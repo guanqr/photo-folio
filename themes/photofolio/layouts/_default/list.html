@@ -45,9 +45,10 @@
             {{ $aperture := .aperture }}
             {{ $shutter := .shutter }}
             {{ $iso := .iso }}
+            {{ $description := .description }}
             
             <div class="masonry-item">
-                <div class="photo-card">
+                <div class="photo-card" {{ with $description }}data-description="{{ . }}"{{ end }}>
                     <div class="photo-wrapper">
                         {{ with $src }}
                             {{/* 调用 img-url 组件处理瀑布流照片路径 */}}
