@@ -15,9 +15,9 @@ defaultContentLanguage = "zh-cn"
 
     heroInterval = 5  # 每张图片停留的秒数
     heroImages = [
-    "/images/photos/金光穿洞.jpg",
-    "/images/photos/钢铁森林.jpg",
-    "/images/photos/杨家溪古榕.jpg"
+    "/images/photos/宏村月沼.jpg",
+    "/images/photos/白纱下的凝视.jpg",
+    "/images/photos/钢铁森林.jpg"
     ]
 
     # 图床/CDN 基础 URL。
