@@ -33,11 +33,24 @@ defaultContentLanguage = "zh-cn"
     name = "Guanqr"
 
 [params.typography]
+    # 【升级】字体外链对象数组 (支持 preconnect 和 stylesheet 混排)
+    fontLinks = [
+        # 1. 自定义字体的预连接
+        { rel = "preconnect", href = "https://cdn.jsdelivr.net", crossorigin = true },
+        # 2. 自定义字体的样式表
+        { rel = "stylesheet", href = "https://cdn.jsdelivr.net/gh/guanqr/fonts@build/css/fonts.min.css" },
+        
+        # 3. Google Fonts (loli镜像) 的预连接
+        { rel = "preconnect", href = "https://fonts.loli.net", crossorigin = true },
+        # 4. Google Fonts (loli镜像) 的样式表
+        { rel = "stylesheet", href = "https://fonts.loli.net/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap" }
+    ]
+
     # 【重要】字体名称不要加引号，不要加逗号，只写核心字体名
     headingFont = "Noto Serif TC"
-    bodyFont = "Noto Serif TC"
-    footerFont = "Noto Serif TC"
-    metaFont = "Noto Serif TC"
+    bodyFont = "I.MingCP"
+    footerFont = "LXGW WenKai TC"
+    metaFont = "LXGW WenKai TC"
     
     # 基础字号 (这些是纯数字+单位，不会触发 ZgotmplZ)
     baseFontSize = "16px" 

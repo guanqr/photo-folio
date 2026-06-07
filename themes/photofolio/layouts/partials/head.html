@@ -2,9 +2,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }} - {{ .Site.Title }}{{ end }}</title>
 
-<!-- 使用国内可用的字体 CDN -->
-<link rel="preconnect" href="https://fonts.loli.net" crossorigin>
-<link href="https://fonts.loli.net/css2?family=Noto+Serif+TC:wght@400;600;700&family=Inter:wght@300;400;500;600&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<!-- 动态引入字体外链 -->
+{{ $typo := .Site.Params.typography }}
+{{ with $typo.fontLinks }}
+    {{/* 遍历配置中的字体链接对象 */}}
+    {{ range . }}
+        <link rel="{{ .rel }}" href="{{ .href }}" {{ if .crossorigin }}crossorigin{{ end }}>
+    {{ end }}
+{{ else }}
+    {{/* 默认回退：如果没有配置 fontLinks，使用默认的 Google Fonts 镜像 */}}
+    <link rel="preconnect" href="https://fonts.loli.net" crossorigin>
+    <link rel="stylesheet" href="https://fonts.loli.net/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap">
+{{ end }}
 
 <!-- 动态注入排版变量 -->
 {{ $typo := .Site.Params.typography }}
@@ -19,9 +28,9 @@
       2. 使用 safeCSS 告诉 Hugo 这是合法的 CSS，防止 ZgotmplZ 报错
     */
     --font-heading: {{ printf "'%s', serif" ($typo.headingFont | default "Noto Serif TC") | safeCSS }};
-    --font-body: {{ printf "'%s', sans-serif" ($typo.bodyFont | default "Noto Serif TC") | safeCSS }};
-    --font-footer: {{ printf "'%s', sans-serif" ($typo.footerFont | default "Noto Serif TC") | safeCSS }};
-    --font-meta: {{ printf "'%s', monospace" ($typo.metaFont | default "Noto Serif TC") | safeCSS }};
+    --font-body: {{ printf "'%s', serif" ($typo.bodyFont | default "Noto Serif TC") | safeCSS }};
+    --font-footer: {{ printf "'%s',serif" ($typo.footerFont | default "Noto Serif TC") | safeCSS }};
+    --font-meta: {{ printf "'%s', serif" ($typo.metaFont | default "Noto Serif TC") | safeCSS }};
     
     /* 字号比例 (纯数值，直接输出) */
     --size-h1: {{ $typo.sizeH1 | default "2.5em" }};
