@@ -5,9 +5,11 @@
 </head>
 <body>
     {{- partial "header.html" . -}}
+    
     <main class="main-content">
         {{- block "main" . }}{{- end }}
     </main>
+    
     {{- partial "footer.html" . -}}
 
     <!-- Lightbox 全局容器 -->
@@ -19,67 +21,38 @@
         </div>
     </div>
 
-    <!-- 使用 Hugo Pipes 引入 JS -->
-    {{ $js := resources.Get "js/masonry.js" }}
+    <!-- 【核心】使用 Hugo Extended 的 js.Build (esbuild) 编译所有 ES6 模块 -->
+    {{ $js := resources.Get "js/main.js" }}
+    {{ $opts := dict "targetPath" "js/bundle.js" }}
+    
     {{ if hugo.IsProduction }}
-    {{/* 生产环境：压缩并添加指纹哈希 */}}
-    {{ $js = $js | resources.Minify | resources.Fingerprint }}
+      {{ $opts = merge $opts (dict "minify" true) }}
     {{ end }}
-    <script src="{{ $js.RelPermalink }}" {{ with $js.Data.Integrity }}integrity="{{ . }}"{{ end }}></script>
+    
+    {{ $js = $js | js.Build $opts }}
+    
+    {{ if hugo.IsProduction }}
+      {{ $js = $js | resources.Fingerprint }}
+    {{ end }}
+    
+    <!-- defer 确保在 DOM 解析完成后执行，不会阻塞渲染 -->
+    <script src="{{ $js.RelPermalink }}" {{ with $js.Data.Integrity }}integrity="{{ . }}"{{ end }} defer></script>
 
-    <!-- 内联移动端菜单控制脚本 -->
-    <script>
-        (function() {
-            var btn = document.getElementById('nav-toggle');
-            var nav = document.getElementById('site-nav');
-            if (!btn || !nav) return;
-
-            // 终极防冲突：克隆按钮节点，清除所有外部 JS 绑定的旧事件
-            var newBtn = btn.cloneNode(true);
-            btn.parentNode.replaceChild(newBtn, btn);
-            btn = newBtn;
-
-            // 绑定点击事件 (使用 capture 阶段确保优先执行)
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                nav.classList.toggle('active');
-                this.classList.toggle('active');
-            }, true); 
-
-            // 点击空白处关闭
-            document.addEventListener('click', function(e) {
-                if (nav.classList.contains('active') && 
-                    !nav.contains(e.target) && 
-                    !btn.contains(e.target)) {
-                    nav.classList.remove('active');
-                    btn.classList.remove('active');
-                }
-            }, true);
-        })();
-    </script>
-
-    <!-- PWA Service Worker 注册 (Hugo Pipes 方式) -->
+    <!-- PWA Service Worker 注册 (必须独立，不参与 js.Build) -->
     {{ if and .Site.Params.enableServiceWorker (eq hugo.Environment "production") }}
         {{- $sw := resources.Get "js/sw.js" -}}
         {{- $dummy := "" | resources.FromString "dummy.js" -}}
-        {{/* 将文件拼接并输出到根目录的 sw.js，确保 SW 的作用域 (Scope) 是全站 "/" */}}
         {{- $url := (slice $sw $dummy | resources.Concat "sw.js").RelPermalink -}}
 
         <script>
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
                     navigator.serviceWorker.register('{{ $url }}')
-                    .then(function(registration) {
-                        console.log('PWA ServiceWorker 注册成功，作用域: ', registration.scope);
-                    })
-                    .catch(function(error) {
-                        console.log('PWA ServiceWorker 注册失败: ', error);
-                    });
+                        .then(reg => console.log('PWA ServiceWorker 注册成功，作用域: ', reg.scope))
+                        .catch(err => console.log('PWA ServiceWorker 注册失败: ', err));
                 });
             }
         </script>
     {{ end }}
 </body>
 </html>
-

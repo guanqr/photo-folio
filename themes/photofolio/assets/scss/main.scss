@@ -1,0 +1,18 @@
+// 1. 基础与变量 (必须最先引入)
+@import "base";
+
+// 2. 布局组件
+@import "header";
+@import "footer";
+
+// 3. 页面模块
+@import "hero";
+@import "categories";
+@import "gallery";
+
+// 4. 交互与工具
+@import "lightbox";
+@import "utils";
+
+// 5. 响应式覆盖 (必须最后引入，确保优先级最高)
+@import "responsive";

@@ -34,12 +34,20 @@
 }
 </style>
 
-<!-- 使用 Hugo Pipes 引入 CSS -->
-{{ $css := resources.Get "css/style.css" }}
+<!-- 使用 Hugo 0.128.0+ 最新的 css.Sass 语法 -->
+{{ $opts := dict "transpiler" "libsass" "targetPath" "css/style.css" }}
 {{ if hugo.IsProduction }}
-  {{/* 生产环境：压缩并添加指纹哈希 */}}
-  {{ $css = $css | resources.Minify | resources.Fingerprint }}
+    {{/* 生产环境下开启压缩 */}}
+    {{ $opts = merge $opts (dict "outputStyle" "compressed") }}
 {{ end }}
+
+{{ $css := resources.Get "scss/main.scss" | css.Sass $opts }}
+
+{{ if hugo.IsProduction }}
+    {{/* 生产环境下添加指纹哈希防缓存 */}}
+    {{ $css = $css | resources.Fingerprint }}
+{{ end }}
+
 <link rel="stylesheet" href="{{ $css.RelPermalink }}" {{ with $css.Data.Integrity }}integrity="{{ . }}"{{ end }}>
 
 <!-- Favicon, Icons, Web App -->

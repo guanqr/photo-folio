@@ -1,0 +1,98 @@
+/* ===== Hero Section ===== */
+.hero {
+    position: relative;
+    height: 80vh;
+    min-height: 30em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    margin-top: 4.5em;
+    overflow: hidden; 
+}
+
+.hero-slides {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 0;
+}
+
+.hero-slide {
+    position: absolute;
+    top: 0; left: 0; 
+    width: 100%; height: 100%;
+    background-size: cover;
+    background-position: center;
+    opacity: 0;
+    transition: opacity 1.5s ease-in-out;
+    z-index: 0;
+
+    &.active {
+        opacity: 1;
+        z-index: 1;
+    }
+}
+
+.hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(10,10,10,0.2) 0%, rgba(10,10,10,0.75) 100%);
+    z-index: 2;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 3;
+    padding: 0 2em;
+}
+
+.hero-title {
+    font-family: var(--font-heading);
+    font-size: var(--size-h1);
+    font-weight: 700;
+    margin-bottom: 1em;
+    background: linear-gradient(135deg, #fff 0%, #c8a45c 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0.25em 1em rgba(0,0,0,0.3);
+}
+
+.hero-subtitle {
+    font-size: 1.2em;
+    color: #f0f0f0;
+    font-weight: 300;
+    letter-spacing: 0.1em;
+    text-shadow: 0 0.125em 0.5em rgba(0,0,0,0.5);
+}
+
+.hero-indicators {
+    position: absolute;
+    bottom: 2.5em;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 0.8em;
+    z-index: 4;
+}
+
+.hero-dot {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.4);
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.3s ease;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.8);
+        transform: scale(1.2);
+    }
+
+    &.active {
+        background: var(--color-accent);
+        transform: scale(1.4);
+        box-shadow: 0 0 0.5em rgba(200, 164, 92, 0.5);
+    }
+}

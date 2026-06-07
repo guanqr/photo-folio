@@ -1,0 +1,60 @@
+/* ===== Reset & Base ===== */
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    height: 100%; /* 配合 Sticky Footer */
+}
+
+body {
+    font-family: var(--font-body);
+    font-size: var(--size-body);
+    background-color: #0a0a0a;
+    color: #e8e8e8;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    
+    /* Sticky Footer 核心布局 */
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh; 
+}
+
+.main-content {
+    flex: 1 0 auto; 
+}
+
+:root {
+    --color-bg: #0a0a0a;
+    --color-bg-secondary: #141414;
+    --color-bg-card: #1a1a1a;
+    --color-text: #e8e8e8;
+    --color-text-secondary: #999;
+    --color-text-muted: #666;
+    --color-accent: #c8a45c;
+    --color-border: #2a2a2a;
+    --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --container-width: 87.5em; 
+}
+
+img { max-width: 100%; height: auto; display: block; }
+a { color: inherit; text-decoration: none; transition: color var(--transition); }
+ul { list-style: none; }
+
+.container {
+    max-width: var(--container-width);
+    margin: 0 auto;
+    padding: 0 2em;
+}
+
+.icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--color-accent);
+    opacity: 0.8;
+}

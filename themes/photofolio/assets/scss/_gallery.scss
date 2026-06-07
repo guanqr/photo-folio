@@ -1,0 +1,91 @@
+/* ===== Gallery Page (Masonry) ===== */
+.gallery-page { margin-top: 4.5em; }
+
+.gallery-header { 
+    padding: 3em 0 2em; 
+    border-bottom: 0.0625em solid var(--color-border); 
+}
+
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    font-size: var(--size-small);
+    color: var(--color-text-muted);
+    margin-bottom: 1.5em;
+}
+
+.page-title {
+    font-family: var(--font-heading);
+    font-size: var(--size-h1);
+    font-weight: 700;
+    margin-bottom: 0.75em;
+}
+
+.masonry-container {
+    padding: 2em;
+    max-width: var(--container-width); 
+    margin: 0 auto;
+}
+
+.masonry-grid {
+    column-count: 3;
+    column-gap: 1.5em;
+}
+
+.masonry-item {
+    break-inside: avoid;
+    margin-bottom: 1.5em;
+}
+
+.photo-card {
+    background: var(--color-bg-card);
+    border-radius: 0.5em;
+    overflow: hidden;
+    border: 0.0625em solid var(--color-border);
+    transition: transform var(--transition), border-color var(--transition);
+
+    &:hover {
+        transform: translateY(-0.125em);
+        border-color: rgba(200, 164, 92, 0.3);
+        
+        .photo-img { transform: scale(1.03); }
+        .photo-hover { opacity: 1; }
+    }
+}
+
+.photo-wrapper { position: relative; overflow: hidden; cursor: pointer; }
+.photo-img { width: 100%; height: auto; transition: transform 0.5s ease; }
+
+.photo-hover {
+    position: absolute; inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0;
+    transition: opacity var(--transition);
+}
+
+.view-icon { color: #fff; font-size: 1.5em; }
+.photo-meta { padding: 1.25em; }
+
+.photo-title {
+    font-family: var(--font-heading);
+    font-size: 1em;
+    font-weight: 600;
+    margin-bottom: 0.75em;
+}
+
+.photo-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4em;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    font-family: var(--font-meta);
+    font-size: var(--size-meta);
+    color: var(--color-text-secondary);
+}
