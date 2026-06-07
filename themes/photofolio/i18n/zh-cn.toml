@@ -29,3 +29,6 @@ other = "當前頁面未關聯照片數據。如果是分類頁，請檢查 <cod
 
 [close]
 other = "關閉"
+
+[back_to_top]
+other = "返回顶部"

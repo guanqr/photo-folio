@@ -52,3 +52,46 @@
     color: var(--color-text-muted);
     font-size: var(--size-small);
 }
+
+/* ===== Back to Top Button ===== */
+.back-to-top {
+    position: fixed;
+    bottom: 2em;
+    right: 2em;
+    width: 3em;
+    height: 3em;
+    border-radius: 50%;
+    background-color: var(--color-bg-card);
+    color: var(--color-text);
+    border: 0.0625em solid var(--color-border);
+    box-shadow: 0 0.25em 1em rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 990; /* 低于 Header(1000) 和 Mobile Nav(998)，避免遮挡 */
+    
+    /* 初始隐藏状态 */
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(1em);
+    transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease, background-color 0.3s ease, color 0.3s ease;
+
+    &:hover {
+        background-color: var(--color-accent);
+        color: #fff;
+        border-color: var(--color-accent);
+    }
+
+    /* 激活状态（滚动后显示） */
+    &.active {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+    svg {
+        width: 1.25em;
+        height: 1.25em;
+    }
+}

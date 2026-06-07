@@ -21,6 +21,11 @@
         </div>
     </div>
 
+    <!-- 返回顶部按钮 -->
+    <button id="back-to-top" class="back-to-top" aria-label="{{ i18n "back_to_top" }}">
+        {{ $.Site.Data.svg.arrow_up | safeHTML }}
+    </button>
+
     <!-- 【核心】使用 Hugo Extended 的 js.Build (esbuild) 编译所有 ES6 模块 -->
     {{ $js := resources.Get "js/main.js" }}
     {{ $opts := dict "targetPath" "js/bundle.js" }}
