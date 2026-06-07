@@ -34,6 +34,14 @@
 }
 </style>
 
+<!-- 使用 Hugo Pipes 引入 CSS -->
+{{ $css := resources.Get "css/style.css" }}
+{{ if hugo.IsProduction }}
+  {{/* 生产环境：压缩并添加指纹哈希 */}}
+  {{ $css = $css | resources.Minify | resources.Fingerprint }}
+{{ end }}
+<link rel="stylesheet" href="{{ $css.RelPermalink }}" {{ with $css.Data.Integrity }}integrity="{{ . }}"{{ end }}>
+
 <!-- Favicon, Icons, Web App -->
 {{- $icoFavicon := "favicon.ico" -}}
 {{- $svgFavicon := "icons/favicon.svg" -}}
@@ -50,5 +58,3 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="application-name" content="{{ .Site.Title }}" />
 <link rel="manifest" href="{{ $manifest | relURL }}" />
-
-<link rel="stylesheet" href="{{ "css/style.css" | relURL }}">

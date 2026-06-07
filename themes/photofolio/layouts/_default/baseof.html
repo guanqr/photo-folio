@@ -19,8 +19,13 @@
         </div>
     </div>
 
-    <!-- 外部 JS (用于 Lightbox 等) -->
-    <script src="{{ "js/masonry.js" | relURL }}"></script>
+    <!-- 使用 Hugo Pipes 引入 JS -->
+    {{ $js := resources.Get "js/masonry.js" }}
+    {{ if hugo.IsProduction }}
+    {{/* 生产环境：压缩并添加指纹哈希 */}}
+    {{ $js = $js | resources.Minify | resources.Fingerprint }}
+    {{ end }}
+    <script src="{{ $js.RelPermalink }}" {{ with $js.Data.Integrity }}integrity="{{ . }}"{{ end }}></script>
 
     <!-- 内联移动端菜单控制脚本 -->
     <script>
@@ -65,12 +70,12 @@
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
                     navigator.serviceWorker.register('{{ $url }}')
-                        .then(function(registration) {
-                            console.log('PWA ServiceWorker 注册成功，作用域: ', registration.scope);
-                        })
-                        .catch(function(error) {
-                            console.log('PWA ServiceWorker 注册失败: ', error);
-                        });
+                    .then(function(registration) {
+                        console.log('PWA ServiceWorker 注册成功，作用域: ', registration.scope);
+                    })
+                    .catch(function(error) {
+                        console.log('PWA ServiceWorker 注册失败: ', error);
+                    });
                 });
             }
         </script>
