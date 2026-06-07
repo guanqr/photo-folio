@@ -28,6 +28,9 @@ defaultContentLanguage = "zh-cn"
     # 启用 Service Worker (仅在 hugo 构建生产环境时生效)
     enableServiceWorker = true 
 
+    # 是否开启 instant.page 链接预加载加速 (true 为开启，false 为关闭)
+    enableInstantPage = true 
+
 [params.author]
     # 名字
     name = "Guanqr"
@@ -68,7 +71,7 @@ defaultContentLanguage = "zh-cn"
         url = "/"
         weight = 1
     [[menu.main]]
-        name = "村落"
+        name = "鄉村"
         url = "/countryside/"
         weight = 2
     [[menu.main]]

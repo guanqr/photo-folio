@@ -38,6 +38,11 @@
     <!-- defer 确保在 DOM 解析完成后执行，不会阻塞渲染 -->
     <script src="{{ $js.RelPermalink }}" {{ with $js.Data.Integrity }}integrity="{{ . }}"{{ end }} defer></script>
 
+    <!-- Instant.page 预加载加速 (使用 jsDelivr CDN) -->
+    {{ if .Site.Params.enableInstantPage }}
+    <script src="https://cdn.jsdelivr.net/npm/instant.page@5.2.0/instantpage.min.js" type="module" crossorigin></script>
+    {{ end }}
+
     <!-- PWA Service Worker 注册 (必须独立，不参与 js.Build) -->
     {{ if and .Site.Params.enableServiceWorker (eq hugo.Environment "production") }}
         {{- $sw := resources.Get "js/sw.js" -}}
