@@ -32,3 +32,6 @@ other = "關閉"
 
 [back_to_top]
 other = "返回顶部"
+
+[theme_toggle]
+other = "切换主题"

@@ -49,28 +49,25 @@
         transform: translateY(-0.125em);
         border-color: var(--color-accent-border);
         
-        .photo-img { transform: scale(1.03); }
-        .photo-hover { opacity: 1; }
+        /* 保留照片本身的轻微放大效果 */
+        .photo-img { transform: scale(1.03); } 
+        
     }
 }
 
-.photo-wrapper { position: relative; overflow: hidden; cursor: pointer; }
-.photo-img { width: 100%; height: auto; transition: transform 0.5s ease; }
-
-.photo-hover {
-    position: absolute; inset: 0;
-    background: var(--color-overlay-hover);
-    display: flex; align-items: center; justify-content: center;
-    opacity: 0;
-    transition: opacity var(--transition);
+.photo-wrapper { 
+    position: relative; 
+    overflow: hidden; 
+    cursor: pointer; /* 保留指针样式，因为点击依然会触发 Lightbox */
 }
 
-.view-icon { 
-    color: var(--color-white); 
-    font-size: 1.5em; 
+.photo-img { 
+    width: 100%; 
+    height: auto; 
+    transition: transform 0.5s ease; 
 }
 
-.photo-meta { padding: 1em; }
+.photo-meta { padding: 1.25em; }
 
 .photo-title {
     font-family: var(--font-heading);

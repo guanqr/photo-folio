@@ -22,7 +22,7 @@
     top: 1.5em; right: 1.5em;
     background: none;
     border: none;
-    color: var(--color-white);
+    color: var(--color-text);
     font-size: 2.5em;
     cursor: pointer;
     width: 2em; height: 2em;
@@ -66,7 +66,7 @@
 }
 
 .lightbox-caption {
-    color: var(--color-white);
+    color: var(--color-text);
     font-family: var(--font-heading);
     font-size: 1.2em;
     font-weight: 600;

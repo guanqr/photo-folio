@@ -1,34 +1,32 @@
 {{ define "main" }}
 {{ $heroImages := .Site.Params.heroImages | default slice }}
 
+<!-- ================= 1. 纯净轮播图区域 (无文字、无遮罩) ================= -->
 <section class="hero" data-interval="{{ .Site.Params.heroInterval | default 5 }}">
     <div class="hero-slides">
         {{ range $index, $img := $heroImages }}
-            {{/* 调用 img-url 组件处理轮播图路径 */}}
             {{ $imgUrl := partial "img-url.html" (dict "src" $img "site" $.Site) }}
             <div class="hero-slide {{ if eq $index 0 }}active{{ end }}" style="background-image: url('{{ $imgUrl }}');"></div>
         {{ end }}
-    </div>
-    
-    <div class="hero-overlay"></div>
-
-    <div class="hero-content">
-        <h1 class="hero-title">{{ .Site.Params.heroTitle }}</h1>
-        <p class="hero-subtitle">{{ .Site.Params.heroSubtitle }}</p>
     </div>
 
     {{ if gt (len $heroImages) 1 }}
     <div class="hero-indicators">
         {{ range $index, $img := $heroImages }}
-        <button class="hero-dot {{ if eq $index 0 }}active{{ end }}" data-slide="{{ $index }}"></button>
+        <button class="hero-dot {{ if eq $index 0 }}active{{ end }}" data-slide="{{ $index }}" aria-label="切换到第 {{ add $index 1 }} 张图片"></button>
         {{ end }}
     </div>
     {{ end }}
 </section>
 
+<!-- ================= 2. 作品集与分类卡片区域 ================= -->
 <section class="categories-grid">
     <div class="container">
-        <h2 class="section-title">{{ i18n "portfolio_title" }}</h2>
+        <div class="section-header">
+            <h2 class="section-title">{{ .Site.Params.heroTitle }}</h2>
+            <p class="section-subtitle">{{ .Site.Params.heroSubtitle }}</p>
+        </div>
+        
         <div class="grid">
             {{ $allPhotos := site.Data.photo.photo | default slice }}
             {{ $sortedPhotos := sort $allPhotos "time" "desc" }}
@@ -43,14 +41,13 @@
                     {{ $coverImg = (index $categoryPhotos 0).src }}
                 {{ end }}
 
+                <!-- 图片容器 + 底部信息容器 -->
                 <a href="{{ .Permalink }}" class="category-card">
                     <div class="category-image">
                         {{ with $coverImg }}
-                            {{/* 调用 img-url 组件处理分类封面路径 */}}
                             {{ $coverUrl := partial "img-url.html" (dict "src" . "site" $.Site) }}
                             <img src="{{ $coverUrl }}" alt="{{ $.Title }}" loading="lazy">
                         {{ end }}
-                        <div class="category-overlay"></div>
                     </div>
                     <div class="category-info">
                         <h3 class="category-title">{{ .Title }}</h3>

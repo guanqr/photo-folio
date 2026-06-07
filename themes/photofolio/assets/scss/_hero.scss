@@ -1,12 +1,8 @@
-/* ===== Hero Section ===== */
+/* ===== Hero Section (纯净轮播图) ===== */
 .hero {
     position: relative;
-    height: 80vh;
-    min-height: 30em;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
+    height: 75vh; /* 稍微降低高度，给下方文字留出空间 */
+    min-height: 25em;
     margin-top: 4.5em;
     overflow: hidden; 
 }
@@ -32,41 +28,10 @@
     }
 }
 
-.hero-overlay {
-    position: absolute;
-    inset: 0;
-    background: var(--gradient-hero-overlay);
-    z-index: 2;
-}
-
-.hero-content {
-    position: relative;
-    z-index: 3;
-    padding: 0 2em;
-}
-
-.hero-title {
-    font-family: var(--font-heading);
-    font-size: var(--size-h1);
-    font-weight: 700;
-    margin-bottom: 1em;
-    background: var(--gradient-hero-title);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    text-shadow: var(--shadow-text-dark);
-}
-
-.hero-subtitle {
-    font-size: 1.2em;
-    color: var(--color-text-light);
-    font-weight: 300;
-    letter-spacing: 0.1em;
-    text-shadow: var(--shadow-text-darker);
-}
-
+/* 底部小圆点指示器 */
 .hero-indicators {
     position: absolute;
-    bottom: 2.5em;
+    bottom: 2em;
     left: 50%;
     transform: translateX(-50%);
     display: flex;

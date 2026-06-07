@@ -1,6 +1,6 @@
 <header class="site-header">
     <div class="header-inner">
-        <a href="/" class="site-logo">
+        <a href="{{ .Site.BaseURL }}" class="site-logo">
             {{ with .Site.Params.logo }}
                 <img src="{{ . }}" alt="{{ $.Site.Title }}">
             {{ else }}
@@ -8,22 +8,29 @@
             {{ end }}
         </a>
         
-        <nav class="site-nav" id="site-nav">
-            <ul>
-                {{ range .Site.Menus.main }}
-                <li>
-                    <a href="{{ .URL }}" {{ if eq $.RelPermalink .URL }}class="active"{{ end }}>
-                        {{ .Name }}
-                    </a>
-                </li>
-                {{ end }}
-            </ul>
-        </nav>
-        
-        <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">
-            <span></span>
-            <span></span>
-            <span></span>
-        </button>
+        <div class="header-actions">
+            <button id="theme-toggle" class="theme-toggle" aria-label="{{ i18n "theme_toggle" }}">
+                <span class="icon-sun">{{ $.Site.Data.svg.sun | safeHTML }}</span>
+                <span class="icon-moon">{{ $.Site.Data.svg.moon | safeHTML }}</span>
+            </button>
+
+            <nav class="site-nav" id="site-nav">
+                <ul>
+                    {{ range .Site.Menus.main }}
+                    <li>
+                        <a href="{{ .URL }}" {{ if eq $.RelPermalink .URL }}class="active"{{ end }}>
+                            {{ .Name }}
+                        </a>
+                    </li>
+                    {{ end }}
+                </ul>
+            </nav>
+            
+            <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
     </div>
 </header>

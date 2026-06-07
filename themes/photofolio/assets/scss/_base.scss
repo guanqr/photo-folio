@@ -45,16 +45,8 @@ body {
     --color-header-bg-solid: rgba(10, 10, 10, 0.95);
     --color-nav-mobile-bg: rgba(10, 10, 10, 0.98);
     --color-lightbox-bg: rgba(0, 0, 0, 0.95);
-    --color-overlay-hover: rgba(0, 0, 0, 0.4);
-
-    /* --- 渐变 --- */
-    --gradient-hero-overlay: linear-gradient(to bottom, rgba(10,10,10,0.2) 0%, rgba(10,10,10,0.75) 100%);
-    --gradient-category-overlay: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.1) 100%);
-    --gradient-hero-title: linear-gradient(135deg, var(--color-white) 0%, var(--color-accent) 100%);
 
     /* --- 阴影 --- */
-    --shadow-text-dark: 0 0.25em 1em rgba(0,0,0,0.3);
-    --shadow-text-darker: 0 0.125em 0.5em rgba(0,0,0,0.5);
     --shadow-img-lightbox: 0 0 2em rgba(0,0,0,0.5);
 
     /* --- 交互与透明色 --- */
@@ -67,6 +59,38 @@ body {
     /* --- 布局与动画 --- */
     --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --container-width: 87.5em; 
+}
+
+/* ===== Light Mode (明亮模式) ===== */
+[data-theme="light"] {
+    --color-bg: #f8f9fa;
+    --color-bg-secondary: #e9ecef;
+    --color-bg-card: #ffffff;
+    
+    --color-text: #212529;
+    --color-text-secondary: #495057;
+    --color-text-muted: #6c757d;
+    
+    --color-accent: #b8860b; 
+    --color-border: #dee2e6;
+
+    --color-header-bg: rgba(248, 249, 250, 0.85);
+    --color-header-bg-solid: rgba(248, 249, 250, 0.95);
+    --color-nav-mobile-bg: rgba(248, 249, 250, 0.98);
+    --color-lightbox-bg: rgba(255, 255, 255, 0.95);
+
+    --gradient-hero-title: linear-gradient(135deg, #212529 0%, var(--color-accent) 100%);
+
+    --shadow-text-dark: 0 0.25em 1em rgba(255,255,255,0.5);
+    --shadow-text-darker: 0 0.125em 0.5em rgba(255,255,255,0.8);
+    --shadow-img-lightbox: 0 0 2em rgba(0,0,0,0.15);
+
+    --color-dot-inactive: rgba(0, 0, 0, 0.3);
+    --color-dot-hover: rgba(0, 0, 0, 0.6);
+    --color-accent-glow: rgba(184, 134, 11, 0.4);
+    --color-accent-border: rgba(184, 134, 11, 0.3);
+    --color-white-alpha-10: rgba(0, 0, 0, 0.05);
+    
 }
 
 img { max-width: 100%; height: auto; display: block; }
