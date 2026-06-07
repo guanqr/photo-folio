@@ -8,6 +8,7 @@ aperture = "10"
 shutter = "1/200"
 time = "2015-08-27"
 place = "天津薊州"
+description = "黄崖关长城位于天津市蓟州区，是明代长城的重要关隘之一。夕阳下的长城显得格外壮丽，金色的阳光洒在古老的城砖上，仿佛在诉说着历史的沧桑。"
 
 [[photo]]
 src = "/images/photos/茶卡盐湖.jpg"
