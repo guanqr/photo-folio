@@ -329,8 +329,14 @@ ul { list-style: none; }
 }
 
 /* ===== Gallery Page (Masonry) ===== */
-.gallery-page { margin-top: 4.5em; }
-.gallery-header { padding: 3em 0 2em; border-bottom: 0.0625em solid var(--color-border); }
+.gallery-page { 
+    margin-top: 4.5em; 
+}
+
+.gallery-header { 
+    padding: 3em 0 2em; 
+    border-bottom: 0.0625em solid var(--color-border); 
+}
 
 .breadcrumb {
     display: flex;
@@ -577,11 +583,24 @@ ul { list-style: none; }
     .masonry-grid { column-count: 2; }
 }
 
-/* 768px */
+/* 768px 窄屏适配 */
 @media (max-width: 768px) {
+    .header-inner,
+    .container,
+    .footer-inner {
+        padding: 0 1em; /* 头部菜单、首页内容、页脚 左右改为 1em */
+    }
+
+    .masonry-container {
+        padding: 1em; /* 照片瀑布流区域四周改为 1em */
+    }
+
+    .categories-grid {
+        padding: 2em 0; /* 首页分类区域上下间距适当缩小 (原为 5em 0) */
+    }
+
     .grid { grid-template-columns: 1fr; }
     .masonry-grid { column-count: 1; }
-    .masonry-container { padding: 1.5em 1em; }
     
     .footer-inner {
         flex-direction: column;
@@ -595,7 +614,7 @@ ul { list-style: none; }
         z-index: 1002; 
     }
 
-    /* 移动端导航面板 (高度自适应，不遮挡 Header) */
+    /* 移动端导航面板 */
     .site-nav {
         position: fixed;
         top: 4.5em; 
@@ -605,9 +624,8 @@ ul { list-style: none; }
         background: rgba(10, 10, 10, 0.98);
         backdrop-filter: blur(1.25em);
         -webkit-backdrop-filter: blur(1.25em);
-        padding: 2em;
+        padding: 2em 1em; /* 菜单内部左右也适配 1em */
         
-        /* 初始隐藏状态 */
         opacity: 0;
         visibility: hidden;
         transform: translateY(-1em); 
@@ -623,7 +641,6 @@ ul { list-style: none; }
         overflow: visible; 
     }
 
-    /* 激活状态 */
     .site-nav.active {
         opacity: 1 !important;
         visibility: visible !important;
