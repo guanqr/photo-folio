@@ -591,6 +591,7 @@ ul { list-style: none; }
         padding: 0 1em; /* 头部菜单、首页内容、页脚 左右改为 1em */
     }
     .category-info,
+    .photo-meta,
     .masonry-container {
         padding: 1em; /* 照片瀑布流区域四周改为 1em */
     }
