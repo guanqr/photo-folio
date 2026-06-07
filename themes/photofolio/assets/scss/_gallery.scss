@@ -47,7 +47,7 @@
 
     &:hover {
         transform: translateY(-0.125em);
-        border-color: rgba(200, 164, 92, 0.3);
+        border-color: var(--color-accent-border);
         
         .photo-img { transform: scale(1.03); }
         .photo-hover { opacity: 1; }
@@ -59,13 +59,17 @@
 
 .photo-hover {
     position: absolute; inset: 0;
-    background: rgba(0, 0, 0, 0.4);
+    background: var(--color-overlay-hover);
     display: flex; align-items: center; justify-content: center;
     opacity: 0;
     transition: opacity var(--transition);
 }
 
-.view-icon { color: #fff; font-size: 1.5em; }
+.view-icon { 
+    color: var(--color-white); 
+    font-size: 1.5em; 
+}
+
 .photo-meta { padding: 1em; }
 
 .photo-title {

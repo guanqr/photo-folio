@@ -6,18 +6,16 @@
 }
 
 html {
-    height: 100%; /* 配合 Sticky Footer */
+    height: 100%;
 }
 
 body {
     font-family: var(--font-body);
     font-size: var(--size-body);
-    background-color: #0a0a0a;
-    color: #e8e8e8;
+    background-color: var(--color-bg);
+    color: var(--color-text);
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
-    
-    /* Sticky Footer 核心布局 */
     display: flex;
     flex-direction: column;
     min-height: 100vh; 
@@ -28,14 +26,45 @@ body {
 }
 
 :root {
+    /* --- 基础颜色 --- */
     --color-bg: #0a0a0a;
     --color-bg-secondary: #141414;
     --color-bg-card: #1a1a1a;
+    
     --color-text: #e8e8e8;
     --color-text-secondary: #999;
     --color-text-muted: #666;
+    --color-text-light: #f0f0f0;
+    --color-white: #ffffff;
+    
     --color-accent: #c8a45c;
     --color-border: #2a2a2a;
+
+    /* --- 语义化背景与遮罩 --- */
+    --color-header-bg: rgba(10, 10, 10, 0.85);
+    --color-header-bg-solid: rgba(10, 10, 10, 0.95);
+    --color-nav-mobile-bg: rgba(10, 10, 10, 0.98);
+    --color-lightbox-bg: rgba(0, 0, 0, 0.95);
+    --color-overlay-hover: rgba(0, 0, 0, 0.4);
+
+    /* --- 渐变 --- */
+    --gradient-hero-overlay: linear-gradient(to bottom, rgba(10,10,10,0.2) 0%, rgba(10,10,10,0.75) 100%);
+    --gradient-category-overlay: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.1) 100%);
+    --gradient-hero-title: linear-gradient(135deg, var(--color-white) 0%, var(--color-accent) 100%);
+
+    /* --- 阴影 --- */
+    --shadow-text-dark: 0 0.25em 1em rgba(0,0,0,0.3);
+    --shadow-text-darker: 0 0.125em 0.5em rgba(0,0,0,0.5);
+    --shadow-img-lightbox: 0 0 2em rgba(0,0,0,0.5);
+
+    /* --- 交互与透明色 --- */
+    --color-dot-inactive: rgba(255, 255, 255, 0.4);
+    --color-dot-hover: rgba(255, 255, 255, 0.8);
+    --color-accent-glow: rgba(200, 164, 92, 0.5);
+    --color-accent-border: rgba(200, 164, 92, 0.3);
+    --color-white-alpha-10: rgba(255, 255, 255, 0.1);
+
+    /* --- 布局与动画 --- */
     --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --container-width: 87.5em; 
 }

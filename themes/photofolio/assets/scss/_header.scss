@@ -3,7 +3,7 @@
     position: fixed;
     top: 0; left: 0; right: 0;
     z-index: 1000;
-    background: rgba(10, 10, 10, 0.85);
+    background: var(--color-header-bg);
     backdrop-filter: blur(1.25em);
     border-bottom: 0.0625em solid var(--color-border);
 }

@@ -51,8 +51,9 @@
 }
 
 .category-overlay {
-    position: absolute; inset: 0;
-    background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.1) 100%);
+    position: absolute; 
+    inset: 0;
+    background: var(--gradient-category-overlay);
 }
 
 .category-info {
@@ -67,7 +68,7 @@
     font-size: var(--size-h3);
     font-weight: 600;
     margin-bottom: 0.25em;
-    color: #fff;
+    color: var(--color-white);
 }
 
 .category-count {
