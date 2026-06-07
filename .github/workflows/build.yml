@@ -31,7 +31,7 @@ jobs:
         DEPLOY_BRANCH: gh-pages
         PERSONAL_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
       run: |
-        cd ./public && git init
+        cd ./public && git init -b main
         git config user.name "guanqr"
         git config user.email "guanqirui@zju.edu.cn"
         git add .
