@@ -22,7 +22,7 @@
     <!-- 外部 JS (用于 Lightbox 等) -->
     <script src="{{ "js/masonry.js" | relURL }}"></script>
 
-    <!-- 【核心修复】内联移动端菜单控制脚本 -->
+    <!-- 内联移动端菜单控制脚本 -->
     <script>
         (function() {
             var btn = document.getElementById('nav-toggle');
@@ -53,6 +53,28 @@
             }, true);
         })();
     </script>
+
+    <!-- PWA Service Worker 注册 (Hugo Pipes 方式) -->
+    {{ if and .Site.Params.enableServiceWorker (eq hugo.Environment "production") }}
+        {{- $sw := resources.Get "js/sw.js" -}}
+        {{- $dummy := "" | resources.FromString "dummy.js" -}}
+        {{/* 将文件拼接并输出到根目录的 sw.js，确保 SW 的作用域 (Scope) 是全站 "/" */}}
+        {{- $url := (slice $sw $dummy | resources.Concat "sw.js").RelPermalink -}}
+
+        <script>
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('{{ $url }}')
+                        .then(function(registration) {
+                            console.log('PWA ServiceWorker 注册成功，作用域: ', registration.scope);
+                        })
+                        .catch(function(error) {
+                            console.log('PWA ServiceWorker 注册失败: ', error);
+                        });
+                });
+            }
+        </script>
+    {{ end }}
 </body>
 </html>
 

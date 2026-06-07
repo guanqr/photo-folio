@@ -25,6 +25,9 @@ defaultContentLanguage = "zh-cn"
     # 留空或注释掉则使用本地图片。末尾无需加斜杠。
     imageCDN = "https://guanqr.oss-cn-hangzhou.aliyuncs.com" 
 
+    # 启用 Service Worker (仅在 hugo 构建生产环境时生效)
+    enableServiceWorker = true 
+
 [params.author]
     # 名字
     name = "Guanqr"

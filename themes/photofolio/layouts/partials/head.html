@@ -34,4 +34,21 @@
 }
 </style>
 
+<!-- Favicon, Icons, Web App -->
+{{- $icoFavicon := "favicon.ico" -}}
+{{- $svgFavicon := "icons/favicon.svg" -}}
+{{- $pngFavicon := "icons/favicon-96x96.png" -}}
+{{- $appleTouchIcon := "icons/apple-touch-icon.png" -}}
+{{- $manifest := "manifest.json" -}}
+<link rel="shortcut icon" type="image/x-icon" href="{{ $icoFavicon | relURL }}" />
+<link rel="icon" type="image/svg+xml" href="{{ $svgFavicon | relURL }}" />
+<link rel="icon" type="image/png" href="{{ $pngFavicon | relURL }}" sizes="96x96" />
+<link rel="apple-touch-icon" href="{{ $appleTouchIcon | relURL }}" sizes="180x180" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="{{ .Site.Title }}" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="application-name" content="{{ .Site.Title }}" />
+<link rel="manifest" href="{{ $manifest | relURL }}" />
+
 <link rel="stylesheet" href="{{ "css/style.css" | relURL }}">
