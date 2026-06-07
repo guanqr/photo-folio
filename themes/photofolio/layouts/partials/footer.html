@@ -1,0 +1,11 @@
+<footer class="site-footer">
+    <div class="footer-inner">
+        <p class="copyright-text">
+            {{ with .Site.Params.copyrightText }}
+                {{ . | safeHTML }}
+            {{ else }}
+                &copy; {{ now.Year }} {{ $.Site.Params.Author.Name }}
+            {{ end }}
+        </p>
+    </div>
+</footer>

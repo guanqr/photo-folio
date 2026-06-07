@@ -1,0 +1,29 @@
+<header class="site-header">
+    <div class="header-inner">
+        <a href="{{ .Site.BaseURL }}" class="site-logo">
+            {{ with .Site.Params.logo }}
+                <img src="{{ . }}" alt="{{ $.Site.Title }}">
+            {{ else }}
+                <span class="logo-text">{{ .Site.Title }}</span>
+            {{ end }}
+        </a>
+        
+        <nav class="site-nav" id="site-nav">
+            <ul>
+                {{ range .Site.Menus.main }}
+                <li>
+                    <a href="{{ .URL }}" {{ if eq $.RelPermalink .URL }}class="active"{{ end }}>
+                        {{ .Name }}
+                    </a>
+                </li>
+                {{ end }}
+            </ul>
+        </nav>
+        
+        <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </div>
+</header>

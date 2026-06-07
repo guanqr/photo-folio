@@ -1,0 +1,31 @@
+# i18n/zh-cn.toml
+
+[home]
+other = "首頁"
+
+[breadcrumb_separator]
+other = "/"
+
+[portfolio_title]
+other = "作品集"
+
+[photo_count]
+other = "{{ .Count }} 張作品"
+
+[total_photos]
+other = "共 {{ .Count }} 張作品"
+
+[no_image]
+other = "暫無圖片"
+
+[no_photos_under]
+other = "{{ .Title }} 下暫無圖片"
+
+[hint]
+other = "提示："
+
+[debug_info_list]
+other = "當前頁面未關聯照片數據。如果是分類頁，請檢查 <code>data/photo.toml</code> 中是否有 <code>category = \"{{ .Section }}\"</code> 的數據。"
+
+[close]
+other = "關閉"

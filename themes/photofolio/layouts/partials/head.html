@@ -1,0 +1,37 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }} - {{ .Site.Title }}{{ end }}</title>
+
+<!-- 使用国内可用的字体 CDN -->
+<link rel="preconnect" href="https://fonts.loli.net" crossorigin>
+<link href="https://fonts.loli.net/css2?family=Noto+Serif+TC:wght@400;600;700&family=Inter:wght@300;400;500;600&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- 动态注入排版变量 -->
+{{ $typo := .Site.Params.typography }}
+<style>
+:root {
+    /* 基础字号 (纯数值，直接输出) */
+    --base-font-size: {{ $typo.baseFontSize | default "16px" }};
+    
+    /* 
+      字体族设置：
+      1. 使用 printf 自动为配置中的字体名加上单引号和 fallback (如 , serif)
+      2. 使用 safeCSS 告诉 Hugo 这是合法的 CSS，防止 ZgotmplZ 报错
+    */
+    --font-heading: {{ printf "'%s', serif" ($typo.headingFont | default "Noto Serif TC") | safeCSS }};
+    --font-body: {{ printf "'%s', sans-serif" ($typo.bodyFont | default "Noto Serif TC") | safeCSS }};
+    --font-footer: {{ printf "'%s', sans-serif" ($typo.footerFont | default "Noto Serif TC") | safeCSS }};
+    --font-meta: {{ printf "'%s', monospace" ($typo.metaFont | default "Noto Serif TC") | safeCSS }};
+    
+    /* 字号比例 (纯数值，直接输出) */
+    --size-h1: {{ $typo.sizeH1 | default "2.5em" }};
+    --size-h2: {{ $typo.sizeH2 | default "2em" }};
+    --size-h3: {{ $typo.sizeH3 | default "1.5em" }};
+    --size-body: {{ $typo.sizeBody | default "1em" }};
+    --size-small: {{ $typo.sizeSmall | default "0.875em" }};
+    --size-meta: {{ $typo.sizeMeta | default "0.8em" }};
+    --size-footer: {{ $typo.sizeFooter | default "0.85em" }};
+}
+</style>
+
+<link rel="stylesheet" href="{{ "css/style.css" | relURL }}">

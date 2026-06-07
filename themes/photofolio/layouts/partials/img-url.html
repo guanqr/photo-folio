@@ -1,0 +1,10 @@
+{{- $src := .src | default "" -}}
+{{- $site := .site -}}
+{{- $cdn := $site.Params.imageCDN | default "" -}}
+
+{{- if and $cdn (not (strings.HasPrefix $src "http")) -}}
+    {{- $cdn = strings.TrimSuffix "/" $cdn -}}
+    {{- printf "%s%s" $cdn $src -}}
+{{- else -}}
+    {{- $src -}}
+{{- end -}}

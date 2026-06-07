@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="{{ .Site.LanguageCode | default "zh-cn" }}">
+<head>
+    {{- partial "head.html" . -}}
+</head>
+<body>
+    {{- partial "header.html" . -}}
+    <main class="main-content">
+        {{- block "main" . }}{{- end }}
+    </main>
+    {{- partial "footer.html" . -}}
+
+    <!-- Lightbox 全局容器 -->
+    <div class="lightbox" id="lightbox">
+        <button class="lightbox-close" id="lightbox-close" aria-label="{{ i18n "close" }}">&times;</button>
+        <div class="lightbox-content">
+            <img src="" alt="" id="lightbox-img">
+            <div class="lightbox-caption" id="lightbox-caption"></div>
+        </div>
+    </div>
+
+    <!-- 外部 JS (用于 Lightbox 等) -->
+    <script src="{{ "js/masonry.js" | relURL }}"></script>
+
+    <!-- 【核心修复】内联移动端菜单控制脚本 -->
+    <script>
+        (function() {
+            var btn = document.getElementById('nav-toggle');
+            var nav = document.getElementById('site-nav');
+            if (!btn || !nav) return;
+
+            // 终极防冲突：克隆按钮节点，清除所有外部 JS 绑定的旧事件
+            var newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            btn = newBtn;
+
+            // 绑定点击事件 (使用 capture 阶段确保优先执行)
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                nav.classList.toggle('active');
+                this.classList.toggle('active');
+            }, true); 
+
+            // 点击空白处关闭
+            document.addEventListener('click', function(e) {
+                if (nav.classList.contains('active') && 
+                    !nav.contains(e.target) && 
+                    !btn.contains(e.target)) {
+                    nav.classList.remove('active');
+                    btn.classList.remove('active');
+                }
+            }, true);
+        })();
+    </script>
+</body>
+</html>
+

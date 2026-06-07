@@ -1,0 +1,115 @@
+{{ define "main" }}
+{{/* 1. 安全获取 section 名称 */}}
+{{ $sectionName := "" }}
+{{ with .File }}
+    {{ $sectionName = .ContentBaseName }}
+{{ else }}
+    {{ $sectionName = .Title | urlize }}
+{{ end }}
+
+{{ $allPhotos := site.Data.photo.photo | default slice }}
+
+{{/* 按 time 字段降序排列 (desc)，最新的排在最前面 */}}
+{{ $sortedPhotos := sort $allPhotos "time" "desc" }}
+
+{{/* 从排序后的数组中过滤出当前分类的照片 */}}
+{{ $photos := where $sortedPhotos "category" $sectionName }}
+
+<section class="gallery-page">
+    <div class="gallery-header">
+        <div class="container">
+            <nav class="breadcrumb">
+                <a href="{{ .Site.BaseURL }}">{{ i18n "home" }}</a>
+                <span class="separator">/</span>
+                <span>{{ .Title }}</span>
+            </nav>
+            <h1 class="page-title">{{ .Title }}</h1>
+            {{ with .Params.description }}
+                <p class="page-description">{{ . }}</p>
+            {{ end }}
+            <p class="photo-count">{{ i18n "total_photos" (dict "Count" (len $photos)) }}</p>
+        </div>
+    </div>
+
+    <div class="masonry-container">
+        {{ if gt (len $photos) 0 }}
+        <div class="masonry-grid" id="masonry-grid">
+            {{ range $photos }}
+            
+            {{/* 提前提取所有属性为独立变量 */}}
+            {{ $altText := .alt }}
+            {{ $src := .src }}
+            {{ $place := .place }}
+            {{ $time := .time }}
+            {{ $focus := .focus }}
+            {{ $aperture := .aperture }}
+            {{ $shutter := .shutter }}
+            {{ $iso := .iso }}
+            
+            <div class="masonry-item">
+                <div class="photo-card">
+                    <div class="photo-wrapper">
+                        {{ with $src }}
+                            {{/* 调用 img-url 组件处理瀑布流照片路径 */}}
+                            {{ $srcUrl := partial "img-url.html" (dict "src" . "site" $.Site) }}
+                            <img src="{{ $srcUrl }}" alt="{{ $altText }}" loading="lazy" class="photo-img">
+                        {{ else }}
+                            <div class="photo-placeholder">{{ i18n "no_image" }}</div>
+                        {{ end }}
+                        <div class="photo-hover">
+                            <span class="view-icon">
+                                {{ $.Site.Data.svg.eye | safeHTML }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="photo-meta">
+                        <h3 class="photo-title">{{ $altText }}</h3>
+                        <div class="photo-details">
+                            {{ with $place }}
+                            <div class="meta-item">
+                                <span class="icon">{{ $.Site.Data.svg.location | safeHTML }}</span>
+                                <span>{{ . }}</span>
+                            </div>
+                            {{ end }}
+                            
+                            {{ with $time }}
+                            <div class="meta-item">
+                                <span class="icon">{{ $.Site.Data.svg.calendar | safeHTML }}</span>
+                                <span>{{ . | time.Format "2006.01.02" }}</span>
+                            </div>
+                            {{ end }}
+                            
+                            {{/* 智能拼接 EXIF 参数 */}}
+                            {{ $exif := slice }}
+                            {{ with $focus }}{{ $exif = $exif | append (printf "%smm" .) }}{{ end }}
+                            {{ with $aperture }}{{ $exif = $exif | append (printf "f/%s" .) }}{{ end }}
+                            {{ with $shutter }}{{ $exif = $exif | append (printf "%ss" .) }}{{ end }}
+                            {{ with $iso }}{{ $exif = $exif | append (printf "ISO%s" .) }}{{ end }}
+                            
+                            {{ if gt (len $exif) 0 }}
+                            <div class="meta-item">
+                                <span class="icon">{{ $.Site.Data.svg.settings | safeHTML }}</span>
+                                <span>{{ delimit $exif " | " }}</span>
+                            </div>
+                            {{ end }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{ end }}
+        </div>
+        {{ else }}
+        <div class="empty-state">
+            <div class="empty-icon">{{ $.Site.Data.svg.camera | safeHTML }}</div>
+            <h3>{{ i18n "no_photos_under" (dict "Title" .Title) }}</h3>
+            <p class="debug-info">
+                <strong>{{ i18n "hint" }}</strong><br>
+                <!-- 使用 i18n 传入 Section 变量，并用 safeHTML 渲染 HTML 标签 -->
+                {{ i18n "debug_info_list" (dict "Section" $sectionName) | safeHTML }}
+            </p>
+        </div>
+        {{ end }}
+    </div>
+</section>
+{{ end }}

@@ -1,0 +1,12 @@
+name = "PhotoFolio"
+license = "MIT"
+licenselink = "https://github.com/guanqr/photo-folio/blob/master/LICENSE"
+description = "A Hugo theme for showcasing personal photography works"
+homepage = "https://github.com/guanqr/photo-folio"
+tags = ["photography", "portfolio", "gallery", "masonry"]
+features = ["responsive", "masonry-layout", "exif-data"]
+min_version = "0.80.0"
+
+[author]
+  name = "Guanqr"
+  homepage = "https://guanqr.com"

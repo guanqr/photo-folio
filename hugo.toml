@@ -1,0 +1,81 @@
+baseURL = "https://your-photography-site.com/"
+languageCode = "zh-cn"
+title = "荷戟獨彷徨"
+theme = "photofolio"
+
+defaultContentLanguage = "zh-cn"
+
+[params]
+    description = "用鏡頭記錄世界的每一個瞬間"
+    heroTitle = "用鏡頭記錄世界"
+    heroSubtitle = "每一幀都是一個故事"
+    logo = ""
+    # 自定义底部版权文字 (支持 HTML 标签，如 <a> 链接)
+    copyrightText = ""
+
+    heroInterval = 5  # 每张图片停留的秒数
+    heroImages = [
+    "/images/photos/金光穿洞.jpg",
+    "/images/photos/钢铁森林.jpg",
+    "/images/photos/杨家溪古榕.jpg"
+    ]
+
+    # 图床/CDN 基础 URL。
+    # 设置后，所有本地图片路径会自动拼接此前缀。
+    # 留空或注释掉则使用本地图片。末尾无需加斜杠。
+    imageCDN = "https://guanqr.oss-cn-hangzhou.aliyuncs.com" 
+
+[params.author]
+    # 名字
+    name = "Guanqr"
+
+[params.typography]
+    # 【重要】字体名称不要加引号，不要加逗号，只写核心字体名
+    headingFont = "Noto Serif TC"
+    bodyFont = "Noto Serif TC"
+    footerFont = "Noto Serif TC"
+    metaFont = "Noto Serif TC"
+    
+    # 基础字号 (这些是纯数字+单位，不会触发 ZgotmplZ)
+    baseFontSize = "16px" 
+    sizeH1 = "2.5em"
+    sizeH2 = "2em"
+    sizeH3 = "1.5em"
+    sizeBody = "1em"
+    sizeSmall = "0.875em"
+    sizeMeta = "0.8em"
+    sizeFooter = "0.85em"
+
+[menu]
+    [[menu.main]]
+        name = "首頁"
+        url = "/"
+        weight = 1
+    [[menu.main]]
+        name = "村落"
+        url = "/countryside/"
+        weight = 2
+    [[menu.main]]
+        name = "城市"
+        url = "/city/"
+        weight = 3
+    [[menu.main]]
+        name = "山河"
+        url = "/landscape/"
+        weight = 4
+    [[menu.main]]
+        name = "民俗"
+        url = "/folk/"
+        weight = 5
+    [[menu.main]]
+        name = "花木"
+        url = "/floral/"
+        weight = 6
+    [[menu.main]]
+        name = "動物"
+        url = "/animal/"
+        weight = 7
+    [[menu.main]]
+        name = "博客"
+        url = "https://guanqr.com/"
+        weight = 8
