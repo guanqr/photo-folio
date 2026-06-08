@@ -59,6 +59,8 @@ body {
     /* --- 布局与动画 --- */
     --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --container-width: 87.5em; 
+
+    --color-tag-bg: rgba(200, 164, 92, 0.15); 
 }
 
 /* ===== Light Mode (明亮模式) ===== */
@@ -79,15 +81,13 @@ body {
     --color-nav-mobile-bg: rgba(248, 249, 250, 0.98);
     --color-lightbox-bg: rgba(255, 255, 255, 0.95);
 
-    --gradient-hero-title: linear-gradient(135deg, #212529 0%, var(--color-accent) 100%);
-
-    --shadow-text-dark: 0 0.25em 1em rgba(255,255,255,0.5);
-    --shadow-text-darker: 0 0.125em 0.5em rgba(255,255,255,0.8);
     --shadow-img-lightbox: 0 0 2em rgba(0,0,0,0.15);
 
     --color-accent-glow: rgba(184, 134, 11, 0.4);
     --color-accent-border: rgba(184, 134, 11, 0.3);
     --color-white-alpha-10: rgba(0, 0, 0, 0.05);
+
+    --color-tag-bg: rgba(184, 134, 11, 0.12); /* 微透明的深金色 */
 }
 
 img { max-width: 100%; height: auto; display: block; }

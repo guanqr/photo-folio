@@ -1,5 +1,4 @@
 {{ define "main" }}
-{{/* 1. 安全获取 section 名称 */}}
 {{ $sectionName := "" }}
 {{ with .File }}
     {{ $sectionName = .ContentBaseName }}
@@ -8,19 +7,25 @@
 {{ end }}
 
 {{ $allPhotos := site.Data.photo.photo | default slice }}
-
-{{/* 按 time 字段降序排列 (desc)，最新的排在最前面 */}}
 {{ $sortedPhotos := sort $allPhotos "time" "desc" }}
 
-{{/* 从排序后的数组中过滤出当前分类的照片 */}}
-{{ $photos := where $sortedPhotos "category" $sectionName }}
+{{ $photos := slice }}
+{{ $isAllPhotosPage := false }}
+
+{{/* 判断是否为“全部作品”页 */}}
+{{ if eq $sectionName "gallery" }}
+    {{ $photos = $sortedPhotos }}
+    {{ $isAllPhotosPage = true }}
+{{ else }}
+    {{ $photos = where $sortedPhotos "category" $sectionName }}
+{{ end }}
 
 <section class="gallery-page">
     <div class="gallery-header">
         <div class="container">
             <nav class="breadcrumb">
-                <a href="/">{{ i18n "home" }}</a>
-                <span class="separator">/</span>
+                <a href="{{ .Site.BaseURL }}">{{ i18n "home" }}</a>
+                <span class="separator">{{ i18n "breadcrumb_separator" }}</span>
                 <span>{{ .Title }}</span>
             </nav>
             <h1 class="page-title">{{ .Title }}</h1>
@@ -36,7 +41,6 @@
         <div class="masonry-grid" id="masonry-grid">
             {{ range $photos }}
             
-            {{/* 提前提取所有属性为独立变量 */}}
             {{ $altText := .alt }}
             {{ $src := .src }}
             {{ $place := .place }}
@@ -46,28 +50,40 @@
             {{ $shutter := .shutter }}
             {{ $iso := .iso }}
             {{ $description := .description }}
+            {{ $categoryKey := .category }}
+            
+            {{/* 获取该照片所属分类的 Page 对象，用于读取中文标题和链接 */}}
+            {{ $categoryPage := site.GetPage $categoryKey }}
             
             <div class="masonry-item">
                 <div class="photo-card" {{ with $description }}data-description="{{ . }}"{{ end }}>
                     <div class="photo-wrapper">
                         {{ with $src }}
-                            {{/* 调用 img-url 组件处理瀑布流照片路径 */}}
                             {{ $srcUrl := partial "img-url.html" (dict "src" . "site" $.Site) }}
                             <img src="{{ $srcUrl }}" alt="{{ $altText }}" loading="lazy" class="photo-img">
                         {{ else }}
                             <div class="photo-placeholder">{{ i18n "no_image" }}</div>
                         {{ end }}
                     </div>
-
                     <div class="photo-meta">
                         <h3 class="photo-title">{{ $altText }}</h3>
                         <div class="photo-details">
-                            {{ with $place }}
-                            <div class="meta-item">
-                                <span class="icon">{{ $.Site.Data.svg.location | safeHTML }}</span>
-                                <span>{{ . }}</span>
+                            
+                            <div class="meta-row-between">
+                                <div class="meta-item">
+                                    {{ with $place }}
+                                        <span class="icon">{{ $.Site.Data.svg.location | safeHTML }}</span>
+                                        <span>{{ . }}</span>
+                                    {{ end }}
+                                </div>
+                                
+                                {{ if and $isAllPhotosPage $categoryPage }}
+                                    <a href="{{ $categoryPage.Permalink }}" class="photo-category-tag" title='{{ i18n "view_category" (dict "Category" $categoryPage.Title) }}'>
+                                        <span class="icon">{{ $.Site.Data.svg.tag | safeHTML }}</span>
+                                        <span>{{ $categoryPage.Title }}</span>
+                                    </a>
+                                {{ end }}
                             </div>
-                            {{ end }}
                             
                             {{ with $time }}
                             <div class="meta-item">
@@ -76,7 +92,6 @@
                             </div>
                             {{ end }}
                             
-                            {{/* 智能拼接 EXIF 参数 */}}
                             {{ $exif := slice }}
                             {{ with $focus }}{{ $exif = $exif | append (printf "%smm" .) }}{{ end }}
                             {{ with $aperture }}{{ $exif = $exif | append (printf "f/%s" .) }}{{ end }}
@@ -99,11 +114,6 @@
         <div class="empty-state">
             <div class="empty-icon">{{ $.Site.Data.svg.camera | safeHTML }}</div>
             <h3>{{ i18n "no_photos_under" (dict "Title" .Title) }}</h3>
-            <p class="debug-info">
-                <strong>{{ i18n "hint" }}</strong><br>
-                <!-- 使用 i18n 传入 Section 变量，并用 safeHTML 渲染 HTML 标签 -->
-                {{ i18n "debug_info_list" (dict "Section" $sectionName) | safeHTML }}
-            </p>
         </div>
         {{ end }}
     </div>

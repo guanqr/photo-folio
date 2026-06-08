@@ -82,6 +82,56 @@
     gap: 0.2em;
 }
 
+/* 同行左右布局容器 */
+.meta-row-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5em;
+    
+    /* 如果左侧没有位置信息，隐藏空节点 */
+    .meta-item:empty {
+        display: none;
+    }
+}
+
+/* 分类跳转标签样式 */
+.photo-category-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+    
+    /* 使用微透明主题色背景，去掉突兀的边框 */
+    background: var(--color-tag-bg); 
+    border: none; 
+    border-radius: 0.25em; /* 小圆角，比胶囊形更克制、更现代 */
+    padding: 0.2em 0.5em;
+    
+    font-family: var(--font-meta); /* 使用等宽字体，与 EXIF 参数视觉统一 */
+    font-size: 0.75em;
+    font-weight: 500;
+    color: var(--color-accent);
+    transition: all var(--transition);
+    
+    /* 确保即使左侧没有位置信息，标签也强制靠右 */
+    margin-left: auto; 
+    
+    &:hover {
+        background: var(--color-accent);
+        color: var(--color-bg); /* 悬停时文字反色 */
+    }
+    
+    .icon {
+        color: inherit;
+        opacity: 0.8;
+        display: flex;
+        svg {
+            width: 0.85em;
+            height: 0.85em;
+        }
+    }
+}
+
 .meta-item {
     display: flex;
     align-items: center;

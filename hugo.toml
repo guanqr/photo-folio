@@ -71,29 +71,9 @@ defaultContentLanguage = "zh-cn"
         url = "/"
         weight = 1
     [[menu.main]]
-        name = "鄉村"
-        url = "/countryside/"
+        name = "作品"
+        url = "/gallery/"
         weight = 2
-    [[menu.main]]
-        name = "城市"
-        url = "/city/"
-        weight = 3
-    [[menu.main]]
-        name = "山河"
-        url = "/landscape/"
-        weight = 4
-    [[menu.main]]
-        name = "民俗"
-        url = "/folk/"
-        weight = 5
-    [[menu.main]]
-        name = "花木"
-        url = "/floral/"
-        weight = 6
-    [[menu.main]]
-        name = "動物"
-        url = "/animal/"
-        weight = 7
     [[menu.main]]
         name = "博客"
         url = "https://guanqr.com/"
