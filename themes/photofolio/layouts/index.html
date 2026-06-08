@@ -33,30 +33,35 @@
             
             {{ range .Site.Sections.ByWeight }}
                 {{ $sectionName := .File.ContentBaseName }}
-                {{ $categoryPhotos := where $sortedPhotos "category" $sectionName }}
-                {{ $photoCount := len $categoryPhotos }}
                 
-                {{ $coverImg := .Params.cover }}
-                {{ if and (not $coverImg) (gt $photoCount 0) }}
-                    {{ $coverImg = (index $categoryPhotos 0).src }}
-                {{ end }}
+                {{/* 排除“全部作品(gallery)”页面，不在首页分类卡片中显示 */}}
+                {{ if ne $sectionName "gallery" }}
+                    
+                    {{ $categoryPhotos := where $sortedPhotos "category" $sectionName }}
+                    {{ $photoCount := len $categoryPhotos }}
+                    
+                    {{ $coverImg := .Params.cover }}
+                    {{ if and (not $coverImg) (gt $photoCount 0) }}
+                        {{ $coverImg = (index $categoryPhotos 0).src }}
+                    {{ end }}
 
-                <!-- 图片容器 + 底部信息容器 -->
-                <a href="{{ .Permalink }}" class="category-card">
-                    <div class="category-image">
-                        {{ with $coverImg }}
-                            {{ $coverUrl := partial "img-url.html" (dict "src" . "site" $.Site) }}
-                            <img src="{{ $coverUrl }}" alt="{{ $.Title }}" loading="lazy">
-                        {{ end }}
-                    </div>
-                    <div class="category-info">
-                        <h3 class="category-title">{{ .Title }}</h3>
-                        <p class="category-count">{{ i18n "photo_count" (dict "Count" $photoCount) }}</p>
-                        {{ with .Params.description }}
-                            <p class="category-desc">{{ . }}</p>
-                        {{ end }}
-                    </div>
-                </a>
+                    <a href="{{ .Permalink }}" class="category-card">
+                        <div class="category-image">
+                            {{ with $coverImg }}
+                                {{ $coverUrl := partial "img-url.html" (dict "src" . "site" $.Site) }}
+                                <img src="{{ $coverUrl }}" alt="{{ $.Title }}" loading="lazy">
+                            {{ end }}
+                        </div>
+                        <div class="category-info">
+                            <h3 class="category-title">{{ .Title }}</h3>
+                            <p class="category-count">{{ i18n "photo_count" (dict "Count" $photoCount) }}</p>
+                            {{ with .Params.description }}
+                                <p class="category-desc">{{ . }}</p>
+                            {{ end }}
+                        </div>
+                    </a>
+                    
+                {{ end }}
             {{ end }}
         </div>
     </div>
