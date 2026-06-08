@@ -140,3 +140,47 @@
     font-size: var(--size-meta);
     color: var(--color-text-secondary);
 }
+
+/* ===== Load More Trigger (无限滚动触发器) ===== */
+.load-more-trigger {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1em;
+    padding: 3em 0;
+    color: var(--color-text-muted);
+    font-size: var(--size-small);
+    transition: opacity 0.3s ease;
+
+    .loading-spinner {
+        width: 2em;
+        height: 2em;
+        border: 0.2em solid var(--color-border);
+        border-top-color: var(--color-accent);
+        border-radius: 50%;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+
+    &.is-loading {
+        .loading-spinner {
+            opacity: 1;
+            animation: spin 0.8s linear infinite;
+        }
+        .load-more-text { display: none; }
+    }
+
+    &.is-finished {
+        .loading-spinner { display: none; }
+    }
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* 隐藏超出首屏批次的照片卡片 */
+.masonry-item.is-hidden {
+    display: none !important;
+}

@@ -12,7 +12,6 @@
 {{ $photos := slice }}
 {{ $isAllPhotosPage := false }}
 
-{{/* 判断是否为“全部作品”页 */}}
 {{ if eq $sectionName "gallery" }}
     {{ $photos = $sortedPhotos }}
     {{ $isAllPhotosPage = true }}
@@ -21,6 +20,7 @@
 {{ end }}
 
 <section class="gallery-page">
+    <!-- 确保页面标题和头部结构完整 -->
     <div class="gallery-header">
         <div class="container">
             <nav class="breadcrumb">
@@ -39,77 +39,20 @@
     <div class="masonry-container">
         {{ if gt (len $photos) 0 }}
         <div class="masonry-grid" id="masonry-grid">
+            {{/* 直接遍历渲染所有照片，不做任何切分 */}}
             {{ range $photos }}
-            
-            {{ $altText := .alt }}
-            {{ $src := .src }}
-            {{ $place := .place }}
-            {{ $time := .time }}
-            {{ $focus := .focus }}
-            {{ $aperture := .aperture }}
-            {{ $shutter := .shutter }}
-            {{ $iso := .iso }}
-            {{ $description := .description }}
-            {{ $categoryKey := .category }}
-            
-            {{/* 获取该照片所属分类的 Page 对象，用于读取中文标题和链接 */}}
-            {{ $categoryPage := site.GetPage $categoryKey }}
-            
-            <div class="masonry-item">
-                <div class="photo-card" {{ with $description }}data-description="{{ . }}"{{ end }}>
-                    <div class="photo-wrapper">
-                        {{ with $src }}
-                            {{ $srcUrl := partial "img-url.html" (dict "src" . "site" $.Site) }}
-                            <img src="{{ $srcUrl }}" alt="{{ $altText }}" loading="lazy" class="photo-img">
-                        {{ else }}
-                            <div class="photo-placeholder">{{ i18n "no_image" }}</div>
-                        {{ end }}
-                    </div>
-                    <div class="photo-meta">
-                        <h3 class="photo-title">{{ $altText }}</h3>
-                        <div class="photo-details">
-                            
-                            <div class="meta-row-between">
-                                <div class="meta-item">
-                                    {{ with $place }}
-                                        <span class="icon">{{ $.Site.Data.svg.location | safeHTML }}</span>
-                                        <span>{{ . }}</span>
-                                    {{ end }}
-                                </div>
-                                
-                                {{ if and $isAllPhotosPage $categoryPage }}
-                                    <a href="{{ $categoryPage.Permalink }}" class="photo-category-tag" title='{{ i18n "view_category" (dict "Category" $categoryPage.Title) }}'>
-                                        <span class="icon">{{ $.Site.Data.svg.tag | safeHTML }}</span>
-                                        <span>{{ $categoryPage.Title }}</span>
-                                    </a>
-                                {{ end }}
-                            </div>
-                            
-                            {{ with $time }}
-                            <div class="meta-item">
-                                <span class="icon">{{ $.Site.Data.svg.calendar | safeHTML }}</span>
-                                <span>{{ . | time.Format "2006.01.02" }}</span>
-                            </div>
-                            {{ end }}
-                            
-                            {{ $exif := slice }}
-                            {{ with $focus }}{{ $exif = $exif | append (printf "%smm" .) }}{{ end }}
-                            {{ with $aperture }}{{ $exif = $exif | append (printf "f/%s" .) }}{{ end }}
-                            {{ with $shutter }}{{ $exif = $exif | append (printf "%ss" .) }}{{ end }}
-                            {{ with $iso }}{{ $exif = $exif | append (printf "ISO%s" .) }}{{ end }}
-                            
-                            {{ if gt (len $exif) 0 }}
-                            <div class="meta-item">
-                                <span class="icon">{{ $.Site.Data.svg.settings | safeHTML }}</span>
-                                <span>{{ delimit $exif " · " }}</span>
-                            </div>
-                            {{ end }}
-                        </div>
-                    </div>
-                </div>
-            </div>
+                {{ partial "photo-card.html" (dict "photo" . "isAllPhotosPage" $isAllPhotosPage "site" $.Site) }}
             {{ end }}
         </div>
+
+        {{/* 如果照片总数大于 12，才显示加载触发器 */}}
+        {{ if gt (len $photos) 12 }}
+        <div class="load-more-trigger" id="load-more-trigger" data-page-size="12" data-finished-text="{{ i18n "no_more_photos" }}">
+            <div class="loading-spinner"></div>
+            <span class="load-more-text">{{ i18n "loading" }}</span>
+        </div>
+        {{ end }}
+
         {{ else }}
         <div class="empty-state">
             <div class="empty-icon">{{ $.Site.Data.svg.camera | safeHTML }}</div>

@@ -1,0 +1,67 @@
+{{ $photo := .photo }}
+{{ $isAllPhotosPage := .isAllPhotosPage }}
+{{ $site := .site }}
+
+{{ $altText := $photo.alt }}
+{{ $src := $photo.src }}
+{{ $srcUrl := $photo.srcUrl | default (partial "img-url.html" (dict "src" $src "site" $site)) }}
+{{ $place := $photo.place }}
+{{ $time := $photo.time }}
+{{ $focus := $photo.focus }}
+{{ $aperture := $photo.aperture }}
+{{ $shutter := $photo.shutter }}
+{{ $iso := $photo.iso }}
+{{ $description := $photo.description }}
+{{ $categoryKey := $photo.category }}
+
+{{ $categoryPage := site.GetPage $categoryKey }}
+{{ $categoryUrl := $photo.categoryUrl | default ($categoryPage.Permalink | default "") }}
+{{ $categoryTitle := $photo.categoryTitle | default ($categoryPage.Title | default "") }}
+
+<div class="masonry-item">
+    <div class="photo-card" {{ with $description }}data-description="{{ . }}"{{ end }}>
+        <div class="photo-wrapper">
+            {{ with $srcUrl }}
+                <img src="{{ . }}" alt="{{ $altText }}" loading="lazy" class="photo-img">
+            {{ else }}
+                <div class="photo-placeholder">{{ i18n "no_image" }}</div>
+            {{ end }}
+        </div>
+        <div class="photo-meta">
+            <h3 class="photo-title">{{ $altText }}</h3>
+            <div class="photo-details">
+                <div class="meta-row-between">
+                    <div class="meta-item">
+                        {{ with $place }}
+                            <span class="icon">{{ $site.Data.svg.location | safeHTML }}</span>
+                            <span>{{ . }}</span>
+                        {{ end }}
+                    </div>
+                    {{ if and $isAllPhotosPage $categoryUrl }}
+                        <a href="{{ $categoryUrl }}" class="photo-category-tag" title='{{ i18n "view_category" (dict "Category" $categoryTitle) }}'>
+                            <span class="icon">{{ $site.Data.svg.tag | safeHTML }}</span>
+                            <span>{{ $categoryTitle }}</span>
+                        </a>
+                    {{ end }}
+                </div>
+                {{ with $time }}
+                <div class="meta-item">
+                    <span class="icon">{{ $site.Data.svg.calendar | safeHTML }}</span>
+                    <span>{{ . | time.Format "2006.01.02" }}</span>
+                </div>
+                {{ end }}
+                {{ $exif := slice }}
+                {{ with $focus }}{{ $exif = $exif | append (printf "%smm" .) }}{{ end }}
+                {{ with $aperture }}{{ $exif = $exif | append (printf "f/%s" .) }}{{ end }}
+                {{ with $shutter }}{{ $exif = $exif | append (printf "%ss" .) }}{{ end }}
+                {{ with $iso }}{{ $exif = $exif | append (printf "ISO%s" .) }}{{ end }}
+                {{ if gt (len $exif) 0 }}
+                <div class="meta-item">
+                    <span class="icon">{{ $site.Data.svg.settings | safeHTML }}</span>
+                    <span>{{ delimit $exif " · " }}</span>
+                </div>
+                {{ end }}
+            </div>
+        </div>
+    </div>
+</div>

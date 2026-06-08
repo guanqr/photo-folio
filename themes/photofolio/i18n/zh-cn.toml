@@ -38,3 +38,9 @@ other = "切換主題"
 
 [view_category]
 other = "查看 {{ .Category }} 分類"
+
+[loading]
+other = "載入中..."
+
+[no_more_photos]
+other = "已展示全部作品"
