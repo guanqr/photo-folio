@@ -1,0 +1,105 @@
+{{ define "main" }}
+{{/* 1. 数据聚合：按 location (省份/国家) 分组 */}}
+{{ $allPhotos := site.Data.photo.photo | default slice }}
+{{ $sortedPhotos := sort $allPhotos "time" "desc" }}
+
+{{ $locationData := slice }}
+{{ $processedLocations := slice }}
+
+{{ range $sortedPhotos }}
+    {{ $loc := .location }}
+    {{ if and $loc (not (in $processedLocations $loc)) }}
+        {{ $processedLocations = $processedLocations | append $loc }}
+        {{ $locPhotos := where $sortedPhotos "location" $loc }}
+        {{ $latestTime := (index $locPhotos 0).time }}
+        
+        {{ $locationData = $locationData | append (dict 
+            "location" $loc 
+            "time" $latestTime 
+            "photos" $locPhotos 
+        ) }}
+    {{ end }}
+{{ end }}
+
+{{ $timeline := sort $locationData "time" "desc" }}
+
+<section class="footprint-page">
+    <div class="gallery-header">
+        <div class="container">
+            <nav class="breadcrumb">
+                <a href="{{ .Site.BaseURL }}">{{ i18n "home" }}</a>
+                <span class="separator">{{ i18n "breadcrumb_separator" }}</span>
+                <span>{{ .Title }}</span>
+            </nav>
+            <h1 class="page-title">{{ .Title }}</h1>
+            {{ with .Params.description }}
+                <p class="page-description">{{ . }}</p>
+            {{ end }}
+        </div>
+    </div>
+
+    <div class="timeline-container">
+        {{ range $timeline }}
+        <div class="timeline-node" data-anim="fade-up">
+            <div class="timeline-date">
+                {{ $year := .time | time.Format "2006" }}
+                {{ $month := .time | time.Format "01" }}
+                <time datetime="{{ .time }}">{{ i18n "date_format_year_month" (dict "Year" $year "Month" $month) }}</time>
+            </div>
+            
+            {{/* 通过中文 Title 反查 Page 对象，获取真实的英文 Permalink */}}
+            {{ $loc := .location }}
+            {{ $footprintSection := site.GetPage "/footprint" }}
+            {{ $locPage := false }}
+            
+            {{ if $footprintSection }}
+                {{ range $footprintSection.Pages }}
+                    {{ if eq .Title $loc }}
+                        {{ $locPage = . }}
+                    {{ end }}
+                {{ end }}
+            {{ end }}
+            
+            {{/* 安全获取 URL，降级方案指向 /footprint/xxx/ */}}
+            {{ $targetUrl := "" }}
+            {{ if $locPage }}
+                {{ $targetUrl = $locPage.Permalink }}
+            {{ else }}
+                {{ $targetUrl = printf "/footprint/%s/" ($loc | urlize) | relURL }}
+            {{ end }}
+
+            <a href="{{ $targetUrl }}" class="timeline-content">
+                <h3 class="timeline-location">{{ .location }}</h3>
+                <p class="timeline-count">{{ i18n "timeline_photo_count" (dict "Count" (len .photos)) }}</p>
+                
+                <div class="timeline-gallery">
+                    {{ $totalPhotos := len .photos }}
+                    {{ $showMore := gt $totalPhotos 4 }}
+                    {{ $imgLimit := cond $showMore 3 4 }} 
+                    
+                    {{ range first $imgLimit .photos }}
+                        {{ $srcUrl := partial "img-url.html" (dict "src" .src "site" $.Site) }}
+                        <div class="timeline-thumb">
+                            <img src="{{ $srcUrl }}" alt="{{ .alt }}" loading="lazy" class="photo-img">
+                        </div>
+                    {{ end }}
+                    
+                    {{ if $showMore }}
+                        <div class="timeline-more">
+                            <span>+{{ sub $totalPhotos 3 }}</span>
+                        </div>
+                    {{ end }}
+                </div>
+            </a>
+        </div>
+        {{ end }}
+        
+        <div class="timeline-end" data-anim="fade-up">
+            <div class="timeline-date"></div>
+            <div class="timeline-content-static">
+                <p class="end-text">{{ i18n "journey_continues" }}</p>
+            </div>
+        </div>
+    </div>
+</section>
+{{ end }}

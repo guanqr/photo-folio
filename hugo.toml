@@ -75,6 +75,10 @@ defaultContentLanguage = "zh-cn"
         url = "/gallery/"
         weight = 2
     [[menu.main]]
+        name = "足迹"
+        url = "/footprint/"
+        weight = 3
+    [[menu.main]]
         name = "博客"
         url = "https://guanqr.com/"
         weight = 8

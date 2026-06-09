@@ -1,30 +1,19 @@
 {{ define "main" }}
-{{ $sectionName := "" }}
-{{ with .File }}
-    {{ $sectionName = .ContentBaseName }}
-{{ else }}
-    {{ $sectionName = .Title | urlize }}
-{{ end }}
+{{ $locationName := .Title }}
 
 {{ $allPhotos := site.Data.photo.photo | default slice }}
 {{ $sortedPhotos := sort $allPhotos "time" "desc" }}
 
-{{ $photos := slice }}
-{{ $isAllPhotosPage := false }}
-
-{{ if eq $sectionName "gallery" }}
-    {{ $photos = $sortedPhotos }}
-    {{ $isAllPhotosPage = true }}
-{{ else }}
-    {{ $photos = where $sortedPhotos "category" $sectionName }}
-{{ end }}
+{{/* 过滤出当前 location 的照片 */}}
+{{ $photos := where $sortedPhotos "location" $locationName }}
 
 <section class="gallery-page">
-    <!-- 确保页面标题和头部结构完整 -->
     <div class="gallery-header">
         <div class="container">
             <nav class="breadcrumb">
                 <a href="{{ .Site.BaseURL }}">{{ i18n "home" }}</a>
+                <span class="separator">{{ i18n "breadcrumb_separator" }}</span>
+                <a href="{{ "/footprint/" | relURL }}">{{ i18n "footprint" }}</a>
                 <span class="separator">{{ i18n "breadcrumb_separator" }}</span>
                 <span>{{ .Title }}</span>
             </nav>
@@ -39,20 +28,10 @@
     <div class="masonry-container">
         {{ if gt (len $photos) 0 }}
         <div class="masonry-grid" id="masonry-grid">
-            {{/* 直接遍历渲染所有照片，不做任何切分 */}}
             {{ range $photos }}
                 {{ partial "photo-card.html" (dict "photo" . "site" $.Site) }}
             {{ end }}
         </div>
-
-        {{/* 如果照片总数大于 12，才显示加载触发器 */}}
-        {{ if gt (len $photos) 12 }}
-        <div class="load-more-trigger" id="load-more-trigger" data-page-size="12" data-finished-text="{{ i18n "no_more_photos" }}">
-            <div class="loading-spinner"></div>
-            <span class="load-more-text">{{ i18n "loading" }}</span>
-        </div>
-        {{ end }}
-
         {{ else }}
         <div class="empty-state">
             <div class="empty-icon">{{ $.Site.Data.svg.camera | safeHTML }}</div>

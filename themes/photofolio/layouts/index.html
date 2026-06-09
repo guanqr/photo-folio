@@ -31,11 +31,14 @@
             {{ $allPhotos := site.Data.photo.photo | default slice }}
             {{ $sortedPhotos := sort $allPhotos "time" "desc" }}
             
+            {{/* 定义排除名单，过滤掉非分类的独立页面 */}}
+            {{ $excludeSections := slice "gallery" "footprint" }}
+            
             {{ range .Site.Sections.ByWeight }}
                 {{ $sectionName := .File.ContentBaseName }}
                 
-                {{/* 排除“全部作品(gallery)”页面，不在首页分类卡片中显示 */}}
-                {{ if ne $sectionName "gallery" }}
+                {{/* 只有不在排除名单中的 Section，才会渲染为分类卡片 */}}
+                {{ if not (in $excludeSections $sectionName) }}
                     
                     {{ $categoryPhotos := where $sortedPhotos "category" $sectionName }}
                     {{ $photoCount := len $categoryPhotos }}

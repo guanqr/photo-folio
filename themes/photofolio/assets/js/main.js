@@ -6,6 +6,7 @@ import { initMobileNav } from './mobile-nav.js';
 import { initBackToTop } from './back-to-top.js';
 import { initThemeToggle } from './theme-toggle.js';
 import { initInfiniteScroll } from './infinite-scroll.js';
+import { initTimelineAnim } from './timeline-anim.js';
 
 // 当 DOM 加载完成后，统一初始化所有模块
 document.addEventListener('DOMContentLoaded', () => {
@@ -17,4 +18,5 @@ document.addEventListener('DOMContentLoaded', () => {
     initBackToTop();
     initThemeToggle();
     initInfiniteScroll();
+    initTimelineAnim();
 });

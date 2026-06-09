@@ -4,18 +4,18 @@ export function initLightbox() {
     const lightboxCaption = document.getElementById('lightbox-caption');
     const lightboxDesc = document.getElementById('lightbox-description');
     const lightboxClose = document.getElementById('lightbox-close');
-    const grid = document.getElementById('masonry-grid');
 
-    if (!lightbox || !lightboxImg || !grid) return;
+    if (!lightbox || !lightboxImg) return;
 
-    // 使用事件委托，监听父容器的点击，完美兼容动态加载的新节点
-    grid.addEventListener('click', function(e) {
+    // 【核心修改】全局事件委托，支持瀑布流和时间流缩略图的点击
+    document.addEventListener('click', function(e) {
         const wrapper = e.target.closest('.photo-wrapper');
-        if (!wrapper) return; // 如果点击的不是照片区域，则忽略
+        if (!wrapper) return; 
 
         const img = wrapper.querySelector('img');
-        const card = wrapper.closest('.photo-card');
-        const title = card ? card.querySelector('.photo-title') : null;
+        // 尝试向上寻找 photo-card (瀑布流) 或 timeline-content (时间流)
+        const card = wrapper.closest('.photo-card') || wrapper.closest('.timeline-content');
+        const title = card ? (card.querySelector('.photo-title') || card.querySelector('.timeline-location')) : null;
         const description = card ? card.dataset.description : '';
 
         if (img) {

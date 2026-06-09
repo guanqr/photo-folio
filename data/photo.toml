@@ -8,6 +8,7 @@ aperture = "10"
 shutter = "1/200"
 time = "2015-08-27"
 place = "天津薊州"
+location = "天津"
 description = "黄崖关长城位于天津市蓟州区，是明代长城的重要关隘之一。夕阳下的长城显得格外壮丽，金色的阳光洒在古老的城砖上，仿佛在诉说着历史的沧桑。"
 
 [[photo]]
@@ -20,6 +21,7 @@ aperture = "2.2"
 shutter = "1/2900"
 time = "2017-07-25"
 place = "青海茶卡鹽湖"
+location = "青海"
 
 [[photo]]
 src = "/images/photos/东京铁路.jpg"
@@ -31,6 +33,7 @@ aperture = "2.2"
 shutter = "1/280"
 time = "2018-07-16"
 place = "日本东京"
+location = "日本"
 
 [[photo]]
 src = "/images/photos/鼓浪屿.jpg"
@@ -42,6 +45,8 @@ aperture = "5.6"
 shutter = "1/250"
 time = "2024-05-02"
 place = "廈門鼓浪嶼"
+location = "福建"
+
 
 [[photo]]
 src = "/images/photos/厦门植物园.jpg"
@@ -53,6 +58,7 @@ aperture = "6"
 shutter = "1/125"
 time = "2024-05-03"
 place = "廈門植物園"
+location = "福建"
 
 [[photo]]
 src = "/images/photos/宏村月沼.jpg"
@@ -64,6 +70,7 @@ aperture = "4.5"
 shutter = "1/125"
 time = "2024-10-06"
 place = "安徽宏村"
+location = "安徽"
 
 [[photo]]
 src = "/images/photos/黛瓦灯影.jpg"
@@ -75,6 +82,7 @@ aperture = "5.6"
 shutter = "1/60"
 time = "2024-10-06"
 place = "安徽宏村"
+location = "安徽"
 
 [[photo]]
 src = "/images/photos/卢村秋景.jpg"
@@ -86,6 +94,7 @@ aperture = "5.6"
 shutter = "1/250"
 time = "2024-10-06"
 place = "安徽盧村"
+location = "安徽"
 
 [[photo]]
 src = "/images/photos/满觉陇汤屋.jpg"
@@ -97,6 +106,7 @@ aperture = "2.4"
 shutter = "1/100"
 time = "2024-10-07"
 place = "杭州滿覺隴"
+location = "杭州"
 
 [[photo]]
 src = "/images/photos/深秋绿叶.jpg"
@@ -108,6 +118,7 @@ aperture = "6.3"
 shutter = "1/160"
 time = "2024-11-30"
 place = "杭州虎跑公園"
+location = "杭州"
 
 [[photo]]
 src = "/images/photos/德寿红梅.jpg"
@@ -119,6 +130,7 @@ aperture = "11"
 shutter = "1/800"
 time = "2025-03-01"
 place = "杭州德壽宮"
+location = "杭州"
 
 [[photo]]
 src = "/images/photos/上海空山基展.jpg"
@@ -130,6 +142,7 @@ aperture = "4"
 shutter = "1/250"
 time = "2025-03-15"
 place = "上海空山基展"
+location = "上海"
 
 [[photo]]
 src = "/images/photos/白纱下的凝视.jpg"
@@ -141,6 +154,7 @@ aperture = "6.3"
 shutter = "1/125"
 time = "2025-10-01"
 place = "上海玩物藏志集"
+location = "上海"
 
 [[photo]]
 src = "/images/photos/老场坊.jpg"
@@ -152,6 +166,7 @@ aperture = "5"
 shutter = "1/125"
 time = "2025-10-01"
 place = "上海 1933 老場坊"
+location = "上海"
 
 [[photo]]
 src = "/images/photos/玉龙雪山.jpg"
@@ -163,6 +178,7 @@ aperture = "5.6"
 shutter = "1/250"
 time = "2025-10-05"
 place = "雲南麗江"
+location = "雲南"
 
 [[photo]]
 src = "/images/photos/云杉坪.jpg"
@@ -174,6 +190,7 @@ aperture = "5.6"
 shutter = "1/250"
 time = "2025-10-05"
 place = "雲南麗江"
+location = "雲南"
 
 [[photo]]
 src = "/images/photos/木窗瓷韵.jpg"
@@ -185,6 +202,7 @@ aperture = "6.3"
 shutter = "1/60"
 time = "2025-10-06"
 place = "雲南麗江"
+location = "雲南"
 
 [[photo]]
 src = "/images/photos/镜中世界.jpg"
@@ -196,6 +214,7 @@ aperture = "6.3"
 shutter = "1/250"
 time = "2025-10-06"
 place = "雲南麗江"
+location = "雲南"
 
 [[photo]]
 src = "/images/photos/荒野之国.jpg"
@@ -207,6 +226,7 @@ aperture = "6.3"
 shutter = "1/320"
 time = "2025-10-06"
 place = "雲南麗江"
+location = "雲南"
 
 [[photo]]
 src = "/images/photos/金檐青霄.jpg"
@@ -218,6 +238,7 @@ aperture = "6.3"
 shutter = "1/250"
 time = "2025-10-07"
 place = "雲南香格里拉"
+location = "雲南"
 
 [[photo]]
 src = "/images/photos/独克宗古城.jpg"
@@ -229,6 +250,7 @@ aperture = "5.3"
 shutter = "1/250"
 time = "2025-10-07"
 place = "雲南香格里拉"
+location = "雲南"
 
 [[photo]]
 src = "/images/photos/松赞林寺.jpg"
@@ -240,6 +262,7 @@ aperture = "6"
 shutter = "1/250"
 time = "2025-10-07"
 place = "雲南香格里拉"
+location = "雲南"
 
 [[photo]]
 src = "/images/photos/望仙谷舞龙.jpg"
@@ -251,6 +274,7 @@ aperture = "6.3"
 shutter = "1/100"
 time = "2026-02-22"
 place = "江西上饒"
+location = "江西"
 
 [[photo]]
 src = "/images/photos/滕王阁.jpg"
@@ -262,6 +286,7 @@ aperture = "6.3"
 shutter = "1/200"
 time = "2026-02-23"
 place = "江西南昌"
+location = "江西"
 
 [[photo]]
 src = "/images/photos/绳金塔.jpg"
@@ -273,6 +298,7 @@ aperture = "6.3"
 shutter = "1/125"
 time = "2026-02-23"
 place = "江西南昌"
+location = "江西"
 
 [[photo]]
 src = "/images/photos/赣江两岸.jpg"
@@ -284,6 +310,7 @@ aperture = "6.3"
 shutter = "1/5"
 time = "2026-02-23"
 place = "江西南昌"
+location = "江西"
 
 [[photo]]
 src = "/images/photos/江岭日出.jpg"
@@ -295,6 +322,7 @@ aperture = "16"
 shutter = "6"
 time = "2026-03-15"
 place = "江西婺源"
+location = "江西"
 
 [[photo]]
 src = "/images/photos/花竹日出.jpg"
@@ -306,6 +334,7 @@ aperture = "16"
 shutter = "1/400"
 time = "2026-05-01"
 place = "福建霞浦"
+location = "福建"
 
 [[photo]]
 src = "/images/photos/杨家溪古榕.jpg"
@@ -317,6 +346,7 @@ aperture = "7.1"
 shutter = "1/125"
 time = "2026-05-01"
 place = "福建霞浦"
+location = "福建"
 
 [[photo]]
 src = "/images/photos/半山铁骨.jpg"
@@ -328,6 +358,7 @@ aperture = "6.3"
 shutter = "1/250"
 time = "2026-05-16"
 place = "杭州杭钢公园"
+location = "杭州"
 
 [[photo]]
 src = "/images/photos/黄线迷宫.jpg"
@@ -339,6 +370,7 @@ aperture = "8"
 shutter = "1/125"
 time = "2026-05-16"
 place = "杭州杭钢公园"
+location = "杭州"
 
 [[photo]]
 src = "/images/photos/金光穿洞.jpg"
@@ -350,6 +382,7 @@ aperture = "10"
 shutter = "1/6"
 time = "2026-05-17"
 place = "杭州曲院風荷"
+location = "杭州"
 
 [[photo]]
 src = "/images/photos/钢铁森林.jpg"
@@ -361,3 +394,4 @@ aperture = "16"
 shutter = "3"
 time = "2026-05-30"
 place = "寧波鎮海煉化"
+location = "寧波"

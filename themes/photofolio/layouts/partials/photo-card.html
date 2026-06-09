@@ -1,5 +1,4 @@
 {{ $photo := .photo }}
-{{ $isAllPhotosPage := .isAllPhotosPage }}
 {{ $site := .site }}
 
 {{ $altText := $photo.alt }}
@@ -37,7 +36,7 @@
                             <span>{{ . }}</span>
                         {{ end }}
                     </div>
-                    {{ if and $isAllPhotosPage $categoryUrl }}
+                    {{ if $categoryUrl }}
                         <a href="{{ $categoryUrl }}" class="photo-category-tag" title='{{ i18n "view_category" (dict "Category" $categoryTitle) }}'>
                             <span class="icon">{{ $site.Data.svg.tag | safeHTML }}</span>
                             <span>{{ $categoryTitle }}</span>
@@ -47,7 +46,10 @@
                 {{ with $time }}
                 <div class="meta-item">
                     <span class="icon">{{ $site.Data.svg.calendar | safeHTML }}</span>
-                    <span>{{ . | time.Format "2006.01.02" }}</span>
+                    {{ $year := . | time.Format "2006" }}
+                    {{ $month := . | time.Format "01" }}
+                    {{ $day := . | time.Format "02" }}
+                    <span>{{ i18n "date_format_full" (dict "Year" $year "Month" $month "Day" $day) }}</span>
                 </div>
                 {{ end }}
                 {{ $exif := slice }}

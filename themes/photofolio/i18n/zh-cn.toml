@@ -44,3 +44,18 @@ other = "載入中..."
 
 [no_more_photos]
 other = "已展示全部作品"
+
+[all_photos]
+other = "全部作品"
+
+[date_format_year_month]
+other = "{{ .Year }}年{{ .Month }}月"
+
+[date_format_full]
+other = "{{ .Year }}年{{ .Month }}月{{ .Day }}日"
+
+[timeline_photo_count]
+other = "共 {{ .Count }} 張作品"
+
+[journey_continues]
+other = "旅途仍在繼續..."

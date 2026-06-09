@@ -1,0 +1,187 @@
+/* ===== Timeline (摄影足迹) ===== */
+.footprint-page { margin-top: 4.5em; }
+
+.timeline-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 4em 2em 6em;
+    position: relative;
+
+    /* 中间的垂直时间线 */
+    &::before {
+        content: '';
+        position: absolute;
+        top: 4em;
+        bottom: 6em;
+        left: calc(2em + 60px); /* 对齐左侧时间文字 */
+        width: 2px;
+        background: var(--color-border);
+    }
+}
+
+.timeline-node {
+    display: flex;
+    gap: 2em;
+    margin-bottom: 4em;
+    position: relative;
+    
+    /* 动画初始状态 */
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+
+    &.is-visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.timeline-date {
+    flex-shrink: 0;
+    width: 60px;
+    text-align: right;
+    padding-top: 0.2em;
+    
+    time {
+        font-family: var(--font-meta);
+        font-size: 0.9em;
+        color: var(--color-text-muted);
+        font-weight: 500;
+    }
+
+    /* 时间轴上的圆点 */
+    &::after {
+        content: '';
+        position: absolute;
+        left: calc(60px + 2em - 5px); /* 对齐垂直线 */
+        top: 0.5em;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--color-bg);
+        border: 2px solid var(--color-accent);
+        z-index: 1;
+    }
+}
+
+/* 将 a 标签伪装成普通卡片 */
+a.timeline-content {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    flex: 1;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: 0.75em;
+    padding: 1.5em;
+    transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+
+    &:hover {
+        border-color: var(--color-accent-border);
+        box-shadow: 0 0.5em 1.5em rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px); /* 增加轻微上浮效果 */
+    }
+}
+
+/* 底部结束语的静态样式 */
+.timeline-content-static {
+    flex: 1;
+    padding: 1.5em 0;
+}
+
+.timeline-location {
+    font-family: var(--font-heading);
+    font-size: 1.5em;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 0.25em;
+}
+
+.timeline-count {
+    font-size: 0.85em;
+    color: var(--color-text-muted);
+    margin-bottom: 1.25em;
+}
+
+.timeline-gallery {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75em;
+}
+
+.timeline-thumb {
+    aspect-ratio: 1/1;
+    border-radius: 0.5em;
+    overflow: hidden;
+    cursor: pointer;
+    
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.5s ease;
+    }
+
+    &:hover img {
+        transform: scale(1.1);
+    }
+}
+
+.timeline-more {
+    aspect-ratio: 1/1;
+    border-radius: 0.5em;
+    background: var(--color-bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-meta);
+    font-size: 1.2em;
+    font-weight: 600;
+    color: var(--color-text-muted);
+}
+
+.timeline-end {
+    display: flex;
+    gap: 2em;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+    
+    &.is-visible { opacity: 1; transform: translateY(0); }
+    
+    .end-text {
+        font-family: var(--font-heading);
+        font-style: italic;
+        color: var(--color-text-muted);
+        padding-top: 0.5em;
+    }
+}
+
+/* 窄屏适配 */
+@media (max-width: 768px) {
+    .timeline-container {
+        padding: 2em 1em 4em;
+        &::before { left: 1em; }
+    }
+    
+    .timeline-node, .timeline-end { 
+        flex-direction: column; 
+        gap: 0.5em; 
+        margin-bottom: 3em;
+    }
+    
+    .timeline-date {
+        width: auto;
+        text-align: left;
+        padding-left: 2em;
+        
+        &::after {
+            left: calc(1em - 5px);
+            top: 0.3em;
+        }
+    }
+    
+    .timeline-gallery {
+        grid-template-columns: repeat(2, 1fr); /* 手机端改为 2 列 */
+    }
+}
