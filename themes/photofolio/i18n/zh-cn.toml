@@ -48,6 +48,9 @@ other = "已展示全部作品"
 [all_photos]
 other = "全部作品"
 
+[footprint]
+other = "攝影足跡"
+
 [date_format_year_month]
 other = "{{ .Year }}年{{ .Month }}月"
 
