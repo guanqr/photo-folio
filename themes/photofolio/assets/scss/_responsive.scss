@@ -90,4 +90,30 @@
             height: 1.4em;
         }
     }
+
+    .timeline-container {
+        padding: 2em 1em 4em;
+        &::before { left: 1em; }
+    }
+    
+    .timeline-node, .timeline-end { 
+        flex-direction: column; 
+        gap: 0.5em; 
+        margin-bottom: 3em;
+    }
+    
+    .timeline-date {
+        width: auto;
+        text-align: left;
+        padding-left: 2em;
+        
+        &::after {
+            left: calc(1em - 5px);
+            top: 0.3em;
+        }
+    }
+    
+    .timeline-gallery {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
