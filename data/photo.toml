@@ -85,6 +85,18 @@ place = "安徽宏村"
 location = "安徽"
 
 [[photo]]
+src = "/images/photos/家训.jpg"
+alt = "家訓"
+category = "humanist"
+focus = "44"
+iso = "1000"
+aperture = "5.3"
+shutter = "1/125"
+time = "2024-10-06"
+place = "安徽宏村"
+location = "安徽"
+
+[[photo]]
 src = "/images/photos/卢村秋景.jpg"
 alt = "盧村秋景"
 category = "countryside"
@@ -253,6 +265,18 @@ place = "雲南香格里拉"
 location = "雲南"
 
 [[photo]]
+src = "/images/photos/松赞一隅.jpg"
+alt = "松贊一隅"
+category = "countryside"
+focus = "28"
+iso = "100"
+aperture = "6.3"
+shutter = "1/320"
+time = "2025-10-07"
+place = "雲南香格里拉"
+location = "雲南"
+
+[[photo]]
 src = "/images/photos/松赞林寺.jpg"
 alt = "松贊林寺"
 category = "countryside"
@@ -267,7 +291,7 @@ location = "雲南"
 [[photo]]
 src = "/images/photos/望仙谷舞龙.jpg"
 alt = "望仙谷舞龍"
-category = "folk"
+category = "humanist"
 focus = "120"
 iso = "1600"
 aperture = "6.3"
