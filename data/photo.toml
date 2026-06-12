@@ -61,6 +61,18 @@ place = "廈門植物園"
 location = "福建"
 
 [[photo]]
+src = "/images/photos/古村熙攘.jpg"
+alt = "古村熙攘"
+category = "countryside"
+focus = "102"
+iso = "400"
+aperture = "6.3"
+shutter = "1/160"
+time = "2024-10-05"
+place = "安徽宏村"
+location = "安徽"
+
+[[photo]]
 src = "/images/photos/宏村月沼.jpg"
 alt = "月沼清晨"
 category = "countryside"
