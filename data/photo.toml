@@ -324,6 +324,18 @@ place = "雲南香格里拉"
 location = "雲南"
 
 [[photo]]
+src = "/images/photos/转经.jpg"
+alt = "轉經"
+category = "humanist"
+focus = "24"
+iso = "100"
+aperture = "8"
+shutter = "1/500"
+time = "2025-10-07"
+place = "雲南香格里拉"
+location = "雲南"
+
+[[photo]]
 src = "/images/photos/望仙谷舞龙.jpg"
 alt = "望仙谷舞龍"
 category = "humanist"
