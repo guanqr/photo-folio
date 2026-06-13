@@ -47,7 +47,6 @@ time = "2024-05-02"
 place = "廈門鼓浪嶼"
 location = "福建"
 
-
 [[photo]]
 src = "/images/photos/厦门植物园.jpg"
 alt = "林中光影"
@@ -115,6 +114,18 @@ category = "countryside"
 focus = "32"
 iso = "200"
 aperture = "5.6"
+shutter = "1/250"
+time = "2024-10-06"
+place = "安徽盧村"
+location = "安徽"
+
+[[photo]]
+src = "/images/photos/瓦檐秋野.jpg"
+alt = "瓦簷秋野"
+category = "countryside"
+focus = "200"
+iso = "400"
+aperture = "6.3"
 shutter = "1/250"
 time = "2024-10-06"
 place = "安徽盧村"
