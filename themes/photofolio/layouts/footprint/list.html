@@ -1,16 +1,25 @@
 {{ define "main" }}
-{{/* 1. 数据聚合：按 location (省份/国家) 分组 */}}
+{{/* 1. 获取并排序所有照片 */}}
 {{ $allPhotos := site.Data.photo.photo | default slice }}
 {{ $sortedPhotos := sort $allPhotos "time" "desc" }}
 
+{{/* 【核心过滤】剔除组照内页，只保留单图和组照封面参与时间流计算 */}}
+{{ $displayPhotos := slice }}
+{{ range $sortedPhotos }}
+    {{ if or (not .series) .is_cover }}
+        {{ $displayPhotos = $displayPhotos | append . }}
+    {{ end }}
+{{ end }}
+
+{{/* 2. 数据聚合：按 location (省份/国家) 分组 */}}
 {{ $locationData := slice }}
 {{ $processedLocations := slice }}
 
-{{ range $sortedPhotos }}
+{{ range $displayPhotos }}
     {{ $loc := .location }}
     {{ if and $loc (not (in $processedLocations $loc)) }}
         {{ $processedLocations = $processedLocations | append $loc }}
-        {{ $locPhotos := where $sortedPhotos "location" $loc }}
+        {{ $locPhotos := where $displayPhotos "location" $loc }}
         {{ $latestTime := (index $locPhotos 0).time }}
         
         {{ $locationData = $locationData | append (dict 
@@ -47,7 +56,7 @@
                 <time datetime="{{ .time }}">{{ i18n "date_format_year_month" (dict "Year" $year "Month" $month) }}</time>
             </div>
             
-            {{/* 通过中文 Title 反查 Page 对象，获取真实的英文 Permalink */}}
+            {{/* 反查 Page 对象获取真实的英文 Permalink */}}
             {{ $loc := .location }}
             {{ $footprintSection := site.GetPage "/footprint" }}
             {{ $locPage := false }}
@@ -60,7 +69,6 @@
                 {{ end }}
             {{ end }}
             
-            {{/* 安全获取 URL，降级方案指向 /footprint/xxx/ */}}
             {{ $targetUrl := "" }}
             {{ if $locPage }}
                 {{ $targetUrl = $locPage.Permalink }}

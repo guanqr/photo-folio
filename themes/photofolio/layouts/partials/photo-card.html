@@ -1,9 +1,10 @@
 {{ $photo := .photo }}
 {{ $site := .site }}
+{{ $isInSeriesPage := .isInSeriesPage | default false }}
 
 {{ $altText := $photo.alt }}
 {{ $src := $photo.src }}
-{{ $srcUrl := $photo.srcUrl | default (partial "img-url.html" (dict "src" $src "site" $site)) }}
+{{ $srcUrl := partial "img-url.html" (dict "src" $src "site" $site) }}
 {{ $place := $photo.place }}
 {{ $time := $photo.time }}
 {{ $focus := $photo.focus }}
@@ -12,22 +13,57 @@
 {{ $iso := $photo.iso }}
 {{ $description := $photo.description }}
 {{ $categoryKey := $photo.category }}
+{{ $seriesName := $photo.series }}
+{{ $isCover := $photo.is_cover }}
 
 {{ $categoryPage := site.GetPage $categoryKey }}
-{{ $categoryUrl := $photo.categoryUrl | default ($categoryPage.Permalink | default "") }}
-{{ $categoryTitle := $photo.categoryTitle | default ($categoryPage.Title | default "") }}
+{{ $categoryUrl := $categoryPage.Permalink | default "" }}
+{{ $categoryTitle := $categoryPage.Title | default "" }}
+
+{{/* 反查组照的英文 URL (仅在非组照详情页时需要) */}}
+{{ $seriesUrl := "" }}
+{{ if and $seriesName $isCover (not $isInSeriesPage) }}
+    {{ $seriesSection := site.GetPage "/series" }}
+    {{ $seriesPage := false }}
+    {{ if $seriesSection }}
+        {{ range $seriesSection.Pages }}
+            {{ if eq .Title $seriesName }}
+                {{ $seriesPage = . }}
+            {{ end }}
+        {{ end }}
+    {{ end }}
+    {{ if $seriesPage }}
+        {{ $seriesUrl = $seriesPage.Permalink }}
+    {{ else }}
+        {{ $seriesUrl = printf "/series/%s/" ($seriesName | urlize) | relURL }}
+    {{ end }}
+{{ end }}
+
+{{/* 【核心逻辑 1】决定显示的标题：如果在普通页面且是组照封面，显示组照名；否则显示照片自己的 alt */}}
+{{ $displayTitle := $altText }}
+{{ if and $seriesName $isCover (not $isInSeriesPage) }}
+    {{ $displayTitle = $seriesName }}
+{{ end }}
 
 <div class="masonry-item">
     <div class="photo-card" {{ with $description }}data-description="{{ . }}"{{ end }}>
-        <div class="photo-wrapper">
-            {{ with $srcUrl }}
-                <img src="{{ . }}" alt="{{ $altText }}" loading="lazy" class="photo-img">
-            {{ else }}
-                <div class="photo-placeholder">{{ i18n "no_image" }}</div>
-            {{ end }}
-        </div>
+        
+        {{/* 【核心逻辑 2】决定封面渲染方式：如果在普通页面且是组照封面，渲染为 a 标签带图标；否则渲染为普通 div 支持 Lightbox 放大 */}}
+        {{ if and $seriesName $isCover (not $isInSeriesPage) }}
+            <a href="{{ $seriesUrl }}" class="photo-wrapper series-link" title='{{ i18n "view_series" (dict "Series" $seriesName) }}'>
+                <img src="{{ $srcUrl }}" alt="{{ $altText }}" loading="lazy" class="photo-img">
+                <div class="series-badge">
+                    <span class="icon">{{ $site.Data.svg.layers | safeHTML }}</span>
+                </div>
+            </a>
+        {{ else }}
+            <div class="photo-wrapper">
+                <img src="{{ $srcUrl }}" alt="{{ $altText }}" loading="lazy" class="photo-img">
+            </div>
+        {{ end }}
+
         <div class="photo-meta">
-            <h3 class="photo-title">{{ $altText }}</h3>
+            <h3 class="photo-title">{{ $displayTitle }}</h3>
             <div class="photo-details">
                 <div class="meta-row-between">
                     <div class="meta-item">

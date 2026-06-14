@@ -1,35 +1,24 @@
 {{ define "main" }}
-{{ $sectionName := "" }}
-{{ with .File }}
-    {{ $sectionName = .ContentBaseName }}
-{{ else }}
-    {{ $sectionName = .Title | urlize }}
-{{ end }}
+{{ $seriesName := .Title }}
 
 {{ $allPhotos := site.Data.photo.photo | default slice }}
 {{ $sortedPhotos := sort $allPhotos "time" "desc" }}
 
-{{ $displayPhotos := slice }}
+{{/* 【修复】使用 range + eq 手动过滤，确保精准匹配组照名称 */}}
+{{ $photos := slice }}
 {{ range $sortedPhotos }}
-    {{ if or (not .series) .is_cover }}
-        {{ $displayPhotos = $displayPhotos | append . }}
+    {{ if eq .series $seriesName }}
+        {{ $photos = $photos | append . }}
     {{ end }}
 {{ end }}
 
-{{ $photos := slice }}
-{{/* 后续逻辑使用 $displayPhotos 替代 $sortedPhotos */}}
-{{ if eq $sectionName "gallery" }}
-    {{ $photos = $displayPhotos }}
-{{ else }}
-    {{ $photos = where $displayPhotos "category" $sectionName }}
-{{ end }}
-
 <section class="gallery-page">
-    <!-- 确保页面标题和头部结构完整 -->
     <div class="gallery-header">
         <div class="container">
             <nav class="breadcrumb">
                 <a href="{{ .Site.BaseURL }}">{{ i18n "home" }}</a>
+                <span class="separator">{{ i18n "breadcrumb_separator" }}</span>
+                <a href="{{ "/series/" | relURL }}">{{ i18n "series_collection" }}</a>
                 <span class="separator">{{ i18n "breadcrumb_separator" }}</span>
                 <span>{{ .Title }}</span>
             </nav>
@@ -44,24 +33,15 @@
     <div class="masonry-container">
         {{ if gt (len $photos) 0 }}
         <div class="masonry-grid" id="masonry-grid">
-            {{/* 直接遍历渲染所有照片，不做任何切分 */}}
             {{ range $photos }}
-                {{ partial "photo-card.html" (dict "photo" . "site" $.Site "isInSeriesPage" false) }}
+                {{/* 【核心】传入 isInSeriesPage = true，让卡片知道当前在组照详情页 */}}
+                {{ partial "photo-card.html" (dict "photo" . "site" $.Site "isInSeriesPage" true) }}
             {{ end }}
         </div>
-
-        {{/* 如果照片总数大于 12，才显示加载触发器 */}}
-        {{ if gt (len $photos) 12 }}
-        <div class="load-more-trigger" id="load-more-trigger" data-page-size="12" data-finished-text="{{ i18n "no_more_photos" }}">
-            <div class="loading-spinner"></div>
-            <span class="load-more-text">{{ i18n "loading" }}</span>
-        </div>
-        {{ end }}
-
         {{ else }}
         <div class="empty-state">
             <div class="empty-icon">{{ $.Site.Data.svg.camera | safeHTML }}</div>
-            <h3>{{ i18n "no_photos_under" (dict "Title" .Title) }}</h3>
+            <h3>该组照暂无照片，请检查 photo.toml 中的 series 字段是否与标题完全一致。</h3>
         </div>
         {{ end }}
     </div>

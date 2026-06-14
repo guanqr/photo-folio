@@ -1,19 +1,14 @@
 {{ define "main" }}
-{{ $locationName := .Title }}
-
 {{ $allPhotos := site.Data.photo.photo | default slice }}
 {{ $sortedPhotos := sort $allPhotos "time" "desc" }}
 
-{{/* 【核心过滤】剔除组照内页，只保留单图和组照封面 */}}
-{{ $displayPhotos := slice }}
+{{/* 【核心逻辑】只过滤出所有的“组照封面” (有 series 字段且 is_cover 为 true) */}}
+{{ $coverPhotos := slice }}
 {{ range $sortedPhotos }}
-    {{ if or (not .series) .is_cover }}
-        {{ $displayPhotos = $displayPhotos | append . }}
+    {{ if and .series .is_cover }}
+        {{ $coverPhotos = $coverPhotos | append . }}
     {{ end }}
 {{ end }}
-
-{{/* 过滤出当前 location 的照片 */}}
-{{ $photos := where $displayPhotos "location" $locationName }}
 
 <section class="gallery-page">
     <div class="gallery-header">
@@ -21,29 +16,31 @@
             <nav class="breadcrumb">
                 <a href="{{ .Site.BaseURL }}">{{ i18n "home" }}</a>
                 <span class="separator">{{ i18n "breadcrumb_separator" }}</span>
-                <a href="{{ "/footprint/" | relURL }}">{{ i18n "footprint" }}</a>
-                <span class="separator">{{ i18n "breadcrumb_separator" }}</span>
                 <span>{{ .Title }}</span>
             </nav>
             <h1 class="page-title">{{ .Title }}</h1>
             {{ with .Params.description }}
                 <p class="page-description">{{ . }}</p>
             {{ end }}
-            <p class="photo-count">{{ i18n "total_photos" (dict "Count" (len $photos)) }}</p>
+            <p class="photo-count">共 {{ len $coverPhotos }} 个组照作品</p>
         </div>
     </div>
 
     <div class="masonry-container">
-        {{ if gt (len $photos) 0 }}
+        {{ if gt (len $coverPhotos) 0 }}
         <div class="masonry-grid" id="masonry-grid">
-            {{ range $photos }}
+            {{ range $coverPhotos }}
+                {{/* 注意：这里 isInSeriesPage 必须为 false，这样卡片才会渲染为带图标的跳转链接 */}}
                 {{ partial "photo-card.html" (dict "photo" . "site" $.Site "isInSeriesPage" false) }}
             {{ end }}
         </div>
         {{ else }}
         <div class="empty-state">
             <div class="empty-icon">{{ $.Site.Data.svg.camera | safeHTML }}</div>
-            <h3>{{ i18n "no_photos_under" (dict "Title" .Title) }}</h3>
+            <h3>暂无组照作品</h3>
+            <p style="margin-top: 1em; color: var(--color-text-muted); font-size: 0.9em;">
+                请在 <code>data/photo.toml</code> 中为照片添加 <code>series</code> 和 <code>is_cover = true</code> 字段。
+            </p>
         </div>
         {{ end }}
     </div>

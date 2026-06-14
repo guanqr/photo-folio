@@ -62,3 +62,9 @@ other = "共 {{ .Count }} 張作品"
 
 [journey_continues]
 other = "旅途仍在繼續..."
+
+[view_series]
+other = "查看組照：{{ .Series }}"
+
+[series_collection]
+other = "組照合集"

@@ -184,3 +184,47 @@
 .masonry-item.is-hidden {
     display: none !important;
 }
+
+/* 组照封面链接样式 */
+.series-link {
+    display: block;
+    cursor: pointer;
+}
+
+/* 组照右上角图标 */
+.series-badge {
+    position: absolute;
+    top: 0.75em;
+    right: 0.75em;
+    width: 2em;
+    height: 2em;
+    /* 保持半透明黑色毛玻璃背景，不变成纯色方块 */
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.1); /* 增加一丝微弱的白边提升质感 */
+    border-radius: 0.375em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff; /* 默认白色图标 */
+    z-index: 2;
+    /* 增加平滑过渡 */
+    transition: background 0.3s ease, color 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+
+    .icon {
+        display: flex;
+        svg {
+            width: 1.1em;
+            height: 1.1em;
+        }
+    }
+}
+
+/* 悬停效果：背景稍微加深，图标变成主题色（金色），并轻微放大 */
+.photo-card:hover .series-badge {
+    background: rgba(0, 0, 0, 0.7); 
+    color: var(--color-accent); /* 图标变为金色 */
+    border-color: var(--color-accent-border); /* 边框泛起微光 */
+    transform: scale(1.05); /* 轻微放大，增加灵动感 */
+}

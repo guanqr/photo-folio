@@ -11,6 +11,7 @@ export function initLightbox() {
     document.addEventListener('click', function(e) {
         const wrapper = e.target.closest('.photo-wrapper');
         if (!wrapper) return; 
+        if (wrapper.tagName === 'A') return; 
 
         const img = wrapper.querySelector('img');
         // 尝试向上寻找 photo-card (瀑布流) 或 timeline-content (时间流)
