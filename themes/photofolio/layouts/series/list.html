@@ -2,7 +2,7 @@
 {{ $allPhotos := site.Data.photo.photo | default slice }}
 {{ $sortedPhotos := sort $allPhotos "time" "desc" }}
 
-{{/* 【核心逻辑】只过滤出所有的“组照封面” (有 series 字段且 is_cover 为 true) */}}
+{{/* 只过滤出所有的“组照封面” */}}
 {{ $coverPhotos := slice }}
 {{ range $sortedPhotos }}
     {{ if and .series .is_cover }}
@@ -22,7 +22,7 @@
             {{ with .Params.description }}
                 <p class="page-description">{{ . }}</p>
             {{ end }}
-            <p class="photo-count">共 {{ len $coverPhotos }} 个组照作品</p>
+            <p class="photo-count">{{ i18n "series_count" (dict "Count" (len $coverPhotos)) }}</p>
         </div>
     </div>
 
@@ -30,16 +30,15 @@
         {{ if gt (len $coverPhotos) 0 }}
         <div class="masonry-grid" id="masonry-grid">
             {{ range $coverPhotos }}
-                {{/* 注意：这里 isInSeriesPage 必须为 false，这样卡片才会渲染为带图标的跳转链接 */}}
                 {{ partial "photo-card.html" (dict "photo" . "site" $.Site "isInSeriesPage" false) }}
             {{ end }}
         </div>
         {{ else }}
         <div class="empty-state">
             <div class="empty-icon">{{ $.Site.Data.svg.camera | safeHTML }}</div>
-            <h3>暂无组照作品</h3>
+            <h3>{{ i18n "no_series" }}</h3>
             <p style="margin-top: 1em; color: var(--color-text-muted); font-size: 0.9em;">
-                请在 <code>data/photo.toml</code> 中为照片添加 <code>series</code> 和 <code>is_cover = true</code> 字段。
+                {{ i18n "no_series_hint" }}
             </p>
         </div>
         {{ end }}
