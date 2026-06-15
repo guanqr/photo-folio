@@ -7,6 +7,7 @@
 ## ✨ 特性
 
 - **瀑布流布局** — CSS 多列瀑布流展示照片，宽屏三列，响应式适配
+- **组图系列** — 支持将多张照片归入同一主题系列（如组照），以封面图展示，点击进入系列详情页浏览全部照片
 - **Lightbox 灯箱** — 点击照片全屏预览
 - **暗色/亮色主题切换** — 自动检测系统偏好，支持手动切换
 - **无限滚动加载** — 照片超过 12 张时自动分批加载
@@ -14,7 +15,7 @@
 - **足迹时间线** — 按地区整理拍摄足迹
 - **PWA 支持** — Service Worker 离线缓存
 - **Instant.page** — 链接预加载，提升浏览体验
-- **中文排版优化** — 使用 Noto Serif TC、I.MingCP、LXGW WenKai TC 等中文字体
+- **中文排版优化** — 使用 Glyph Correction、Noto Serif TC、I.MingCP、LXGW WenKai TC 等中文字体，支持本地字体注入
 - **图片 CDN** — 支持阿里云 OSS 等图床加速
 
 ## 🚀 快速开始
@@ -53,6 +54,7 @@ photo-folio/
 ├── assets/              # Hugo 资源（jsconfig.json）
 ├── content/
 │   ├── gallery/         # 全部作品页
+│   ├── series/          # 组照合集（主题系列作品）
 │   ├── city/            # 城市分类
 │   ├── countryside/     # 乡村分类
 │   ├── landscape/       # 山河分类
@@ -90,6 +92,34 @@ time = "2025-10-05"
 place = "雲南麗江"
 location = "雲南"
 description = "照片描述（可选，用于 Lightbox 展示）"
+series = ""               # 组照名称（可选，同一组照的多张照片填写相同名称）
+is_cover = false          # 是否为组照封面（同一组照中仅一张设为 true）
+```
+
+### 组照（系列作品）
+
+多张照片可归入同一个「组照」（如"割藺草"系列）。在非组照页面中，组照的封面图会显示为带图标的链接，点击后跳转到独立组照详情页浏览全部照片。
+
+```toml
+# 封面图
+[[photo]]
+series = "割藺草"
+is_cover = true
+# ... 其他字段
+
+# 同组其他照片
+[[photo]]
+series = "割藺草"
+is_cover = false
+# ... 其他字段
+```
+
+同时在 `content/series/` 目录下创建对应的 Markdown 文件：
+
+```markdown
+---
+title: "割藺草"
+---
 ```
 
 ## 🎨 配置
@@ -103,7 +133,7 @@ description = "照片描述（可选，用于 Lightbox 展示）"
 | `params.heroInterval` | 轮播间隔（秒） |
 | `params.enableServiceWorker` | 启用 PWA Service Worker |
 | `params.enableInstantPage` | 启用 Instant.page 预加载 |
-| `params.typography` | 字体设置（fontLinks、字体名称、字号） |
+| `params.typography` | 字体设置（fontLinks、字体名称、字号、本地字体注入） |
 
 ## 🚢 部署
 
