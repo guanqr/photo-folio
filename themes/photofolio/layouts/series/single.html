@@ -4,7 +4,7 @@
 {{ $allPhotos := site.Data.photo.photo | default slice }}
 {{ $sortedPhotos := sort $allPhotos "time" "desc" }}
 
-{{/* 【修复】使用 range + eq 手动过滤，确保精准匹配组照名称 */}}
+{{/* 使用 range + eq 手动过滤，确保精准匹配组照名称 */}}
 {{ $photos := slice }}
 {{ range $sortedPhotos }}
     {{ if eq .series $seriesName }}
@@ -34,14 +34,16 @@
         {{ if gt (len $photos) 0 }}
         <div class="masonry-grid" id="masonry-grid">
             {{ range $photos }}
-                {{/* 【核心】传入 isInSeriesPage = true，让卡片知道当前在组照详情页 */}}
                 {{ partial "photo-card.html" (dict "photo" . "site" $.Site "isInSeriesPage" true) }}
             {{ end }}
         </div>
         {{ else }}
         <div class="empty-state">
             <div class="empty-icon">{{ $.Site.Data.svg.camera | safeHTML }}</div>
-            <h3>该组照暂无照片，请检查 photo.toml 中的 series 字段是否与标题完全一致。</h3>
+            <h3>{{ i18n "no_photos_in_series" (dict "Title" $seriesName) }}</h3>
+            <p style="margin-top: 1em; color: var(--color-text-muted); font-size: 0.9em;">
+                {{ i18n "no_series_match_hint" }}
+            </p>
         </div>
         {{ end }}
     </div>
