@@ -50,8 +50,8 @@ defaultContentLanguage = "zh-cn"
     ]
 
     # 【重要】字体名称不要加引号，不要加逗号，只写核心字体名
-    headingFont = "Noto Serif TC"
-    bodyFont = "I.MingCP"
+    headingFont = "Glyph Correction, Noto Serif TC"
+    bodyFont = "Glyph Correction, I.MingCP"
     footerFont = "LXGW WenKai TC"
     metaFont = "LXGW WenKai TC"
     

@@ -27,29 +27,64 @@
 <!-- 动态注入排版变量 -->
 {{ $typo := .Site.Params.typography }}
 <style>
-:root {
-    /* 基础字号 (纯数值，直接输出) */
-    --base-font-size: {{ $typo.baseFontSize | default "16px" }};
-    
-    /* 
-      字体族设置：
-      1. 使用 printf 自动为配置中的字体名加上单引号和 fallback (如 , serif)
-      2. 使用 safeCSS 告诉 Hugo 这是合法的 CSS，防止 ZgotmplZ 报错
-    */
-    --font-heading: {{ printf "'%s', serif" ($typo.headingFont | default "Noto Serif TC") | safeCSS }};
-    --font-body: {{ printf "'%s', serif" ($typo.bodyFont | default "Noto Serif TC") | safeCSS }};
-    --font-footer: {{ printf "'%s',serif" ($typo.footerFont | default "Noto Serif TC") | safeCSS }};
-    --font-meta: {{ printf "'%s', serif" ($typo.metaFont | default "Noto Serif TC") | safeCSS }};
-    
-    /* 字号比例 (纯数值，直接输出) */
-    --size-h1: {{ $typo.sizeH1 | default "2.5em" }};
-    --size-h2: {{ $typo.sizeH2 | default "2em" }};
-    --size-h3: {{ $typo.sizeH3 | default "1.5em" }};
-    --size-body: {{ $typo.sizeBody | default "1em" }};
-    --size-small: {{ $typo.sizeSmall | default "0.875em" }};
-    --size-meta: {{ $typo.sizeMeta | default "0.8em" }};
-    --size-footer: {{ $typo.sizeFooter | default "0.85em" }};
-}
+    @font-face {
+        font-family: 'Glyph Correction';
+        src: url('{{ "/fonts/glyph-correction.woff2" | relURL }}') format('woff2');
+        font-weight: normal;
+        font-style: normal;
+        font-display: swap; /* 确保文本在字体加载期间依然可见 */
+    }
+
+    :root {
+        /* 基础字号 (纯数值，直接输出) */
+        --base-font-size: {{ $typo.baseFontSize | default "16px" }};
+        
+        /* 
+        字体族设置：
+        1. 使用 printf 自动为配置中的字体名加上单引号和 fallback (如 , serif)
+        2. 使用 safeCSS 告诉 Hugo 这是合法的 CSS，防止 ZgotmplZ 报错
+        */
+        {{/* 1. 处理 Heading 字体 */}}
+        {{ $hStack := "'Glyph Correction', 'Noto Serif TC', serif" }}
+        {{ with $typo.headingFont }}
+            {{ $q := slice }}{{ range split . "," }}{{ $q = $q | append (printf "'%s'" (trim . " ")) }}{{ end }}
+            {{ $hStack = printf "%s, serif" (delimit $q ", ") }}
+        {{ end }}
+        --font-heading: {{ $hStack | safeCSS }};
+
+        {{/* 2. 处理 Body 字体 */}}
+        {{ $bStack := "'Glyph Correction', 'Noto Serif TC', serif" }}
+        {{ with $typo.bodyFont }}
+            {{ $q := slice }}{{ range split . "," }}{{ $q = $q | append (printf "'%s'" (trim . " ")) }}{{ end }}
+            {{ $bStack = printf "%s, serif" (delimit $q ", ") }}
+        {{ end }}
+        --font-body: {{ $bStack | safeCSS }};
+
+        {{/* 3. 处理 Footer 字体 */}}
+        {{ $fStack := "'Glyph Correction', 'Noto Serif TC', serif" }}
+        {{ with $typo.footerFont }}
+            {{ $q := slice }}{{ range split . "," }}{{ $q = $q | append (printf "'%s'" (trim . " ")) }}{{ end }}
+            {{ $fStack = printf "%s, serif" (delimit $q ", ") }}
+        {{ end }}
+        --font-footer: {{ $fStack | safeCSS }};
+
+        {{/* 4. 处理 Meta 字体 (通常使用等宽或无衬线，这里以 sans-serif 结尾) */}}
+        {{ $mStack := "'Glyph Correction', 'Noto Serif TC', serif" }}
+        {{ with $typo.metaFont }}
+            {{ $q := slice }}{{ range split . "," }}{{ $q = $q | append (printf "'%s'" (trim . " ")) }}{{ end }}
+            {{ $mStack = printf "%s, serif" (delimit $q ", ") }}
+        {{ end }}
+        --font-meta: {{ $mStack | safeCSS }};
+
+        /* 字号比例 (纯数值，直接输出) */
+        --size-h1: {{ $typo.sizeH1 | default "2.5em" }};
+        --size-h2: {{ $typo.sizeH2 | default "2em" }};
+        --size-h3: {{ $typo.sizeH3 | default "1.5em" }};
+        --size-body: {{ $typo.sizeBody | default "1em" }};
+        --size-small: {{ $typo.sizeSmall | default "0.875em" }};
+        --size-meta: {{ $typo.sizeMeta | default "0.8em" }};
+        --size-footer: {{ $typo.sizeFooter | default "0.85em" }};
+    }
 </style>
 
 <!-- 使用 Hugo 0.128.0+ 最新的 css.Sass 语法 -->
