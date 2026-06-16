@@ -1,9 +1,9 @@
 {{ define "main" }}
-{{/* 1. 获取并排序所有照片 */}}
+{{/* 1. 获取并排序所有照片（全量数据，包含组照内页） */}}
 {{ $allPhotos := site.Data.photo.photo | default slice }}
 {{ $sortedPhotos := sort $allPhotos "time" "desc" }}
 
-{{/* 【核心过滤】剔除组照内页，只保留单图和组照封面参与时间流计算 */}}
+{{/* 2. 过滤出用于展示的卡片（剔除组照内页，只保留单图和封面） */}}
 {{ $displayPhotos := slice }}
 {{ range $sortedPhotos }}
     {{ if or (not .series) .is_cover }}
@@ -11,25 +11,35 @@
     {{ end }}
 {{ end }}
 
-{{/* 2. 数据聚合：按 location (省份/国家) 分组 */}}
+{{/* 3. 数据聚合：按 location (省份/国家) 分组 */}}
 {{ $locationData := slice }}
 {{ $processedLocations := slice }}
 
-{{ range $displayPhotos }}
+{{/* 【核心修复】遍历全量照片，以确保统计数字包含组照内页 */}}
+{{ range $sortedPhotos }}
     {{ $loc := .location }}
     {{ if and $loc (not (in $processedLocations $loc)) }}
         {{ $processedLocations = $processedLocations | append $loc }}
-        {{ $locPhotos := where $displayPhotos "location" $loc }}
-        {{ $latestTime := (index $locPhotos 0).time }}
         
+        {{/* A. 获取该地点的全量照片（用于统计真实总数和获取最新时间） */}}
+        {{ $realLocPhotos := where $sortedPhotos "location" $loc }}
+        {{ $latestTime := (index $realLocPhotos 0).time }}
+        {{ $realCount := len $realLocPhotos }}
+        
+        {{/* B. 获取该地点的展示照片（用于生成缩略图，已剔除组照内页） */}}
+        {{ $displayLocPhotos := where $displayPhotos "location" $loc }}
+        
+        {{/* 构建包含真实总数和展示照片的字典 */}}
         {{ $locationData = $locationData | append (dict 
             "location" $loc 
             "time" $latestTime 
-            "photos" $locPhotos 
+            "realCount" $realCount
+            "photos" $displayLocPhotos
         ) }}
     {{ end }}
 {{ end }}
 
+{{/* 4. 对所有地点按解锁时间降序排序 */}}
 {{ $timeline := sort $locationData "time" "desc" }}
 
 <section class="footprint-page">
@@ -69,6 +79,7 @@
                 {{ end }}
             {{ end }}
             
+            {{/* 安全获取 URL */}}
             {{ $targetUrl := "" }}
             {{ if $locPage }}
                 {{ $targetUrl = $locPage.Permalink }}
@@ -78,9 +89,11 @@
 
             <a href="{{ $targetUrl }}" class="timeline-content">
                 <h3 class="timeline-location">{{ .location }}</h3>
-                <p class="timeline-count">{{ i18n "timeline_photo_count" (dict "Count" (len .photos)) }}</p>
+                <!-- 【修复】使用 .realCount 显示真实的照片总数 -->
+                <p class="timeline-count">{{ i18n "timeline_photo_count" (dict "Count" .realCount) }}</p>
                 
                 <div class="timeline-gallery">
+                    <!-- 缩略图依然使用过滤后的 .photos，避免组照内页撑爆网格 -->
                     {{ $totalPhotos := len .photos }}
                     {{ $showMore := gt $totalPhotos 4 }}
                     {{ $imgLimit := cond $showMore 3 4 }} 

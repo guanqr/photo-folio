@@ -4,16 +4,17 @@
 {{ $allPhotos := site.Data.photo.photo | default slice }}
 {{ $sortedPhotos := sort $allPhotos "time" "desc" }}
 
-{{/* 【核心过滤】剔除组照内页，只保留单图和组照封面 */}}
+{{/* 【修复 1】获取该地点真实的照片集合（包含组照内页） */}}
+{{ $realPhotos := where $sortedPhotos "location" $locationName }}
+{{ $totalRealCount := len $realPhotos }}
+
+{{/* 【修复 2】过滤出用于瀑布流显示的卡片（剔除组照内页） */}}
 {{ $displayPhotos := slice }}
-{{ range $sortedPhotos }}
+{{ range $realPhotos }}
     {{ if or (not .series) .is_cover }}
         {{ $displayPhotos = $displayPhotos | append . }}
     {{ end }}
 {{ end }}
-
-{{/* 过滤出当前 location 的照片 */}}
-{{ $photos := where $displayPhotos "location" $locationName }}
 
 <section class="gallery-page">
     <div class="gallery-header">
@@ -29,14 +30,16 @@
             {{ with .Params.description }}
                 <p class="page-description">{{ . }}</p>
             {{ end }}
-            <p class="photo-count">{{ i18n "total_photos" (dict "Count" (len $photos)) }}</p>
+            <!-- 【修复 3】使用真实的照片总数进行统计 -->
+            <p class="photo-count">{{ i18n "total_photos" (dict "Count" $totalRealCount) }}</p>
         </div>
     </div>
 
     <div class="masonry-container">
-        {{ if gt (len $photos) 0 }}
+        {{ if gt (len $displayPhotos) 0 }}
         <div class="masonry-grid" id="masonry-grid">
-            {{ range $photos }}
+            <!-- 渲染时使用过滤后的 displayPhotos -->
+            {{ range $displayPhotos }}
                 {{ partial "photo-card.html" (dict "photo" . "site" $.Site "isInSeriesPage" false) }}
             {{ end }}
         </div>
