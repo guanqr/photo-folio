@@ -246,24 +246,3 @@
     border-color: var(--color-accent-border); 
     transform: scale(1.05); 
 }
-
-/* 窄屏手机端适配 */
-@media (max-width: 768px) {
-    .series-badge {
-        top: 0.5em;
-        right: 0.5em;
-        height: 1.6em;
-        padding: 0 0.45em;
-        gap: 0.2em;
-        border-radius: 0.8em;
-
-        .icon svg {
-            width: 0.9em;
-            height: 0.9em;
-        }
-
-        .count {
-            font-size: 0.75em;
-        }
-    }
-}

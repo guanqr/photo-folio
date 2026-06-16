@@ -2,18 +2,19 @@
 .footprint-page { margin-top: 4.5em; }
 
 .timeline-container {
-    max-width: 800px;
+    /* 【修改】将最大宽度从 800px 放宽到 1100px */
+    max-width: 1100px; 
     margin: 0 auto;
     padding: 4em 2em 6em;
     position: relative;
 
-    /* 中间的垂直时间线 */
+    /* 中间的垂直时间线 (位置不需要变，依然对齐左侧) */
     &::before {
         content: '';
         position: absolute;
         top: 4em;
         bottom: 6em;
-        left: calc(2em + 60px); /* 对齐左侧时间文字 */
+        left: calc(2em + 80px); /* 稍微加宽左侧时间列的宽度，从 60px 改为 80px */
         width: 2px;
         background: var(--color-border);
     }
@@ -21,7 +22,7 @@
 
 .timeline-node {
     display: flex;
-    gap: 2em;
+    gap: 2.5em; /* 【微调】增加左侧时间和右侧卡片的间距 */
     margin-bottom: 4em;
     position: relative;
     
@@ -38,22 +39,22 @@
 
 .timeline-date {
     flex-shrink: 0;
-    width: 60px;
+    width: 80px; /* 【微调】配合上面的 calc，加宽左侧时间列 */
     text-align: right;
     padding-top: 0.2em;
     
     time {
         font-family: var(--font-meta);
-        font-size: 0.9em;
+        font-size: 0.95em; /* 稍微放大一点时间字体 */
         color: var(--color-text-muted);
         font-weight: 500;
     }
 
-    /* 时间轴上的圆点 */
+    /* 时间轴上的圆点位置微调 */
     &::after {
         content: '';
         position: absolute;
-        left: calc(60px + 2em - 5px); /* 对齐垂直线 */
+        left: calc(80px + 2.5em - 5px); /* 对齐垂直线 */
         top: 0.5em;
         width: 12px;
         height: 12px;

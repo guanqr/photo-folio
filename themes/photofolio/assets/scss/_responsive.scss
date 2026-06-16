@@ -116,4 +116,22 @@
     .timeline-gallery {
         grid-template-columns: repeat(2, 1fr);
     }
+
+    .series-badge {
+        top: 0.5em;
+        right: 0.5em;
+        height: 1.6em;
+        padding: 0 0.45em;
+        gap: 0.2em;
+        border-radius: 0.8em;
+
+        .icon svg {
+            width: 0.9em;
+            height: 0.9em;
+        }
+
+        .count {
+            font-size: 0.75em;
+        }
+    }
 }
