@@ -7,19 +7,16 @@ other = "首頁"
 other = "/"
 
 [portfolio_title]
-other = "作品集"
+other = "照片集"
 
 [photo_count]
-other = "{{ .Count }} 張作品"
+other = "{{ .Count }} 張照片"
 
 [total_photos]
-other = "共 {{ .Count }} 張作品"
-
-[no_image]
-other = "暫無圖片"
+other = "共 {{ .Count }} 張照片"
 
 [no_photos_under]
-other = "{{ .Title }} 下暫無圖片"
+other = "{{ .Title }} 下暫無照片"
 
 [hint]
 other = "提示："
@@ -43,10 +40,10 @@ other = "查看 {{ .Category }} 分類"
 other = "載入中..."
 
 [no_more_photos]
-other = "已展示全部作品"
+other = "已展示全部照片"
 
 [all_photos]
-other = "全部作品"
+other = "全部照片"
 
 [footprint]
 other = "攝影足跡"
@@ -58,7 +55,7 @@ other = "{{ .Year }}年{{ .Month }}月"
 other = "{{ .Year }}年{{ .Month }}月{{ .Day }}日"
 
 [timeline_photo_count]
-other = "共 {{ .Count }} 張作品"
+other = "共 {{ .Count }} 張照片"
 
 [journey_continues]
 other = "旅途仍在繼續..."
@@ -70,10 +67,10 @@ other = "查看組照：{{ .Series }}"
 other = "組照合集"
 
 [series_count]
-other = "共 {{ .Count }} 个組照作品"
+other = "共 {{ .Count }} 組照片"
 
 [no_series]
-other = "暫無組照作品"
+other = "暫無組照"
 
 [no_series_hint]
 other = "請在 data/photo.toml 中為照片添加 series 和 is_cover = true 字段。"
