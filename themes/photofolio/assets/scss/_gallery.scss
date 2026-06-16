@@ -191,40 +191,79 @@
     cursor: pointer;
 }
 
-/* 组照右上角图标 */
+/* 组照右上角图标与数量 (胶囊形状) */
 .series-badge {
     position: absolute;
     top: 0.75em;
     right: 0.75em;
-    width: 2em;
     height: 2em;
-    /* 保持半透明黑色毛玻璃背景，不变成纯色方块 */
-    background: rgba(0, 0, 0, 0.5);
+    padding: 0 0.65em;
+    
+    /* 【核心】100% 复用现有 Design Tokens，不新增变量 */
+    background: var(--color-header-bg);
+    border: 1px solid var(--color-white-alpha-10);
+    color: var(--color-text); 
+    
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
-    border: 1px solid rgba(255, 255, 255, 0.1); /* 增加一丝微弱的白边提升质感 */
-    border-radius: 0.375em;
+    border-radius: 1em;
     display: flex;
     align-items: center;
-    justify-content: center;
-    color: #fff; /* 默认白色图标 */
-    z-index: 2;
-    /* 增加平滑过渡 */
+    gap: 0.35em;
+    
     transition: background 0.3s ease, color 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+
+    .icon, .count {
+        color: inherit; 
+        transition: inherit;
+    }
 
     .icon {
         display: flex;
+        transform: none; 
+        
         svg {
             width: 1.1em;
             height: 1.1em;
+            stroke: currentColor; 
+            fill: none;
         }
+    }
+
+    .count {
+        font-family: var(--font-meta);
+        font-size: 0.85em;
+        font-weight: 600;
+        line-height: 1;
+        padding-bottom: 0.05em;
     }
 }
 
-/* 悬停效果：背景稍微加深，图标变成主题色（金色），并轻微放大 */
+/* 悬停效果：复用 Lightbox 的深色遮罩和主题色 */
 .photo-card:hover .series-badge {
-    background: rgba(0, 0, 0, 0.7); 
-    color: var(--color-accent); /* 图标变为金色 */
-    border-color: var(--color-accent-border); /* 边框泛起微光 */
-    transform: scale(1.05); /* 轻微放大，增加灵动感 */
+    background: var(--color-lightbox-bg); 
+    color: var(--color-accent); 
+    border-color: var(--color-accent-border); 
+    transform: scale(1.05); 
+}
+
+/* 窄屏手机端适配 */
+@media (max-width: 768px) {
+    .series-badge {
+        top: 0.5em;
+        right: 0.5em;
+        height: 1.6em;
+        padding: 0 0.45em;
+        gap: 0.2em;
+        border-radius: 0.8em;
+
+        .icon svg {
+            width: 0.9em;
+            height: 0.9em;
+        }
+
+        .count {
+            font-size: 0.75em;
+        }
+    }
 }

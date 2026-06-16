@@ -16,6 +16,12 @@
 {{ $seriesName := $photo.series }}
 {{ $isCover := $photo.is_cover }}
 
+{{/* 计算该组照的真实总照片数（包含内页） */}}
+{{ $seriesCount := 0 }}
+{{ if and $seriesName $isCover }}
+    {{ $seriesCount = len (where site.Data.photo.photo "series" $seriesName) }}
+{{ end }}
+
 {{ $categoryPage := site.GetPage $categoryKey }}
 {{ $categoryUrl := $categoryPage.Permalink | default "" }}
 {{ $categoryTitle := $categoryPage.Title | default "" }}
@@ -54,6 +60,7 @@
                 <img src="{{ $srcUrl }}" alt="{{ $altText }}" loading="lazy" class="photo-img">
                 <div class="series-badge">
                     <span class="icon">{{ $site.Data.svg.layers | safeHTML }}</span>
+                    <span class="count">{{ $seriesCount }}</span>
                 </div>
             </a>
         {{ else }}
