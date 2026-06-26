@@ -47,13 +47,6 @@ export function getColumnCount() {
     return 3;
 }
 
-export function getShortestColumn(columns) {
-    if (!columns || columns.length === 0) return null;
-    return columns.reduce((a, b) =>
-        a.getBoundingClientRect().height <= b.getBoundingClientRect().height ? a : b
-    );
-}
-
 export function initMasonryResize() {
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimeout);
@@ -91,7 +84,7 @@ function flipRebuild(grid) {
     // ── 拆旧列、建新列 ──
     // 传入 firstMap 供 rebuildAndDistribute 使用预测量高度（避免 item 脱离 DOM 后测高为 0）
     allRendered.forEach(el => el.remove());
-    rebuildAndDistribute(grid, allRendered, firstMap);
+    rebuildAndDistribute(grid, allRendered);
 
     // 重建后立即恢复滚动位置
     window.scrollTo(0, scrollY);
@@ -129,43 +122,25 @@ function flipRebuild(grid) {
     });
 }
 
-function rebuildAndDistribute(grid, items, firstMap) {
+function rebuildAndDistribute(grid, items) {
     grid.innerHTML = '';
     const columns = [];
-    const colHeights = [];
     for (let i = 0; i < currentColumnCount; i++) {
         const col = document.createElement('div');
         col.className = 'masonry-column';
         columns.push(col);
-        colHeights.push(0);
         grid.appendChild(col);
     }
     grid._columns = columns;
 
+    // 按原始时间序排列
     const itemIndexMap = new Map();
     grid._allItems.forEach((item, index) => itemIndexMap.set(item, index));
     items.sort((a, b) => (itemIndexMap.get(a) || 0) - (itemIndexMap.get(b) || 0));
 
-    // 用 firstMap 中预测量的高度（此时 items 已脱离 DOM，需用旧数据）
-    const visibleHeights = [];
-    items.forEach(item => {
-        if (!item.classList.contains('is-hidden')) {
-            const fr = firstMap ? firstMap.get(item) : null;
-            visibleHeights.push(fr ? fr.height : 300);
-        }
-    });
-    const avgHeight = visibleHeights.length > 0
-        ? visibleHeights.reduce((a, b) => a + b, 0) / visibleHeights.length
-        : 300;
-
-    items.forEach(item => {
-        const hidden = item.classList.contains('is-hidden');
-        let minIdx = 0;
-        for (let i = 1; i < columns.length; i++) {
-            if (colHeights[i] < colHeights[minIdx]) minIdx = i;
-        }
-        columns[minIdx].appendChild(item);
-        // 刚插入的 item 已在 DOM 中，可用真实高度；隐藏项用预估高度
-        colHeights[minIdx] += hidden ? avgHeight : item.getBoundingClientRect().height;
+    // round-robin：保证行内严格按时间横排
+    items.forEach((item, index) => {
+        const col = columns[index % currentColumnCount];
+        col.appendChild(item);
     });
 }

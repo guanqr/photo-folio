@@ -8,6 +8,13 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 
 ---
 
+## [0.5.2] — 2026-06-27
+
+### Fixed
+- 修复 resize 后行内照片顺序错乱：`rebuildAndDistribute` 从最短列优先改为 round-robin，保证每行始终按时间横排
+
+---
+
 ## [0.5.1] — 2026-06-27
 
 ### Fixed
