@@ -1,29 +1,33 @@
+/**
+ * 无限滚动加载
+ *
+ * 依赖 inline script（baseof.html）在 HTML 解析阶段标记首批之外的 .is-hidden。
+ * masonry.js 随后用 round-robin 将 items 移入列容器。
+ *
+ * 关键：使用 grid._allItems（原始时间顺序）而非 DOM 查询来定位下一批，
+ *      避免 round-robin 重排后 document 顺序导致的一列全显、他列为空。
+ */
+
 export function initInfiniteScroll() {
     const trigger = document.getElementById('load-more-trigger');
     const grid = document.getElementById('masonry-grid');
-    
-    if (!trigger || !grid) return;
 
-    const items = grid.querySelectorAll('.masonry-item');
+    if (!trigger || !grid) return;
+    if (!grid._allItems) return;
+
+    const allItems = grid._allItems;  // 原始时间倒序数组，由 masonry 保存
     const pageSize = parseInt(trigger.dataset.pageSize, 10) || 12;
-    
-    // 如果照片总数小于等于 pageSize，不需要无限滚动
-    if (items.length <= pageSize) {
+
+    // 前 pageSize 张已可见（inline script 只隐藏了 index >= pageSize 的项）
+    let currentIndex = pageSize;
+
+    if (currentIndex >= allItems.length) {
         trigger.remove();
         return;
     }
 
-    let currentIndex = pageSize;
     let isLoading = false;
 
-    // 1. 初始化：隐藏第 13 张及以后的照片
-    items.forEach((item, index) => {
-        if (index >= pageSize) {
-            item.classList.add('is-hidden');
-        }
-    });
-
-    // 2. 监听滚动
     const observer = new IntersectionObserver((entries) => {
         if (entries[0].isIntersecting && !isLoading) {
             loadMore();
@@ -33,7 +37,7 @@ export function initInfiniteScroll() {
     observer.observe(trigger);
 
     function loadMore() {
-        if (currentIndex >= items.length) {
+        if (currentIndex >= allItems.length) {
             finishLoading();
             return;
         }
@@ -41,23 +45,22 @@ export function initInfiniteScroll() {
         isLoading = true;
         trigger.classList.add('is-loading');
 
-        // 模拟一点点延迟，让 loading 动画显示出来
         setTimeout(() => {
-            const nextIndex = Math.min(currentIndex + pageSize, items.length);
-            
-            // 显示下一批照片
+            const nextIndex = Math.min(currentIndex + pageSize, allItems.length);
+
+            // 按原始时间顺序依次解除隐藏 —— 均匀分布在所有列中
             for (let i = currentIndex; i < nextIndex; i++) {
-                items[i].classList.remove('is-hidden');
+                allItems[i].classList.remove('is-hidden');
             }
-            
+
             currentIndex = nextIndex;
             isLoading = false;
             trigger.classList.remove('is-loading');
 
-            if (currentIndex >= items.length) {
+            if (currentIndex >= allItems.length) {
                 finishLoading();
             }
-        }, 300); 
+        }, 800);
     }
 
     function finishLoading() {

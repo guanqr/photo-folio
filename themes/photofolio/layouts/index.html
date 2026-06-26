@@ -48,7 +48,7 @@
                         {{ $coverImg = (index $categoryPhotos 0).src }}
                     {{ end }}
 
-                    <a href="{{ .Permalink }}" class="category-card">
+                    <a href="{{ .RelPermalink }}" class="category-card">
                         <div class="category-image">
                             {{ with $coverImg }}
                                 {{ $coverUrl := partial "img-url.html" (dict "src" . "site" $.Site) }}

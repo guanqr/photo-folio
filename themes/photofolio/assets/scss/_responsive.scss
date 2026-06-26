@@ -1,6 +1,6 @@
 /* ===== Responsive & Mobile Nav ===== */
 @media (max-width: 1024px) {
-    .masonry-grid { column-count: 2; }
+    .masonry-grid { gap: 1em; }
 }
 
 @media (max-width: 768px) {
@@ -21,7 +21,7 @@
     }
 
     .grid { grid-template-columns: 1fr; }
-    .masonry-grid { column-count: 1; }
+    /* 列数由 JS 控制，不再切换 flex-direction */
     
     .footer-inner {
         flex-direction: column;
@@ -30,32 +30,34 @@
     }
 
     .nav-toggle {
-        display: flex !important; 
-        z-index: 1002; 
+        visibility: visible;
+        opacity: 1;
+        z-index: 1002;
     }
 
     .site-nav {
         position: fixed;
-        top: 4.5em; 
+        top: 4.5em;
         left: 0; right: 0;
         background: var(--color-nav-mobile-bg);
         backdrop-filter: blur(1.25em);
         -webkit-backdrop-filter: blur(1.25em);
-        padding: 2em 1em; 
-        
+        padding: 2em 1em;
+
         opacity: 0;
         visibility: hidden;
-        transform: translateY(-1em); 
-        transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, visibility 0.3s;
+        transform: translateY(-1em);
         pointer-events: none;
-        z-index: 998; 
+        z-index: 998;
         height: auto;
-        overflow: visible; 
+        overflow: visible;
+        /* 不设 transition，JS 在用户点击汉堡按钮时动态注入，
+           防止跨越 768px 断点时从桌面可见态过渡到移动隐藏态造成闪烁 */
 
         &.active {
             opacity: 1 !important;
             visibility: visible !important;
-            transform: translateY(0) !important; 
+            transform: translateY(0) !important;
             pointer-events: all !important;
         }
 
@@ -93,29 +95,9 @@
 
     .timeline-container {
         padding: 2em 1em 4em;
-        &::before { left: 1em; }
     }
-    
-    .timeline-node, .timeline-end { 
-        flex-direction: column; 
-        gap: 0.5em; 
-        margin-bottom: 3em;
-    }
-    
-    .timeline-date {
-        width: auto;
-        text-align: left;
-        padding-left: 2em;
-        
-        &::after {
-            left: calc(1em - 5px);
-            top: 0.3em;
-        }
-    }
-    
-    .timeline-gallery {
-        grid-template-columns: repeat(2, 1fr);
-    }
+
+    /* timeline-node / timeline-date / timeline-gallery 由 JS 控制 + FLIP 动画 */
 
     .series-badge {
         top: 0.5em;

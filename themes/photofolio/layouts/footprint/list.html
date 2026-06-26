@@ -46,7 +46,7 @@
     <div class="gallery-header">
         <div class="container">
             <nav class="breadcrumb">
-                <a href="{{ .Site.BaseURL }}">{{ i18n "home" }}</a>
+                <a href="/">{{ i18n "home" }}</a>
                 <span class="separator">{{ i18n "breadcrumb_separator" }}</span>
                 <span>{{ .Title }}</span>
             </nav>
@@ -82,7 +82,7 @@
             {{/* 安全获取 URL */}}
             {{ $targetUrl := "" }}
             {{ if $locPage }}
-                {{ $targetUrl = $locPage.Permalink }}
+                {{ $targetUrl = $locPage.RelPermalink }}
             {{ else }}
                 {{ $targetUrl = printf "/footprint/%s/" ($loc | urlize) | relURL }}
             {{ end }}
@@ -94,7 +94,7 @@
                 
                 <div class="timeline-gallery">
                     <!-- 缩略图依然使用过滤后的 .photos，避免组照内页撑爆网格 -->
-                    {{ $totalPhotos := len .photos }}
+                    {{ $totalPhotos := .realCount }}
                     {{ $showMore := gt $totalPhotos 4 }}
                     {{ $imgLimit := cond $showMore 3 4 }} 
                     

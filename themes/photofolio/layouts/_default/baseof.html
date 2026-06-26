@@ -5,11 +5,26 @@
 </head>
 <body>
     {{- partial "header.html" . -}}
-    
+
     <main class="main-content">
         {{- block "main" . }}{{- end }}
     </main>
-    
+
+    <!-- 同步隐藏超出首屏的照片，阻止浏览器提前加载隐藏图片 -->
+    <script>
+    (function() {
+        var trigger = document.getElementById('load-more-trigger');
+        if (!trigger) return;
+        var grid = document.getElementById('masonry-grid');
+        if (!grid) return;
+        var pageSize = parseInt(trigger.dataset.pageSize, 10) || 12;
+        var items = grid.querySelectorAll('.masonry-item');
+        for (var i = pageSize; i < items.length; i++) {
+            items[i].classList.add('is-hidden');
+        }
+    })();
+    </script>
+
     {{- partial "footer.html" . -}}
 
     <!-- Lightbox 全局容器 -->
@@ -32,17 +47,17 @@
     <!-- 【核心】使用 Hugo Extended 的 js.Build (esbuild) 编译所有 ES6 模块 -->
     {{ $js := resources.Get "js/main.js" }}
     {{ $opts := dict "targetPath" "js/bundle.js" }}
-    
+
     {{ if hugo.IsProduction }}
       {{ $opts = merge $opts (dict "minify" true) }}
     {{ end }}
-    
+
     {{ $js = $js | js.Build $opts }}
-    
+
     {{ if hugo.IsProduction }}
       {{ $js = $js | resources.Fingerprint }}
     {{ end }}
-    
+
     <!-- defer 确保在 DOM 解析完成后执行，不会阻塞渲染 -->
     <script src="{{ $js.RelPermalink }}" {{ with $js.Data.Integrity }}integrity="{{ . }}"{{ end }} defer></script>
 

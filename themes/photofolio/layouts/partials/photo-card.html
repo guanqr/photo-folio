@@ -23,7 +23,7 @@
 {{ end }}
 
 {{ $categoryPage := site.GetPage $categoryKey }}
-{{ $categoryUrl := $categoryPage.Permalink | default "" }}
+{{ $categoryUrl := $categoryPage.RelPermalink | default "" }}
 {{ $categoryTitle := $categoryPage.Title | default "" }}
 
 {{/* 反查组照的英文 URL (仅在非组照详情页时需要) */}}
@@ -39,7 +39,7 @@
         {{ end }}
     {{ end }}
     {{ if $seriesPage }}
-        {{ $seriesUrl = $seriesPage.Permalink }}
+        {{ $seriesUrl = $seriesPage.RelPermalink }}
     {{ else }}
         {{ $seriesUrl = printf "/series/%s/" ($seriesName | urlize) | relURL }}
     {{ end }}
