@@ -15,8 +15,9 @@ defaultContentLanguage = "zh-cn"
 
     heroInterval = 5  # 每张图片停留的秒数
     heroImages = [
+    "/images/photos/骑楼拥圣心.jpg",
+    "/images/photos/冼村龙舟招景-1.jpg",
     "/images/photos/割蔺草-1.jpg",
-    "/images/photos/金光穿洞.jpg",
     "/images/photos/钢铁森林.jpg"
     ]
 
