@@ -28,7 +28,16 @@
     margin: 0 auto;
 }
 
+/* fallback：JS 就绪前用 CSS columns */
 .masonry-grid {
+    column-count: 3;
+    column-gap: 1.5em;
+}
+
+/* JS 接管：切换为 flex 布局 */
+.masonry-grid.masonry-ready {
+    column-count: auto;
+    column-gap: normal;
     display: flex;
     gap: 1.5em;
     align-items: flex-start;
@@ -43,8 +52,14 @@
 }
 
 .masonry-item {
-    /* 列内 gap 已处理间距，无需额外 margin */
+    break-inside: avoid; /* CSS columns fallback 防止卡片被截断 */
+    margin-bottom: 1.5em; /* CSS columns fallback 间距 */
     transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+}
+
+.masonry-grid.masonry-ready .masonry-item {
+    break-inside: auto;
+    margin-bottom: 0;
 }
 
 .photo-card {

@@ -36,6 +36,9 @@ export function initMasonry() {
     grid._columns = columns;
     grid._renderedCount = allItems.length;
     grid._nextIndex = allItems.length;
+
+    // 标记就绪，CSS 从 column-count fallback 切换到 flex 布局
+    grid.classList.add('masonry-ready');
 }
 
 export function getColumnCount() {

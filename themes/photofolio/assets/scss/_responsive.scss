@@ -1,6 +1,7 @@
 /* ===== Responsive & Mobile Nav ===== */
 @media (max-width: 1024px) {
-    .masonry-grid { gap: 1em; }
+    .masonry-grid { column-count: 2; }
+    .masonry-grid.masonry-ready { column-count: auto; gap: 1em; }
 }
 
 @media (max-width: 768px) {
@@ -21,7 +22,8 @@
     }
 
     .grid { grid-template-columns: 1fr; }
-    /* 列数由 JS 控制，不再切换 flex-direction */
+    .masonry-grid { column-count: 1; }
+    .masonry-grid.masonry-ready { column-count: auto; gap: 1em; }
     
     .footer-inner {
         flex-direction: column;

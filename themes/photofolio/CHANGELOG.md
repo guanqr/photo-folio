@@ -8,6 +8,13 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 
 ---
 
+## [0.5.1] — 2026-06-27
+
+### Fixed
+- 修复移动端首帧闪现三列再跳一列的问题：`column-count` 和 `display:flex` 冲突导致 fallback 失效，改为 JS 就绪前后两套独立 CSS（`.masonry-ready` 切换）
+
+---
+
 ## [0.5.0] — 2026-06-27
 
 ### Added
