@@ -8,6 +8,35 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 
 ---
 
+## [0.5.0] — 2026-06-27
+
+### Added
+- **瀑布流 JS 引擎**（`masonry.js`）：显式列容器 + round-robin 初始分配，替代 CSS `column-count`
+- **resize FLIP 动画**：列数互切时位移+缩放平滑过渡（0.35s），自动保持滚动位置
+- **足迹时间线 FLIP 动画**（`timeline-anim.js`）：JS 接管整卡 flex 布局、缩略图网格列数、竖线/圆点位置，跨越 768px 断点时统一 FLIP
+- **inline 隐藏脚本**（`baseof.html`）：同步执行，在浏览器触发 lazy loading 前标记首批之外的 `.is-hidden`
+
+### Changed
+- **首屏加载策略**：inline script → masonry 初始化 → infinite-scroll 分发的三阶段管线
+- `infinite-scroll.js` 基于 `grid._allItems` 原始时间序索引，不依赖 DOM 顺序；加载延迟 300ms → 800ms
+- **移动端导航**：汉堡按钮 `display:none` → `visibility+opacity` 淡入淡出；菜单动画由 JS 动态注入 transition（`transitionend` 后清除）
+- **CSS 架构**：移除 `_responsive.scss` 中由 JS 接管的规则（`.masonry-grid` flex-direction、`.timeline-gallery` 列数、`.timeline-node` / `.timeline-date` 移动端布局）。竖线/圆点改用 CSS 自定义属性（`--tl-line-left` 等）
+- **全站内部链接**：`Permalink` → `RelPermalink`，`BaseURL` → `/`
+- `.masonry-item`、`.timeline-thumb`、`.series-badge`、`.timeline-content` 统一 `transition: transform 0.35s`
+
+### Fixed
+- CSS columns 加载更多时已有照片位置跳变
+- resize 后 loadMore 隐藏项全部挤入同一列：`rebuildAndDistribute` 脱离 DOM 后测高为 0 → 引入虚拟 `colHeights[]` 跟踪 + 入参 `firstMap` 预测量高度
+- FLIP 元素索引错配：`allRendered.sort()` 原地排序导致 `firstRects[i]` / `lastRects[i]` 非同一元素 → `Map<Element, Rect>` 按元素查找
+- FLIP Play 阶段清除 `transformOrigin` 导致缩放原点从 `top left` 跳回 `center` → 保留不清除
+- `visibility:hidden` 阻止浏览器原生 lazy loading → 移除，用同步 inline script + round-robin 替代
+- `getBoundingClientRect()` 在初始分配时每轮强制同步 layout → round-robin 替代最短列
+- 足迹页面 `+N` 未计入组照内页数量
+- `.series-badge` FLIP 动画时长与卡片不一致（0.3s vs 0.35s）
+- mobile nav 跨越 768px 断点时从桌面可见态过渡造成闪烁
+
+---
+
 ## [0.4.1] — 2026-06-16
 
 ### Added
