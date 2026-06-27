@@ -13,6 +13,8 @@ defaultContentLanguage = "zh-cn"
     # 自定义底部版权文字 (支持 HTML 标签，如 <a> 链接)
     copyrightText = ""
 
+    # Hero 轮播模式: "auto" 自动选前5张横图 / "custom" 自定义图片 / "none" 关闭
+    heroMode = "auto"
     heroInterval = 5  # 每张图片停留的秒数
     heroImages = [
     "/images/photos/骑楼拥圣心.jpg",
@@ -76,7 +78,7 @@ defaultContentLanguage = "zh-cn"
         url = "/gallery/"
         weight = 2
     [[menu.main]]
-        name = "足迹"
+        name = "足跡"
         url = "/footprint/"
         weight = 3
     [[menu.main]]
