@@ -13,16 +13,6 @@ defaultContentLanguage = "zh-cn"
     # 自定义底部版权文字 (支持 HTML 标签，如 <a> 链接)
     copyrightText = ""
 
-    # Hero 轮播模式: "auto" 自动选前5张横图 / "custom" 自定义图片 / "none" 关闭
-    heroMode = "auto"
-    heroInterval = 5  # 每张图片停留的秒数
-    heroImages = [
-    "/images/photos/骑楼拥圣心.jpg",
-    "/images/photos/冼村龙舟招景-1.jpg",
-    "/images/photos/割蔺草-1.jpg",
-    "/images/photos/钢铁森林.jpg"
-    ]
-
     # 图床/CDN 基础 URL。
     # 设置后，所有本地图片路径会自动拼接此前缀。
     # 留空或注释掉则使用本地图片。末尾无需加斜杠。

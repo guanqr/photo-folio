@@ -1,54 +1,6 @@
 {{ define "main" }}
-{{ $heroMode := .Site.Params.heroMode | default "auto" }}
-
-<!-- ================= 1. 轮播图区域 ================= -->
-{{ if ne $heroMode "none" }}
-{{ if eq $heroMode "auto" }}
-{{/* 自动模式：取最新 50 张照片，JS 端筛选横图 */}}
-{{ $allPhotos := site.Data.photo.photo | default slice }}
-{{ $withKey := slice }}
-{{ range $idx, $p := $allPhotos }}
-    {{ $t := $p.time | time.Format "2006-01-02 15:04:05" }}
-    {{ $withKey = $withKey | append (merge $p (dict "_sortKey" (printf "%s-%06d" $t $idx))) }}
-{{ end }}
-{{ $candidates := first 50 (sort $withKey "_sortKey" "desc") }}
-
-<section class="hero"
-         data-interval="{{ .Site.Params.heroInterval | default 5 }}"
-         data-candidates='[
-    {{- range $i, $p := $candidates -}}
-        {{- $url := partial "img-url.html" (dict "src" $p.src "site" $.Site) -}}
-        {{- if $i }},{{ end -}}
-        {"src":{{ $url | jsonify }},"alt":{{ $p.alt | jsonify }},"series":{{ $p.series | jsonify }},"isCover":{{ $p.is_cover | jsonify }}}
-    {{- end -}}
-]'>
-    <div class="hero-slides"></div>
-    <div class="hero-indicators"></div>
-</section>
-
-{{ else }}
-{{/* 自定义模式：使用 heroImages 列表 */}}
-{{ $heroImages := .Site.Params.heroImages | default slice }}
-<section class="hero" data-interval="{{ .Site.Params.heroInterval | default 5 }}">
-    <div class="hero-slides">
-        {{ range $index, $img := $heroImages }}
-            {{ $imgUrl := partial "img-url.html" (dict "src" $img "site" $.Site) }}
-            <div class="hero-slide {{ if eq $index 0 }}active{{ end }}" style="background-image: url('{{ $imgUrl }}');"></div>
-        {{ end }}
-    </div>
-    {{ if gt (len $heroImages) 1 }}
-    <div class="hero-indicators">
-        {{ range $index, $img := $heroImages }}
-        <button class="hero-dot {{ if eq $index 0 }}active{{ end }}" data-slide="{{ $index }}" aria-label="切换到第 {{ add $index 1 }} 张图片"></button>
-        {{ end }}
-    </div>
-    {{ end }}
-</section>
-{{ end }}
-{{ end }}
-
-<!-- ================= 2. 作品集与分类卡片区域 ================= -->
-<section class="categories-grid"{{ if eq $heroMode "none" }} style="padding-top: 8em"{{ end }}>
+<!-- ================= 1. 作品集与分类卡片区域 ================= -->
+<section class="categories-grid" style="padding-top: 8em">
     <div class="container">
         <div class="section-header">
             <h2 class="section-title">{{ .Site.Params.heroTitle }}</h2>

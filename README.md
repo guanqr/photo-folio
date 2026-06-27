@@ -130,8 +130,6 @@ title: "割藺草"
 | 配置项 | 说明 |
 |---|---|
 | `params.imageCDN` | 图片 CDN 前缀（如阿里云 OSS），留空则使用本地图片 |
-| `params.heroImages` | 首页轮播图片列表 |
-| `params.heroInterval` | 轮播间隔（秒） |
 | `params.enableServiceWorker` | 启用 PWA Service Worker |
 | `params.enableInstantPage` | 启用 Instant.page 预加载 |
 | `params.typography` | 字体设置（fontLinks、字体名称、字号、本地字体注入） |
