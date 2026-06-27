@@ -65,17 +65,11 @@
     <div class="timeline-container">
         {{ range $timeline }}
         <div class="timeline-node" data-anim="fade-up">
-            <div class="timeline-date">
-                {{ $year := .time | time.Format "2006" }}
-                {{ $month := .time | time.Format "01" }}
-                <time datetime="{{ .time }}">{{ i18n "date_format_year_month" (dict "Year" $year "Month" $month) }}</time>
-            </div>
-            
             {{/* 反查 Page 对象获取真实的英文 Permalink */}}
             {{ $loc := .location }}
             {{ $footprintSection := site.GetPage "/footprint" }}
             {{ $locPage := false }}
-            
+
             {{ if $footprintSection }}
                 {{ range $footprintSection.Pages }}
                     {{ if eq .Title $loc }}
@@ -83,7 +77,7 @@
                     {{ end }}
                 {{ end }}
             {{ end }}
-            
+
             {{/* 安全获取 URL */}}
             {{ $targetUrl := "" }}
             {{ if $locPage }}
@@ -92,24 +86,26 @@
                 {{ $targetUrl = printf "/footprint/%s/" ($loc | urlize) | relURL }}
             {{ end }}
 
+            {{ $year := .time | time.Format "2006" }}
+            {{ $month := .time | time.Format "01" }}
+            <time class="timeline-date" datetime="{{ .time }}">{{ i18n "date_format_year_month" (dict "Year" $year "Month" $month) }}</time>
+
             <a href="{{ $targetUrl }}" class="timeline-content">
                 <h3 class="timeline-location">{{ .location }}</h3>
-                <!-- 【修复】使用 .realCount 显示真实的照片总数 -->
                 <p class="timeline-count">{{ i18n "timeline_photo_count" (dict "Count" .realCount) }}</p>
-                
+
                 <div class="timeline-gallery">
-                    <!-- 缩略图依然使用过滤后的 .photos，避免组照内页撑爆网格 -->
                     {{ $totalPhotos := .realCount }}
                     {{ $showMore := gt $totalPhotos 4 }}
-                    {{ $imgLimit := cond $showMore 3 4 }} 
-                    
+                    {{ $imgLimit := cond $showMore 3 4 }}
+
                     {{ range first $imgLimit .photos }}
                         {{ $srcUrl := partial "img-url.html" (dict "src" .src "site" $.Site) }}
                         <div class="timeline-thumb">
                             <img src="{{ $srcUrl }}" alt="{{ .alt }}" loading="lazy" class="photo-img">
                         </div>
                     {{ end }}
-                    
+
                     {{ if $showMore }}
                         <div class="timeline-more">
                             <span>+{{ sub $totalPhotos 3 }}</span>
@@ -121,7 +117,6 @@
         {{ end }}
         
         <div class="timeline-end" data-anim="fade-up">
-            <div class="timeline-date"></div>
             <div class="timeline-content-static">
                 <p class="end-text">{{ i18n "journey_continues" }}</p>
             </div>

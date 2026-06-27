@@ -60,7 +60,6 @@ function getTimelineColumns() {
 function collectTimelineElements() {
     const elements = [];
     document.querySelectorAll('.timeline-node').forEach(n => elements.push(n));
-    document.querySelectorAll('.timeline-date').forEach(n => elements.push(n));
     document.querySelectorAll('.timeline-thumb, .timeline-more').forEach(n => elements.push(n));
     return elements;
 }
@@ -119,25 +118,21 @@ function applyTimelineState(mobile, cols) {
 
     // 移动端布局
     document.querySelectorAll('.timeline-node, .timeline-end').forEach(el => {
-        el.style.flexDirection = mobile ? 'column' : '';
-        el.style.gap = mobile ? '0.5em' : '';
+        el.style.setProperty('--tl-node-pad', mobile ? '0' : '');
         el.style.marginBottom = mobile ? '3em' : '';
     });
 
-    document.querySelectorAll('.timeline-date').forEach(el => {
-        el.style.width = mobile ? 'auto' : '';
-        el.style.textAlign = mobile ? 'left' : '';
-        el.style.paddingLeft = mobile ? '2em' : '';
-    });
-
-    // 时间线左侧竖线位置
+    // 竖线、圆点
     document.querySelectorAll('.timeline-container').forEach(el => {
         el.style.setProperty('--tl-line-left', mobile ? '1em' : '');
+        el.style.setProperty('--tl-line-top', mobile ? '2em' : '');
+        el.style.setProperty('--tl-line-bottom', mobile ? '4em' : '');
+        el.style.setProperty('--tl-dot-left', mobile ? '-0.3125em' : '');
+        el.style.setProperty('--tl-dot-top', mobile ? '0.3em' : '');
     });
 
-    // 圆点位置
-    document.querySelectorAll('.timeline-date').forEach(el => {
-        el.style.setProperty('--tl-dot-left', mobile ? 'calc(1em - 5px)' : '');
-        el.style.setProperty('--tl-dot-top', mobile ? '0.3em' : '');
+    // 窄屏日期和结束语加左距，避免与竖线重叠
+    document.querySelectorAll('.timeline-date, .timeline-content-static').forEach(el => {
+        el.style.paddingLeft = mobile ? '1em' : '';
     });
 }

@@ -33,7 +33,7 @@
     transition: background 0.3s;
     z-index: 10000;
 
-    &:hover { background: var(--color-white-alpha-10); }
+    &:hover { background: var(--color-overlay-subtle); }
 }
 
 .lightbox-content {

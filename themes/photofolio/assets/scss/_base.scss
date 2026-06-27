@@ -26,65 +26,81 @@ body {
 }
 
 :root {
-    /* --- 基础颜色 --- */
-    --color-bg: rgba(10, 10, 10);
-    --color-bg-secondary: rgba(20, 20, 20);
-    --color-bg-card: rgba(26, 26, 26);
-    
-    --color-text: rgba(232, 232, 232);
-    --color-text-secondary: rgba(153, 153, 153);
-    --color-text-muted: rgba(102, 102, 102);
-    --color-accent: rgba(200, 164, 92);
-    --color-border: rgba(42, 42, 42);
+    /* ═══ RGB 原色（唯一颜色定义，后面全部引用这些分量）═══ */
+    --rgb-bg: 10, 10, 10;
+    --rgb-bg-raised: 20, 20, 20;
+    --rgb-card: 26, 26, 26;
+    --rgb-text: 232, 232, 232;
+    --rgb-text-secondary: 153, 153, 153;
+    --rgb-text-muted: 102, 102, 102;
+    --rgb-accent: 200, 164, 92;
+    --rgb-border: 42, 42, 42;
+    --rgb-white: 255, 255, 255;
+    --rgb-black: 0, 0, 0;
 
-    /* --- 语义化背景与遮罩 --- */
-    --color-header-bg: rgba(10, 10, 10, 0.85);
-    --color-header-bg-solid: rgba(10, 10, 10, 0.95);
-    --color-nav-mobile-bg: rgba(10, 10, 10, 0.98);
-    --color-lightbox-bg: rgba(0, 0, 0, 0.95);
+    /* ═══ 语义颜色（全部引用上方 RGB）═══ */
+    --color-bg: rgb(var(--rgb-bg));
+    --color-bg-secondary: rgb(var(--rgb-bg-raised));
+    --color-bg-card: rgb(var(--rgb-card));
 
-    /* --- 阴影 --- */
-    --shadow-img-lightbox: 0 0 2em rgba(0, 0, 0, 0.5);
+    --color-text: rgb(var(--rgb-text));
+    --color-text-secondary: rgb(var(--rgb-text-secondary));
+    --color-text-muted: rgb(var(--rgb-text-muted));
 
-    /* --- 交互与透明色 --- */
-    --color-dot-inactive: rgba(255, 255, 255, 0.4);
-    --color-dot-hover: rgba(255, 255, 255, 0.8);
-    --color-accent-glow: rgba(200, 164, 92, 0.5);
-    --color-accent-border: rgba(200, 164, 92, 0.3);
-    --color-white-alpha-10: rgba(255, 255, 255, 0.1);
+    --color-accent: rgb(var(--rgb-accent));
+    --color-accent-15: rgba(var(--rgb-accent), 0.15);
+    --color-accent-30: rgba(var(--rgb-accent), 0.3);
+    --color-accent-50: rgba(var(--rgb-accent), 0.5);
 
-    /* --- 布局与动画 --- */
+    --color-border: rgb(var(--rgb-border));
+
+    --color-header-bg: rgba(var(--rgb-bg), 0.85);
+    --color-nav-bg: rgba(var(--rgb-bg), 0.95);
+    --color-lightbox-bg: rgba(var(--rgb-card), 0.95);
+
+    --color-overlay-subtle: rgba(var(--rgb-white), 0.1);
+    --color-dot-inactive: rgba(var(--rgb-white), 0.4);
+    --color-dot-hover: rgba(var(--rgb-white), 0.8);
+
+    --shadow-img-lightbox: 0 0 2em rgba(var(--rgb-black), 0.5);
+
     --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --container-width: 87.5em; 
-
-    --color-tag-bg: rgba(200, 164, 92, 0.15); 
+    --container-width: 87.5em;
 }
 
 /* ===== Light Mode (明亮模式) ===== */
 [data-theme="light"] {
-    --color-bg: rgba(248, 249, 250);
-    --color-bg-secondary: rgba(233, 236, 239);
-    --color-bg-card: rgba(255, 255, 255);
-    
-    --color-text: rgba(33, 37, 41);
-    --color-text-secondary: rgba(73, 80, 87);
-    --color-text-muted: rgba(108, 117, 125);
-    
-    --color-accent: rgba(184, 134, 11); 
-    --color-border: rgba(222, 226, 230);
+    --rgb-bg: 248, 249, 250;
+    --rgb-bg-raised: 233, 236, 239;
+    --rgb-card: 255, 255, 255;
+    --rgb-text: 33, 37, 41;
+    --rgb-text-secondary: 73, 80, 87;
+    --rgb-text-muted: 108, 117, 125;
+    --rgb-accent: 184, 134, 11;
+    --rgb-border: 222, 226, 230;
 
-    --color-header-bg: rgba(248, 249, 250, 0.85);
-    --color-header-bg-solid: rgba(248, 249, 250, 0.95);
-    --color-nav-mobile-bg: rgba(248, 249, 250, 0.98);
-    --color-lightbox-bg: rgba(255, 255, 255, 0.95);
+    --color-bg: rgb(var(--rgb-bg));
+    --color-bg-secondary: rgb(var(--rgb-bg-raised));
+    --color-bg-card: rgb(var(--rgb-card));
 
-    --shadow-img-lightbox: 0 0 2em rgba(0, 0, 0, 0.15);
+    --color-text: rgb(var(--rgb-text));
+    --color-text-secondary: rgb(var(--rgb-text-secondary));
+    --color-text-muted: rgb(var(--rgb-text-muted));
 
-    --color-accent-glow: rgba(184, 134, 11, 0.4);
-    --color-accent-border: rgba(184, 134, 11, 0.3);
-    --color-white-alpha-10: rgba(0, 0, 0, 0.05);
+    --color-accent: rgb(var(--rgb-accent));
+    --color-accent-15: rgba(var(--rgb-accent), 0.15);
+    --color-accent-30: rgba(var(--rgb-accent), 0.3);
+    --color-accent-50: rgba(var(--rgb-accent), 0.5);
 
-    --color-tag-bg: rgba(184, 134, 11, 0.12); 
+    --color-border: rgb(var(--rgb-border));
+
+    --color-header-bg: rgba(var(--rgb-bg), 0.85);
+    --color-nav-bg: rgba(var(--rgb-bg), 0.95);
+    --color-lightbox-bg: rgba(var(--rgb-card), 0.95);
+
+    --color-overlay-subtle: rgba(var(--rgb-black), 0.05);
+
+    --shadow-img-lightbox: 0 0 2em rgba(var(--rgb-black), 0.15);
 }
 
 img { max-width: 100%; height: auto; display: block; }

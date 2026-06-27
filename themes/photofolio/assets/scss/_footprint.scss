@@ -2,20 +2,19 @@
 .footprint-page { margin-top: 4.5em; }
 
 .timeline-container {
-    /* 【修改】将最大宽度从 800px 放宽到 1100px */
-    max-width: 1100px; 
+    max-width: 1100px;
     margin: 0 auto;
     padding: 4em 2em 6em;
     position: relative;
 
-    /* 中间的垂直时间线 */
+    /* 垂直时间线 */
     &::before {
         content: '';
         position: absolute;
-        top: 4em;
-        bottom: 6em;
-        left: var(--tl-line-left, calc(2em + 80px));
-        width: 2px;
+        top: var(--tl-line-top, 4em);
+        bottom: var(--tl-line-bottom, 6em);
+        left: var(--tl-line-left, 1.5em);
+        width: 0.125em;
         background: var(--color-border);
         transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     }
@@ -25,7 +24,7 @@
 .timeline-node,
 .timeline-end {
     opacity: 0;
-    transform: translateY(30px);
+    transform: translateY(1.875em);
     transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 
     &.is-visible {
@@ -35,64 +34,56 @@
 }
 
 .timeline-node {
-    display: flex;
-    gap: 2.5em;
+    padding-left: var(--tl-node-pad, 1em);
     margin-bottom: 4em;
     position: relative;
-}
 
-.timeline-date {
-    flex-shrink: 0;
-    width: 80px; /* 【微调】配合上面的 calc，加宽左侧时间列 */
-    text-align: right;
-    padding-top: 0.2em;
-    
-    time {
-        font-family: var(--font-meta);
-        font-size: 0.95em; /* 稍微放大一点时间字体 */
-        color: var(--color-text-muted);
-        font-weight: 500;
-    }
-
-    /* 时间轴上的圆点 */
+    /* 圆点：贴在竖线上，与日期文字同一水平线 */
     &::after {
         content: '';
         position: absolute;
-        left: var(--tl-dot-left, calc(80px + 2.5em - 5px));
-        top: var(--tl-dot-top, 0.5em);
-        width: 12px;
-        height: 12px;
+        left: var(--tl-dot-left, calc(-0.5em - 0.3125em));
+        top: var(--tl-dot-top, 0.35em);
+        width: 0.75em;
+        height: 0.75em;
         border-radius: 50%;
         background: var(--color-bg);
-        border: 2px solid var(--color-accent);
+        border: 0.125em solid var(--color-accent);
         z-index: 1;
         transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1), top 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     }
 }
 
-/* 将 a 标签伪装成普通卡片 */
+/* 日期（卡片上方） */
+.timeline-date {
+    display: block;
+    font-family: var(--font-meta);
+    font-size: 0.9em;
+    color: var(--color-text-muted);
+    font-weight: 500;
+    margin-bottom: 0.6em;
+}
+
+/* 内容卡片 */
 a.timeline-content {
     text-decoration: none;
     color: inherit;
     display: block;
-    flex: 1;
     background: var(--color-bg-card);
-    border: 1px solid var(--color-border);
+    border: 0.0625em solid var(--color-border);
     border-radius: 0.75em;
     padding: 1.5em;
     transition: border-color 0.3s, box-shadow 0.3s, transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 
     &:hover {
-        border-color: var(--color-accent-border);
+        border-color: var(--color-accent-30);
         box-shadow: 0 0.5em 1.5em rgba(0, 0, 0, 0.1);
-        transform: translateY(-2px); /* 增加轻微上浮效果 */
+        transform: translateY(-0.125em);
     }
 }
 
-/* 底部结束语的静态样式 */
 .timeline-content-static {
-    flex: 1;
-    padding: 1.5em 0;
+    padding: 0;
 }
 
 .timeline-location {
@@ -148,13 +139,27 @@ a.timeline-content {
 }
 
 .timeline-end {
-    display: flex;
-    gap: 2em;
+    padding-left: var(--tl-node-pad, 1em);
+    position: relative;
+
+    /* 圆点：与 timeline-node 同位置 */
+    &::after {
+        content: '';
+        position: absolute;
+        left: var(--tl-dot-left, calc(-0.5em - 0.3125em));
+        top: var(--tl-dot-top, 0.35em);
+        width: 0.75em;
+        height: 0.75em;
+        border-radius: 50%;
+        background: var(--color-bg);
+        border: 0.125em solid var(--color-accent);
+        z-index: 1;
+        transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1), top 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
 
     .end-text {
         font-family: var(--font-heading);
         font-style: italic;
         color: var(--color-text-muted);
-        padding-top: 0.5em;
     }
 }

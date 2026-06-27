@@ -41,7 +41,7 @@
         position: fixed;
         top: 4.5em;
         left: 0; right: 0;
-        background: var(--color-nav-mobile-bg);
+        background: var(--color-nav-bg);
         backdrop-filter: blur(1.25em);
         -webkit-backdrop-filter: blur(1.25em);
         padding: 2em 1em;
@@ -99,7 +99,7 @@
         padding: 2em 1em 4em;
     }
 
-    /* timeline-node / timeline-date / timeline-gallery 由 JS 控制 + FLIP 动画 */
+    /* 列数由 JS 控制 + FLIP 动画 */
 
     .series-badge {
         top: 0.5em;

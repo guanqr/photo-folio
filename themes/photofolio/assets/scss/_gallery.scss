@@ -71,7 +71,7 @@
 
     &:hover {
         transform: translateY(-0.125em);
-        border-color: var(--color-accent-border);
+        border-color: var(--color-accent-30);
         
         /* 保留照片本身的轻微放大效果 */
         .photo-img { transform: scale(1.03); } 
@@ -126,7 +126,7 @@
     gap: 0.3em;
     
     /* 使用微透明主题色背景，去掉突兀的边框 */
-    background: var(--color-tag-bg); 
+    background: var(--color-accent-15); 
     border: none; 
     border-radius: 0.25em; /* 小圆角，比胶囊形更克制、更现代 */
     padding: 0.2em 0.5em;
@@ -225,11 +225,11 @@
     
     /* 【核心】100% 复用现有 Design Tokens，不新增变量 */
     background: var(--color-header-bg);
-    border: 1px solid var(--color-white-alpha-10);
+    border: 0.0625em solid var(--color-overlay-subtle);
     color: var(--color-text); 
     
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(0.375em);
+    -webkit-backdrop-filter: blur(0.375em);
     border-radius: 1em;
     display: flex;
     align-items: center;
@@ -267,6 +267,6 @@
 .photo-card:hover .series-badge {
     background: var(--color-lightbox-bg); 
     color: var(--color-accent); 
-    border-color: var(--color-accent-border); 
+    border-color: var(--color-accent-30); 
     transform: scale(1.05); 
 }
