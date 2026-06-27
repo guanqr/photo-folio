@@ -22,21 +22,46 @@ export function initMasonry() {
         grid.appendChild(col);
     }
 
-    // 分离可见/隐藏：隐藏项不预分配，等加载时再逐张放入最矮列
-    const visible = allItems.filter(item => !item.classList.contains('is-hidden'));
-    const pending = allItems.filter(item => item.classList.contains('is-hidden'));
-
-    // 只分配可见项
-    distributeIntoColumns(visible, columns);
-
-    // 隐藏项暂存，供 infinite-scroll 按需取出
-    pending.forEach(item => item.remove());
-    grid._pendingItems = pending;
+    // 全部照片不预分配，揭示时逐张放入当前最矮列
+    allItems.forEach(item => item.remove());
+    grid._pendingItems = allItems; // 保持时间顺序
 
     grid._allItems = allItems;
     grid._columns = columns;
 
     grid.classList.add('masonry-ready');
+
+    // 首批照片逐张揭示（每张放入揭示瞬间的最矮列）
+    const pageSize = 12;
+    revealBatch(grid, pageSize);
+}
+
+export function revealBatch(grid, count) {
+    const pending = grid._pendingItems;
+    const batch = Math.min(count, pending.length);
+    const columns = grid._columns;
+
+    for (let i = 0; i < batch; i++) {
+        setTimeout(() => {
+            const item = pending.shift();
+            const shortest = getShortestCol(columns);
+            shortest.appendChild(item);
+            item.classList.remove('is-hidden');
+        }, i * 60);
+    }
+}
+
+function getShortestCol(columns) {
+    const heights = columns.map(c => c.getBoundingClientRect().height);
+    const counts = columns.map(c => c.children.length);
+    let min = 0;
+    for (let i = 1; i < columns.length; i++) {
+        const diff = heights[i] - heights[min];
+        if (diff < -0.5 || (Math.abs(diff) < 0.5 && counts[i] < counts[min])) {
+            min = i;
+        }
+    }
+    return columns[min];
 }
 
 export function getColumnCount() {
@@ -124,22 +149,27 @@ function flipRebuild(grid) {
     });
 }
 
-// 混合分配：前 N 个 round-robin（首行时间序），后续最短列优先（均衡列高）
+// 混合分配（FLIP rebuild 用）：前 N 个 round-robin，后续最短列优先
 function distributeIntoColumns(items, columns) {
     const colHeights = columns.map(() => 0);
+    const colCounts = columns.map(() => 0);
 
     items.forEach((item, index) => {
-        let col;
+        let colIdx;
         if (index < columns.length) {
-            col = columns[index];
+            colIdx = index;
         } else {
             let minIdx = 0;
             for (let i = 1; i < columns.length; i++) {
-                if (colHeights[i] < colHeights[minIdx]) minIdx = i;
+                const diff = colHeights[i] - colHeights[minIdx];
+                if (diff < -0.5 || (Math.abs(diff) < 0.5 && colCounts[i] < colCounts[minIdx])) {
+                    minIdx = i;
+                }
             }
-            col = columns[minIdx];
+            colIdx = minIdx;
         }
-        col.appendChild(item);
-        colHeights[columns.indexOf(col)] += item.getBoundingClientRect().height || 300;
+        columns[colIdx].appendChild(item);
+        colHeights[colIdx] += item.getBoundingClientRect().height || 300;
+        colCounts[colIdx]++;
     });
 }

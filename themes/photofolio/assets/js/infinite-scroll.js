@@ -1,11 +1,10 @@
 /**
  * 无限滚动加载
  *
- * 隐藏照片不预分配列，存入 grid._pendingItems。
- * 加载时逐张取出，放入当前最矮列后立即解除隐藏。
+ * masonry.js 已处理首批揭示，这里接管后续批次。
  */
 
-import { getColumnCount } from './masonry.js';
+import { revealBatch } from './masonry.js';
 
 export function initInfiniteScroll() {
     const trigger = document.getElementById('load-more-trigger');
@@ -31,20 +30,8 @@ export function initInfiniteScroll() {
 
     observer.observe(trigger);
 
-    function getShortestCol() {
-        const cols = grid._columns;
-        let min = cols[0];
-        for (let i = 1; i < cols.length; i++) {
-            if (cols[i].getBoundingClientRect().height < min.getBoundingClientRect().height) {
-                min = cols[i];
-            }
-        }
-        return min;
-    }
-
     function loadMore() {
-        const pending = grid._pendingItems;
-        if (pending.length === 0) {
+        if (grid._pendingItems.length === 0) {
             finishLoading();
             return;
         }
@@ -52,27 +39,23 @@ export function initInfiniteScroll() {
         isLoading = true;
         trigger.classList.add('is-loading');
 
-        const batch = Math.min(pageSize, pending.length);
+        const batch = Math.min(pageSize, grid._pendingItems.length);
         let done = 0;
 
         for (let i = 0; i < batch; i++) {
             setTimeout(() => {
-                const item = pending.shift();
-                const col = getShortestCol();
-                col.appendChild(item);
-                item.classList.remove('is-hidden');
                 done++;
-
                 if (done === batch) {
                     isLoading = false;
                     trigger.classList.remove('is-loading');
-
-                    if (pending.length === 0) {
+                    if (grid._pendingItems.length === 0) {
                         finishLoading();
                     }
                 }
-            }, 300 + i * 60);
+            }, i * 60);
         }
+
+        revealBatch(grid, batch);
     }
 
     function finishLoading() {
