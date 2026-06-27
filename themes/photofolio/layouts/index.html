@@ -30,8 +30,9 @@
         <div class="grid">
             {{ $allPhotos := site.Data.photo.photo | default slice }}
             {{ $withKey := slice }}
-{{ range $allPhotos }}
-    {{ $withKey = $withKey | append (merge . (dict "_sortKey" (printf "%s-%s" .time .src))) }}
+{{ range $idx, $p := $allPhotos }}
+    {{ $t := $p.time | time.Format "2006-01-02 15:04:05" }}
+    {{ $withKey = $withKey | append (merge $p (dict "_sortKey" (printf "%s-%06d" $t $idx))) }}
 {{ end }}
 {{ $sortedPhotos := sort $withKey "_sortKey" "desc" }}
             

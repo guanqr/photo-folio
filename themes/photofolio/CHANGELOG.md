@@ -2,16 +2,18 @@
 
 PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)。
 
-## [Unreleased]
-
-（暂无未发布变更）
-
----
-
 ## [0.5.3] — 2026-06-27
 
+### Changed
+- **加载动画**：12 张照片改为逐张揭示，每张间隔 60ms（首张延迟 300ms），瀑布流自上而下逐个淡入
+- **按需分配列**：隐藏照片不再预分配到列中，改为 `loadMore` 时逐张放入当前最矮列后解除隐藏，确保加载过程中列高实时均衡
+- **混合分配策略**：可见照片分配采用"前 N 张 round-robin（保证首行时间序）+ 后续最短列优先（均衡列高）"
+- **排序增强**：同日照片改用 photo.toml 数组索引作为次要排序键（`time-索引`），按数据文件先后定序
+
 ### Fixed
-- 修复同一天照片排序不稳定：Hugo `sort` 非稳定排序，改为构建 `time-src` 复合键排序，确保同日照片顺序一致
+- 修复同一天照片排序不稳定：Hugo `sort` 非稳定排序，改为构建 `time-索引` 复合键。`time` 先经 `time.Format` 标准化为 `YYYY-MM-DD HH:MM:SS`
+- 修复移动端首帧闪现三列：`column-count` 与 `display:flex` 冲突，改为 JS 就绪前后两套独立 CSS（`.masonry-ready` 切换）
+- 修复 resize 后加载更多时照片全挤入同一列
 
 ---
 

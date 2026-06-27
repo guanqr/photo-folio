@@ -1,27 +1,22 @@
 /**
  * 无限滚动加载
  *
- * 依赖 inline script（baseof.html）在 HTML 解析阶段标记首批之外的 .is-hidden。
- * masonry.js 随后用 round-robin 将 items 移入列容器。
- *
- * 关键：使用 grid._allItems（原始时间顺序）而非 DOM 查询来定位下一批，
- *      避免 round-robin 重排后 document 顺序导致的一列全显、他列为空。
+ * 隐藏照片不预分配列，存入 grid._pendingItems。
+ * 加载时逐张取出，放入当前最矮列后立即解除隐藏。
  */
+
+import { getColumnCount } from './masonry.js';
 
 export function initInfiniteScroll() {
     const trigger = document.getElementById('load-more-trigger');
     const grid = document.getElementById('masonry-grid');
 
     if (!trigger || !grid) return;
-    if (!grid._allItems) return;
+    if (!grid._pendingItems) return;
 
-    const allItems = grid._allItems;  // 原始时间倒序数组，由 masonry 保存
     const pageSize = parseInt(trigger.dataset.pageSize, 10) || 12;
 
-    // 前 pageSize 张已可见（inline script 只隐藏了 index >= pageSize 的项）
-    let currentIndex = pageSize;
-
-    if (currentIndex >= allItems.length) {
+    if (grid._pendingItems.length === 0) {
         trigger.remove();
         return;
     }
@@ -36,8 +31,20 @@ export function initInfiniteScroll() {
 
     observer.observe(trigger);
 
+    function getShortestCol() {
+        const cols = grid._columns;
+        let min = cols[0];
+        for (let i = 1; i < cols.length; i++) {
+            if (cols[i].getBoundingClientRect().height < min.getBoundingClientRect().height) {
+                min = cols[i];
+            }
+        }
+        return min;
+    }
+
     function loadMore() {
-        if (currentIndex >= allItems.length) {
+        const pending = grid._pendingItems;
+        if (pending.length === 0) {
             finishLoading();
             return;
         }
@@ -45,22 +52,27 @@ export function initInfiniteScroll() {
         isLoading = true;
         trigger.classList.add('is-loading');
 
-        setTimeout(() => {
-            const nextIndex = Math.min(currentIndex + pageSize, allItems.length);
+        const batch = Math.min(pageSize, pending.length);
+        let done = 0;
 
-            // 按原始时间顺序依次解除隐藏 —— 均匀分布在所有列中
-            for (let i = currentIndex; i < nextIndex; i++) {
-                allItems[i].classList.remove('is-hidden');
-            }
+        for (let i = 0; i < batch; i++) {
+            setTimeout(() => {
+                const item = pending.shift();
+                const col = getShortestCol();
+                col.appendChild(item);
+                item.classList.remove('is-hidden');
+                done++;
 
-            currentIndex = nextIndex;
-            isLoading = false;
-            trigger.classList.remove('is-loading');
+                if (done === batch) {
+                    isLoading = false;
+                    trigger.classList.remove('is-loading');
 
-            if (currentIndex >= allItems.length) {
-                finishLoading();
-            }
-        }, 800);
+                    if (pending.length === 0) {
+                        finishLoading();
+                    }
+                }
+            }, 300 + i * 60);
+        }
     }
 
     function finishLoading() {

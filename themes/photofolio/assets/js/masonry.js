@@ -1,10 +1,5 @@
 /**
  * 瀑布流布局引擎
- *
- * 替代 CSS column-count，实现：
- * 1. 按时间顺序横排（左→右 = 新→旧）—— round-robin 分配
- * 2. 加载更多时已有照片位置不变
- * 3. resize 列数切换时使用 FLIP 动画平滑过渡
  */
 
 let resizeTimeout = null;
@@ -27,17 +22,20 @@ export function initMasonry() {
         grid.appendChild(col);
     }
 
-    allItems.forEach((item, index) => {
-        const col = columns[index % currentColumnCount];
-        col.appendChild(item);
-    });
+    // 分离可见/隐藏：隐藏项不预分配，等加载时再逐张放入最矮列
+    const visible = allItems.filter(item => !item.classList.contains('is-hidden'));
+    const pending = allItems.filter(item => item.classList.contains('is-hidden'));
+
+    // 只分配可见项
+    distributeIntoColumns(visible, columns);
+
+    // 隐藏项暂存，供 infinite-scroll 按需取出
+    pending.forEach(item => item.remove());
+    grid._pendingItems = pending;
 
     grid._allItems = allItems;
     grid._columns = columns;
-    grid._renderedCount = allItems.length;
-    grid._nextIndex = allItems.length;
 
-    // 标记就绪，CSS 从 column-count fallback 切换到 flex 布局
     grid.classList.add('masonry-ready');
 }
 
@@ -63,12 +61,7 @@ export function initMasonryResize() {
     });
 }
 
-/**
- * FLIP 动画重建列
- * First（旧位置）→ 拆 DOM → Last（新位置）→ Invert → Play
- */
 function flipRebuild(grid) {
-    // 保存滚动位置，防止 DOM 清空时页面回顶
     const scrollY = window.scrollY;
 
     const allRendered = [];
@@ -77,52 +70,12 @@ function flipRebuild(grid) {
         children.forEach(child => allRendered.push(child));
     });
 
-    // ── First：记录旧位置（用 Map 按元素索引，避免后续 sort 打乱顺序）──
+    // First
     const firstMap = new Map();
     allRendered.forEach(el => firstMap.set(el, el.getBoundingClientRect()));
 
-    // ── 拆旧列、建新列 ──
-    // 传入 firstMap 供 rebuildAndDistribute 使用预测量高度（避免 item 脱离 DOM 后测高为 0）
+    // 重建（只有可见项参与；隐藏项在 _pendingItems 中，不受影响）
     allRendered.forEach(el => el.remove());
-    rebuildAndDistribute(grid, allRendered);
-
-    // 重建后立即恢复滚动位置
-    window.scrollTo(0, scrollY);
-
-    // ── Last：新位置 ──
-    const lastMap = new Map();
-    allRendered.forEach(el => lastMap.set(el, el.getBoundingClientRect()));
-
-    // ── Invert：瞬间拉到旧位置 + 旧尺寸 ──
-    allRendered.forEach(el => {
-        const fr = firstMap.get(el);
-        const lr = lastMap.get(el);
-        if (!fr || !lr) return;
-        const dx = fr.left - lr.left;
-        const dy = fr.top - lr.top;
-        const sx = fr.width / lr.width;
-        const sy = fr.height / lr.height;
-        const moved = Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5;
-        const sized = Math.abs(sx - 1) > 0.001 || Math.abs(sy - 1) > 0.001;
-        if (moved || sized) {
-            el.style.transition = 'none';
-            el.style.transformOrigin = 'top left';
-            el.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
-        }
-    });
-
-    // 强制浏览器应用 invert 状态
-    allRendered.forEach(el => el.offsetHeight);
-
-    // ── Play：移除 transform，CSS transition 接管 ──
-    // 注意：不清除 transformOrigin，否则从 top-left 跳回默认 center 会导致缩放原点突变
-    allRendered.forEach(el => {
-        el.style.transition = '';
-        el.style.transform = '';
-    });
-}
-
-function rebuildAndDistribute(grid, items) {
     grid.innerHTML = '';
     const columns = [];
     for (let i = 0; i < currentColumnCount; i++) {
@@ -133,14 +86,60 @@ function rebuildAndDistribute(grid, items) {
     }
     grid._columns = columns;
 
-    // 按原始时间序排列
+    // 按时间排序后分配
     const itemIndexMap = new Map();
     grid._allItems.forEach((item, index) => itemIndexMap.set(item, index));
-    items.sort((a, b) => (itemIndexMap.get(a) || 0) - (itemIndexMap.get(b) || 0));
+    allRendered.sort((a, b) => (itemIndexMap.get(a) || 0) - (itemIndexMap.get(b) || 0));
+    distributeIntoColumns(allRendered, columns);
 
-    // round-robin：保证行内严格按时间横排
+    window.scrollTo(0, scrollY);
+
+    // Last
+    const lastMap = new Map();
+    allRendered.forEach(el => lastMap.set(el, el.getBoundingClientRect()));
+
+    // Invert
+    allRendered.forEach(el => {
+        const fr = firstMap.get(el);
+        const lr = lastMap.get(el);
+        if (!fr || !lr) return;
+        const dx = fr.left - lr.left;
+        const dy = fr.top - lr.top;
+        const sx = fr.width / lr.width;
+        const sy = fr.height / lr.height;
+        if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5 ||
+            Math.abs(sx - 1) > 0.001 || Math.abs(sy - 1) > 0.001) {
+            el.style.transition = 'none';
+            el.style.transformOrigin = 'top left';
+            el.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
+        }
+    });
+
+    allRendered.forEach(el => el.offsetHeight);
+
+    // Play
+    allRendered.forEach(el => {
+        el.style.transition = '';
+        el.style.transform = '';
+    });
+}
+
+// 混合分配：前 N 个 round-robin（首行时间序），后续最短列优先（均衡列高）
+function distributeIntoColumns(items, columns) {
+    const colHeights = columns.map(() => 0);
+
     items.forEach((item, index) => {
-        const col = columns[index % currentColumnCount];
+        let col;
+        if (index < columns.length) {
+            col = columns[index];
+        } else {
+            let minIdx = 0;
+            for (let i = 1; i < columns.length; i++) {
+                if (colHeights[i] < colHeights[minIdx]) minIdx = i;
+            }
+            col = columns[minIdx];
+        }
         col.appendChild(item);
+        colHeights[columns.indexOf(col)] += item.getBoundingClientRect().height || 300;
     });
 }
