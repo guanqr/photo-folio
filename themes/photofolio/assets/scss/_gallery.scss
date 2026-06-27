@@ -135,7 +135,7 @@
     font-size: 0.75em;
     font-weight: 500;
     color: var(--color-accent);
-    transition: all var(--transition);
+    transition: background var(--transition), color var(--transition), border-color var(--transition);
     
     /* 确保即使左侧没有位置信息，标签也强制靠右 */
     margin-left: auto; 

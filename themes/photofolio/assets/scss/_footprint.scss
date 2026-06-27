@@ -21,13 +21,9 @@
     }
 }
 
-.timeline-node {
-    display: flex;
-    gap: 2.5em; /* 【微调】增加左侧时间和右侧卡片的间距 */
-    margin-bottom: 4em;
-    position: relative;
-    
-    /* 动画初始状态 */
+/* timeline-node / timeline-end 共享淡入动画 */
+.timeline-node,
+.timeline-end {
     opacity: 0;
     transform: translateY(30px);
     transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
@@ -36,6 +32,13 @@
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+.timeline-node {
+    display: flex;
+    gap: 2.5em;
+    margin-bottom: 4em;
+    position: relative;
 }
 
 .timeline-date {
@@ -147,12 +150,7 @@ a.timeline-content {
 .timeline-end {
     display: flex;
     gap: 2em;
-    opacity: 0;
-    transform: translateY(30px);
-    transition: opacity 0.8s ease, transform 0.8s ease;
-    
-    &.is-visible { opacity: 1; transform: translateY(0); }
-    
+
     .end-text {
         font-family: var(--font-heading);
         font-style: italic;
