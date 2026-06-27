@@ -2,16 +2,34 @@
 
 PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)。
 
+## [0.5.4] — 2026-06-27
+
+### Changed
+- **足迹时间线重新设计**：日期移到卡片上方、竖线+圆点在左侧、卡片式布局
+  - 移除独立日期列，结构简化为 `.timeline-node` > date + card
+  - 竖线和圆点统一用 CSS 变量控制（`--tl-line-left/top/bottom`、`--tl-dot-left/top`、`--tl-node-pad`）
+  - 宽屏竖线与卡片间留小间隙，窄屏卡片左缘紧贴竖线、日期文字加左距防重叠
+  - 结束语新增圆点
+- **SCSS px → em 统一**：`_footprint.scss` 和 `_gallery.scss` 中长度值改为 em
+- **首页轮播图自动选图**（已移除）：新增 `heroMode` 配置（`auto`/`custom`/`none`），后因性能考虑完全移除轮播功能
+
+### Removed
+- **首页轮播图**：删除 `hero-slider.js`、`_hero.scss`，首页直接进入分类卡片区域
+
+### Fixed
+- 足迹时间线日期换行与竖线重叠
+- 窄屏圆点与竖线未对齐
+
+---
+
 ## [0.5.3] — 2026-06-27
 
 ### Changed
 - **加载动画**：12 张照片改为逐张揭示，每张间隔 60ms（首张延迟 300ms），瀑布流自上而下逐个淡入
-- **按需分配列**：隐藏照片不再预分配到列中，改为 `loadMore` 时逐张放入当前最矮列后解除隐藏，确保加载过程中列高实时均衡
+- **按需分配列**：隐藏照片不再预分配到列中，改为 `loadMore` 时逐张放入当前最矮列后解除隐藏
 - **混合分配策略**：可见照片分配采用"前 N 张 round-robin（保证首行时间序）+ 后续最短列优先（均衡列高）"
-- **排序增强**：同日照片改用 photo.toml 数组索引作为次要排序键（`time-索引`），按数据文件先后定序
-
-### Changed
-- **SCSS 优化**：`.photo-category-tag` 的 `transition: all` 改为具体属性；`.timeline-node` / `.timeline-end` 合并共享淡入动画；移除未使用的 `--color-white` / `--color-text-light` 变量
+- **排序增强**：同日照片改用 photo.toml 数组索引作为次要排序键（`time-索引`）
+- **SCSS 优化**：`transition: all` → 具体属性；合并重复淡入动画；移除未使用变量；颜色命名规范化；引入 RGB 分量变量
 
 ### Fixed
 - 修复同一天照片排序不稳定：Hugo `sort` 非稳定排序，改为构建 `time-索引` 复合键。`time` 先经 `time.Format` 标准化为 `YYYY-MM-DD HH:MM:SS`
