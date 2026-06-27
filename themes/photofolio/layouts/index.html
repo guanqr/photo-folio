@@ -29,7 +29,11 @@
         
         <div class="grid">
             {{ $allPhotos := site.Data.photo.photo | default slice }}
-            {{ $sortedPhotos := sort $allPhotos "time" "desc" }}
+            {{ $withKey := slice }}
+{{ range $allPhotos }}
+    {{ $withKey = $withKey | append (merge . (dict "_sortKey" (printf "%s-%s" .time .src))) }}
+{{ end }}
+{{ $sortedPhotos := sort $withKey "_sortKey" "desc" }}
             
             {{/* 定义排除名单，过滤掉非分类的独立页面 */}}
             {{ $excludeSections := slice "gallery" "footprint" "series" }}

@@ -1,6 +1,10 @@
 {{ define "main" }}
 {{ $allPhotos := site.Data.photo.photo | default slice }}
-{{ $sortedPhotos := sort $allPhotos "time" "desc" }}
+{{ $withKey := slice }}
+{{ range $allPhotos }}
+    {{ $withKey = $withKey | append (merge . (dict "_sortKey" (printf "%s-%s" .time .src))) }}
+{{ end }}
+{{ $sortedPhotos := sort $withKey "_sortKey" "desc" }}
 
 {{/* 只过滤出所有的“组照封面” */}}
 {{ $coverPhotos := slice }}

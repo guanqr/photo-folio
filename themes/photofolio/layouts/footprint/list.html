@@ -1,7 +1,11 @@
 {{ define "main" }}
 {{/* 1. 获取并排序所有照片（全量数据，包含组照内页） */}}
 {{ $allPhotos := site.Data.photo.photo | default slice }}
-{{ $sortedPhotos := sort $allPhotos "time" "desc" }}
+{{ $withKey := slice }}
+{{ range $allPhotos }}
+    {{ $withKey = $withKey | append (merge . (dict "_sortKey" (printf "%s-%s" .time .src))) }}
+{{ end }}
+{{ $sortedPhotos := sort $withKey "_sortKey" "desc" }}
 
 {{/* 2. 过滤出用于展示的卡片（剔除组照内页，只保留单图和封面） */}}
 {{ $displayPhotos := slice }}

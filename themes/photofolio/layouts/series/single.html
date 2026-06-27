@@ -2,7 +2,11 @@
 {{ $seriesName := .Title }}
 
 {{ $allPhotos := site.Data.photo.photo | default slice }}
-{{ $sortedPhotos := sort $allPhotos "time" "desc" }}
+{{ $withKey := slice }}
+{{ range $allPhotos }}
+    {{ $withKey = $withKey | append (merge . (dict "_sortKey" (printf "%s-%s" .time .src))) }}
+{{ end }}
+{{ $sortedPhotos := sort $withKey "_sortKey" "desc" }}
 
 {{/* 使用 range + eq 手动过滤，确保精准匹配组照名称 */}}
 {{ $photos := slice }}

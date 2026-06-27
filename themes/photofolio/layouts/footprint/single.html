@@ -2,7 +2,11 @@
 {{ $locationName := .Title }}
 
 {{ $allPhotos := site.Data.photo.photo | default slice }}
-{{ $sortedPhotos := sort $allPhotos "time" "desc" }}
+{{ $withKey := slice }}
+{{ range $allPhotos }}
+    {{ $withKey = $withKey | append (merge . (dict "_sortKey" (printf "%s-%s" .time .src))) }}
+{{ end }}
+{{ $sortedPhotos := sort $withKey "_sortKey" "desc" }}
 
 {{/* 【修复 1】获取该地点真实的照片集合（包含组照内页） */}}
 {{ $realPhotos := where $sortedPhotos "location" $locationName }}

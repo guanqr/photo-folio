@@ -7,7 +7,11 @@
 {{ end }}
 
 {{ $allPhotos := site.Data.photo.photo | default slice }}
-{{ $sortedPhotos := sort $allPhotos "time" "desc" }}
+{{ $withKey := slice }}
+{{ range $allPhotos }}
+    {{ $withKey = $withKey | append (merge . (dict "_sortKey" (printf "%s-%s" .time .src))) }}
+{{ end }}
+{{ $sortedPhotos := sort $withKey "_sortKey" "desc" }}
 
 {{/* 【修复 1】先获取真实的照片集合（包含组照内页），用于准确统计总数 */}}
 {{ $realPhotos := slice }}
