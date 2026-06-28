@@ -88,7 +88,7 @@ defaultContentLanguage = "zh-cn"
         name = "關於"
         url = "/about/"
         weight = 7
-    [[menu.main]]
-        name = "博客"
-        url = "https://guanqr.com/"
-        weight = 8
+    # [[menu.main]]
+    #     name = "博客"
+    #     url = "https://guanqr.com/"
+    #     weight = 8
