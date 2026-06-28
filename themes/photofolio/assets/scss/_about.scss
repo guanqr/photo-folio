@@ -1,0 +1,79 @@
+/* ===== About Page ===== */
+.about-page { margin-top: 4.5em; }
+
+.about-container {
+    max-width: 40em;
+    margin: 0 auto;
+    padding: 4em 2em 6em;
+}
+
+.about-header {
+    display: flex;
+    align-items: center;
+    gap: 2em;
+    margin-bottom: 3em;
+}
+
+.about-avatar {
+    width: 6em;
+    height: 6em;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 0.1875em solid var(--color-border);
+    flex-shrink: 0;
+}
+
+.about-header-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.about-name {
+    font-family: var(--font-heading);
+    font-size: var(--size-h1);
+    font-weight: 700;
+    margin-bottom: 0.25em;
+    color: var(--color-text);
+}
+
+.about-bio {
+    font-size: 1.05em;
+    color: var(--color-text-secondary);
+    line-height: 1.7;
+    margin: 0;
+}
+
+/* equipment */
+.about-equipment {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5em;
+    margin-bottom: 2.5em;
+}
+
+.equipment-group {
+    h3 {
+        font-family: var(--font-meta);
+        font-size: var(--size-small);
+        color: var(--color-accent);
+        font-weight: 600;
+        margin-bottom: 0.4em;
+    }
+}
+
+.equipment-list {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5em;
+
+    li {
+        background: var(--color-bg-card);
+        border: 0.0625em solid var(--color-border);
+        border-radius: 0.375em;
+        padding: 0.35em 0.85em;
+        font-size: var(--size-small);
+        color: var(--color-text-secondary);
+    }
+}
+

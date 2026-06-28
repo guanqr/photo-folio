@@ -25,8 +25,21 @@ defaultContentLanguage = "zh-cn"
     enableInstantPage = true 
 
 [params.author]
-    # 名字
     name = "Guanqr"
+    avatar = "/icons/favicon.svg"
+    bio = "用鏡頭記錄世界的每一個瞬間"
+
+    [[params.author.equipment]]
+        category = "相機"
+        items = ["Nikon Z5", "Nikon Z8"]
+
+    [[params.author.equipment]]
+        category = "鏡頭"
+        items = ["NIKKOR Z 24-200mm f/4-6.3 VR", "NIKKOR Z 24-70mm f/4 S"]
+
+    [[params.author.equipment]]
+        category = "後期處理"
+        items = ["DxO PureRAW", "Adobe Lightroom", "Adobe Photoshop"]
 
 [params.typography]
     # 【升级】字体外链对象数组 (支持 preconnect 和 stylesheet 混排)
@@ -71,6 +84,10 @@ defaultContentLanguage = "zh-cn"
         name = "足跡"
         url = "/footprint/"
         weight = 3
+    [[menu.main]]
+        name = "關於"
+        url = "/about/"
+        weight = 7
     [[menu.main]]
         name = "博客"
         url = "https://guanqr.com/"

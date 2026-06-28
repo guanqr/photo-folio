@@ -29,7 +29,15 @@
 
     <!-- Lightbox 全局容器 -->
     <div class="lightbox" id="lightbox">
-        <button class="lightbox-close" id="lightbox-close" aria-label="{{ i18n "close" }}">&times;</button>
+        <button class="lightbox-close" id="lightbox-close" aria-label="{{ i18n "close" }}">
+            {{ $.Site.Data.svg.x | safeHTML }}
+        </button>
+        <button class="lightbox-arrow lightbox-prev" id="lightbox-prev" aria-label="上一张">
+            {{ $.Site.Data.svg.chevron_left | safeHTML }}
+        </button>
+        <button class="lightbox-arrow lightbox-next" id="lightbox-next" aria-label="下一张">
+            {{ $.Site.Data.svg.chevron_right | safeHTML }}
+        </button>
         <div class="lightbox-content">
             <img src="" alt="" id="lightbox-img">
             <div class="lightbox-info">

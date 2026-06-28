@@ -80,3 +80,6 @@ other = "未找到屬於《{{ .Title }}》的照片"
 
 [no_series_match_hint]
 other = "請檢查 data/photo.toml 中照片的 series 字段是否與當前頁面的標題完全一致（注意空格和大小寫）。"
+
+[about]
+other = "關於"

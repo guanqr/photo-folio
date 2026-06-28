@@ -7,7 +7,7 @@
     {{ $t := $p.time | time.Format "2006-01-02 15:04:05" }}
     {{ $withKey = $withKey | append (merge $p (dict "_sortKey" (printf "%s-%06d" $t $idx))) }}
 {{ end }}
-{{ $sortedPhotos := sort $withKey "_sortKey" "desc" }}
+{{ $sortedPhotos := sort $withKey "_sortKey" "asc" }}
 
 {{/* 使用 range + eq 手动过滤，确保精准匹配组照名称 */}}
 {{ $photos := slice }}

@@ -101,6 +101,31 @@
 
     /* 列数由 JS 控制 + FLIP 动画 */
 
+    .about-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 1em;
+    }
+    .about-avatar {
+        width: 5em;
+        height: 5em;
+    }
+
+    .lightbox-arrow {
+        width: 2em;
+        height: 3em;
+        svg { width: 1.2em; height: 1.2em; }
+    }
+    .lightbox-prev { left: 0.25em; }
+    .lightbox-next { right: 0.25em; }
+    .lightbox-close {
+        top: 0.75em;
+        right: 0.75em;
+        width: 2.5em;
+        height: 2.5em;
+        svg { width: 1.2em; height: 1.2em; }
+    }
+
     .series-badge {
         top: 0.5em;
         right: 0.5em;

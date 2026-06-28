@@ -1,0 +1,35 @@
+{{ define "main" }}
+{{ $author := .Site.Params.author }}
+
+<section class="about-page">
+    <div class="about-container">
+        <div class="about-header">
+            {{ with $author.avatar }}
+                <img class="about-avatar" src="{{ . | relURL }}" alt="{{ $author.name }}">
+            {{ end }}
+            <div class="about-header-text">
+                <h1 class="about-name">{{ $author.name }}</h1>
+                {{ with $author.bio }}
+                    <p class="about-bio">{{ . }}</p>
+                {{ end }}
+            </div>
+        </div>
+
+        {{ if $author.equipment }}
+        <div class="about-equipment">
+            {{ range $author.equipment }}
+            <div class="equipment-group">
+                <h3 class="equipment-category">{{ .category }}</h3>
+                <ul class="equipment-list">
+                    {{ range .items }}
+                    <li>{{ . }}</li>
+                    {{ end }}
+                </ul>
+            </div>
+            {{ end }}
+        </div>
+        {{ end }}
+
+    </div>
+</section>
+{{ end }}

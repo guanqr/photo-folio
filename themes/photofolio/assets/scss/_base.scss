@@ -62,6 +62,11 @@ body {
     --color-dot-inactive: rgba(var(--rgb-white), 0.4);
     --color-dot-hover: rgba(var(--rgb-white), 0.8);
 
+    --color-lightbox-ctrl-bg: rgba(var(--rgb-black), 0.4);
+    --color-lightbox-ctrl-hover: rgba(var(--rgb-black), 0.6);
+    --color-lightbox-ctrl-text: rgba(var(--rgb-white), 0.8);
+    --color-lightbox-ctrl-text-hover: rgba(var(--rgb-white), 1);
+
     --shadow-img-lightbox: 0 0 2em rgba(var(--rgb-black), 0.5);
 
     --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
