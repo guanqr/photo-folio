@@ -2,6 +2,25 @@
 
 PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)。
 
+## [0.5.5] — 2026-06-28
+
+### Changed
+- **全部按需分配列**：首批照片也不再预分配，改为逐张揭示时实时测最矮列放入（`revealBatch`），确保加载过程中的列高始终均衡
+- **高度比较加容差**：列高差 0.5px 以内视为相等，此时选照片数量更少的列，避免浮点精度导致堆积
+- `initMasonry` 不再预分配，`infinite-scroll` 复用 `revealBatch`
+- **Lightbox 升级**：新增左右箭头切换照片（半透明底+SVG 图标），支持键盘 ← → 导航；关闭按钮改用 SVG；手机端箭头缩小并叠加在图片上不占空间
+- **关于页面**：新增 `/about/` 页面，展示头像、个人简介、设备工具列表，配置集中在 `hugo.toml` 的 `[params.author]`
+- **SVG 统一管理**：所有 SVG 图标集中到 `data/svg.toml`，模板通过 `{{ $.Site.Data.svg.xxx | safeHTML }}` 引用，`baseof.html` 三处硬编码改为引用；新增 `x`、`chevron_left`、`chevron_right` 图标
+- 关于页去除大标题「設備與工具」，保留分类小标题；清理冗余 `.about-section` 包裹层及 SCSS、i18n 无用键值
+- 导航栏隐藏博客外链
+
+### Fixed
+- 修复首批 12 张照片在列高相等时全部堆积到第一列
+- 修复两列模式下列高微差导致的不均衡
+- 修复组照详情页照片排序：改为 `asc`，按 photo.toml 原始顺序展示
+
+---
+
 ## [0.5.4] — 2026-06-27
 
 ### Changed
