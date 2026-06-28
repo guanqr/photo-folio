@@ -621,6 +621,18 @@ place = "廣州聖心大教堂"
 location = "廣東"
 
 [[photo]]
+src = "/images/photos/彩窗垂灯.jpg"
+alt = "彩窗垂燈"
+category = "city"
+focus = "38"
+iso = "800"
+aperture = "9"
+shutter = "1/100"
+time = "2026-06-18"
+place = "廣州聖心大教堂"
+location = "廣東"
+
+[[photo]]
 src = "/images/photos/冼村龙舟招景-1.jpg"
 alt = "冼村龍舟招景·組照 1"
 category = "humanist"
