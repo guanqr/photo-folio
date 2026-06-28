@@ -673,6 +673,18 @@ place = "珠海香洲區"
 location = "廣東"
 
 [[photo]]
+src = "/images/photos/古檐贝影.jpg"
+alt = "古簷貝影"
+category = "city"
+focus = "165"
+iso = "100"
+aperture = "8"
+shutter = "1/200"
+time = "2026-06-19"
+place = "珠海香洲區"
+location = "廣東"
+
+[[photo]]
 src = "/images/photos/爱情邮局灯塔.jpg"
 alt = "愛情郵局燈塔"
 category = "city"
