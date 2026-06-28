@@ -17,7 +17,7 @@
 {{ $sortedPhotos := sort $withKey "_sortKey" "desc" }}
             
             {{/* 定义排除名单，过滤掉非分类的独立页面 */}}
-            {{ $excludeSections := slice "gallery" "footprint" "series" }}
+            {{ $excludeSections := slice "gallery" "footprint" "series" "about" }}
             
             {{ range .Site.Sections.ByWeight }}
                 {{ $sectionName := .File.ContentBaseName }}
