@@ -2,6 +2,33 @@
 
 PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)。
 
+## [0.5.6] — 2026-06-29
+
+### Changed
+- **全局动画增强**：新增 `--transition-spring` 变量（弹性缓动）、`body` 明暗主题过渡、`fadeInUp/Down` 全局关键帧
+- **页面切换**：拦截站内导航，仅替换 `.main-content`，header/footer/Lightbox 不重载；History API 支持前进后退；切换后自动更新导航高亮、关闭移动菜单
+- **导航栏**：下划线改为 `scaleX` 从中心展开 + `will-change` GPU 优化；header 背景平滑过渡
+- **主题切换**：太阳光线向内收缩 + 核心圆与弯月交叉淡入（取代整图标旋转缩放）；`transform` 与 `opacity` 统一 0.4s 同步过渡
+- **汉堡菜单**：三条线始终绝对定位，纯 `transform` 驱动叉号动画，交点精确居中
+- **分类卡片**：交错淡入入场、hover 弹簧抬升 + 阴影（与照片卡片统一）
+- **照片瀑布流**：逐张渐入揭示（JS + CSS）、hover 弹簧抬升 + 阴影、分类标签 hover 弹出
+- **Lightbox**：图片 + 标题 + 说明同步淡入淡出切换；关闭按钮 hover 弹簧旋转（纯 SVG，不缩放按钮）；左右箭头仅 hover 时淡入浮现；控件尺寸统一 3em，窄屏不缩小
+- **关于页**：头像/设备组交错淡入、头像 hover 弹簧旋转、设备标签 hover 变色
+- **足迹时间线**：圆点弹入动画（`dotPulse`）、卡片 hover 弹簧抬升、缩略图 hover 弹出
+- **页脚**：链接 hover 发光（`text-shadow`）
+- **返回顶部**：弹簧弹入 + hover 上浮，页面切换后正确重新绑定
+- **懒加载**：图片模糊渐清（`blur(10px) → 0`），页面切换复用已有 Observer
+- **列数切换 FLIP**：使用平滑缓动替代弹簧曲线，过渡完成后清理 inline style
+- **无限滚动**：仅从不可见→可见转变时触发（防初始误触）；800ms 延迟开始观察；滚动到底后转圈 700ms 再加载
+- **模块防重入**：masonry、lightbox、timeline、lazy-load、back-to-top 加守卫/清理，支持页面切换后安全重新初始化
+
+### Fixed
+- 首页排除关于页卡片：`about` section 加入 `excludeSections`，避免关于页作为分类卡片出现在首页
+- 分类卡片 hover 上移不生效（CSS animation 覆盖 transform）
+- 页面切换后导航下划线不更新
+
+---
+
 ## [0.5.5] — 2026-06-28
 
 ### Changed
