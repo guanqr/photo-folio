@@ -1,3 +1,5 @@
+let inited = false;
+
 export function initLightbox() {
     const lightbox = document.getElementById('lightbox');
     const lightboxImg = document.getElementById('lightbox-img');
@@ -35,19 +37,59 @@ export function initLightbox() {
     function open(index) {
         if (!currentPhotos.length) collectPhotos();
         if (index < 0 || index >= currentPhotos.length) return;
+        const isSwitch = lightbox.classList.contains('active');
         currentIndex = index;
         const p = currentPhotos[index];
-        lightboxImg.src = p.src;
-        lightboxImg.alt = p.alt;
-        if (lightboxCaption) lightboxCaption.textContent = p.title;
-        if (lightboxDesc) lightboxDesc.textContent = p.desc;
-        lightbox.classList.add('active');
-        document.body.style.overflow = 'hidden';
+
+        if (isSwitch) {
+            // 切换照片：图片 + 标题 + 说明同步淡出 → 换内容 → 淡入
+            lightboxImg.style.opacity = '0';
+            if (lightboxCaption) lightboxCaption.style.opacity = '0';
+            if (lightboxDesc) lightboxDesc.style.opacity = '0';
+
+            lightboxImg.addEventListener('transitionend', function handler() {
+                lightboxImg.removeEventListener('transitionend', handler);
+                lightboxImg.src = p.src;
+                lightboxImg.alt = p.alt;
+                if (lightboxCaption) {
+                    lightboxCaption.textContent = p.title;
+                    lightboxCaption.style.opacity = '1';
+                }
+                if (lightboxDesc) {
+                    lightboxDesc.textContent = p.desc;
+                    lightboxDesc.style.opacity = '1';
+                }
+                lightboxImg.style.opacity = '1';
+            });
+        } else {
+            lightboxImg.style.opacity = '0';
+            if (lightboxCaption) { lightboxCaption.style.opacity = '0'; lightboxCaption.textContent = p.title; }
+            if (lightboxDesc) { lightboxDesc.style.opacity = '0'; lightboxDesc.textContent = p.desc; }
+
+            lightboxImg.src = p.src;
+            lightboxImg.alt = p.alt;
+            lightbox.classList.add('active');
+            document.body.style.overflow = 'hidden';
+
+            if (lightboxImg.complete) {
+                lightboxImg.style.opacity = '1';
+                if (lightboxCaption) lightboxCaption.style.opacity = '1';
+                if (lightboxDesc) lightboxDesc.style.opacity = '1';
+            } else {
+                lightboxImg.addEventListener('load', function onLoad() {
+                    lightboxImg.removeEventListener('load', onLoad);
+                    lightboxImg.style.opacity = '1';
+                    if (lightboxCaption) lightboxCaption.style.opacity = '1';
+                    if (lightboxDesc) lightboxDesc.style.opacity = '1';
+                });
+            }
+        }
         updateArrows();
     }
 
     function close() {
         lightbox.classList.remove('active');
+        lightboxImg.style.opacity = '0';
         document.body.style.overflow = '';
     }
 
@@ -72,6 +114,10 @@ export function initLightbox() {
         btnNext.style.display = hasMultiple ? '' : 'none';
     }
 
+    // 全局监听器仅注册一次（lightbox DOM 在 .main-content 外部，不会随页面切换重建）
+    if (inited) return;
+    inited = true;
+
     // 点击照片打开
     document.addEventListener('click', function (e) {
         const wrapper = e.target.closest('.photo-wrapper');
@@ -85,7 +131,6 @@ export function initLightbox() {
 
     // 关闭
     if (lightboxClose) lightboxClose.addEventListener('click', close);
-    lightbox.addEventListener('click', e => { if (e.target === lightbox) close(); });
 
     // 箭头按钮
     if (btnPrev) btnPrev.addEventListener('click', e => { e.stopPropagation(); prev(); });

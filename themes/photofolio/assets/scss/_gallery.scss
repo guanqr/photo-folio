@@ -52,9 +52,16 @@
 }
 
 .masonry-item {
-    break-inside: avoid; /* CSS columns fallback 防止卡片被截断 */
-    margin-bottom: 1.5em; /* CSS columns fallback 间距 */
-    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+    break-inside: avoid;
+    margin-bottom: 1.5em;
+    opacity: 0;
+    transform: translateY(1.5em);
+    transition: transform 0.5s var(--transition-spring), opacity 0.4s ease;
+
+    &.is-revealed {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .masonry-grid.masonry-ready .masonry-item {
@@ -67,28 +74,24 @@
     border-radius: 0.5em;
     overflow: hidden;
     border: 0.0625em solid var(--color-border);
-    transition: transform var(--transition), border-color var(--transition);
+    transition: transform var(--transition-spring), border-color var(--transition), box-shadow var(--transition);
 
     &:hover {
-        transform: translateY(-0.125em);
+        transform: translateY(-0.35em);
         border-color: var(--color-accent-30);
-        
-        /* 保留照片本身的轻微放大效果 */
-        .photo-img { transform: scale(1.03); } 
-        
+        box-shadow: 0 0.75em 2em rgba(0, 0, 0, 0.2);
     }
 }
 
-.photo-wrapper { 
-    position: relative; 
-    overflow: hidden; 
-    cursor: pointer; /* 保留指针样式，因为点击依然会触发 Lightbox */
+.photo-wrapper {
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
 }
 
-.photo-img { 
-    width: 100%; 
-    height: auto; 
-    transition: transform 0.5s ease; 
+.photo-img {
+    width: 100%;
+    height: auto;
 }
 
 .photo-meta { padding: 1.25em; }
@@ -135,14 +138,15 @@
     font-size: 0.75em;
     font-weight: 500;
     color: var(--color-accent);
-    transition: background var(--transition), color var(--transition), border-color var(--transition);
-    
+    transition: background var(--transition), color var(--transition), transform var(--transition-spring);
+
     /* 确保即使左侧没有位置信息，标签也强制靠右 */
-    margin-left: auto; 
-    
+    margin-left: auto;
+
     &:hover {
         background: var(--color-accent);
-        color: var(--color-bg); /* 悬停时文字反色 */
+        color: var(--color-bg);
+        transform: scale(1.08);
     }
     
     .icon {
@@ -235,7 +239,7 @@
     align-items: center;
     gap: 0.35em;
     
-    transition: background 0.3s ease, color 0.3s ease, transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s ease;
+    transition: background 0.3s ease, color 0.3s ease, transform var(--transition-spring), border-color 0.3s ease;
 
     .icon, .count {
         color: inherit; 

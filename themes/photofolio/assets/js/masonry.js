@@ -4,6 +4,7 @@
 
 let resizeTimeout = null;
 let currentColumnCount = 0;
+let resizeBound = false;
 
 export function initMasonry() {
     const grid = document.getElementById('masonry-grid');
@@ -47,6 +48,12 @@ export function revealBatch(grid, count) {
             const shortest = getShortestCol(columns);
             shortest.appendChild(item);
             item.classList.remove('is-hidden');
+            // 触发渐入动画：先设初始态，下一帧切到可见
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    item.classList.add('is-revealed');
+                });
+            });
         }, i * 60);
     }
 }
@@ -71,6 +78,8 @@ export function getColumnCount() {
 }
 
 export function initMasonryResize() {
+    if (resizeBound) return;
+    resizeBound = true;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(() => {
@@ -142,10 +151,14 @@ function flipRebuild(grid) {
 
     allRendered.forEach(el => el.offsetHeight);
 
-    // Play
+    // Play（使用平滑缓动，不用弹簧曲线，列数切换更干净）
     allRendered.forEach(el => {
-        el.style.transition = '';
+        el.style.transition = 'transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
         el.style.transform = '';
+        el.addEventListener('transitionend', function handler() {
+            el.removeEventListener('transitionend', handler);
+            el.style.transition = '';
+        });
     });
 }
 

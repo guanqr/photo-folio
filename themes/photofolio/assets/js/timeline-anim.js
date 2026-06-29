@@ -21,6 +21,7 @@ export function initTimelineAnim() {
 let timelineCols = 0;
 let isMobile = false;
 let resizeTimer = null;
+let timelineResizeBound = false;
 
 const MOBILE_BP = 768;
 
@@ -35,6 +36,8 @@ export function initTimelineResize() {
     // 立即应用正确的列数和移动端布局（无动画）
     applyTimelineState();
 
+    if (timelineResizeBound) return;
+    timelineResizeBound = true;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(() => {

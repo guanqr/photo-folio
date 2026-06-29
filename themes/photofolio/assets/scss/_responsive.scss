@@ -88,7 +88,8 @@
     }
     
     .theme-toggle {
-        padding: 0.5em;
+        width: 2.75em;
+        height: 2.75em;
         svg {
             width: 1.4em;
             height: 1.4em;
@@ -109,21 +110,6 @@
     .about-avatar {
         width: 5em;
         height: 5em;
-    }
-
-    .lightbox-arrow {
-        width: 2em;
-        height: 3em;
-        svg { width: 1.2em; height: 1.2em; }
-    }
-    .lightbox-prev { left: 0.25em; }
-    .lightbox-next { right: 0.25em; }
-    .lightbox-close {
-        top: 0.75em;
-        right: 0.75em;
-        width: 2.5em;
-        height: 2.5em;
-        svg { width: 1.2em; height: 1.2em; }
     }
 
     .series-badge {

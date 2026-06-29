@@ -21,14 +21,22 @@ export function initInfiniteScroll() {
     }
 
     let isLoading = false;
+    let wasIntersecting = true;
 
     const observer = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && !isLoading) {
+        const isIntersecting = entries[0].isIntersecting;
+        if (isIntersecting && !wasIntersecting && !isLoading) {
             loadMore();
         }
-    }, { rootMargin: '300px' });
+        wasIntersecting = isIntersecting;
+    }, { rootMargin: '0px' });
 
-    observer.observe(trigger);
+    // 延迟观察，先记录触发器当前位置，防止初始即触发
+    setTimeout(() => {
+        const rect = trigger.getBoundingClientRect();
+        wasIntersecting = rect.top < window.innerHeight && rect.bottom > 0;
+        observer.observe(trigger);
+    }, 800);
 
     function loadMore() {
         if (grid._pendingItems.length === 0) {
@@ -40,22 +48,26 @@ export function initInfiniteScroll() {
         trigger.classList.add('is-loading');
 
         const batch = Math.min(pageSize, grid._pendingItems.length);
-        let done = 0;
 
-        for (let i = 0; i < batch; i++) {
-            setTimeout(() => {
-                done++;
-                if (done === batch) {
-                    isLoading = false;
-                    trigger.classList.remove('is-loading');
-                    if (grid._pendingItems.length === 0) {
-                        finishLoading();
+        // 先展示转圈图标 400ms，再开始揭示照片
+        setTimeout(() => {
+            let done = 0;
+
+            for (let i = 0; i < batch; i++) {
+                setTimeout(() => {
+                    done++;
+                    if (done === batch) {
+                        isLoading = false;
+                        trigger.classList.remove('is-loading');
+                        if (grid._pendingItems.length === 0) {
+                            finishLoading();
+                        }
                     }
-                }
-            }, i * 60);
-        }
+                }, i * 60);
+            }
 
-        revealBatch(grid, batch);
+            revealBatch(grid, batch);
+        }, 700);
     }
 
     function finishLoading() {

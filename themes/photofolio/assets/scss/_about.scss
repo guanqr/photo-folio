@@ -7,11 +7,13 @@
     padding: 4em 2em 6em;
 }
 
+/* ===== 交错入场动画 ===== */
 .about-header {
     display: flex;
     align-items: center;
     gap: 2em;
     margin-bottom: 3em;
+    animation: fadeInUp 0.6s ease both;
 }
 
 .about-avatar {
@@ -21,6 +23,13 @@
     object-fit: cover;
     border: 0.1875em solid var(--color-border);
     flex-shrink: 0;
+    transition: transform var(--transition-spring), border-color var(--transition), box-shadow var(--transition);
+
+    &:hover {
+        transform: scale(1.08) rotate(-3deg);
+        border-color: var(--color-accent-30);
+        box-shadow: 0 0.5em 1.5em rgba(0, 0, 0, 0.2);
+    }
 }
 
 .about-header-text {
@@ -52,6 +61,12 @@
 }
 
 .equipment-group {
+    animation: fadeInUp 0.5s ease both;
+
+    &:nth-child(1) { animation-delay: 0.2s; }
+    &:nth-child(2) { animation-delay: 0.3s; }
+    &:nth-child(3) { animation-delay: 0.4s; }
+
     h3 {
         font-family: var(--font-meta);
         font-size: var(--size-small);
@@ -74,6 +89,12 @@
         padding: 0.35em 0.85em;
         font-size: var(--size-small);
         color: var(--color-text-secondary);
+        transition: border-color var(--transition), color var(--transition), background var(--transition);
+
+        &:hover {
+            border-color: var(--color-accent);
+            color: var(--color-accent);
+            background: var(--color-accent-15);
+        }
     }
 }
-

@@ -74,13 +74,14 @@
     /* 初始隐藏状态 */
     opacity: 0;
     visibility: hidden;
-    transform: translateY(1em);
-    transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease, background-color 0.3s ease, color 0.3s ease;
+    transform: translateY(1.5em);
+    transition: opacity 0.3s ease, visibility 0.3s ease, transform var(--transition-spring), background-color 0.3s ease, color 0.3s ease;
 
     &:hover {
         background-color: var(--color-accent);
         color: #fff;
         border-color: var(--color-accent);
+        transform: translateY(-0.2em);
     }
 
     /* 激活状态（滚动后显示） */

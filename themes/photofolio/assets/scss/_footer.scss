@@ -25,11 +25,12 @@
     a {
         color: var(--color-text-secondary);
         border-bottom: 0.0625em solid var(--color-border);
-        transition: color var(--transition), border-color var(--transition);
+        transition: color var(--transition), border-color var(--transition), text-shadow var(--transition);
 
         &:hover {
             color: var(--color-accent);
             border-color: var(--color-accent);
+            text-shadow: 0 0 0.8em var(--color-accent-30);
         }
     }
 }

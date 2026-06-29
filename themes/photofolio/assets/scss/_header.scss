@@ -6,10 +6,11 @@
     background: var(--color-header-bg);
     backdrop-filter: blur(1.25em);
     border-bottom: 0.0625em solid var(--color-border);
+    transition: background 0.3s ease, box-shadow 0.3s ease;
 }
 
 .header-inner {
-    max-width: var(--container-width); 
+    max-width: var(--container-width);
     margin: 0 auto;
     padding: 0 2em;
     display: flex;
@@ -26,9 +27,9 @@
 }
 
 .site-nav {
-    ul { 
-        display: flex; 
-        gap: 2em; 
+    ul {
+        display: flex;
+        gap: 2em;
         margin: 0;
         padding: 0;
     }
@@ -42,25 +43,25 @@
         &::after {
             content: '';
             position: absolute;
-            bottom: -0.125em; left: 0;
-            width: 0; height: 0.1em;
+            bottom: -0.125em;
+            left: 0; right: 0;
+            height: 0.1em;
             background: var(--color-accent);
-            transition: width var(--transition);
+            transform: scaleX(0);
+            transform-origin: center;
+            will-change: transform;
+            transition: transform var(--transition);
         }
 
-        &:hover, &.active { 
-            color: var(--color-text); 
-            &::after { width: 100%; }
+        &:hover, &.active {
+            color: var(--color-text);
+            &::after { transform: scaleX(1); }
         }
     }
 }
 
 .nav-toggle {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 0.35em;
+    position: relative;
     background: none;
     border: none;
     cursor: pointer;
@@ -68,7 +69,6 @@
     height: 2.75em;
     padding: 0;
     z-index: 1002;
-    position: relative;
 
     /* 宽屏默认隐藏，用 visibility+opacity 替代 display:none 实现过渡动画 */
     visibility: hidden;
@@ -76,11 +76,37 @@
     transition: opacity 0.3s ease, visibility 0.3s;
 
     span {
+        position: absolute;
+        top: 50%;
+        left: 50%;
         display: block;
         width: 1.5em;
         height: 0.125em;
+        margin-top: -0.0625em;
+        margin-left: -0.75em;
         background: var(--color-text);
-        transition: var(--transition);
+        border-radius: 0.0625em;
+        transition: transform 0.35s var(--transition-spring),
+                    opacity 0.25s ease;
+
+        &:nth-child(1) { transform: translateY(-0.475em) rotate(0deg); }
+        &:nth-child(2) { transform: scaleX(1); }
+        &:nth-child(3) { transform: translateY(0.475em) rotate(0deg); }
+    }
+
+    &.active {
+        span {
+            &:nth-child(1) {
+                transform: translateY(0) rotate(45deg);
+            }
+            &:nth-child(2) {
+                opacity: 0;
+                transform: scaleX(0);
+            }
+            &:nth-child(3) {
+                transform: translateY(0) rotate(-45deg);
+            }
+        }
     }
 }
 
@@ -93,20 +119,22 @@
 
 /* ===== Theme Toggle Button ===== */
 .theme-toggle {
+    position: relative;
+    width: 2.5em;
+    height: 2.5em;
     background: none;
     border: none;
     cursor: pointer;
-    padding: 0.5em;
+    padding: 0;
     color: var(--color-text-secondary);
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: color var(--transition), transform var(--transition);
+    transition: color var(--transition);
     border-radius: 50%;
 
     &:hover {
         color: var(--color-accent);
-        transform: rotate(15deg); /* 悬停时轻微旋转，增加灵动感 */
     }
 
     svg {
@@ -114,15 +142,42 @@
         height: 1.5em;
     }
 
-    /* 默认暗色模式：显示月亮，隐藏太阳 */
-    .icon-sun { display: none; }
-    .icon-moon { display: block; }
+    .icon-sun, .icon-moon {
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* ===== 图标内部元素动画 ===== */
+    .sg-core, .sg-ray {
+        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                    opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        transform-origin: center;
+        transform-box: fill-box;
+    }
+
+    /* 暗色模式：月亮可见，太阳隐藏 */
+    .icon-sun {
+        .sg-core { opacity: 0; transform: scale(0.6); }
+        .sg-ray  { opacity: 0; transform: scale(0); }
+    }
+    .icon-moon {
+        .sg-core { opacity: 1; transform: scale(1); }
+    }
 }
 
-/* 亮色模式：显示太阳，隐藏月亮 */
+/* 亮色模式：太阳可见，月亮隐藏 */
 [data-theme="light"] {
     .theme-toggle {
-        .icon-sun { display: block; }
-        .icon-moon { display: none; }
+        .icon-sun {
+            .sg-core { opacity: 1; transform: scale(1); }
+            .sg-ray  { opacity: 1; transform: scale(1); }
+        }
+        .icon-moon {
+            .sg-core { opacity: 0; transform: scale(0.6); }
+        }
     }
 }

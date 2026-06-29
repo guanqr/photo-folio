@@ -7,11 +7,12 @@
 .section-header {
     text-align: center;
     margin-bottom: 3em;
+    animation: fadeInDown 0.6s ease both;
 }
 
 .section-title {
     font-family: var(--font-heading);
-    font-size: var(--size-h1); /* 放大标题 */
+    font-size: var(--size-h1);
     font-weight: 700;
     margin-bottom: 0.5em;
     color: var(--color-text);
@@ -22,6 +23,7 @@
     color: var(--color-text-secondary);
     font-weight: 300;
     letter-spacing: 0.05em;
+    animation: fadeInDown 0.6s 0.15s ease both;
 }
 
 .grid {
@@ -34,20 +36,21 @@
 .category-card {
     display: flex;
     flex-direction: column;
-    background-color: var(--color-bg-card); 
+    background-color: var(--color-bg-card);
     border-radius: 0.75em;
     overflow: hidden;
     border: 0.0625em solid var(--color-border);
-    transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
+    transition: transform var(--transition-spring), border-color var(--transition), box-shadow var(--transition);
+    animation: fadeInUp 0.5s ease both;
 
-    &:hover { 
-        transform: translateY(-0.25em); 
+    @for $i from 1 through 12 {
+        &:nth-child(#{$i}) { animation-delay: #{$i * 0.06}s; }
+    }
+
+    &:hover {
+        transform: translateY(-0.35em);
         border-color: var(--color-accent-30);
-        box-shadow: 0 0.5em 1.5em rgba(0, 0, 0, 0.2);
-        
-        .category-image img { 
-            transform: scale(1.05); 
-        }
+        box-shadow: 0 0.75em 2em rgba(0, 0, 0, 0.2);
     }
 }
 
@@ -59,11 +62,10 @@
     overflow: hidden;
 
     img {
-        width: 100%; 
+        width: 100%;
         height: 100%;
         object-fit: cover;
-        display: block; 
-        transition: transform 0.6s ease;
+        display: block;
     }
 }
 
@@ -73,7 +75,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.25em;
-    flex: 1; /* 撑满剩余空间 */
+    flex: 1;
 }
 
 .category-title {
@@ -85,7 +87,7 @@
 
 .category-count {
     font-size: var(--size-small);
-    color: var(--color-accent); 
+    color: var(--color-accent);
     font-weight: 500;
 }
 
@@ -95,3 +97,4 @@
     margin-top: 0.5em;
     line-height: 1.5;
 }
+

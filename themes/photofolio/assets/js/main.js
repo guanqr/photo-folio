@@ -7,19 +7,33 @@ import { initThemeToggle } from './theme-toggle.js';
 import { initMasonry, initMasonryResize } from './masonry.js';
 import { initInfiniteScroll } from './infinite-scroll.js';
 import { initTimelineAnim, initTimelineResize } from './timeline-anim.js';
+import { initPageTransition } from './page-transition.js';
 
-// 当 DOM 加载完成后，统一初始化所有模块
-document.addEventListener('DOMContentLoaded', () => {
+// 页面相关模块（每次页面切换需重新初始化）
+function initPageModules() {
     initLightbox();
     initLazyLoad();
-    initHeaderScroll();
-    initMobileNav();
-    initBackToTop();
-    initThemeToggle();
-    // masonry 必须先于 infinite-scroll 初始化
     initMasonry();
     initMasonryResize();
     initInfiniteScroll();
     initTimelineAnim();
     initTimelineResize();
+    initBackToTop();
+}
+
+// 全局模块（仅首次初始化，页面切换后不重复执行）
+let globalInited = false;
+function initGlobalModules() {
+    if (globalInited) return;
+    globalInited = true;
+    initHeaderScroll();
+    initMobileNav();
+    initThemeToggle();
+}
+
+// 首次加载
+document.addEventListener('DOMContentLoaded', () => {
+    initGlobalModules();
+    initPageModules();
+    initPageTransition(initPageModules);
 });
