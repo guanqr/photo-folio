@@ -114,9 +114,14 @@ function applyTimelineState(mobile, cols) {
     if (mobile === undefined) mobile = isMobile;
     if (cols === undefined) cols = timelineCols;
 
-    // 缩略图列数
+    // 缩略图列数 + 卡片宽度（不足时按比例收窄，保持缩略图尺寸一致）
     document.querySelectorAll('.timeline-gallery').forEach(g => {
-        g.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        const n = g.children.length;
+        const count = Math.min(cols, n);
+        const card = g.parentElement;
+        g.style.gridTemplateColumns = `repeat(${count}, 1fr)`;
+        card.style.width = count < cols ? `${(count / cols) * 100}%` : '';
+        card.style.minWidth = count < cols ? '0' : '';
     });
 
     // 移动端布局

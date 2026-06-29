@@ -115,18 +115,11 @@ a.timeline-content {
     border-radius: 0.5em;
     overflow: hidden;
     cursor: pointer;
-    transition: transform var(--transition-spring), opacity 0.3s ease;
 
     img {
         width: 100%;
         height: 100%;
         object-fit: cover;
-        transition: transform 0.5s var(--transition-spring);
-    }
-
-    &:hover {
-        transform: scale(1.05);
-        img { transform: scale(1.15); }
     }
 }
 
