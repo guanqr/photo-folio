@@ -6,7 +6,7 @@
     background: var(--color-header-bg);
     backdrop-filter: blur(1.25em);
     border-bottom: 0.0625em solid var(--color-border);
-    transition: background 0.3s ease, box-shadow 0.3s ease;
+    transition: background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
 }
 
 .header-inner {
@@ -24,6 +24,8 @@
     font-size: 2em;
     font-weight: 700;
     letter-spacing: -0.02em;
+    color: var(--color-text);
+    transition: color 0.3s ease;
 }
 
 .site-nav {
@@ -105,7 +107,8 @@
         background: var(--color-text);
         border-radius: 0.0625em;
         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                    background-color 0.3s ease;
 
         &:nth-child(1) { transform: translateY(-0.475em) rotate(0deg); }
         &:nth-child(2) { transform: scaleX(1); }
@@ -172,7 +175,8 @@
     /* ===== 图标内部元素动画 ===== */
     .sg-core, .sg-ray {
         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                    background-color 0.3s ease;
         transform-origin: center;
         transform-box: fill-box;
     }

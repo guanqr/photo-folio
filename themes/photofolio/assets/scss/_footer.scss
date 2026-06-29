@@ -5,7 +5,8 @@
     margin-top: 2em;
     font-family: var(--font-footer);
     font-size: var(--size-footer);
-    flex-shrink: 0; 
+    flex-shrink: 0;
+    transition: border-color 0.3s ease, color 0.3s ease;
 }
 
 .footer-inner {

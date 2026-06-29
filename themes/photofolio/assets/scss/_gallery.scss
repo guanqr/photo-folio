@@ -1,9 +1,10 @@
 /* ===== Gallery Page (Masonry) ===== */
 .gallery-page { margin-top: 4.5em; }
 
-.gallery-header { 
-    padding: 3em 0 2em; 
-    border-bottom: 0.0625em solid var(--color-border); 
+.gallery-header {
+    padding: 3em 0 2em;
+    border-bottom: 0.0625em solid var(--color-border);
+    transition: border-color 0.3s ease;
 }
 
 .breadcrumb {
@@ -13,6 +14,7 @@
     font-size: var(--size-small);
     color: var(--color-text-muted);
     margin-bottom: 1.5em;
+    transition: color 0.3s ease;
 }
 
 .page-title {
@@ -20,6 +22,8 @@
     font-size: var(--size-h1);
     font-weight: 700;
     margin-bottom: 0.75em;
+    color: var(--color-text);
+    transition: color 0.3s ease;
 }
 
 .masonry-container {
@@ -74,7 +78,7 @@
     border-radius: 0.5em;
     overflow: hidden;
     border: 0.0625em solid var(--color-border);
-    transition: transform var(--transition-spring), border-color var(--transition), box-shadow var(--transition);
+    transition: transform var(--transition-spring), border-color var(--transition), box-shadow var(--transition), background-color 0.3s ease;
 
     &:hover {
         transform: translateY(-0.35em);
@@ -101,6 +105,8 @@
     font-size: 1em;
     font-weight: 600;
     margin-bottom: 0.75em;
+    color: var(--color-text);
+    transition: color 0.3s ease;
 }
 
 .photo-details {
@@ -167,6 +173,7 @@
     font-family: var(--font-meta);
     font-size: var(--size-meta);
     color: var(--color-text-secondary);
+    transition: color 0.3s ease;
 }
 
 /* ===== Load More Trigger (无限滚动触发器) ===== */

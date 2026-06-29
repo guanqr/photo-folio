@@ -43,6 +43,7 @@
     font-weight: 700;
     margin-bottom: 0.25em;
     color: var(--color-text);
+    transition: color 0.3s ease;
 }
 
 .about-bio {
@@ -50,6 +51,7 @@
     color: var(--color-text-secondary);
     line-height: 1.7;
     margin: 0;
+    transition: color 0.3s ease;
 }
 
 /* equipment */
@@ -73,6 +75,7 @@
         color: var(--color-accent);
         font-weight: 600;
         margin-bottom: 0.4em;
+        transition: color 0.3s ease;
     }
 }
 
