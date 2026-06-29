@@ -49,24 +49,16 @@ export function initInfiniteScroll() {
 
         const batch = Math.min(pageSize, grid._pendingItems.length);
 
-        // 先展示转圈图标 400ms，再开始揭示照片
+        // 先展示转圈图标 700ms，再开始揭示照片
         setTimeout(() => {
-            let done = 0;
-
-            for (let i = 0; i < batch; i++) {
-                setTimeout(() => {
-                    done++;
-                    if (done === batch) {
-                        isLoading = false;
-                        trigger.classList.remove('is-loading');
-                        if (grid._pendingItems.length === 0) {
-                            finishLoading();
-                        }
-                    }
-                }, i * 60);
-            }
-
             revealBatch(grid, batch);
+            setTimeout(() => {
+                isLoading = false;
+                trigger.classList.remove('is-loading');
+                if (grid._pendingItems.length === 0) {
+                    finishLoading();
+                }
+            }, batch * 60);
         }, 700);
     }
 

@@ -7,7 +7,7 @@
 .section-header {
     text-align: center;
     margin-bottom: 3em;
-    animation: fadeInDown 0.6s ease both;
+    animation: fadeInUp 0.6s ease both;
 }
 
 .section-title {
@@ -23,7 +23,7 @@
     color: var(--color-text-secondary);
     font-weight: 300;
     letter-spacing: 0.05em;
-    animation: fadeInDown 0.6s 0.15s ease both;
+    animation: fadeInUp 0.6s 0.15s ease both;
 }
 
 .grid {

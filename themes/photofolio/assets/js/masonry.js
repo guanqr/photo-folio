@@ -25,9 +25,8 @@ export function initMasonry() {
 
     // 全部照片不预分配，揭示时逐张放入当前最矮列
     allItems.forEach(item => item.remove());
-    grid._pendingItems = allItems; // 保持时间顺序
-
-    grid._allItems = allItems;
+    grid._pendingItems = allItems; // 揭示时会 shift，顺序逐步消耗
+    grid._allItems = [...allItems]; // 独立副本，flipRebuild 依赖完整原始顺序
     grid._columns = columns;
 
     grid.classList.add('masonry-ready');
@@ -71,7 +70,7 @@ function getShortestCol(columns) {
     return columns[min];
 }
 
-export function getColumnCount() {
+function getColumnCount() {
     if (window.innerWidth <= 768) return 1;
     if (window.innerWidth <= 1024) return 2;
     return 3;

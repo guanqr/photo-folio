@@ -20,18 +20,6 @@
         color: var(--color-text-secondary);
     }
 
-    .debug-info {
-        font-size: var(--size-small);
-        color: var(--color-text-muted);
-        line-height: 1.8;
-        max-width: 40em;
-        margin: 0 auto;
-        text-align: left;
-        background: var(--color-bg);
-        padding: 1.5em;
-        border-radius: 0.5em;
-    }
-
     code {
         font-family: var(--font-meta);
         background: var(--color-bg-card);
@@ -40,17 +28,6 @@
         color: var(--color-accent);
         font-size: 0.9em;
     }
-}
-
-.photo-placeholder {
-    width: 100%;
-    aspect-ratio: 4/3;
-    background: var(--color-bg-secondary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--color-text-muted);
-    font-size: var(--size-small);
 }
 
 /* ===== Back to Top Button ===== */

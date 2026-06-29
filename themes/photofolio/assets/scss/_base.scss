@@ -51,7 +51,6 @@ body {
     --color-accent: rgb(var(--rgb-accent));
     --color-accent-15: rgba(var(--rgb-accent), 0.15);
     --color-accent-30: rgba(var(--rgb-accent), 0.3);
-    --color-accent-50: rgba(var(--rgb-accent), 0.5);
 
     --color-border: rgb(var(--rgb-border));
 
@@ -60,8 +59,6 @@ body {
     --color-lightbox-bg: rgba(var(--rgb-card), 0.95);
 
     --color-overlay-subtle: rgba(var(--rgb-white), 0.1);
-    --color-dot-inactive: rgba(var(--rgb-white), 0.4);
-    --color-dot-hover: rgba(var(--rgb-white), 0.8);
 
     --color-lightbox-ctrl-bg: rgba(var(--rgb-black), 0.4);
     --color-lightbox-ctrl-hover: rgba(var(--rgb-black), 0.6);
@@ -97,7 +94,6 @@ body {
     --color-accent: rgb(var(--rgb-accent));
     --color-accent-15: rgba(var(--rgb-accent), 0.15);
     --color-accent-30: rgba(var(--rgb-accent), 0.3);
-    --color-accent-50: rgba(var(--rgb-accent), 0.5);
 
     --color-border: rgb(var(--rgb-border));
 
@@ -143,10 +139,6 @@ ul { list-style: none; }
 
 /* ===== 全局入场关键帧 ===== */
 @keyframes fadeInUp {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-}
-@keyframes fadeInDown {
     from { opacity: 0; }
     to   { opacity: 1; }
 }

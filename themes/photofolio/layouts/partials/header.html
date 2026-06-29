@@ -19,7 +19,10 @@
                     {{ range .Site.Menus.main }}
                     <li>
                         <a href="{{ .URL }}" {{ if eq $.RelPermalink .URL }}class="active"{{ end }}>
-                            {{ .Name }}
+                            {{ with .Params.icon }}
+                                <span class="nav-icon">{{ index $.Site.Data.svg . | safeHTML }}</span>
+                            {{ end }}
+                            <span class="nav-text">{{ .Name }}</span>
                         </a>
                     </li>
                     {{ end }}

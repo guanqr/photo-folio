@@ -1,6 +1,8 @@
 let inited = false;
 
 export function initLightbox() {
+    if (inited) return;
+
     const lightbox = document.getElementById('lightbox');
     const lightboxImg = document.getElementById('lightbox-img');
     const lightboxCaption = document.getElementById('lightbox-caption');
@@ -114,10 +116,6 @@ export function initLightbox() {
         btnNext.style.display = hasMultiple ? '' : 'none';
     }
 
-    // 全局监听器仅注册一次（lightbox DOM 在 .main-content 外部，不会随页面切换重建）
-    if (inited) return;
-    inited = true;
-
     // 点击照片打开
     document.addEventListener('click', function (e) {
         const wrapper = e.target.closest('.photo-wrapper');
@@ -143,4 +141,6 @@ export function initLightbox() {
         if (e.key === 'ArrowLeft') prev();
         if (e.key === 'ArrowRight') next();
     });
+
+    inited = true;
 }

@@ -64,7 +64,6 @@ defaultContentLanguage = "zh-cn"
     # 基础字号 (这些是纯数字+单位，不会触发 ZgotmplZ)
     baseFontSize = "16px" 
     sizeH1 = "2.5em"
-    sizeH2 = "2em"
     sizeH3 = "1.5em"
     sizeBody = "1em"
     sizeSmall = "0.875em"
@@ -76,18 +75,26 @@ defaultContentLanguage = "zh-cn"
         name = "首頁"
         url = "/"
         weight = 1
+        [menu.main.params]
+        icon = "home"
     [[menu.main]]
         name = "作品"
         url = "/gallery/"
         weight = 2
+        [menu.main.params]
+        icon = "grid"
     [[menu.main]]
         name = "足跡"
         url = "/footprint/"
         weight = 3
+        [menu.main.params]
+        icon = "map_pin"
     [[menu.main]]
         name = "關於"
         url = "/about/"
         weight = 7
+        [menu.main.params]
+        icon = "user"
     # [[menu.main]]
     #     name = "博客"
     #     url = "https://guanqr.com/"

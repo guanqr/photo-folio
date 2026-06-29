@@ -64,14 +64,6 @@ async function loadContent(url) {
         // 更新导航当前页高亮
         updateActiveNav(url);
 
-        // 关闭移动端导航（如果已打开）
-        const nav = document.getElementById('site-nav');
-        const navBtn = document.getElementById('nav-toggle');
-        if (nav && nav.classList.contains('active')) {
-            nav.classList.remove('active');
-            if (navBtn) navBtn.classList.remove('active');
-        }
-
         // 滚动到顶部
         window.scrollTo(0, 0);
 

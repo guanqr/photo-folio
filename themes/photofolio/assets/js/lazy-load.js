@@ -30,7 +30,7 @@ export function initLazyLoad() {
 }
 
 // 暴露方法，用于观察新插入 DOM 的图片
-export function observeNewImages(container) {
+function observeNewImages(container) {
     if (!imageObserver) return;
     container.querySelectorAll('img[loading="lazy"]').forEach(img => {
         imageObserver.observe(img);
