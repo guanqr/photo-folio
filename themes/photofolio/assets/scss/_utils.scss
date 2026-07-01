@@ -20,6 +20,13 @@
         color: var(--color-text-secondary);
     }
 
+    .empty-hint {
+        margin-top: 1em;
+        color: var(--color-text-muted);
+        font-size: 0.9em;
+        transition: color 0.3s ease;
+    }
+
     code {
         font-family: var(--font-meta);
         background: var(--color-bg-card);
@@ -41,7 +48,7 @@
     background-color: var(--color-bg-card);
     color: var(--color-text);
     border: 0.0625em solid var(--color-border);
-    box-shadow: 0 0.25em 1em rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0.25em 1em rgba(var(--rgb-black), 0.3);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -56,7 +63,7 @@
 
     &:hover {
         background-color: var(--color-accent);
-        color: #fff;
+        color: rgba(var(--rgb-white), 1);
         border-color: var(--color-accent);
         transform: translateY(-0.2em);
     }

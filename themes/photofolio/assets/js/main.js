@@ -9,6 +9,15 @@ import { initInfiniteScroll } from './infinite-scroll.js';
 import { initTimelineAnim, initTimelineResize } from './timeline-anim.js';
 import { initPageTransition } from './page-transition.js';
 
+// 首页分类卡片交错渐入
+function revealCategoryCards() {
+    const cards = document.querySelectorAll('.category-card:not(.is-revealed)');
+    if (!cards.length) return;
+    cards.forEach((card, i) => {
+        setTimeout(() => card.classList.add('is-revealed'), i * 60);
+    });
+}
+
 // 页面相关模块（每次页面切换需重新初始化）
 function initPageModules() {
     initLightbox();
@@ -19,6 +28,7 @@ function initPageModules() {
     initTimelineAnim();
     initTimelineResize();
     initBackToTop();
+    revealCategoryCards();
 }
 
 // 全局模块（仅首次初始化，页面切换后不重复执行）

@@ -60,7 +60,7 @@
     margin-bottom: 1.5em;
     opacity: 0;
     transform: translateY(1.5em);
-    transition: transform 0.5s var(--transition-spring), opacity 0.4s ease;
+    transition: transform 0.4s var(--transition-spring), opacity 0.4s ease;
 
     &.is-revealed {
         opacity: 1;
@@ -83,7 +83,7 @@
     &:hover {
         transform: translateY(-0.35em);
         border-color: var(--color-accent-30);
-        box-shadow: 0 0.75em 2em rgba(0, 0, 0, 0.2);
+        box-shadow: 0 0.75em 2em rgba(var(--rgb-black), 0.2);
     }
 }
 

@@ -31,10 +31,9 @@ export function initInfiniteScroll() {
         wasIntersecting = isIntersecting;
     }, { rootMargin: '0px' });
 
-    // 延迟观察，先记录触发器当前位置，防止初始即触发
+    // 延迟 800ms 后开始观察，此时若触发器已在视口内则直接触发加载
     setTimeout(() => {
-        const rect = trigger.getBoundingClientRect();
-        wasIntersecting = rect.top < window.innerHeight && rect.bottom > 0;
+        wasIntersecting = false;
         observer.observe(trigger);
     }, 800);
 

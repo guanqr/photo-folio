@@ -2,3 +2,9 @@ public/
 resources/
 .hugo_build.lock
 .claude/
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
+node_modules/

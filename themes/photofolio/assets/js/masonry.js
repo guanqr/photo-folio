@@ -31,7 +31,6 @@ export function initMasonry() {
 
     grid.classList.add('masonry-ready');
 
-    // 首批照片逐张揭示（每张放入揭示瞬间的最矮列）
     const pageSize = 12;
     revealBatch(grid, pageSize);
 }

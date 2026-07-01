@@ -1,13 +1,13 @@
 /* ===== Categories Grid ===== */
-.categories-grid { 
-    padding: 4em 0 5em; 
+.categories-grid {
+    padding: 8em 0 5em;
 }
 
 /* 作品集头部标题区域 */
 .section-header {
     text-align: center;
     margin-bottom: 3em;
-    animation: fadeInUp 0.6s ease both;
+    animation: fadeIn 0.6s ease both;
 }
 
 .section-title {
@@ -16,6 +16,7 @@
     font-weight: 700;
     margin-bottom: 0.5em;
     color: var(--color-text);
+    transition: color 0.3s ease;
 }
 
 .section-subtitle {
@@ -23,7 +24,8 @@
     color: var(--color-text-secondary);
     font-weight: 300;
     letter-spacing: 0.05em;
-    animation: fadeInUp 0.6s 0.15s ease both;
+    transition: color 0.3s ease;
+    animation: fadeIn 0.6s 0.15s ease both;
 }
 
 .grid {
@@ -40,17 +42,19 @@
     border-radius: 0.75em;
     overflow: hidden;
     border: 0.0625em solid var(--color-border);
-    transition: transform var(--transition-spring), border-color var(--transition), box-shadow var(--transition);
-    animation: fadeInUp 0.5s ease both;
+    opacity: 0;
+    transform: translateY(1.5em);
+    transition: transform var(--transition-spring), border-color var(--transition), box-shadow var(--transition), background-color 0.3s ease, opacity 0.45s ease;
 
-    @for $i from 1 through 12 {
-        &:nth-child(#{$i}) { animation-delay: #{$i * 0.06}s; }
+    &.is-revealed {
+        opacity: 1;
+        transform: translateY(0);
     }
 
     &:hover {
         transform: translateY(-0.35em);
         border-color: var(--color-accent-30);
-        box-shadow: 0 0.75em 2em rgba(0, 0, 0, 0.2);
+        box-shadow: 0 0.75em 2em rgba(var(--rgb-black), 0.2);
     }
 }
 
@@ -83,12 +87,14 @@
     font-size: var(--size-h3);
     font-weight: 600;
     color: var(--color-text);
+    transition: color 0.3s ease;
 }
 
 .category-count {
     font-size: var(--size-small);
     color: var(--color-accent);
     font-weight: 500;
+    transition: color 0.3s ease;
 }
 
 .category-desc {
@@ -96,5 +102,6 @@
     color: var(--color-text-secondary);
     margin-top: 0.5em;
     line-height: 1.5;
+    transition: color 0.3s ease;
 }
 

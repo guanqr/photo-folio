@@ -3,6 +3,6 @@ export function initHeaderScroll() {
     if (!header) return;
 
     window.addEventListener('scroll', () => {
-        header.style.background = window.pageYOffset > 100 ? 'var(--color-nav-bg)' : 'var(--color-header-bg)';
+        header.style.background = window.scrollY > 100 ? 'var(--color-nav-bg)' : 'var(--color-header-bg)';
     });
 }

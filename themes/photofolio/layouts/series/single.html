@@ -42,11 +42,12 @@
                 {{ partial "photo-card.html" (dict "photo" . "site" $.Site "isInSeriesPage" true) }}
             {{ end }}
         </div>
+        <div class="load-more-trigger" id="load-more-trigger" data-page-size="12" data-finished-text="{{ i18n "no_more_photos" }}"></div>
         {{ else }}
         <div class="empty-state">
             <div class="empty-icon">{{ $.Site.Data.svg.camera | safeHTML }}</div>
             <h3>{{ i18n "no_photos_in_series" (dict "Title" $seriesName) }}</h3>
-            <p style="margin-top: 1em; color: var(--color-text-muted); font-size: 0.9em;">
+            <p class="empty-hint">
                 {{ i18n "no_series_match_hint" }}
             </p>
         </div>

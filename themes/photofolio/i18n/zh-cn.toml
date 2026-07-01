@@ -84,5 +84,26 @@ other = "請檢查 data/photo.toml 中照片的 series 字段是否與當前頁�
 [copyright_notice]
 other = "本站所有作品均由本人拍攝，歡迎轉發與分享，禁止商用或二次創作。"
 
+[page_not_found]
+other = "頁面未找到"
+
+[page_not_found_desc]
+other = "您訪問的頁面不存在或已被移動。"
+
+[skip_to_content]
+other = "跳至主要內容"
+
+[nav_toggle]
+other = "切換導航"
+
+[prev_photo]
+other = "上一張"
+
+[next_photo]
+other = "下一張"
+
+[back_to_home]
+other = "返回首頁"
+
 [about]
 other = "關於"

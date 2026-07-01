@@ -4,9 +4,10 @@
     {{- partial "head.html" . -}}
 </head>
 <body>
+    <a href="#main-content" class="skip-link">{{ i18n "skip_to_content" }}</a>
     {{- partial "header.html" . -}}
 
-    <main class="main-content">
+    <main class="main-content" id="main-content">
         {{- block "main" . }}{{- end }}
     </main>
 
@@ -32,10 +33,10 @@
         <button class="lightbox-close" id="lightbox-close" aria-label="{{ i18n "close" }}">
             {{ $.Site.Data.svg.x | safeHTML }}
         </button>
-        <button class="lightbox-arrow lightbox-prev" id="lightbox-prev" aria-label="上一张">
+        <button class="lightbox-arrow lightbox-prev" id="lightbox-prev" aria-label="{{ i18n "prev_photo" }}">
             {{ $.Site.Data.svg.chevron_left | safeHTML }}
         </button>
-        <button class="lightbox-arrow lightbox-next" id="lightbox-next" aria-label="下一张">
+        <button class="lightbox-arrow lightbox-next" id="lightbox-next" aria-label="{{ i18n "next_photo" }}">
             {{ $.Site.Data.svg.chevron_right | safeHTML }}
         </button>
         <div class="lightbox-content">
