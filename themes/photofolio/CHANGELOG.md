@@ -2,6 +2,50 @@
 
 PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)。
 
+## [0.5.8] — 2026-07-01
+
+### Added
+- **404 页面**：含返回首页链接，完整 i18n
+- **无障碍支持**：skip-to-content 跳转链接、全局 `:focus-visible` 焦点样式、aria-label 全部走 i18n
+- **SEO**：meta description、canonical、Open Graph（含封面图）、Twitter Card
+
+### Fixed
+- **硬编码颜色**：`#fff` → `rgba(var(--rgb-white), 1)`，5 处阴影 `rgba(0,0,0,x)` → `rgba(var(--rgb-black), x)`
+- **过渡时长统一**：懒加载 `filter/opacity`、masonry-item `transform/opacity`、category-card `opacity` 全部统一到匹配时长
+- 足迹页面全部元素补齐黑白切换过渡（竖线、圆点、日期、标题、计数、+N 卡片、结束语）
+- 首页分类卡片补齐 `background-color` 过渡
+- `header-scroll.js` 废弃 API `pageYOffset` → `scrollY`
+- `.gitignore` 补充 `.DS_Store`/`Thumbs.db`/`*.log`/`.vscode/`/`.idea/`/`node_modules/`
+
+### Cleanup
+- HTML 内联样式全部移至 SCSS：`index.html`、`404.html`、series 提示文字
+- 删除冗余 `:focus-visible` 重复规则；`fadeInUp` 重命名为 `fadeIn`；`revealCategoryCards` 加空守卫
+
+---
+
+## [0.5.7] — 2026-06-29
+
+### Changed
+- **移动端导航图标**：菜单文字左侧显示图标（首页/作品/足迹/关于），宽屏隐藏；图标 0.85em + 微调对齐；下划线仅划文字不划图标
+- **关于页版权声明**：底部新增摄影作品版权说明，顶部带分隔线
+- **首页分类卡片入场**：改为与瀑布流一致的 `translateY` 滑入动画（JS 60ms 交错），不再用 CSS animation（避免覆盖 hover）
+- **足迹结束语**：字体改为 `var(--font-meta)`，去掉斜体，与日期统一
+
+### Fixed
+- 移动端导航点击菜单项后带动画收回（滑入顶部+淡出），不再直接消失
+- 足迹单页/系列详情页无无限滚动触发器，导致超过 12 张的照片永不加载
+- 无限滚动 `wasIntersecting` 状态追踪在短页面导致永远不会触发加载
+- 足迹卡片照片不足四张时，卡片宽度按比例收窄、缩略图保持原尺寸；取消缩略图 hover 放大双重动画
+- 主题切换/汉堡图标动画卡顿：`transform` 与 `opacity` 统一时长曲线（`0.3s cubic-bezier(0.4, 0, 0.2, 1)`）
+- SPA 页面切换后 `_allItems` 被 `shift` 破坏原始排序
+- 黑白切换补齐颜色过渡：header/footer 边框、网站名称、汉堡横线、照片卡片、gallery-header、关于页、首页分类卡片
+
+### Cleanup
+- SCSS：合并重复 `fadeInDown`→`fadeInUp`，删除未用变量 `--color-accent-50`/`--color-dot-*`/`--size-h2`，删除未用选择器 `.debug-info`/`.photo-placeholder`
+- JS：简化 `infinite-scroll` 冗余计时器；`lightbox` 守卫提前；`masonry`/`lazy-load` 去多余 export；`_allItems` 独立副本
+
+---
+
 ## [0.5.6] — 2026-06-29
 
 ### Changed
