@@ -17,10 +17,6 @@
         padding: 1em; 
     }
 
-    .categories-grid {
-        padding: 2em 0; 
-    }
-
     .grid { grid-template-columns: 1fr; }
     .masonry-grid { column-count: 1; }
     .masonry-grid.masonry-ready { column-count: auto; gap: 1em; }
