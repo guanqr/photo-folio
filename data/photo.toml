@@ -10,6 +10,7 @@ time = "2015-08-27"
 place = "天津薊州"
 location = "天津"
 description = "黄崖关长城位于天津市蓟州区，是明代长城的重要关隘之一。夕阳下的长城显得格外壮丽，金色的阳光洒在古老的城砖上，仿佛在诉说着历史的沧桑。"
+featured = true
 
 [[photo]]
 src = "/images/photos/茶卡盐湖.jpg"
@@ -34,6 +35,7 @@ shutter = "1/280"
 time = "2018-07-16"
 place = "日本东京"
 location = "日本"
+featured = true
 
 [[photo]]
 src = "/images/photos/鼓浪屿.jpg"
@@ -46,6 +48,7 @@ shutter = "1/250"
 time = "2024-05-02"
 place = "廈門鼓浪嶼"
 location = "福建"
+featured = true
 
 [[photo]]
 src = "/images/photos/厦门植物园.jpg"
@@ -58,6 +61,7 @@ shutter = "1/125"
 time = "2024-05-03"
 place = "廈門植物園"
 location = "福建"
+featured = true
 
 [[photo]]
 src = "/images/photos/古村熙攘.jpg"
@@ -82,6 +86,7 @@ shutter = "1/125"
 time = "2024-10-06"
 place = "安徽宏村"
 location = "安徽"
+featured = true
 
 [[photo]]
 src = "/images/photos/黛瓦灯影.jpg"
@@ -118,6 +123,7 @@ shutter = "1/250"
 time = "2024-10-06"
 place = "安徽盧村"
 location = "安徽"
+featured = true
 
 [[photo]]
 src = "/images/photos/瓦檐秋野.jpg"
@@ -214,6 +220,7 @@ shutter = "1/250"
 time = "2025-10-05"
 place = "雲南麗江"
 location = "雲南"
+featured = true
 
 [[photo]]
 src = "/images/photos/云杉坪.jpg"
@@ -322,6 +329,7 @@ shutter = "1/250"
 time = "2025-10-07"
 place = "雲南香格里拉"
 location = "雲南"
+featured = true
 
 [[photo]]
 src = "/images/photos/转经.jpg"
@@ -382,6 +390,7 @@ shutter = "1/5"
 time = "2026-02-23"
 place = "江西南昌"
 location = "江西"
+featured = true
 
 [[photo]]
 src = "/images/photos/江岭日出.jpg"
@@ -394,6 +403,7 @@ shutter = "6"
 time = "2026-03-15"
 place = "江西婺源"
 location = "江西"
+featured = true
 
 [[photo]]
 src = "/images/photos/花竹日出.jpg"
@@ -406,6 +416,7 @@ shutter = "1/400"
 time = "2026-05-01"
 place = "福建霞浦"
 location = "福建"
+featured = true
 
 [[photo]]
 src = "/images/photos/杨家溪古榕.jpg"
@@ -418,6 +429,7 @@ shutter = "1/125"
 time = "2026-05-01"
 place = "福建霞浦"
 location = "福建"
+featured = true
 
 [[photo]]
 src = "/images/photos/与鹅同行.jpg"
@@ -466,6 +478,7 @@ shutter = "1/6"
 time = "2026-05-17"
 place = "杭州曲院風荷"
 location = "浙江"
+featured = true
 
 [[photo]]
 src = "/images/photos/钢铁森林.jpg"
@@ -478,6 +491,7 @@ shutter = "3"
 time = "2026-05-30"
 place = "寧波鎮海煉化"
 location = "浙江"
+featured = true
 
 [[photo]]
 src = "/images/photos/割蔺草-1.jpg"
@@ -492,6 +506,7 @@ place = "寧波海曙區古林鎮茂新村"
 location = "浙江"
 series = "割藺草"
 is_cover = true
+featured = true
 
 [[photo]]
 src = "/images/photos/割蔺草-2.jpg"
@@ -619,6 +634,7 @@ shutter = "1/200"
 time = "2026-06-18"
 place = "廣州聖心大教堂"
 location = "廣東"
+featured = true
 
 [[photo]]
 src = "/images/photos/彩窗垂灯.jpg"

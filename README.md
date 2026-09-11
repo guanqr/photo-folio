@@ -56,6 +56,7 @@ photo-folio/
 ├── content/
 │   ├── gallery/         # 全部作品页
 │   ├── series/          # 组照合集（主题系列作品）
+│   ├── featured/        # 精選页（featured = true 的照片）
 │   ├── city/            # 城市分类
 │   ├── countryside/     # 乡村分类
 │   ├── landscape/       # 山河分类
@@ -97,6 +98,7 @@ location = "雲南"
 description = "照片描述（可选，用于 Lightbox 展示）"
 series = ""               # 组照名称（可选，同一组照的多张照片填写相同名称）
 is_cover = false          # 是否为组照封面（同一组照中仅一张设为 true）
+featured = true           # 精選标记（可选，true 的照片收录进 /featured/ 页面）
 ```
 
 ### 组照（系列作品）
@@ -124,6 +126,10 @@ is_cover = false
 title: "割藺草"
 ---
 ```
+
+### 精選（featured）
+
+在任意照片记录中添加 `featured = true`，该照片便会收录进 `/featured/` 页面。精選页跨分类收集照片、按时间排序，照片仍保留原分类标签。組照照片標記精選時，只展示該單張（不帶組照鏈接與徽章），不會連帶展示整組照片。首页的精選分类卡片会自动统计精選照片数量，并以最新的精選照片作为封面。
 
 ## 🎨 配置
 

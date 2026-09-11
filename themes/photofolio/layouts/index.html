@@ -25,7 +25,16 @@
                 {{/* 只有不在排除名单中的 Section，才会渲染为分类卡片 */}}
                 {{ if not (in $excludeSections $sectionName) }}
                     
+                    {{/* 精选分类按 featured 标记收集照片，其余分类按 category 过滤 */}}
                     {{ $categoryPhotos := where $sortedPhotos "category" $sectionName }}
+                    {{ if eq $sectionName "featured" }}
+                        {{ $categoryPhotos = slice }}
+                        {{ range $sortedPhotos }}
+                            {{ if .featured }}
+                                {{ $categoryPhotos = $categoryPhotos | append . }}
+                            {{ end }}
+                        {{ end }}
+                    {{ end }}
                     {{ $photoCount := len $categoryPhotos }}
                     
                     {{ $coverImg := .Params.cover }}

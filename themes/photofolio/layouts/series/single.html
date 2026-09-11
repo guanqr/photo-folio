@@ -39,7 +39,7 @@
         {{ if gt (len $photos) 0 }}
         <div class="masonry-grid" id="masonry-grid">
             {{ range $photos }}
-                {{ partial "photo-card.html" (dict "photo" . "site" $.Site "isInSeriesPage" true) }}
+                {{ partial "photo-card.html" (dict "photo" . "site" $.Site "asIndividual" true) }}
             {{ end }}
         </div>
         <div class="load-more-trigger" id="load-more-trigger" data-page-size="12" data-finished-text="{{ i18n "no_more_photos" }}"></div>

@@ -18,6 +18,13 @@
 {{ $realPhotos := slice }}
 {{ if eq $sectionName "gallery" }}
     {{ $realPhotos = $sortedPhotos }}
+{{ else if eq $sectionName "featured" }}
+    {{/* 精选页：收集所有 featured = true 的照片，而不是按 category 过滤 */}}
+    {{ range $sortedPhotos }}
+        {{ if .featured }}
+            {{ $realPhotos = $realPhotos | append . }}
+        {{ end }}
+    {{ end }}
 {{ else }}
     {{ $realPhotos = where $sortedPhotos "category" $sectionName }}
 {{ end }}
@@ -25,9 +32,14 @@
 
 {{/* 【修复 2】再过滤出用于瀑布流显示的卡片（剔除组照内页，只保留单图和封面） */}}
 {{ $displayPhotos := slice }}
-{{ range $realPhotos }}
-    {{ if or (not .series) .is_cover }}
-        {{ $displayPhotos = $displayPhotos | append . }}
+{{ if eq $sectionName "featured" }}
+    {{/* 精選页：哪張標記了精選就單獨展示哪張，組照內頁不隱藏、封面不帶組照鏈接 */}}
+    {{ $displayPhotos = $realPhotos }}
+{{ else }}
+    {{ range $realPhotos }}
+        {{ if or (not .series) .is_cover }}
+            {{ $displayPhotos = $displayPhotos | append . }}
+        {{ end }}
     {{ end }}
 {{ end }}
 
@@ -53,7 +65,7 @@
         <div class="masonry-grid" id="masonry-grid">
             <!-- 渲染时使用过滤后的 displayPhotos -->
             {{ range $displayPhotos }}
-                {{ partial "photo-card.html" (dict "photo" . "site" $.Site "isInSeriesPage" false) }}
+                {{ partial "photo-card.html" (dict "photo" . "site" $.Site "asIndividual" (eq $sectionName "featured")) }}
             {{ end }}
         </div>
 

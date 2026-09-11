@@ -1,6 +1,6 @@
 {{ $photo := .photo }}
 {{ $site := .site }}
-{{ $isInSeriesPage := .isInSeriesPage | default false }}
+{{ $asIndividual := .asIndividual | default false }}
 
 {{ $altText := $photo.alt }}
 {{ $src := $photo.src }}
@@ -26,9 +26,9 @@
 {{ $categoryUrl := $categoryPage.RelPermalink | default "" }}
 {{ $categoryTitle := $categoryPage.Title | default "" }}
 
-{{/* 反查组照的英文 URL (仅在非组照详情页时需要) */}}
+{{/* 反查组照的英文 URL (仅在需要渲染组照链接时需要) */}}
 {{ $seriesUrl := "" }}
-{{ if and $seriesName $isCover (not $isInSeriesPage) }}
+{{ if and $seriesName $isCover (not $asIndividual) }}
     {{ $seriesSection := site.GetPage "/series" }}
     {{ $seriesPage := false }}
     {{ if $seriesSection }}
@@ -45,17 +45,17 @@
     {{ end }}
 {{ end }}
 
-{{/* 【核心逻辑 1】决定显示的标题：如果在普通页面且是组照封面，显示组照名；否则显示照片自己的 alt */}}
+{{/* 【核心逻辑 1】决定显示的标题：如果渲染组照链接且是组照封面，显示组照名；否则显示照片自己的 alt */}}
 {{ $displayTitle := $altText }}
-{{ if and $seriesName $isCover (not $isInSeriesPage) }}
+{{ if and $seriesName $isCover (not $asIndividual) }}
     {{ $displayTitle = $seriesName }}
 {{ end }}
 
 <div class="masonry-item">
     <div class="photo-card" {{ with $description }}data-description="{{ . }}"{{ end }}>
         
-        {{/* 【核心逻辑 2】决定封面渲染方式：如果在普通页面且是组照封面，渲染为 a 标签带图标；否则渲染为普通 div 支持 Lightbox 放大 */}}
-        {{ if and $seriesName $isCover (not $isInSeriesPage) }}
+        {{/* 【核心逻辑 2】决定封面渲染方式：如果渲染组照链接且是组照封面，渲染为 a 标签带图标；否则渲染为普通 div 支持 Lightbox 放大 */}}
+        {{ if and $seriesName $isCover (not $asIndividual) }}
             <a href="{{ $seriesUrl }}" class="photo-wrapper series-link" title='{{ i18n "view_series" (dict "Series" $seriesName) }}'>
                 <img src="{{ $srcUrl }}" alt="{{ $altText }}" loading="lazy" class="photo-img">
                 <div class="series-badge">
