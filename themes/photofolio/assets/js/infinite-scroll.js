@@ -2,6 +2,7 @@
  * 无限滚动加载
  *
  * masonry.js 已处理首批揭示，这里接管后续批次。
+ * 只在滚动到页面最底部（距底部 ≤80px）时触发加载。
  */
 
 import { revealBatch } from './masonry.js';
@@ -16,28 +17,21 @@ export function initInfiniteScroll() {
     const pageSize = parseInt(trigger.dataset.pageSize, 10) || 12;
 
     if (grid._pendingItems.length === 0) {
-        trigger.remove();
+        // 全部照片已在首屏：直接显示完成文案（保留在页面底部，不消失）
+        trigger.classList.add('is-finished');
+        trigger.innerHTML = `<span class="load-more-text">${trigger.dataset.finishedText}</span>`;
         return;
     }
 
     let isLoading = false;
-    let wasIntersecting = true;
+    let rafPending = false;
 
-    const observer = new IntersectionObserver((entries) => {
-        const isIntersecting = entries[0].isIntersecting;
-        if (isIntersecting && !wasIntersecting && !isLoading) {
-            loadMore();
-        }
-        wasIntersecting = isIntersecting;
-    }, { rootMargin: '0px' });
-
-    // 延迟 800ms 后开始观察，此时若触发器已在视口内则直接触发加载
-    setTimeout(() => {
-        wasIntersecting = false;
-        observer.observe(trigger);
-    }, 800);
+    function distToBottom() {
+        return document.documentElement.scrollHeight - window.scrollY - window.innerHeight;
+    }
 
     function loadMore() {
+        if (isLoading || !grid.isConnected) return;
         if (grid._pendingItems.length === 0) {
             finishLoading();
             return;
@@ -48,24 +42,48 @@ export function initInfiniteScroll() {
 
         const batch = Math.min(pageSize, grid._pendingItems.length);
 
-        // 先展示转圈图标 700ms，再开始揭示照片
-        setTimeout(() => {
-            revealBatch(grid, batch);
-            setTimeout(() => {
-                isLoading = false;
-                trigger.classList.remove('is-loading');
-                if (grid._pendingItems.length === 0) {
-                    finishLoading();
-                }
-            }, batch * 60);
+        // 先展示转圈图标 700ms，再测量并揭示照片（revealBatch 完成后恢复状态）
+        setTimeout(async () => {
+            await revealBatch(grid, batch);
+            isLoading = false;
+            trigger.classList.remove('is-loading');
+            if (grid._pendingItems.length === 0) {
+                finishLoading();
+                return;
+            }
+            // 本批照片未把用户推出底部区域时继续加载，避免卡在「载入中」
+            if (distToBottom() <= 80) {
+                loadMore();
+            }
         }, 700);
     }
 
     function finishLoading() {
-        observer.disconnect();
+        window.removeEventListener('scroll', onScroll);
         trigger.classList.remove('is-loading');
         trigger.classList.add('is-finished');
+        // 完成文案保留在页面底部，不消失
         trigger.innerHTML = `<span class="load-more-text">${trigger.dataset.finishedText}</span>`;
-        setTimeout(() => trigger.remove(), 2000);
     }
+
+    // rAF 节流的滚动监听：距页面底部 ≤80px 时触发加载
+    function onScroll() {
+        if (rafPending) return;
+        rafPending = true;
+        requestAnimationFrame(() => {
+            rafPending = false;
+            if (isLoading || !grid.isConnected) return;
+            if (grid._pendingItems.length === 0) {
+                finishLoading();
+                return;
+            }
+            if (distToBottom() <= 80) {
+                loadMore();
+            }
+        });
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    // 刷新/跳转后若已在底部，延迟检查一次
+    setTimeout(onScroll, 800);
 }

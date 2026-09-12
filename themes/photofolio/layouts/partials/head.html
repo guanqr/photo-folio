@@ -28,14 +28,7 @@
     <meta name="twitter:image" content="{{ $twImg }}">
 {{ end }}
 
-<script>
-    (function() {
-        const theme = localStorage.getItem('theme');
-        if (theme === 'light' || (!theme && window.matchMedia('(prefers-color-scheme: light)').matches)) {
-            document.documentElement.setAttribute('data-theme', 'light');
-        }
-    })();
-</script>
+<!-- 主题固定为暗色 -->
 
 <!-- 动态引入字体外链 -->
 {{ $typo := .Site.Params.typography }}

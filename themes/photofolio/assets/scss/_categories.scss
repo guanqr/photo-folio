@@ -1,38 +1,21 @@
-/* ===== Categories Grid ===== */
+/* ===== 首页分类入口（轮播图下方，下拉后可见） ===== */
 .categories-grid {
-    margin-top: 4.5em;
     padding: 3.5em 0 5em;
-}
-
-/* 作品集头部标题区域 */
-.section-header {
-    text-align: center;
-    margin-bottom: 3em;
-    animation: fadeIn 0.6s ease both;
-}
-
-.section-title {
-    font-family: var(--font-heading);
-    font-size: var(--size-h1);
-    font-weight: 700;
-    margin-bottom: 0.5em;
-    color: var(--color-text);
-    transition: color 0.3s ease;
-}
-
-.section-subtitle {
-    font-size: 1.1em;
-    color: var(--color-text-secondary);
-    font-weight: 300;
-    letter-spacing: 0.05em;
-    transition: color 0.3s ease;
-    animation: fadeIn 0.6s 0.15s ease both;
 }
 
 .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(20em, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 2em;
+}
+
+/* 断点：1000px 三列 → 两列；768px（与汉堡图标一致）两列 → 单列 */
+@media (max-width: 1000px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+    .grid { grid-template-columns: repeat(1, 1fr); }
 }
 
 /* 分类卡片：上图下文结构 */
@@ -74,7 +57,7 @@
     }
 }
 
-/* 底部信息区域：自然流式布局，不再绝对定位 */
+/* 底部信息区域：自然流式布局 */
 .category-info {
     padding: 1.5em;
     display: flex;
@@ -105,4 +88,3 @@
     line-height: 1.5;
     transition: color 0.3s ease;
 }
-

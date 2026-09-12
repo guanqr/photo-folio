@@ -52,15 +52,16 @@ body {
 }
 
 :root {
-    /* ═══ RGB 原色（唯一颜色定义，后面全部引用这些分量）═══ */
-    --rgb-bg: 10, 10, 10;
-    --rgb-bg-raised: 20, 20, 20;
-    --rgb-card: 26, 26, 26;
+    /* ═══ RGB 原色（唯一颜色定义，后面全部引用这些分量）═══
+       暗色主题底色为蓝灰色调（偏蓝灰，非纯黑） */
+    --rgb-bg: 14, 19, 22; /* #0e1316 */
+    --rgb-bg-raised: 20, 25, 29; /* 与背景同色系，逐级略亮 */
+    --rgb-card: 24, 30, 35;
     --rgb-text: 232, 232, 232;
     --rgb-text-secondary: 153, 153, 153;
     --rgb-text-muted: 102, 102, 102;
-    --rgb-accent: 200, 164, 92;
-    --rgb-border: 42, 42, 42;
+    --rgb-accent: 121, 175, 165; /* hsl(169, 25%, 58%) 转 RGB */
+    --rgb-border: 36, 43, 50;
     --rgb-white: 255, 255, 255;
     --rgb-black: 0, 0, 0;
 
@@ -80,7 +81,7 @@ body {
     --color-border: rgb(var(--rgb-border));
 
     --color-header-bg: rgba(var(--rgb-bg), 0.85);
-    --color-nav-bg: rgba(var(--rgb-bg), 0.95);
+    --color-nav-bg: rgb(var(--rgb-bg)); /* 完全不透明 */
     --color-lightbox-bg: rgba(var(--rgb-card), 0.95);
 
     --color-overlay-subtle: rgba(var(--rgb-white), 0.1);
@@ -90,7 +91,9 @@ body {
     --color-lightbox-ctrl-text: rgba(var(--rgb-white), 0.8);
     --color-lightbox-ctrl-text-hover: rgba(var(--rgb-white), 1);
 
-    --shadow-img-lightbox: 0 0 2em rgba(var(--rgb-black), 0.5);
+    /* 首页轮播顶部渐变（透明导航栏文字可读性） */
+    --carousel-top-overlay: linear-gradient(to bottom, rgba(var(--rgb-black), 0.5), rgba(var(--rgb-black), 0));
+
 
     --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-spring: 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -105,7 +108,7 @@ body {
     --rgb-text: 33, 37, 41;
     --rgb-text-secondary: 73, 80, 87;
     --rgb-text-muted: 108, 117, 125;
-    --rgb-accent: 184, 134, 11;
+    --rgb-accent: 121, 175, 165; /* hsl(169, 25%, 58%) 转 RGB */
     --rgb-border: 222, 226, 230;
 
     --color-bg: rgb(var(--rgb-bg));
@@ -123,12 +126,14 @@ body {
     --color-border: rgb(var(--rgb-border));
 
     --color-header-bg: rgba(var(--rgb-bg), 0.85);
-    --color-nav-bg: rgba(var(--rgb-bg), 0.95);
+    --color-nav-bg: rgb(var(--rgb-bg)); /* 完全不透明 */
     --color-lightbox-bg: rgba(var(--rgb-card), 0.95);
+
+    /* 首页轮播顶部渐变（亮色主题：白色渐变，保证深色导航文字可读） */
+    --carousel-top-overlay: linear-gradient(to bottom, rgba(var(--rgb-white), 0.7), rgba(var(--rgb-white), 0));
 
     --color-overlay-subtle: rgba(var(--rgb-black), 0.05);
 
-    --shadow-img-lightbox: 0 0 2em rgba(var(--rgb-black), 0.15);
 }
 
 img { max-width: 100%; height: auto; display: block; }

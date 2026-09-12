@@ -5,8 +5,7 @@
     z-index: 9999;
     background: var(--color-lightbox-bg);
     display: flex;
-    align-items: center;
-    justify-content: center;
+    flex-direction: column; /* 上下分区：上方图片区、底部信息区 */
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s, visibility 0.3s;
@@ -17,10 +16,41 @@
     }
 }
 
-.lightbox-close {
+/* 背景：当前照片铺满屏幕的模糊毛玻璃（参考储卫民摄影站：
+   cover 填充 + blur(40px) brightness(0.55) 压暗，放大 110% 防白边）
+   层级：背景 0 < 灯箱内容 2，绝不遮挡前景照片 */
+.lightbox-backdrop {
     position: absolute;
-    top: 1em;
-    right: 1em;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: blur(40px) brightness(0.55);
+    transform: scale(1.1); /* 放大避免模糊边缘露白 */
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease; /* 两层背景交叉淡入淡出 */
+}
+
+.lightbox-content {
+    position: relative;
+    z-index: 2;
+}
+
+/* 顶部独立一行：关闭按钮吸附顶部 */
+.lightbox-topbar {
+    position: relative;
+    z-index: 2;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    height: 4em;
+    padding: 0 1em;
+}
+
+.lightbox-close {
     background: var(--color-lightbox-ctrl-bg);
     border: none;
     color: var(--color-lightbox-ctrl-text);
@@ -32,7 +62,6 @@
     justify-content: center;
     border-radius: 50%;
     transition: background 0.2s, color 0.2s;
-    z-index: 10000;
     -webkit-tap-highlight-color: transparent;
 
     svg {
@@ -94,33 +123,48 @@
     &:active { transform: translateY(-50%) translateX(0.25em) scale(0.9); }
 }
 
+/* 上下分区：上方图片区（flex:1 自适应）、底部固定信息区，互不干涉、都能完整显示 */
 .lightbox-content {
-    max-width: 90vw;
-    max-height: 90vh;
+    position: relative;
+    z-index: 2;
+    flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
+}
+
+.lightbox-img-area {
+    flex: 1;
+    min-height: 0;
+    display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden; /* 水平滑动切换时图片裁剪在图片区内 */
+    padding: 1em;
 
     img {
-        max-width: 90vw;
-        max-height: 75vh;
+        max-width: 100%;
+        max-height: 100%;
         object-fit: contain;
         border-radius: 0.25em;
-        box-shadow: var(--shadow-img-lightbox);
+        /* 无阴影：图片区 overflow:hidden 会裁剪横向阴影，造成上下暗边不对称；
+           参考储卫民摄影站的主图同样无阴影，靠毛玻璃背景衬出 */
         opacity: 0;
         transition: opacity 0.3s ease;
     }
 }
 
+/* 底部固定信息区：吸附底部，高度固定不变（不随照片比例变化） */
 .lightbox-info {
-    margin-top: 1.5em;
+    flex-shrink: 0;
+    align-self: center;
     max-width: 50em;
-    width: 90vw;
-    max-height: 15vh;
+    width: 100%;
+    height: 10em;
+    max-height: 30vh;
     overflow-y: auto;
     text-align: center;
-    padding: 0 1em;
+    padding: 0.75em 1em;
     scrollbar-width: none;
     &::-webkit-scrollbar { display: none; }
 }
@@ -129,16 +173,48 @@
     color: var(--color-text);
     font-family: var(--font-heading);
     font-size: 1.2em;
-    font-weight: 600;
+    font-weight: 400;
     margin-bottom: 0.5em;
     transition: opacity 0.3s ease;
 }
 
-.lightbox-description {
-    color: var(--color-text-secondary);
-    font-size: 0.95em;
-    line-height: 1.6;
+/* 完整元信息（地点 / 日期 / 拍摄参数），位于放大图底部，带图标单行显示、组间空格分隔 */
+.lightbox-meta {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75em;
+    margin-top: 0.5em;
     transition: opacity 0.3s ease;
+}
 
-    &:empty { display: none; }
+.lightbox-meta-group {
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+    white-space: nowrap; /* 组内不换行 */
+    color: var(--color-text);
+    font-family: var(--font-meta);
+    font-size: 0.9em;
+
+    .icon {
+        color: var(--color-accent);
+        display: flex;
+        flex-shrink: 0;
+
+        svg {
+            width: 0.9em;
+            height: 0.9em;
+        }
+    }
+}
+
+/* 窄屏：地点/日期/拍摄参数分行显示（每组一行） */
+@media (max-width: 768px) {
+    .lightbox-meta {
+        flex-direction: column;
+        gap: 0.35em;
+    }
+    .lightbox-meta-group { font-size: 0.9em; }
 }

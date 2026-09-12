@@ -3,19 +3,26 @@ import { initLazyLoad } from './lazy-load.js';
 import { initHeaderScroll } from './header-scroll.js';
 import { initMobileNav } from './mobile-nav.js';
 import { initBackToTop } from './back-to-top.js';
-import { initThemeToggle } from './theme-toggle.js';
 import { initMasonry, initMasonryResize } from './masonry.js';
 import { initInfiniteScroll } from './infinite-scroll.js';
 import { initTimelineAnim, initTimelineResize } from './timeline-anim.js';
 import { initPageTransition } from './page-transition.js';
+import { initCarousel } from './carousel.js';
 
-// 首页分类卡片交错渐入
+// 首页分类卡片：滚动进入视口时交错渐入
 function revealCategoryCards() {
     const cards = document.querySelectorAll('.category-card:not(.is-revealed)');
     if (!cards.length) return;
-    cards.forEach((card, i) => {
-        setTimeout(() => card.classList.add('is-revealed'), i * 60);
-    });
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            const card = entry.target;
+            const index = Array.prototype.indexOf.call(cards, card);
+            setTimeout(() => card.classList.add('is-revealed'), index * 60);
+            observer.unobserve(card);
+        });
+    }, { rootMargin: '0px 0px -40px 0px' });
+    cards.forEach((card) => observer.observe(card));
 }
 
 // 页面相关模块（每次页面切换需重新初始化）
@@ -28,6 +35,7 @@ function initPageModules() {
     initTimelineAnim();
     initTimelineResize();
     initBackToTop();
+    initCarousel();
     revealCategoryCards();
 }
 
@@ -38,7 +46,6 @@ function initGlobalModules() {
     globalInited = true;
     initHeaderScroll();
     initMobileNav();
-    initThemeToggle();
 }
 
 // 首次加载

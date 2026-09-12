@@ -1,0 +1,142 @@
+/* ===== 首页轮播（最新的精选图，充满整个页面） ===== */
+.carousel-section {
+    padding: 0;
+}
+
+/* 轮播全宽全高：充满整个页面（照片延伸到顶部导航栏之后，透明导航透出照片），无圆角无边框 */
+.carousel {
+    position: relative;
+    overflow: hidden;
+    height: 100vh;
+    background: var(--color-bg-card);
+    transition: background-color 0.3s ease;
+}
+
+/* 底部渐变压暗，保证左下角标题可读 */
+.carousel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(to top, rgba(var(--rgb-black), 0.55), rgba(var(--rgb-black), 0) 35%);
+    pointer-events: none;
+}
+
+/* 顶部渐变阴影，保证透明导航栏文字可读（明暗主题各自定义） */
+.carousel::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 10em;
+    z-index: 1;
+    background: var(--carousel-top-overlay);
+    pointer-events: none;
+}
+
+/* 整体黑色透明遮罩，让轮播图整体暗一些 */
+.carousel-dim {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: rgba(var(--rgb-black), 0.25);
+    pointer-events: none;
+}
+
+/* 标题与副标题悬浮在轮播图中央 */
+.carousel-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5em;
+    text-align: center;
+    pointer-events: none;
+    animation: fadeIn 0.6s ease both;
+}
+
+.carousel-hero-title {
+    font-family: var(--font-heading);
+    font-size: 3.2em;
+    font-weight: 700;
+    color: rgba(var(--rgb-white), 0.95);
+    text-shadow: 0 0.1em 0.5em rgba(var(--rgb-black), 0.5);
+}
+
+.carousel-hero-subtitle {
+    font-size: 1.35em;
+    font-weight: 300;
+    letter-spacing: 0.08em;
+    color: rgba(var(--rgb-white), 0.9);
+    text-shadow: 0 0.1em 0.5em rgba(var(--rgb-black), 0.5);
+}
+
+/* 切换为淡入淡出：所有幻灯片叠放，opacity 过渡 */
+.carousel-track {
+    position: relative;
+    height: 100%;
+}
+
+.carousel-slide {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.8s ease;
+    pointer-events: none;
+
+    &.active {
+        opacity: 1;
+        pointer-events: auto;
+    }
+}
+
+/* 轮播图链接：点击跳转精選页面 */
+.carousel-link {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.carousel-photo {
+    height: 100%;
+
+    .carousel-img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* 充满轮播区域，居中适当裁剪，不留白边 */
+    }
+}
+
+/* 圆点指示 */
+.carousel-dots {
+    position: absolute;
+    bottom: 0.75em;
+    left: 0;
+    right: 0;
+    z-index: 2;
+    display: flex;
+    justify-content: center;
+    gap: 0.5em;
+}
+
+.carousel-dot {
+    width: 0.55em;
+    height: 0.55em;
+    border-radius: 50%;
+    border: none;
+    padding: 0;
+    background: var(--color-lightbox-ctrl-text);
+    opacity: 0.5;
+    cursor: pointer;
+    transition: opacity 0.2s, background 0.2s;
+
+    &.active {
+        opacity: 1;
+        background: var(--color-accent);
+    }
+}

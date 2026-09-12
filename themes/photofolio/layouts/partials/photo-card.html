@@ -23,7 +23,6 @@
 {{ end }}
 
 {{ $categoryPage := site.GetPage $categoryKey }}
-{{ $categoryUrl := $categoryPage.RelPermalink | default "" }}
 {{ $categoryTitle := $categoryPage.Title | default "" }}
 
 {{/* 反查组照的英文 URL (仅在需要渲染组照链接时需要) */}}
@@ -51,62 +50,43 @@
     {{ $displayTitle = $seriesName }}
 {{ end }}
 
+{{/* 灯箱完整元信息（地点 · 分类 · 日期 · EXIF）：通过 data 属性传给灯箱，卡片上仅显示标题 */}}
+{{ $dateStr := "" }}
+{{ with $time }}
+    {{ $year := . | time.Format "2006" }}
+    {{ $month := . | time.Format "01" }}
+    {{ $day := . | time.Format "02" }}
+    {{ $dateStr = i18n "date_format_full" (dict "Year" $year "Month" $month "Day" $day) }}
+{{ end }}
+{{ $exif := slice }}
+{{ with $focus }}{{ $exif = $exif | append (printf "%smm" .) }}{{ end }}
+{{ with $aperture }}{{ $exif = $exif | append (printf "f/%s" .) }}{{ end }}
+{{ with $shutter }}{{ $exif = $exif | append (printf "%ss" .) }}{{ end }}
+{{ with $iso }}{{ $exif = $exif | append (printf "ISO%s" .) }}{{ end }}
+
 <div class="masonry-item">
-    <div class="photo-card" {{ with $description }}data-description="{{ . }}"{{ end }}>
-        
-        {{/* 【核心逻辑 2】决定封面渲染方式：如果渲染组照链接且是组照封面，渲染为 a 标签带图标；否则渲染为普通 div 支持 Lightbox 放大 */}}
-        {{ if and $seriesName $isCover (not $asIndividual) }}
-            <a href="{{ $seriesUrl }}" class="photo-wrapper series-link" title='{{ i18n "view_series" (dict "Series" $seriesName) }}'>
-                <img src="{{ $srcUrl }}" alt="{{ $altText }}" loading="lazy" class="photo-img">
+    <div class="photo-card"
+        data-title="{{ $displayTitle }}"
+        {{ with $description }}data-description="{{ . }}"{{ end }}
+        {{ with $place }}data-place="{{ . }}"{{ end }}
+        {{ with $categoryTitle }}data-category="{{ . }}"{{ end }}
+        {{ with $dateStr }}data-date="{{ . }}"{{ end }}
+        {{ with $exif }}data-exif="{{ delimit . " · " }}"{{ end }}>
+
+        {{/* 【核心逻辑 2】组照封面渲染为 a 标签带图标（仅包裹图片）；否则渲染普通 img 支持 Lightbox 放大。
+            卡片上不显示任何元信息，标题与完整元信息仅在灯箱放大后显示，wrapper 统一用 div 避免 a 嵌套 a */}}
+        <div class="photo-wrapper">
+            {{ if and $seriesName $isCover (not $asIndividual) }}
+                <a href="{{ $seriesUrl }}" class="series-link" title='{{ i18n "view_series" (dict "Series" $seriesName) }}'>
+                    <img data-src="{{ $srcUrl }}" alt="{{ $altText }}" loading="lazy" class="photo-img">
+                </a>
                 <div class="series-badge">
                     <span class="icon">{{ $site.Data.svg.layers | safeHTML }}</span>
                     <span class="count">{{ $seriesCount }}</span>
                 </div>
-            </a>
-        {{ else }}
-            <div class="photo-wrapper">
-                <img src="{{ $srcUrl }}" alt="{{ $altText }}" loading="lazy" class="photo-img">
-            </div>
-        {{ end }}
-
-        <div class="photo-meta">
-            <h3 class="photo-title">{{ $displayTitle }}</h3>
-            <div class="photo-details">
-                <div class="meta-row-between">
-                    <div class="meta-item">
-                        {{ with $place }}
-                            <span class="icon">{{ $site.Data.svg.location | safeHTML }}</span>
-                            <span>{{ . }}</span>
-                        {{ end }}
-                    </div>
-                    {{ if $categoryUrl }}
-                        <a href="{{ $categoryUrl }}" class="photo-category-tag" title='{{ i18n "view_category" (dict "Category" $categoryTitle) }}'>
-                            <span class="icon">{{ $site.Data.svg.tag | safeHTML }}</span>
-                            <span>{{ $categoryTitle }}</span>
-                        </a>
-                    {{ end }}
-                </div>
-                {{ with $time }}
-                <div class="meta-item">
-                    <span class="icon">{{ $site.Data.svg.calendar | safeHTML }}</span>
-                    {{ $year := . | time.Format "2006" }}
-                    {{ $month := . | time.Format "01" }}
-                    {{ $day := . | time.Format "02" }}
-                    <span>{{ i18n "date_format_full" (dict "Year" $year "Month" $month "Day" $day) }}</span>
-                </div>
-                {{ end }}
-                {{ $exif := slice }}
-                {{ with $focus }}{{ $exif = $exif | append (printf "%smm" .) }}{{ end }}
-                {{ with $aperture }}{{ $exif = $exif | append (printf "f/%s" .) }}{{ end }}
-                {{ with $shutter }}{{ $exif = $exif | append (printf "%ss" .) }}{{ end }}
-                {{ with $iso }}{{ $exif = $exif | append (printf "ISO%s" .) }}{{ end }}
-                {{ if gt (len $exif) 0 }}
-                <div class="meta-item">
-                    <span class="icon">{{ $site.Data.svg.settings | safeHTML }}</span>
-                    <span>{{ delimit $exif " · " }}</span>
-                </div>
-                {{ end }}
-            </div>
+            {{ else }}
+                <img data-src="{{ $srcUrl }}" alt="{{ $altText }}" loading="lazy" class="photo-img">
+            {{ end }}
         </div>
     </div>
 </div>

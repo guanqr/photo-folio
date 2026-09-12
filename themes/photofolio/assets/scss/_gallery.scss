@@ -32,32 +32,21 @@
     margin: 0 auto;
 }
 
-/* fallback：JS 就绪前用 CSS columns */
+/* 照片网格：纵向排列的显式行容器（引擎行 = 视觉行，杜绝 flex 自动换行与行划分不一致）
+   行宽与行高由 JS 按宽高比计算（每行恰好铺满，间距统一） */
 .masonry-grid {
-    column-count: 3;
-    column-gap: 1.5em;
-}
-
-/* JS 接管：切换为 flex 布局 */
-.masonry-grid.masonry-ready {
-    column-count: auto;
-    column-gap: normal;
-    display: flex;
-    gap: 1.5em;
-    align-items: flex-start;
-}
-
-.masonry-column {
-    flex: 1;
-    min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 1.5em;
+    gap: 0.25em;
+}
+
+.masonry-row {
+    display: flex;
+    gap: 0.25em;
 }
 
 .masonry-item {
-    break-inside: avoid;
-    margin-bottom: 1.5em;
+    flex: 0 0 auto;
     opacity: 0;
     transform: translateY(1.5em);
     transition: transform 0.4s var(--transition-spring), opacity 0.4s ease;
@@ -68,23 +57,28 @@
     }
 }
 
-.masonry-grid.masonry-ready .masonry-item {
-    break-inside: auto;
-    margin-bottom: 0;
-}
-
 .photo-card {
     background: var(--color-bg-card);
-    border-radius: 0.5em;
+    border-radius: 0.25em;
     overflow: hidden;
     border: 0.0625em solid var(--color-border);
-    transition: transform var(--transition-spring), border-color var(--transition), box-shadow var(--transition), background-color 0.3s ease;
+    transition: border-color var(--transition), box-shadow var(--transition), background-color 0.3s ease;
 
     &:hover {
-        transform: translateY(-0.35em);
         border-color: var(--color-accent-30);
         box-shadow: 0 0.75em 2em rgba(var(--rgb-black), 0.2);
     }
+}
+
+/* 悬停时照片轻微放大，卡片位置固定不动 */
+.photo-card:hover .photo-img {
+    transform: scale(1.03);
+}
+
+/* 图片过渡：模糊渐清 + 悬停缩放（带回弹的弹簧曲线，灵动不呆滞）。
+   img.photo-img 与 base 中 img[loading="lazy"] 同权重（0,1,1），靠后导入的 gallery 覆盖其 transition */
+img.photo-img {
+    transition: filter 0.4s ease, opacity 0.4s ease, transform var(--transition-spring);
 }
 
 .photo-wrapper {
@@ -94,86 +88,10 @@
 }
 
 .photo-img {
-    width: 100%;
-    height: auto;
-}
-
-.photo-meta { padding: 1.25em; }
-
-.photo-title {
-    font-family: var(--font-heading);
-    font-size: 1em;
-    font-weight: 600;
-    margin-bottom: 0.75em;
-    color: var(--color-text);
-    transition: color 0.3s ease;
-}
-
-.photo-details {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2em;
-}
-
-/* 同行左右布局容器 */
-.meta-row-between {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5em;
-    
-    /* 如果左侧没有位置信息，隐藏空节点 */
-    .meta-item:empty {
-        display: none;
-    }
-}
-
-/* 分类跳转标签样式 */
-.photo-category-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3em;
-    
-    /* 使用微透明主题色背景，去掉突兀的边框 */
-    background: var(--color-accent-15); 
-    border: none; 
-    border-radius: 0.25em; /* 小圆角，比胶囊形更克制、更现代 */
-    padding: 0.2em 0.5em;
-    
-    font-family: var(--font-meta); /* 使用等宽字体，与 EXIF 参数视觉统一 */
-    font-size: 0.75em;
-    font-weight: 500;
-    color: var(--color-accent);
-    transition: background var(--transition), color var(--transition), transform var(--transition-spring);
-
-    /* 确保即使左侧没有位置信息，标签也强制靠右 */
-    margin-left: auto;
-
-    &:hover {
-        background: var(--color-accent);
-        color: var(--color-bg);
-        transform: scale(1.08);
-    }
-    
-    .icon {
-        color: inherit;
-        opacity: 0.8;
-        display: flex;
-        svg {
-            width: 0.85em;
-            height: 0.85em;
-        }
-    }
-}
-
-.meta-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5em;
-    font-family: var(--font-meta);
-    font-size: var(--size-meta);
-    color: var(--color-text-secondary);
-    transition: color 0.3s ease;
+    display: block;
+    /* 宽高由 JS 按照片自身比例精确给定；cover 仅兜底取整误差，绝不拉伸 */
+    object-fit: cover;
+    max-width: none;
 }
 
 /* ===== Load More Trigger (无限滚动触发器) ===== */
@@ -229,45 +147,45 @@
 /* 组照右上角图标与数量 (胶囊形状) */
 .series-badge {
     position: absolute;
-    top: 0.75em;
-    right: 0.75em;
-    height: 2em;
-    padding: 0 0.65em;
-    
+    top: 0.5em;
+    right: 0.5em;
+    height: 1.5em;
+    padding: 0 0.5em;
+
     /* 【核心】100% 复用现有 Design Tokens，不新增变量 */
     background: var(--color-header-bg);
     border: 0.0625em solid var(--color-overlay-subtle);
-    color: var(--color-text); 
-    
+    color: var(--color-text);
+
     backdrop-filter: blur(0.375em);
     -webkit-backdrop-filter: blur(0.375em);
-    border-radius: 1em;
+    border-radius: 0.75em;
     display: flex;
     align-items: center;
-    gap: 0.35em;
-    
+    gap: 0.25em;
+
     transition: background 0.3s ease, color 0.3s ease, transform var(--transition-spring), border-color 0.3s ease;
 
     .icon, .count {
-        color: inherit; 
+        color: inherit;
         transition: inherit;
     }
 
     .icon {
         display: flex;
-        transform: none; 
-        
+        transform: none;
+
         svg {
-            width: 1.1em;
-            height: 1.1em;
-            stroke: currentColor; 
+            width: 0.85em;
+            height: 0.85em;
+            stroke: currentColor;
             fill: none;
         }
     }
 
     .count {
         font-family: var(--font-meta);
-        font-size: 0.85em;
+        font-size: 0.7em;
         font-weight: 600;
         line-height: 1;
         padding-bottom: 0.05em;

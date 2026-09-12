@@ -1,12 +1,19 @@
-/* ===== Header ===== */
+﻿/* ===== Header ===== */
 .site-header {
     position: fixed;
     top: 0; left: 0; right: 0;
     z-index: 1000;
-    background: var(--color-header-bg);
-    backdrop-filter: blur(1.25em);
-    border-bottom: 0.0625em solid var(--color-border);
-    transition: background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    /* 顶部透明：不遮挡首页轮播；下拉滚动后显示背景（缓慢过渡） */
+    background: transparent;
+    backdrop-filter: none;
+    border-bottom: 0.0625em solid transparent;
+    transition: background 0.5s ease, box-shadow 0.5s ease, border-color 0.5s ease, backdrop-filter 0.5s ease;
+
+    &.is-scrolled,
+    &.menu-open {
+        background: var(--color-nav-bg); /* 完全不透明，无需毛玻璃 */
+        border-bottom-color: var(--color-border);
+    }
 }
 
 .header-inner {
@@ -90,7 +97,8 @@
     padding: 0;
     z-index: 1002;
 
-    /* 宽屏默认隐藏，用 visibility+opacity 替代 display:none 实现过渡动画 */
+    /* 宽屏完全不渲染（不留空位），仅在窄屏加载 */
+    display: none;
     visibility: hidden;
     opacity: 0;
     transition: opacity 0.3s ease, visibility 0.3s;
@@ -138,68 +146,3 @@
     gap: 1.5em;
 }
 
-/* ===== Theme Toggle Button ===== */
-.theme-toggle {
-    position: relative;
-    width: 2.5em;
-    height: 2.5em;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    color: var(--color-text-secondary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: color var(--transition);
-    border-radius: 50%;
-
-    &:hover {
-        color: var(--color-accent);
-    }
-
-    svg {
-        width: 1.5em;
-        height: 1.5em;
-    }
-
-    .icon-sun, .icon-moon {
-        position: absolute;
-        top: 50%; left: 50%;
-        transform: translate(-50%, -50%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    /* ===== 图标内部元素动画 ===== */
-    .sg-core, .sg-ray {
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                    background-color 0.3s ease;
-        transform-origin: center;
-        transform-box: fill-box;
-    }
-
-    /* 暗色模式：月亮可见，太阳隐藏 */
-    .icon-sun {
-        .sg-core { opacity: 0; transform: scale(0.6); }
-        .sg-ray  { opacity: 0; transform: scale(0); }
-    }
-    .icon-moon {
-        .sg-core { opacity: 1; transform: scale(1); }
-    }
-}
-
-/* 亮色模式：太阳可见，月亮隐藏 */
-[data-theme="light"] {
-    .theme-toggle {
-        .icon-sun {
-            .sg-core { opacity: 1; transform: scale(1); }
-            .sg-ray  { opacity: 1; transform: scale(1); }
-        }
-        .icon-moon {
-            .sg-core { opacity: 0; transform: scale(0.6); }
-        }
-    }
-}

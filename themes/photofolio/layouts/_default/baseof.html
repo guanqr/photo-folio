@@ -30,9 +30,13 @@
 
     <!-- Lightbox 全局容器 -->
     <div class="lightbox" id="lightbox">
-        <button class="lightbox-close" id="lightbox-close" aria-label="{{ i18n "close" }}">
-            {{ $.Site.Data.svg.x | safeHTML }}
-        </button>
+        <img class="lightbox-backdrop" id="lightbox-backdrop" alt="">
+        <img class="lightbox-backdrop" id="lightbox-backdrop-next" alt="">
+        <div class="lightbox-topbar">
+            <button class="lightbox-close" id="lightbox-close" aria-label="{{ i18n "close" }}">
+                {{ $.Site.Data.svg.x | safeHTML }}
+            </button>
+        </div>
         <button class="lightbox-arrow lightbox-prev" id="lightbox-prev" aria-label="{{ i18n "prev_photo" }}">
             {{ $.Site.Data.svg.chevron_left | safeHTML }}
         </button>
@@ -40,10 +44,25 @@
             {{ $.Site.Data.svg.chevron_right | safeHTML }}
         </button>
         <div class="lightbox-content">
-            <img src="" alt="" id="lightbox-img">
+            <div class="lightbox-img-area">
+                <img src="" alt="" id="lightbox-img">
+            </div>
             <div class="lightbox-info">
                 <div class="lightbox-caption" id="lightbox-caption"></div>
-                <div class="lightbox-description" id="lightbox-description"></div>
+                <div class="lightbox-meta" id="lightbox-meta">
+                    <div class="lightbox-meta-group" id="lightbox-meta-place">
+                        <span class="icon">{{ $.Site.Data.svg.location | safeHTML }}</span>
+                        <span class="lightbox-meta-text"></span>
+                    </div>
+                    <div class="lightbox-meta-group" id="lightbox-meta-date">
+                        <span class="icon">{{ $.Site.Data.svg.calendar | safeHTML }}</span>
+                        <span class="lightbox-meta-text"></span>
+                    </div>
+                    <div class="lightbox-meta-group" id="lightbox-meta-exif">
+                        <span class="icon">{{ $.Site.Data.svg.settings | safeHTML }}</span>
+                        <span class="lightbox-meta-text"></span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

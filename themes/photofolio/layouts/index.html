@@ -1,42 +1,66 @@
 {{ define "main" }}
-<!-- ================= 1. 作品集与分类卡片区域 ================= -->
+<!-- ================= 首页轮播：按时间排序最新的 12 张精选图 ================= -->
+<section class="carousel-section">
+    {{ $allPhotos := site.Data.photo.photo | default slice }}
+        {{ $withKey := slice }}
+        {{ range $idx, $p := $allPhotos }}
+            {{ $t := $p.time | time.Format "2006-01-02 15:04:05" }}
+            {{ $withKey = $withKey | append (merge $p (dict "_sortKey" (printf "%s-%06d" $t $idx))) }}
+        {{ end }}
+        {{ $sortedPhotos := sort $withKey "_sortKey" "desc" }}
+        {{ $featured := slice }}
+        {{ range $sortedPhotos }}
+            {{ if .featured }}
+                {{ $featured = $featured | append . }}
+            {{ end }}
+        {{ end }}
+        {{ $carouselPhotos := first 12 $featured }}
+
+        {{ if gt (len $carouselPhotos) 0 }}
+        <div class="carousel" id="home-carousel">
+            <div class="carousel-track">
+                {{ range $carouselPhotos }}
+                {{ $srcUrl := partial "img-url.html" (dict "src" .src "site" $.Site) }}
+                <div class="carousel-slide">
+                    <a class="carousel-link" href="/featured/" title="{{ .alt }}">
+                        <div class="carousel-photo">
+                            <img src="{{ $srcUrl }}" alt="{{ .alt }}" loading="lazy" class="carousel-img">
+                        </div>
+                    </a>
+                </div>
+                {{ end }}
+            </div>
+
+            <div class="carousel-dots" id="carousel-dots"></div>
+
+            {{/* 整体黑色透明遮罩，让轮播图整体暗一些 */}}
+            <div class="carousel-dim"></div>
+
+            {{/* 标题与副标题悬浮在轮播图中央 */}}
+            <div class="carousel-overlay">
+                <h2 class="carousel-hero-title">{{ .Site.Params.heroTitle }}</h2>
+                <p class="carousel-hero-subtitle">{{ .Site.Params.heroSubtitle }}</p>
+            </div>
+        </div>
+        {{ end }}
+</section>
+
+<!-- ================= 分类入口（轮播图下方，下拉后可见） ================= -->
 <section class="categories-grid">
     <div class="container">
-        <div class="section-header">
-            <h2 class="section-title">{{ .Site.Params.heroTitle }}</h2>
-            <p class="section-subtitle">{{ .Site.Params.heroSubtitle }}</p>
-        </div>
-        
         <div class="grid">
-            {{ $allPhotos := site.Data.photo.photo | default slice }}
-            {{ $withKey := slice }}
-{{ range $idx, $p := $allPhotos }}
-    {{ $t := $p.time | time.Format "2006-01-02 15:04:05" }}
-    {{ $withKey = $withKey | append (merge $p (dict "_sortKey" (printf "%s-%06d" $t $idx))) }}
-{{ end }}
-{{ $sortedPhotos := sort $withKey "_sortKey" "desc" }}
-            
-            {{/* 定义排除名单，过滤掉非分类的独立页面 */}}
-            {{ $excludeSections := slice "gallery" "footprint" "series" "about" }}
-            
+            {{/* 定义排除名单，过滤掉非分类的独立页面（精選由轮播图直达，不展示标签卡） */}}
+            {{ $excludeSections := slice "gallery" "footprint" "series" "about" "featured" }}
+
             {{ range .Site.Sections.ByWeight }}
                 {{ $sectionName := .File.ContentBaseName }}
-                
+
                 {{/* 只有不在排除名单中的 Section，才会渲染为分类卡片 */}}
                 {{ if not (in $excludeSections $sectionName) }}
-                    
-                    {{/* 精选分类按 featured 标记收集照片，其余分类按 category 过滤 */}}
+
                     {{ $categoryPhotos := where $sortedPhotos "category" $sectionName }}
-                    {{ if eq $sectionName "featured" }}
-                        {{ $categoryPhotos = slice }}
-                        {{ range $sortedPhotos }}
-                            {{ if .featured }}
-                                {{ $categoryPhotos = $categoryPhotos | append . }}
-                            {{ end }}
-                        {{ end }}
-                    {{ end }}
                     {{ $photoCount := len $categoryPhotos }}
-                    
+
                     {{ $coverImg := .Params.cover }}
                     {{ if and (not $coverImg) (gt $photoCount 0) }}
                         {{ $coverImg = (index $categoryPhotos 0).src }}
@@ -57,7 +81,7 @@
                             {{ end }}
                         </div>
                     </a>
-                    
+
                 {{ end }}
             {{ end }}
         </div>
