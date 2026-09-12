@@ -48,9 +48,7 @@ export function initCarousel() {
     });
     const dots = [...dotsEl.children];
 
-    // 悬停/聚焦暂停自动播放
-    carousel.addEventListener('mouseenter', stopAuto);
-    carousel.addEventListener('mouseleave', startAuto);
+    // 键盘聚焦（圆点）时暂停自动播放，避免操作被轮播打断；鼠标悬停不暂停
     carousel.addEventListener('focusin', stopAuto);
     carousel.addEventListener('focusout', startAuto);
 
