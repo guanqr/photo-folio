@@ -1,0 +1,25 @@
+{{/* 足迹地点注册表（唯一实现）：地点名 → { slug, url, lat, lng }
+     - slug / url 来自 /footprint/ 各页（按 Title 键控；slug 为页面文件名，如 guangdong/japan）
+     - 坐标来自 data/locations.toml（无坐标的地点 lat/lng 为 0）
+     - 无足迹页但有坐标的地点：url 回退 /footprint/<urlize>/
+     调用：{{ $reg := partial "location-registry.html" . }} */}}
+{{ $reg := dict }}
+{{ $footprintSection := site.GetPage "/footprint" }}
+{{ if $footprintSection }}
+    {{ range $p := $footprintSection.Pages }}
+        {{ $entry := dict "slug" "" "url" $p.RelPermalink "lat" 0 "lng" 0 }}
+        {{ if $p.File }}
+            {{ $entry = merge $entry (dict "slug" $p.File.ContentBaseName) }}
+        {{ end }}
+        {{ $reg = merge $reg (dict $p.Title $entry) }}
+    {{ end }}
+{{ end }}
+{{ range site.Data.locations.location }}
+    {{ $entry := index $reg .name }}
+    {{ if $entry }}
+        {{ $reg = merge $reg (dict .name (merge $entry (dict "lat" .lat "lng" .lng))) }}
+    {{ else }}
+        {{ $reg = merge $reg (dict .name (dict "slug" "" "url" (printf "/footprint/%s/" (.name | urlize) | relURL) "lat" .lat "lng" .lng)) }}
+    {{ end }}
+{{ end }}
+{{ return $reg }}

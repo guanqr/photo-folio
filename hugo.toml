@@ -22,7 +22,13 @@ defaultContentLanguage = "zh-cn"
     enableServiceWorker = true 
 
     # 是否开启 instant.page 链接预加载加速 (true 为开启，false 为关闭)
-    enableInstantPage = true 
+    enableInstantPage = true
+
+    # 全部作品页筛选栏：自行选择开启哪些筛选维度（true 开启 / false 关闭）
+    [params.galleryFilters]
+        year = true
+        location = false
+        category = false
 
 [params.author]
     name = "Guanqr"

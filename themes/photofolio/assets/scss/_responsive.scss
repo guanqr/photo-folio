@@ -103,6 +103,14 @@
         padding: 2em 1em 4em;
     }
 
+    .footprint-map-section {
+        padding: 2em 0 0;
+
+        .footprint-map-title {
+            font-size: 1.5em;
+        }
+    }
+
     /* 列数由 JS 控制 + FLIP 动画 */
 
     .about-header {

@@ -1,13 +1,7 @@
 {{ define "main" }}
 <!-- ================= 首页轮播：按时间排序最新的 12 张精选图 ================= -->
 <section class="carousel-section">
-    {{ $allPhotos := site.Data.photo.photo | default slice }}
-        {{ $withKey := slice }}
-        {{ range $idx, $p := $allPhotos }}
-            {{ $t := $p.time | time.Format "2006-01-02 15:04:05" }}
-            {{ $withKey = $withKey | append (merge $p (dict "_sortKey" (printf "%s-%06d" $t $idx))) }}
-        {{ end }}
-        {{ $sortedPhotos := sort $withKey "_sortKey" "desc" }}
+    {{ $sortedPhotos := partial "photo-sorted.html" . }}
         {{ $featured := slice }}
         {{ range $sortedPhotos }}
             {{ if .featured }}

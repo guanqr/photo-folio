@@ -1,14 +1,6 @@
 {{ define "main" }}
-{{/* 1. 获取并排序所有照片（全量数据，包含组照内页） */}}
-{{ $allPhotos := site.Data.photo.photo | default slice }}
-{{ $withKey := slice }}
-{{ range $idx, $p := $allPhotos }}
-    {{ $t := $p.time | time.Format "2006-01-02 15:04:05" }}
-    {{ $withKey = $withKey | append (merge $p (dict "_sortKey" (printf "%s-%06d" $t $idx))) }}
-{{ end }}
-{{ $sortedPhotos := sort $withKey "_sortKey" "desc" }}
-
-{{/* 2. 过滤出用于展示的卡片（剔除组照内页，只保留单图和封面） */}}
+{{/* 1. 全站照片时间排序 + 展示过滤（剔除组照内页，只保留单图和封面） */}}
+{{ $sortedPhotos := partial "photo-sorted.html" . }}
 {{ $displayPhotos := slice }}
 {{ range $sortedPhotos }}
     {{ if or (not .series) .is_cover }}
@@ -16,45 +8,59 @@
     {{ end }}
 {{ end }}
 
-{{/* 3. 数据聚合：按 location (省份/国家) 分组 */}}
-{{ $locationData := slice }}
-{{ $processedLocations := slice }}
-
-{{/* 【核心修复】遍历全量照片，以确保统计数字包含组照内页 */}}
-{{ range $sortedPhotos }}
-    {{ $loc := .location }}
-    {{ if and $loc (not (in $processedLocations $loc)) }}
-        {{ $processedLocations = $processedLocations | append $loc }}
-        
-        {{/* A. 获取该地点的全量照片（用于统计真实总数和获取最新时间） */}}
-        {{ $realLocPhotos := where $sortedPhotos "location" $loc }}
-        {{ $latestTime := (index $realLocPhotos 0).time }}
-        {{ $realCount := len $realLocPhotos }}
-        
-        {{/* B. 获取该地点的展示照片（用于生成缩略图，已剔除组照内页） */}}
-        {{ $displayLocPhotos := where $displayPhotos "location" $loc }}
-        
-        {{/* 构建包含真实总数和展示照片的字典 */}}
-        {{ $locationData = $locationData | append (dict 
-            "location" $loc 
-            "time" $latestTime 
-            "realCount" $realCount
-            "photos" $displayLocPhotos
-        ) }}
+{{/* 2. 按 location 单趟聚合（输入时间降序 → 首见即最新、末见即最早；统计含组照内页） */}}
+{{ $locAgg := dict }}
+{{ range $p := $sortedPhotos }}
+    {{ with $p.location }}
+        {{ $cur := index $locAgg . }}
+        {{ $latest := $p.time }}
+        {{ $count := 1 }}
+        {{ $displays := slice }}
+        {{ if $cur }}
+            {{ $latest = $cur.time }}
+            {{ $count = add $cur.realCount 1 }}
+            {{ $displays = $cur.photos }}
+        {{ end }}
+        {{ if or (not $p.series) $p.is_cover }}
+            {{ $displays = $displays | append $p }}
+        {{ end }}
+        {{ $locAgg = merge $locAgg (dict . (dict "time" $latest "earliest" $p.time "realCount" $count "photos" $displays)) }}
     {{ end }}
 {{ end }}
-
-{{/* 4. 对所有地点按解锁时间降序排序 */}}
+{{ $locationData := slice }}
+{{ range $loc, $d := $locAgg }}
+    {{ $locationData = $locationData | append (merge $d (dict "location" $loc)) }}
+{{ end }}
 {{ $timeline := sort $locationData "time" "desc" }}
+
+{{/* 3. 足迹地点注册表（slug/url/坐标一次构建，时间线与地图共用） */}}
+{{ $locReg := partial "location-registry.html" . }}
+
+{{/* 4. 地图光点：有坐标的地点进入地图（时间线不受影响） */}}
+{{ $mapPoints := slice }}
+{{ $totalMapPhotos := 0 }}
+{{ range $item := $timeline }}
+    {{ $loc := $item.location }}
+    {{ $entry := index $locReg $loc }}
+    {{ if and $entry $entry.lat }}
+        {{ $targetUrl := default (printf "/footprint/%s/" ($loc | urlize) | relURL) $entry.url }}
+        {{ $mapPoints = $mapPoints | append (dict
+            "name" $loc
+            "lat" $entry.lat
+            "lng" $entry.lng
+            "count" (int $item.realCount)
+            "minYear" (int ($item.earliest | time.Format "2006"))
+            "maxYear" (int ($item.time | time.Format "2006"))
+            "url" $targetUrl
+        ) }}
+        {{ $totalMapPhotos = add $totalMapPhotos (int $item.realCount) }}
+    {{ end }}
+{{ end }}
+{{ $mapPoints = sort $mapPoints "count" "desc" }}
 
 <section class="footprint-page">
     <div class="gallery-header">
         <div class="container">
-            <nav class="breadcrumb">
-                <a href="/">{{ i18n "home" }}</a>
-                <span class="separator">{{ i18n "breadcrumb_separator" }}</span>
-                <span>{{ .Title }}</span>
-            </nav>
             <h1 class="page-title">{{ .Title }}</h1>
             {{ with .Params.description }}
                 <p class="page-description">{{ . }}</p>
@@ -62,29 +68,38 @@
         </div>
     </div>
 
+    {{/* 足迹地图：位于时间线上方；无坐标地点时整块不渲染 */}}
+    {{ if gt (len $mapPoints) 0 }}
+    <section class="footprint-map-section" aria-labelledby="footprint-map-title">
+        <div class="container">
+            <div class="footprint-map-head">
+                <p class="footprint-map-eyebrow">{{ i18n "footprint_map_eyebrow" }}</p>
+                <h2 class="footprint-map-title" id="footprint-map-title">{{ i18n "footprint_map_title" }}</h2>
+                <p class="footprint-map-desc">{{ i18n "footprint_map_description" (dict "Count" $totalMapPhotos "Sites" (len $mapPoints)) }}</p>
+            </div>
+            <div class="footprint-map" id="footprint-map"
+                 data-count-format='{{ i18n "photo_count" (dict "Count" "%COUNT%") }}'
+                 data-year-range-format='{{ i18n "footprint_map_year_range" (dict "Min" "%MIN%" "Max" "%MAX%") }}'>
+                <noscript>
+                    <ul class="footprint-map-fallback">
+                        {{ range $mapPoints }}
+                        <li><a href="{{ .url }}">{{ .name }}</a></li>
+                        {{ end }}
+                    </ul>
+                </noscript>
+            </div>
+            <p class="footprint-map-legend"><span class="legend-dot"></span>{{ i18n "footprint_map_sites" (dict "Count" (len $mapPoints)) }}</p>
+            <script type="application/json" id="footprint-map-data">{{ $mapPoints | jsonify | safeJS }}</script>
+        </div>
+    </section>
+    {{ end }}
+
     <div class="timeline-container">
         {{ range $timeline }}
         <div class="timeline-node" data-anim="fade-up">
-            {{/* 反查 Page 对象获取真实的英文 Permalink */}}
             {{ $loc := .location }}
-            {{ $footprintSection := site.GetPage "/footprint" }}
-            {{ $locPage := false }}
-
-            {{ if $footprintSection }}
-                {{ range $footprintSection.Pages }}
-                    {{ if eq .Title $loc }}
-                        {{ $locPage = . }}
-                    {{ end }}
-                {{ end }}
-            {{ end }}
-
-            {{/* 安全获取 URL */}}
-            {{ $targetUrl := "" }}
-            {{ if $locPage }}
-                {{ $targetUrl = $locPage.RelPermalink }}
-            {{ else }}
-                {{ $targetUrl = printf "/footprint/%s/" ($loc | urlize) | relURL }}
-            {{ end }}
+            {{/* 安全获取 URL（地点 → 足迹页注册表，无页面时回退 urlize） */}}
+            {{ $targetUrl := default (printf "/footprint/%s/" ($loc | urlize) | relURL) (index $locReg $loc).url }}
 
             {{ $year := .time | time.Format "2006" }}
             {{ $month := .time | time.Format "01" }}

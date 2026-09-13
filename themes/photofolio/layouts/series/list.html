@@ -1,11 +1,5 @@
 {{ define "main" }}
-{{ $allPhotos := site.Data.photo.photo | default slice }}
-{{ $withKey := slice }}
-{{ range $idx, $p := $allPhotos }}
-    {{ $t := $p.time | time.Format "2006-01-02 15:04:05" }}
-    {{ $withKey = $withKey | append (merge $p (dict "_sortKey" (printf "%s-%06d" $t $idx))) }}
-{{ end }}
-{{ $sortedPhotos := sort $withKey "_sortKey" "desc" }}
+{{ $sortedPhotos := partial "photo-sorted.html" . }}
 
 {{/* 只过滤出所有的“组照封面” */}}
 {{ $coverPhotos := slice }}
@@ -18,11 +12,6 @@
 <section class="gallery-page">
     <div class="gallery-header">
         <div class="container">
-            <nav class="breadcrumb">
-                <a href="/">{{ i18n "home" }}</a>
-                <span class="separator">{{ i18n "breadcrumb_separator" }}</span>
-                <span>{{ .Title }}</span>
-            </nav>
             <h1 class="page-title">{{ .Title }}</h1>
             {{ with .Params.description }}
                 <p class="page-description">{{ . }}</p>

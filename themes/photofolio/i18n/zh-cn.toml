@@ -3,9 +3,6 @@
 [home]
 other = "首頁"
 
-[breadcrumb_separator]
-other = "/"
-
 [portfolio_title]
 other = "照片集"
 
@@ -42,6 +39,24 @@ other = "已展示全部照片"
 [all_photos]
 other = "全部照片"
 
+[filter_photos]
+other = "篩選照片"
+
+[filter_year]
+other = "拍攝年份"
+
+[filter_location]
+other = "拍攝地點"
+
+[filter_category]
+other = "作品類型"
+
+[filter_all]
+other = "全部"
+
+[filter_empty]
+other = "沒有符合條件的照片"
+
 [footprint]
 other = "攝影足跡"
 
@@ -56,6 +71,21 @@ other = "共 {{ .Count }} 張照片"
 
 [journey_continues]
 other = "旅途仍在繼續..."
+
+[footprint_map_eyebrow]
+other = "FOOTPRINT MAP"
+
+[footprint_map_title]
+other = "拍攝足跡 · 世界地圖"
+
+[footprint_map_description]
+other = "{{ .Count }} 張照片在 {{ .Sites }} 個地點留下足跡。懸停或點擊光點，查看該處的地名、照片數量與拍攝年份跨度。"
+
+[footprint_map_sites]
+other = "{{ .Count }} 處拍攝點"
+
+[footprint_map_year_range]
+other = "{{ .Min }} — {{ .Max }}"
 
 [view_series]
 other = "查看組照：{{ .Series }}"

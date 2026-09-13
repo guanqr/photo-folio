@@ -4,6 +4,7 @@
 
 {{ $altText := $photo.alt }}
 {{ $src := $photo.src }}
+{{ $year := $photo.time | time.Format "2006" }}
 {{ $srcUrl := partial "img-url.html" (dict "src" $src "site" $site) }}
 {{ $place := $photo.place }}
 {{ $time := $photo.time }}
@@ -64,7 +65,7 @@
 {{ with $shutter }}{{ $exif = $exif | append (printf "%ss" .) }}{{ end }}
 {{ with $iso }}{{ $exif = $exif | append (printf "ISO%s" .) }}{{ end }}
 
-<div class="masonry-item">
+<div class="masonry-item" data-year="{{ $year }}" data-location="{{ $photo.location }}" data-category="{{ $photo.category }}">
     <div class="photo-card"
         data-title="{{ $displayTitle }}"
         {{ with $description }}data-description="{{ . }}"{{ end }}

@@ -5,7 +5,9 @@ import { initMobileNav } from './mobile-nav.js';
 import { initBackToTop } from './back-to-top.js';
 import { initMasonry, initMasonryResize } from './masonry.js';
 import { initInfiniteScroll } from './infinite-scroll.js';
+import { initGalleryFilter } from './gallery-filter.js';
 import { initTimelineAnim, initTimelineResize } from './timeline-anim.js';
+import { initFootprintMap } from './footprint-map.js';
 import { initPageTransition } from './page-transition.js';
 import { initCarousel } from './carousel.js';
 
@@ -32,8 +34,10 @@ function initPageModules() {
     initMasonry();
     initMasonryResize();
     initInfiniteScroll();
+    initGalleryFilter();
     initTimelineAnim();
     initTimelineResize();
+    initFootprintMap();
     initBackToTop();
     initCarousel();
     revealCategoryCards();

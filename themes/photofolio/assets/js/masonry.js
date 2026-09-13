@@ -2,9 +2,11 @@
  * 照片网格引擎（两端对齐行布局，行高自然变化、行宽恰好铺满）
  *
  * - 行高 = (行宽 − 间距 − 边框) / 宽高比之和，由本行内容自然决定，行高可以变化
- * - 每行恰好铺满容器（右缘对齐），照片间间距全局统一（CSS gap，4px）
+ * - 每行恰好铺满容器（右缘对齐），照片间间距全局统一（CSS gap 0.5em，引擎读取计算样式）
  * - 贪心分行以参考值 H（最宽布局每行 4 张 3:2 宽幅照片的基准）为目标，
  *   行高天然落在 H 附近；照片严格保持自身长宽比（object-fit: cover 仅兜底取整误差）
+ * - 超窄屏 ≤500px：每行 1–2 张——3:2 横构图独占一行（行高基准 H = 行宽 × 2/3），
+ *   竖构图（宽高比 < 1）绝不落单，与相邻照片同行
  * - 最后一行不强行对齐：行高封顶 H、左侧对齐、右侧留白
  * - 逐行加载：按 DOM 顺序逐张淡入（60ms/张）
  * - resize：先按比例缩放照片（行成员冻结，不做排布调整），仅跨窄屏断点（带滞回）才重新分行——
@@ -15,6 +17,7 @@ const DEFAULT_RATIO = 1.5; // 图片宽高比读取失败时的兜底值（3:2�
 const REVEAL_STAGGER = 60; // 逐张揭示间隔 ms
 
 let resizeBound = false;
+let gridObserver = null; // 每页只有一个网格；SPA 换页时断开旧观察，避免持有已脱离文档的整棵网格子树
 
 export function initMasonry() {
     const grid = document.getElementById('masonry-grid');
@@ -30,22 +33,26 @@ export function initMasonry() {
     const trigger = document.getElementById('load-more-trigger');
     const pageSize = trigger ? (parseInt(trigger.dataset.pageSize, 10) || 12) : 12;
 
+    // 记忆触发器原始 HTML（筛选模式隐藏触发器，重置筛选时恢复）
+    if (trigger && !grid._triggerHtml) grid._triggerHtml = trigger.innerHTML;
+
     grid._pendingItems = [...allItems];
     grid._shownItems = [];
     grid._ratios = new Map();
     grid._cardBorder = 0;
-    // 行基准档位（0=窄屏 ≤768 与汉堡断点一致、1=中屏 769-1000、2=宽屏 >1000）；
+    // 行基准档位（0=超窄屏 ≤500、1=窄屏 501-768 与汉堡断点一致、2=中屏 769-1000、3=宽屏 >1000）；
     // 带滞回，防止断点附近来回切换；按当前宽度初始化
     grid._tier = null;
     updateTier(grid);
     grid._rows = null; // 当前行划分（以全部已显示照片为坐标系；resize 时冻结复用，仅按比例缩放）
-    grid._incompleteStart = -1; // 未完成尾行的起点（等待下一批照片补齐；-1 表示无）
 
     grid.classList.add('masonry-ready');
 
     // 观察网格自身尺寸变化（滚动条出现/消失等），自动重排行布局
     if (typeof ResizeObserver !== 'undefined') {
-        new ResizeObserver(() => scheduleRelayout(grid)).observe(grid);
+        if (gridObserver) gridObserver.disconnect();
+        gridObserver = new ResizeObserver(() => scheduleRelayout(grid));
+        gridObserver.observe(grid);
     }
 
     revealBatch(grid, pageSize);
@@ -146,13 +153,17 @@ function layoutRows(grid, batch) {
     updateTier(grid);
     const H = getTargetRowHeight(W, gap, border2, grid._tier);
 
-    // 合并上一批的未完成尾行（若有）与本批照片
+    // 合并上一批的未完成尾行（若有）与本批照片；
+    // 尾行起点由「上一批最后一行是 ragged（左对齐尾行）」推导：
+    // 有新批次到达时，ragged 尾行必为待补齐的未完成尾行（真正的最后一行不会有后续批次）
+    const lastRow = grid._rows && grid._rows.length > 0 ? grid._rows[grid._rows.length - 1] : null;
+    const incompleteStart = lastRow && lastRow.ragged ? lastRow.start : -1;
     let combined = batch;
     let baseStart = grid._shownItems.length - batch.length;
-    if (grid._incompleteStart >= 0) {
-        const tailItems = grid._shownItems.slice(grid._incompleteStart, baseStart);
+    if (incompleteStart >= 0) {
+        const tailItems = grid._shownItems.slice(incompleteStart, baseStart);
         combined = tailItems.concat(batch);
-        baseStart = grid._incompleteStart;
+        baseStart = incompleteStart;
         // 移除旧尾行的行容器与行记录，重建
         const rowEls = grid.querySelectorAll('.masonry-row');
         rowEls[rowEls.length - 1].remove();
@@ -160,7 +171,7 @@ function layoutRows(grid, batch) {
     }
 
     const combinedRatios = combined.map((item) => grid._ratios.get(item) || DEFAULT_RATIO);
-    const rows = partitionRows(combinedRatios, combined, W, H, gap, border2, true, grid._tier === 0 ? 1 : 2);
+    const rows = partitionRows(combinedRatios, W, H, gap, border2, true, grid._tier);
 
     // 创建行容器并把照片移入（行容器保证每行是独立 flex 行，绝不与相邻行合并；
     // 行容器插入在未揭示照片之前，保持 DOM 顺序 = 展示顺序）
@@ -181,21 +192,18 @@ function layoutRows(grid, batch) {
     }));
     grid._rows = (grid._rows || []).concat(globalRows);
 
-    // 记录未完成尾行起点（还有后续批次时最后一行等待补齐；全部加载完后保持左对齐留白）
-    if (grid._pendingItems.length > 0) {
-        grid._incompleteStart = globalRows[globalRows.length - 1].start;
-    } else {
-        grid._incompleteStart = -1;
-    }
-
     applyRows(combined, rows, combinedRatios, W, gap, border2);
 }
 
-/* 行内水平间距：读取行容器的 columnGap */
+/* 行内水平间距（缓存）：优先读行容器 columnGap；行容器尚未创建（首批）时读网格自身 rowGap——
+   两者由同一条 CSS gap 声明驱动，避免行容器出现前回退到错误默认值导致首屏行宽计算偏差 */
 function getRowGap(grid) {
+    if (grid._gap) return grid._gap;
     const rowEl = grid.querySelector('.masonry-row');
-    if (!rowEl) return 4;
-    return parseFloat(getComputedStyle(rowEl).columnGap) || 4;
+    let g = rowEl ? parseFloat(getComputedStyle(rowEl).columnGap) : 0;
+    if (!g) g = parseFloat(getComputedStyle(grid).rowGap);
+    grid._gap = g || 8; // CSS gap: 0.5em × 根字号 16px 的兜底
+    return grid._gap;
 }
 
 /* 追加行容器：插入在未揭示照片（网格的直接子级）之前，保持 DOM 顺序 = 展示顺序 */
@@ -208,50 +216,76 @@ function appendRowEl(grid, rowEl) {
     }
 }
 
-/* 行基准档位判定（与汉堡图标断点一致）：
-   0=窄屏 ≤768px（每行 2 张 3:2 基准）、1=中屏 769-1000px（每行 3 张 3:2 基准）、
-   2=宽屏 >1000px（每行 4 张 3:2 基准）
-   带滞回（回升时 788/1020 才换档），防止断点附近来回切换导致布局跳跃；返回档位是否变化 */
+/* 行基准档位判定（阈值数据驱动）：
+   0=超窄屏 ≤500px（每行 1–2 张：3:2 横构图独占或与竖构图同行）、
+   1=窄屏 501-768px（每行 2 张 3:2 基准）、2=中屏 769-1000px（每行 3 张 3:2 基准）、
+   3=宽屏 >1000px（每行 4 张 3:2 基准）
+   滞回：升档需越过 TIER_EXIT（520/788/1020），降档按原始阈值（500/768/1000），
+   防止断点附近来回切换导致布局跳跃；返回档位是否变化 */
+const TIER_ENTER = [500, 768, 1000];
+const TIER_EXIT = [520, 788, 1020];
+
 function updateTier(grid) {
     const sw = window.innerWidth;
-    let tier;
-    if (grid._tier == null) {
-        tier = sw <= 768 ? 0 : (sw <= 1000 ? 1 : 2);
-    } else if (grid._tier === 0) {
-        tier = sw >= 788 ? (sw <= 1000 ? 1 : 2) : 0;
-    } else if (grid._tier === 1) {
-        tier = sw <= 768 ? 0 : (sw >= 1020 ? 2 : 1);
-    } else {
-        tier = sw <= 1000 ? 1 : 2;
+    const compute = () => {
+        let t = 0;
+        while (t < TIER_ENTER.length && sw > TIER_ENTER[t]) t++;
+        return t;
+    };
+    let tier = compute();
+    // 滞回：升档未越过出口值时保持原档位（首次判定无原档位，直接采用）
+    if (grid._tier != null && tier > grid._tier && sw < TIER_EXIT[grid._tier]) {
+        tier = grid._tier;
     }
     const changed = tier !== grid._tier;
     grid._tier = tier;
     return changed;
 }
 
+/* 行高公式（全模块唯一实现）：行高 = (行宽 − 间距 − 边框) / 宽高比之和 */
+function rowHeight(W, count, sum, gap, border2) {
+    return (W - gap * (count - 1) - border2 * count) / sum;
+}
+
 /* 行高参考值：以「每行 N 张 3:2 宽幅照片（长边 3、宽边 2）」为基准，按实际容器宽度反推
-   档位：0=窄屏每行 2 张、1=中屏每行 3 张、2=宽屏每行 4 张（档位判定见 updateTier） */
+   档位：0=超窄屏每行 1 张（占满整行）、1=窄屏每行 2 张、2=中屏每行 3 张、3=宽屏每行 4 张
+   （档位判定见 updateTier） */
 function getTargetRowHeight(containerWidth, gap, border2, tier) {
-    const N = tier === 0 ? 2 : (tier === 1 ? 3 : 4);
-    return (containerWidth - gap * (N - 1) - border2 * N) / (N * (3 / 2));
+    const N = tier === 1 ? 2 : (tier === 2 ? 3 : 4);
+    return rowHeight(containerWidth, N, N * (3 / 2), gap, border2);
 }
 
 /* 贪心分行：行高 = (行宽 − 间距 − 边框) / 宽高比之和（自然铺满，行高可变化）
-   逐张累加直到再加一张会低于参考值 H；边界处比较「停在此处 / 纳入下一张 /
-   与下下张交换后纳入」三种方案，取行高最接近 H 者；
+   逐张累加直到再加一张会低于参考值 H；
+   超窄屏档位 0：每行最多 2 张——横构图（宽高比 ≥ 1）可独占一行；竖构图开头的行必须
+   与下一张同行（绝不落单）；行内一张横构图后若下一张是最后一张竖构图，则并入本行；
+   其余档位：边界处比较「停在此处 / 纳入下一张」，取行高最接近 H 者；
    最后一行（照片耗尽）行高封顶 H、右侧留白不强行对齐 */
-function partitionRows(ratios, items, W, H, gap, border2, refine, minPhotos) {
-    const hOf = (count, sum) => (W - gap * (count - 1) - border2 * count) / sum;
+function partitionRows(ratios, W, H, gap, border2, refine, tier) {
+    const isTier0 = tier === 0;
+    const maxPhotos = isTier0 ? 2 : Infinity; // 超窄屏每行最多 2 张
+    const minPhotos = tier <= 1 ? 1 : 2;
+    const hOf = (count, sum) => rowHeight(W, count, sum, gap, border2);
     const rows = [];
     let i = 0;
     const n = ratios.length;
     while (i < n) {
+        // 超窄屏：竖构图（宽高比 < 1）开头的行必须凑足 2 张，与下一张同行
+        const minForRow = isTier0 && ratios[i] < 1 ? 2 : minPhotos;
         let sum = 0;
         let count = 0;
         let j = i;
         while (j < n) {
+            // 超窄屏：行内已有一张横构图、下一张是竖构图且为最后一张——并入本行，避免竖构图落单
+            if (isTier0 && count === 1 && ratios[i] >= 1 && ratios[j] < 1 && j === n - 1) {
+                sum += ratios[j];
+                count++;
+                j++;
+                break;
+            }
             const cand = hOf(count + 1, sum + ratios[j]);
-            if (count >= minPhotos && cand <= H) break; // 再加一张会低于参考值
+            if (count >= minForRow && cand <= H) break; // 再加一张会低于参考值
+            if (count >= maxPhotos) break; // 超窄屏每行最多 2 张
             sum += ratios[j];
             count++;
             j++;
@@ -266,7 +300,7 @@ function partitionRows(ratios, items, W, H, gap, border2, refine, minPhotos) {
             const hNatural = hOf(count, sum);
             h = Math.min(hNatural, H);
             ragged = true;
-        } else if (refine) {
+        } else if (refine && count < maxPhotos) {
             // 行边界微调：比较「停在此处 / 纳入下一张」，取行高最接近 H 者。
             // 注意：不交换照片顺序（JS 数组换序会与 DOM 顺序脱节，导致行划分错位）
             h = hOf(count, sum);
@@ -295,9 +329,12 @@ function applyRows(items, rows, ratios, W, gap, border2) {
         let remaining = W;
         for (let k = 0; k < row.count; k++) {
             const idx = row.start + k;
-            const img = items[idx] && items[idx].querySelector('img.photo-img');
+            const item = items[idx];
+            if (!item) continue;
+            // 缓存 img 引用（resize 逐帧调用时避免每项子树查询）
+            const img = item._img || (item._img = item.querySelector('img.photo-img'));
             if (!img) continue;
-            items[idx].style.marginRight = ''; // 清除任何残留的 inline margin（防止历史版本遗留导致行超宽换行）
+            if (item.style.marginRight) item.style.marginRight = ''; // 清除任何残留的 inline margin（防止历史版本遗留导致行超宽换行）
             const cellW = ratios[idx] * row.h + border2;
             let imgW;
             if (!row.ragged && k === row.count - 1) {
@@ -376,7 +413,7 @@ function relayoutShown(grid) {
         for (let k = 0; k < row.count; k++) {
             sum += grid._ratios.get(shown[row.start + k]) || DEFAULT_RATIO;
         }
-        let h = (W - gap * (row.count - 1) - border2 * row.count) / sum;
+        let h = rowHeight(W, row.count, sum, gap, border2);
         if (row.ragged) h = Math.min(h, H);
         return { start: row.start, count: row.count, h, ragged: row.ragged };
     });
@@ -397,7 +434,7 @@ function rebuildAll(grid, refine) {
     const H = getTargetRowHeight(W, gap, border2, grid._tier);
 
     const allRatios = shown.map((item) => grid._ratios.get(item) || DEFAULT_RATIO);
-    const rows = partitionRows(allRatios, shown, W, H, gap, border2, refine, grid._tier === 0 ? 1 : 2);
+    const rows = partitionRows(allRatios, W, H, gap, border2, refine, grid._tier);
     grid._rows = rows;
 
     grid.querySelectorAll('.masonry-row').forEach((el) => el.remove());
@@ -410,9 +447,50 @@ function rebuildAll(grid, refine) {
         appendRowEl(grid, rowEl);
     });
 
-    grid._incompleteStart = grid._pendingItems.length > 0
-        ? rows[rows.length - 1].start
-        : -1;
-
     applyRows(shown, rows, allRatios, W, gap, border2);
+}
+
+/* ===== 筛选模式（全部作品页） ===== */
+
+/* 将行容器拍平：所有照片（含隐藏的）回到网格直属子级——
+   后续 rebuildAll 只重排 _shownItems，隐藏项必须留在 DOM 里供再次筛选/重置。
+   【顺序关键】行内照片必须插到第一个游离项之前（appendChild 到末尾会把
+   行内照片挪到游离项之后，破坏时间顺序——筛选切换后照片乱序的根因） */
+function flattenRows(grid) {
+    const firstStray = grid.querySelector(':scope > .masonry-item');
+    grid.querySelectorAll('.masonry-row').forEach((row) => {
+        while (row.firstChild) {
+            if (firstStray) grid.insertBefore(row.firstChild, firstStray);
+            else grid.appendChild(row.firstChild);
+        }
+        row.remove();
+    });
+    grid._rows = null;
+}
+
+/* 筛选切换 / 清空筛选：以「下拉加载更多」分页模式重启网格——
+   仅展示给定照片集合：全部重新隐藏，集合内进入分页队列（首批 12 张由 revealBatch
+   逐批解除隐藏，其余等待滚动加载；无限滚动照常工作，触发器保持可见） */
+export function restartMasonryGrid(grid, items) {
+    if (!grid || !grid._shownItems) return;
+
+    flattenRows(grid);
+    const allItems = Array.from(grid.querySelectorAll('.masonry-item'));
+    allItems.forEach((item) => {
+        item.classList.add('is-hidden');
+        item.classList.remove('is-revealed');
+    });
+
+    grid._shownItems = [];
+    grid._pendingItems = [...items];
+
+    const trigger = document.getElementById('load-more-trigger');
+    if (trigger) {
+        trigger.style.display = '';
+        trigger.classList.remove('is-finished', 'is-loading');
+        if (grid._triggerHtml) trigger.innerHTML = grid._triggerHtml;
+    }
+
+    const pageSize = trigger ? (parseInt(trigger.dataset.pageSize, 10) || 12) : 12;
+    revealBatch(grid, pageSize);
 }

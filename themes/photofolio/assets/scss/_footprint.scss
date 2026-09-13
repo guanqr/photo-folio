@@ -37,25 +37,27 @@
     padding-left: var(--tl-node-pad, 1em);
     margin-bottom: 4em;
     position: relative;
+}
 
-    /* 圆点：贴在竖线上，与日期文字同一水平线 */
-    &::after {
-        content: '';
-        position: absolute;
-        left: var(--tl-dot-left, calc(-0.5em - 0.3125em));
-        top: var(--tl-dot-top, 0.35em);
-        width: 0.75em;
-        height: 0.75em;
-        border-radius: 50%;
-        background: var(--color-bg);
-        border: 0.125em solid var(--color-accent);
-        z-index: 1;
-        transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1), top 0.35s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease, border-color 0.3s ease;
-    }
+/* 时间线圆点：贴在竖线上，与日期文字同一水平线（timeline-node 与 timeline-end 共用） */
+.timeline-node::after,
+.timeline-end::after {
+    content: '';
+    position: absolute;
+    left: var(--tl-dot-left, calc(-0.5em - 0.3125em));
+    top: var(--tl-dot-top, 0.35em);
+    width: 0.75em;
+    height: 0.75em;
+    border-radius: 50%;
+    background: var(--color-bg);
+    border: 0.125em solid var(--color-accent);
+    z-index: 1;
+    transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1), top 0.35s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease, border-color 0.3s ease;
+}
 
-    &.is-visible::after {
-        animation: dotPulse 0.6s var(--transition-spring) both;
-    }
+.timeline-node.is-visible::after,
+.timeline-end.is-visible::after {
+    animation: dotPulse 0.6s var(--transition-spring) both;
 }
 
 /* 日期（卡片上方） */
@@ -144,25 +146,6 @@ a.timeline-content {
     padding-left: var(--tl-node-pad, 1em);
     position: relative;
 
-    /* 圆点：与 timeline-node 同位置 */
-    &::after {
-        content: '';
-        position: absolute;
-        left: var(--tl-dot-left, calc(-0.5em - 0.3125em));
-        top: var(--tl-dot-top, 0.35em);
-        width: 0.75em;
-        height: 0.75em;
-        border-radius: 50%;
-        background: var(--color-bg);
-        border: 0.125em solid var(--color-accent);
-        z-index: 1;
-        transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1), top 0.35s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease, border-color 0.3s ease;
-    }
-
-    &.is-visible::after {
-        animation: dotPulse 0.6s var(--transition-spring) both;
-    }
-
     .end-text {
         font-family: var(--font-meta);
         color: var(--color-text-muted);
@@ -175,4 +158,229 @@ a.timeline-content {
     0%   { transform: scale(0); }
     60%  { transform: scale(1.3); }
     100% { transform: scale(1); }
+}
+
+/* ===== 足迹世界地图（时间线上方） ===== */
+/* 地图区块宽度与导航栏一致（沿用 .container 的 --container-width，不加限制） */
+.footprint-map-section {
+    padding: 3em 0 1em;
+}
+
+.footprint-map-head {
+    text-align: center;
+    margin-bottom: 2em;
+}
+
+.footprint-map-eyebrow {
+    font-family: var(--font-meta);
+    font-size: var(--size-small);
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    color: var(--color-accent);
+    margin-bottom: 0.75em;
+    transition: color 0.3s ease;
+}
+
+.footprint-map-title {
+    font-family: var(--font-heading);
+    font-size: var(--size-h2);
+    font-weight: 700;
+    color: var(--color-text);
+    margin-bottom: 0.6em;
+    transition: color 0.3s ease;
+}
+
+.footprint-map-desc {
+    font-size: var(--size-small);
+    color: var(--color-text-secondary);
+    transition: color 0.3s ease;
+}
+
+/* 地图框：边框 + 圆角约束为一个长方形区域；
+   svg 保持默认 overflow:hidden（内容裁剪到 viewBox，视图外的世界几何不外溢） */
+.footprint-map {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 5 / 3; /* JS 构建后内联覆盖为实际视图比；兜底防 CLS */
+    background: var(--color-bg-card);
+    border: 0.0625em solid var(--color-border);
+    border-radius: 0.25em;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+
+    svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+        overflow: hidden; /* 显式裁剪到 viewBox（不依赖 UA 默认值），视图外几何绝不外溢 */
+        border-radius: inherit; /* 贴齐圆角，避免方角溢出框架 */
+    }
+
+    /* 陆地与网格：暗底白 10% / 亮底黑 5% 的微凸起陆地，与全站 overlay 语义一致 */
+    .fm-land path {
+        fill: var(--color-overlay-subtle);
+        stroke: var(--color-border);
+        stroke-width: 0.5;
+        stroke-linejoin: round;
+        stroke-linecap: round;
+        transition: fill 0.3s ease, stroke 0.3s ease;
+    }
+
+    .fm-grid line {
+        stroke: var(--color-border);
+        stroke-width: 0.5;
+        transition: stroke 0.3s ease;
+    }
+
+    /* 光点：位置 translate 在内层 <g>（attribute），弹入 scale 在外层 <a>（CSS），互不覆盖 */
+    .fm-dot-link {
+        outline: none;
+        opacity: 0;
+        transform: scale(0);
+        transform-box: fill-box;
+        transform-origin: center;
+        -webkit-tap-highlight-color: transparent;
+
+        .fm-halo { fill: var(--color-accent-15); }
+        .fm-mid { fill: var(--color-accent-30); }
+        .fm-core {
+            fill: var(--color-accent);
+            stroke: rgba(var(--rgb-black), 0.45);
+            stroke-width: 0.6;
+        }
+
+        .fm-halo,
+        .fm-mid,
+        .fm-core { transition: fill 0.3s ease, transform var(--transition-spring); }
+
+        &:hover .fm-core,
+        &:focus-visible .fm-core { transform: scale(1.12); }
+
+        &:focus-visible .fm-core {
+            stroke: var(--color-text);
+            stroke-width: 1.5;
+            transition: stroke 0.3s ease;
+        }
+    }
+
+    /* 呼吸脉冲环（照片数最多的首点） */
+    .fm-pulse {
+        fill: none;
+        stroke: var(--color-accent);
+        stroke-width: 0.8;
+        opacity: 0;
+        transform-box: fill-box;
+        transform-origin: center;
+    }
+}
+
+/* 弹层：地名 / 张数 / 年份跨度 */
+.fm-tooltip {
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15em;
+    padding: 0.5em 0.875em;
+    background: var(--color-bg-card);
+    border: 0.0625em solid var(--color-border);
+    border-radius: 0.5em;
+    box-shadow: 0 0.75em 2em rgba(var(--rgb-black), 0.15);
+    pointer-events: none;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(0.3em);
+    transition: opacity var(--transition), visibility var(--transition), transform var(--transition), background-color 0.3s ease, border-color 0.3s ease;
+
+    strong {
+        font-size: var(--size-small);
+        font-weight: 600;
+        color: var(--color-text);
+        transition: color 0.3s ease;
+    }
+
+    span {
+        font-family: var(--font-meta);
+        font-size: 0.8em;
+        color: var(--color-text-muted);
+        transition: color 0.3s ease;
+
+        &:first-of-type { color: var(--color-accent); }
+    }
+
+    &.fm-visible {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+}
+
+.footprint-map-legend {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5em;
+    margin-top: 1em;
+    font-family: var(--font-meta);
+    font-size: var(--size-small);
+    letter-spacing: 0.15em;
+    color: var(--color-text-muted);
+    transition: color 0.3s ease;
+
+    .legend-dot {
+        width: 0.625em;
+        height: 0.625em;
+        border-radius: 50%;
+        background: var(--color-accent);
+        box-shadow: 0 0 0.6em var(--color-accent-30);
+        transition: background-color 0.3s ease;
+    }
+}
+
+/* 无 JS 降级：静态地点链接列表 */
+.footprint-map-fallback {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75em;
+    justify-content: center;
+
+    a {
+        padding: 0.25em 0.75em;
+        border: 0.0625em solid var(--color-border);
+        border-radius: 9999px;
+        font-size: var(--size-small);
+        color: var(--color-text-secondary);
+        transition: border-color var(--transition), color var(--transition);
+
+        &:hover {
+            border-color: var(--color-accent-30);
+            color: var(--color-accent);
+        }
+    }
+}
+
+/* ===== 地图弹入动画（reduced-motion 时全部关闭，光点直接可见） ===== */
+@media (prefers-reduced-motion: no-preference) {
+    .footprint-map .fm-dot-link.fm-ready {
+        animation: fmPop 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+        animation-delay: var(--fm-delay, 0ms);
+    }
+
+    .footprint-map .fm-pulse {
+        animation: fmPulse 2.6s ease-in-out infinite;
+    }
+}
+
+@keyframes fmPop {
+    0%   { opacity: 0; transform: scale(0); }
+    60%  { opacity: 1; }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes fmPulse {
+    0%   { opacity: 0.5; transform: scale(0.55); }
+    70%, 100% { opacity: 0; transform: scale(1.15); }
 }

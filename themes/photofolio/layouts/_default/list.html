@@ -6,13 +6,7 @@
     {{ $sectionName = .Title | urlize }}
 {{ end }}
 
-{{ $allPhotos := site.Data.photo.photo | default slice }}
-{{ $withKey := slice }}
-{{ range $idx, $p := $allPhotos }}
-    {{ $t := $p.time | time.Format "2006-01-02 15:04:05" }}
-    {{ $withKey = $withKey | append (merge $p (dict "_sortKey" (printf "%s-%06d" $t $idx))) }}
-{{ end }}
-{{ $sortedPhotos := sort $withKey "_sortKey" "desc" }}
+{{ $sortedPhotos := partial "photo-sorted.html" . }}
 
 {{/* 【修复 1】先获取真实的照片集合（包含组照内页），用于准确统计总数 */}}
 {{ $realPhotos := slice }}
@@ -43,14 +37,41 @@
     {{ end }}
 {{ end }}
 
+{{/* 全部作品页：筛选栏选项（年度 desc、地点/类别按照片数 desc） */}}
+{{ $years := slice }}
+{{ $locList := slice }}
+{{ $catList := slice }}
+{{ if eq $sectionName "gallery" }}
+    {{/* 地点 slug 取自足迹地点注册表（URL 参数用，如 guangdong/japan；显示仍为中文名） */}}
+    {{ $locReg := partial "location-registry.html" . }}
+    {{ $locNames := slice }}
+    {{ $catNames := slice }}
+    {{ $locCount := dict }}
+    {{ $catCount := dict }}
+    {{ range $displayPhotos }}
+        {{ $y := .time | time.Format "2006" }}
+        {{ if not (in $years $y) }}{{ $years = $years | append $y }}{{ end }}
+        {{ with .location }}
+            {{ if not (in $locNames .) }}{{ $locNames = $locNames | append . }}{{ end }}
+            {{ $locCount = merge $locCount (dict . (add (default 0 (index $locCount .)) 1)) }}
+        {{ end }}
+        {{ with .category }}
+            {{ if not (in $catNames .) }}{{ $catNames = $catNames | append . }}{{ end }}
+            {{ $catCount = merge $catCount (dict . (add (default 0 (index $catCount .)) 1)) }}
+        {{ end }}
+    {{ end }}
+    {{ $years = sort $years "value" "desc" }}
+    {{ range $locNames }}
+        {{ $locList = $locList | append (dict "name" . "slug" (default (. | urlize) (index $locReg .).slug) "count" (index $locCount .)) }}
+    {{ end }}
+    {{ $locList = sort $locList "count" "desc" }}
+    {{ range $catNames }}{{ $catList = $catList | append (dict "name" . "count" (index $catCount .)) }}{{ end }}
+    {{ $catList = sort $catList "count" "desc" }}
+{{ end }}
+
 <section class="gallery-page">
     <div class="gallery-header">
         <div class="container">
-            <nav class="breadcrumb">
-                <a href="/">{{ i18n "home" }}</a>
-                <span class="separator">{{ i18n "breadcrumb_separator" }}</span>
-                <span>{{ .Title }}</span>
-            </nav>
             <h1 class="page-title">{{ .Title }}</h1>
             {{ with .Params.description }}
                 <p class="page-description">{{ . }}</p>
@@ -62,6 +83,44 @@
 
     <div class="masonry-container">
         {{ if gt (len $displayPhotos) 0 }}
+        {{/* 筛选栏：仅全部作品页；各维度由 hugo.toml [params.galleryFilters] 控制开关
+           （胶囊按钮组，可横向滚动；缺省仅开启 year）——开关解析一次成 dict */}}
+        {{ $filtersCfg := merge (dict "year" true "location" false "category" false) (default dict site.Params.galleryFilters) }}
+        {{ if and (eq $sectionName "gallery") (or $filtersCfg.year $filtersCfg.location $filtersCfg.category) }}
+        <div class="gallery-filters" role="group" aria-label="{{ i18n "filter_photos" }}" data-empty-text="{{ i18n "filter_empty" }}">
+            {{ if $filtersCfg.year }}
+            <div class="filter-group" data-dim="year">
+                <span class="filter-label">{{ i18n "filter_year" }}</span>
+                <div class="filter-options">
+                    <button type="button" data-value="" aria-pressed="true" class="is-active">{{ i18n "filter_all" }}</button>
+                    {{ range $years }}<button type="button" data-value="{{ . }}" aria-pressed="false">{{ . }}</button>{{ end }}
+                </div>
+            </div>
+            {{ end }}
+            {{ if $filtersCfg.location }}
+            <div class="filter-group" data-dim="location">
+                <span class="filter-label">{{ i18n "filter_location" }}</span>
+                <div class="filter-options">
+                    <button type="button" data-value="" aria-pressed="true" class="is-active">{{ i18n "filter_all" }}</button>
+                    {{/* data-value 用足迹页英文 slug（URL 参数），按钮文本为中文名（匹配与显示） */}}
+                    {{ range $locList }}<button type="button" data-value="{{ .slug }}" aria-pressed="false">{{ .name }}</button>{{ end }}
+                </div>
+            </div>
+            {{ end }}
+            {{ if $filtersCfg.category }}
+            <div class="filter-group" data-dim="category">
+                <span class="filter-label">{{ i18n "filter_category" }}</span>
+                <div class="filter-options">
+                    <button type="button" data-value="" aria-pressed="true" class="is-active">{{ i18n "filter_all" }}</button>
+                    {{ range $catList }}
+                        {{ $catPage := site.GetPage .name }}
+                        <button type="button" data-value="{{ .name }}" aria-pressed="false">{{ default .name $catPage.Title }}</button>
+                    {{ end }}
+                </div>
+            </div>
+            {{ end }}
+        </div>
+        {{ end }}
         <div class="masonry-grid" id="masonry-grid">
             <!-- 渲染时使用过滤后的 displayPhotos -->
             {{ range $displayPhotos }}

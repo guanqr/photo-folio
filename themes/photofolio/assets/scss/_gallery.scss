@@ -7,16 +7,6 @@
     transition: border-color 0.3s ease;
 }
 
-.breadcrumb {
-    display: flex;
-    align-items: center;
-    gap: 0.5em;
-    font-size: var(--size-small);
-    color: var(--color-text-muted);
-    margin-bottom: 1.5em;
-    transition: color 0.3s ease;
-}
-
 .page-title {
     font-family: var(--font-heading);
     font-size: var(--size-h1);
@@ -37,12 +27,12 @@
 .masonry-grid {
     display: flex;
     flex-direction: column;
-    gap: 0.25em;
+    gap: 0.5em;
 }
 
 .masonry-row {
     display: flex;
-    gap: 0.25em;
+    gap: 0.5em;
 }
 
 .masonry-item {
@@ -62,23 +52,19 @@
     border-radius: 0.25em;
     overflow: hidden;
     border: 0.0625em solid var(--color-border);
-    transition: border-color var(--transition), box-shadow var(--transition), background-color 0.3s ease;
+    transition: border-color var(--transition), box-shadow var(--transition), background-color 0.3s ease, transform var(--transition-spring);
 
     &:hover {
+        transform: translateY(-0.15em);
         border-color: var(--color-accent-30);
         box-shadow: 0 0.75em 2em rgba(var(--rgb-black), 0.2);
     }
 }
 
-/* 悬停时照片轻微放大，卡片位置固定不动 */
-.photo-card:hover .photo-img {
-    transform: scale(1.03);
-}
-
-/* 图片过渡：模糊渐清 + 悬停缩放（带回弹的弹簧曲线，灵动不呆滞）。
+/* 图片过渡：模糊渐清。
    img.photo-img 与 base 中 img[loading="lazy"] 同权重（0,1,1），靠后导入的 gallery 覆盖其 transition */
 img.photo-img {
-    transition: filter 0.4s ease, opacity 0.4s ease, transform var(--transition-spring);
+    transition: filter 0.4s ease, opacity 0.4s ease;
 }
 
 .photo-wrapper {
@@ -92,6 +78,86 @@ img.photo-img {
     /* 宽高由 JS 按照片自身比例精确给定；cover 仅兜底取整误差，绝不拉伸 */
     object-fit: cover;
     max-width: none;
+}
+
+/* ===== 筛选栏（全部作品页）：胶囊按钮组，参考站同款横向滚动 + 渐隐遮罩 ===== */
+.gallery-filters {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875em;
+    margin-bottom: 1.5em;
+
+    .filter-group {
+        display: flex;
+        align-items: center;
+        gap: 0.875em;
+        min-width: 0; /* 允许内部横向滚动 */
+    }
+
+    .filter-label {
+        flex: none;
+        font-family: var(--font-meta);
+        font-size: 0.65em;
+        text-transform: uppercase;
+        letter-spacing: 0.25em;
+        color: var(--color-text-muted);
+        white-space: nowrap;
+        transition: color 0.3s ease;
+    }
+
+    .filter-options {
+        display: flex;
+        align-items: center;
+        gap: 0.5em;
+        overflow-x: auto;
+        padding-bottom: 0.125em;
+        /* 右侧渐隐遮罩（JS 按可滚动状态切换） */
+        mask-image: none;
+        -webkit-mask-image: none;
+        scrollbar-width: none;
+
+        &::-webkit-scrollbar { display: none; }
+
+        &.can-scroll-r {
+            mask-image: linear-gradient(to right, #000 82%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to right, #000 82%, transparent 100%);
+        }
+
+        button {
+            flex: none;
+            font-family: var(--font-meta);
+            font-size: var(--size-small);
+            letter-spacing: 0.1em;
+            color: var(--color-text-secondary);
+            background: transparent;
+            border: 0.0625em solid var(--color-border);
+            border-radius: 9999px;
+            padding: 0.3em 1em;
+            cursor: pointer;
+            transition: border-color var(--transition), color 0.3s ease, background-color 0.3s ease;
+
+            &:hover {
+                border-color: var(--color-accent-30);
+                color: var(--color-text);
+            }
+
+            &.is-active {
+                background: var(--color-accent);
+                border-color: var(--color-accent);
+                color: var(--color-bg-card);
+                font-weight: 600;
+            }
+        }
+    }
+}
+
+/* 筛选无匹配提示 */
+.filter-empty {
+    padding: 3em 0;
+    text-align: center;
+    font-family: var(--font-meta);
+    color: var(--color-text-muted);
+    transition: color 0.3s ease;
 }
 
 /* ===== Load More Trigger (无限滚动触发器) ===== */

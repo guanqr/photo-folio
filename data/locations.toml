@@ -1,0 +1,54 @@
+# 足迹地图坐标数据：name 必须与 data/photo.toml 的 location 字段逐字一致
+# 坐标为省份/地区级近似值（无 GPS 的照片按拍摄地所在省份定位）
+# 没有坐标的 location 不会出现在地图上（时间线不受影响）
+# 地图视图自动适配到全部拍摄地点范围（fit-to-bounds）
+
+[[location]]
+name = "廣東"
+lat = 23.13
+lng = 113.26
+
+[[location]]
+name = "浙江"
+lat = 30.27
+lng = 120.15
+
+[[location]]
+name = "雲南"
+lat = 26.86
+lng = 100.23
+
+[[location]]
+name = "安徽"
+lat = 29.92
+lng = 117.98
+
+[[location]]
+name = "福建"
+lat = 24.48
+lng = 118.09
+
+[[location]]
+name = "江西"
+lat = 29.25
+lng = 117.86
+
+[[location]]
+name = "上海"
+lat = 31.23
+lng = 121.47
+
+[[location]]
+name = "天津"
+lat = 39.13
+lng = 117.20
+
+[[location]]
+name = "青海"
+lat = 36.78
+lng = 99.08
+
+[[location]]
+name = "日本"
+lat = 35.68
+lng = 139.76

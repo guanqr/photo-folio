@@ -1,0 +1,15 @@
+{{/* 全站照片时间排序管线（唯一实现）：
+     返回按 time 排序的照片 slice（_sortKey 保证同日照片按数据文件顺序稳定排序）
+     调用：{{ $sorted := partial "photo-sorted.html" . }}
+     （上下文可传页面，或用 dict "order" "asc" 指定升序——组照内页按拍摄顺序） */}}
+{{ $order := "desc" }}
+{{ if reflect.IsMap . }}
+    {{ with index . "order" }}{{ $order = . }}{{ end }}
+{{ end }}
+{{ $allPhotos := site.Data.photo.photo | default slice }}
+{{ $withKey := slice }}
+{{ range $idx, $p := $allPhotos }}
+    {{ $t := $p.time | time.Format "2006-01-02 15:04:05" }}
+    {{ $withKey = $withKey | append (merge $p (dict "_sortKey" (printf "%s-%06d" $t $idx))) }}
+{{ end }}
+{{ return (sort $withKey "_sortKey" $order) }}
