@@ -5,7 +5,16 @@
 {{ $altText := $photo.alt }}
 {{ $src := $photo.src }}
 {{ $year := $photo.time | time.Format "2006" }}
-{{ $srcUrl := partial "img-url.html" (dict "src" $src "site" $site) }}
+
+{{ $cfg := $site.Params.imageSizes | default dict }}
+{{ $thumbWidth := $cfg.gallery | default 800 }}
+{{ $fullWidth := $cfg.lightbox | default 1920 }}
+{{ $quality := $cfg.quality | default 80 }}
+{{ $fullQuality := $cfg.lightboxQuality | default 90 }}
+
+{{ $srcUrl := partial "img-url.html" (dict "src" $src "site" $site "width" $thumbWidth "mode" "lfit" "format" "webp" "quality" $quality) }}
+{{ $fullUrl := partial "img-url.html" (dict "src" $src "site" $site "width" $fullWidth "mode" "lfit" "format" "webp" "quality" $fullQuality) }}
+
 {{ $place := $photo.place }}
 {{ $time := $photo.time }}
 {{ $focus := $photo.focus }}
@@ -79,14 +88,14 @@
         <div class="photo-wrapper">
             {{ if and $seriesName $isCover (not $asIndividual) }}
                 <a href="{{ $seriesUrl }}" class="series-link" title='{{ i18n "view_series" (dict "Series" $seriesName) }}'>
-                    <img data-src="{{ $srcUrl }}" alt="{{ $altText }}" loading="lazy" class="photo-img">
+                    <img data-src="{{ $srcUrl }}" data-full-src="{{ $fullUrl }}" alt="{{ $altText }}" loading="lazy" class="photo-img">
                 </a>
                 <div class="series-badge">
                     <span class="icon">{{ $site.Data.svg.layers | safeHTML }}</span>
                     <span class="count">{{ $seriesCount }}</span>
                 </div>
             {{ else }}
-                <img data-src="{{ $srcUrl }}" alt="{{ $altText }}" loading="lazy" class="photo-img">
+                <img data-src="{{ $srcUrl }}" data-full-src="{{ $fullUrl }}" alt="{{ $altText }}" loading="lazy" class="photo-img">
             {{ end }}
         </div>
     </div>

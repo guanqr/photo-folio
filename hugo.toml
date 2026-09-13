@@ -16,7 +16,20 @@ defaultContentLanguage = "zh-cn"
     # 图床/CDN 基础 URL。
     # 设置后，所有本地图片路径会自动拼接此前缀。
     # 留空或注释掉则使用本地图片。末尾无需加斜杠。
-    imageCDN = "https://guanqr.oss-cn-hangzhou.aliyuncs.com" 
+    imageCDN = "https://guanqr.oss-cn-hangzhou.aliyuncs.com"
+
+    # 图片尺寸与质量配置（用于 OSS 图片处理参数）
+    [params.imageSizes]
+        gallery = 800          # 瀑布流缩略图
+        carousel = 1920        # 首页轮播图
+        category = 1000        # 分类卡片封面
+        timeline = 500         # 足迹时间线缩略图
+        lightbox = 1920        # 灯箱大图
+        ogWidth = 1200         # Open Graph 宽度
+        ogHeight = 630         # Open Graph 高度
+        quality = 80           # 默认质量
+        lightboxQuality = 90   # 灯箱质量
+        ogQuality = 85         # 社交媒体封面质量
 
     # 启用 Service Worker (仅在 hugo 构建生产环境时生效)
     enableServiceWorker = true 

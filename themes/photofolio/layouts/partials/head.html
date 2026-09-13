@@ -8,6 +8,11 @@
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="{{ .Permalink }}">
 
+{{ $cfg := .Site.Params.imageSizes | default dict }}
+{{ $ogWidth := $cfg.ogWidth | default 1200 }}
+{{ $ogHeight := $cfg.ogHeight | default 630 }}
+{{ $ogQuality := $cfg.ogQuality | default 85 }}
+
 {{/* Open Graph */}}
 <meta property="og:title" content="{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }} - {{ .Site.Title }}{{ end }}">
 <meta property="og:description" content="{{ $desc }}">
@@ -15,7 +20,7 @@
 <meta property="og:url" content="{{ .Permalink }}">
 <meta property="og:site_name" content="{{ .Site.Title }}">
 {{ with .Params.cover }}
-    {{ $ogImg := partial "img-url.html" (dict "src" . "site" $.Site) }}
+    {{ $ogImg := partial "img-url.html" (dict "src" . "site" $.Site "width" $ogWidth "height" $ogHeight "mode" "fill" "format" "webp" "quality" $ogQuality) }}
     <meta property="og:image" content="{{ $ogImg }}">
 {{ end }}
 
@@ -24,7 +29,7 @@
 <meta name="twitter:title" content="{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }} - {{ .Site.Title }}{{ end }}">
 <meta name="twitter:description" content="{{ $desc }}">
 {{ with .Params.cover }}
-    {{ $twImg := partial "img-url.html" (dict "src" . "site" $.Site) }}
+    {{ $twImg := partial "img-url.html" (dict "src" . "site" $.Site "width" $ogWidth "height" $ogHeight "mode" "fill" "format" "webp" "quality" $ogQuality) }}
     <meta name="twitter:image" content="{{ $twImg }}">
 {{ end }}
 

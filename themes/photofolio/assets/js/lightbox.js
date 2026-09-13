@@ -34,7 +34,7 @@ export function initLightbox() {
             if (!img || !img.getAttribute('src')) return; // 未揭示的照片还没有 src（无限滚动尚未加载），跳过——箭头仅停留在已加载的最后一张
             const card = w.closest('.photo-card');
             currentPhotos.push({
-                src: img.src,
+                src: img.dataset.fullSrc || img.src,
                 alt: img.alt,
                 title: card ? (card.dataset.title || '') : '',
                 place: card ? (card.dataset.place || '') : '',
@@ -42,6 +42,12 @@ export function initLightbox() {
                 exif: card ? (card.dataset.exif || '') : ''
             });
         });
+    }
+
+    function preload(url) {
+        if (!url) return;
+        const img = new Image();
+        img.src = url;
     }
 
     // 元信息单行显示：地点 / 日期 / 拍摄参数（带图标，组间空格分隔）；空项隐藏，全空则隐藏整个区域
@@ -72,6 +78,11 @@ export function initLightbox() {
             : 1;
         currentIndex = index;
         const p = currentPhotos[index];
+
+        if (currentPhotos.length > 1) {
+            preload(currentPhotos[(currentIndex + 1) % currentPhotos.length].src);
+            preload(currentPhotos[(currentIndex - 1 + currentPhotos.length) % currentPhotos.length].src);
+        }
 
         if (isSwitch) {
             // 切换照片（参考储卫民摄影站）：旧图轻微滑出（12%）并淡出 →
@@ -181,7 +192,7 @@ export function initLightbox() {
         const img = wrapper.querySelector('img');
         if (!img) return;
         collectPhotos();
-        const index = currentPhotos.findIndex(p => p.src === img.src);
+        const index = currentPhotos.findIndex(p => p.src === (img.dataset.fullSrc || img.src));
         if (index >= 0) open(index);
     });
 

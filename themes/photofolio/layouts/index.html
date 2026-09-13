@@ -10,17 +10,19 @@
         {{ end }}
         {{ $carouselPhotos := first 12 $featured }}
 
+        {{ $cfg := .Site.Params.imageSizes | default dict }}
+        {{ $carouselWidth := $cfg.carousel | default 1920 }}
+        {{ $carouselQuality := $cfg.ogQuality | default 85 }}
+
         {{ if gt (len $carouselPhotos) 0 }}
         <div class="carousel" id="home-carousel">
             <div class="carousel-track">
-                {{ range $carouselPhotos }}
-                {{ $srcUrl := partial "img-url.html" (dict "src" .src "site" $.Site) }}
-                <div class="carousel-slide">
-                    <a class="carousel-link" href="/featured/" title="{{ .alt }}">
-                        <div class="carousel-photo">
-                            <img src="{{ $srcUrl }}" alt="{{ .alt }}" loading="lazy" class="carousel-img">
-                        </div>
-                    </a>
+                {{ range $i, $photo := $carouselPhotos }}
+                {{ $srcUrl := partial "img-url.html" (dict "src" $photo.src "site" $.Site "width" $carouselWidth "mode" "lfit" "format" "webp" "quality" $carouselQuality) }}
+                <div class="carousel-slide{{ if eq $i 0 }} active{{ end }}">
+                    <div class="carousel-photo">
+                        <img src="{{ $srcUrl }}" alt="{{ $photo.alt }}" loading="eager" class="carousel-img">
+                    </div>
                 </div>
                 {{ end }}
             </div>
@@ -35,12 +37,17 @@
                 <h2 class="carousel-hero-title">{{ .Site.Params.heroTitle }}</h2>
                 <p class="carousel-hero-subtitle">{{ .Site.Params.heroSubtitle }}</p>
             </div>
+
+            {{/* 向下滚动箭头：点击平滑滚动到分类卡片区域 */}}
+            <button class="carousel-scroll-down" id="carousel-scroll-down" aria-label="向下滚动">
+                {{ .Site.Data.svg.arrow_down | safeHTML }}
+            </button>
         </div>
         {{ end }}
 </section>
 
 <!-- ================= 分类入口（轮播图下方，下拉后可见） ================= -->
-<section class="categories-grid">
+<section class="categories-grid" id="categories-grid">
     <div class="container">
         <div class="grid">
             {{/* 定义排除名单，过滤掉非分类的独立页面（精選由轮播图直达，不展示标签卡） */}}
@@ -60,10 +67,13 @@
                         {{ $coverImg = (index $categoryPhotos 0).src }}
                     {{ end }}
 
+                    {{ $categoryWidth := $cfg.category | default 1000 }}
+                    {{ $categoryQuality := $cfg.quality | default 80 }}
+
                     <a href="{{ .RelPermalink }}" class="category-card">
                         <div class="category-image">
                             {{ with $coverImg }}
-                                {{ $coverUrl := partial "img-url.html" (dict "src" . "site" $.Site) }}
+                                {{ $coverUrl := partial "img-url.html" (dict "src" . "site" $.Site "width" $categoryWidth "mode" "lfit" "format" "webp" "quality" $categoryQuality) }}
                                 <img src="{{ $coverUrl }}" alt="{{ $.Title }}" loading="lazy">
                             {{ end }}
                         </div>

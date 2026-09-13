@@ -75,6 +75,51 @@
     text-shadow: 0 0.1em 0.5em rgba(var(--rgb-black), 0.5);
 }
 
+/* 向下滚动箭头 */
+.carousel-scroll-down {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    display: block;
+    padding: 0;
+    border: none;
+    background: none;
+    color: rgba(var(--rgb-white), 0.85);
+    cursor: pointer;
+    animation: bounce-down 1.6s linear infinite;
+    transition: color 0.2s ease;
+
+    &:hover,
+    &:focus-visible {
+        color: rgba(var(--rgb-white), 1);
+        outline: none;
+    }
+
+    svg {
+        display: block;
+        width: 1.5em;
+        height: 1.5em;
+    }
+}
+
+@keyframes bounce-down {
+    0% {
+        transform: translateX(-50%) translateY(0);
+        /* 下降：整体加速，但触底前轻微减速 */
+        animation-timing-function: cubic-bezier(0.55, 0.085, 0.85, 0.5);
+    }
+    75% {
+        transform: translateX(-50%) translateY(0.5em);
+        /* 回升：快速弹回，到顶部前轻微加速 */
+        animation-timing-function: cubic-bezier(0.2, 0.6, 0.4, 1);
+    }
+    100% {
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
 /* 切换为淡入淡出：所有幻灯片叠放，opacity 过渡 */
 .carousel-track {
     position: relative;
@@ -85,7 +130,7 @@
     position: absolute;
     inset: 0;
     opacity: 0;
-    transition: opacity 0.8s ease;
+    transition: opacity 1.2s ease;
     pointer-events: none;
 
     &.active {
@@ -94,13 +139,7 @@
     }
 }
 
-/* 轮播图链接：点击跳转精選页面 */
-.carousel-link {
-    display: block;
-    width: 100%;
-    height: 100%;
-}
-
+/* 轮播图照片容器 */
 .carousel-photo {
     height: 100%;
 
@@ -112,31 +151,107 @@
     }
 }
 
-/* 圆点指示 */
+/* 进度条指示器：右下角垂直排列，桌面端显示 */
 .carousel-dots {
     position: absolute;
-    bottom: 0.75em;
-    left: 0;
-    right: 0;
+    bottom: 6rem;
+    right: 1.25rem;
     z-index: 2;
-    display: flex;
-    justify-content: center;
-    gap: 0.5em;
+    display: none;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.625rem;
+
+    @media (min-width: 768px) {
+        display: flex;
+        bottom: 7rem;
+        right: 2.5rem;
+    }
 }
 
 .carousel-dot {
-    width: 0.55em;
-    height: 0.55em;
-    border-radius: 50%;
-    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5em;
     padding: 0;
-    background: var(--color-lightbox-ctrl-text);
-    opacity: 0.5;
+    border: none;
+    background: transparent;
+    color: rgba(var(--rgb-white), 0.9);
+    font-family: var(--font-meta);
+    font-size: 0.85em;
+    text-shadow: 0 0.1em 0.5em rgba(var(--rgb-black), 0.5);
+    text-align: right;
     cursor: pointer;
-    transition: opacity 0.2s, background 0.2s;
 
-    &.active {
-        opacity: 1;
-        background: var(--color-accent);
+    &:focus-visible {
+        outline: none;
     }
+
+    /* 未播放项 hover：进度条变亮、稍长，并显示标题 */
+    &:not(.active):hover,
+    &:not(.active):focus-visible {
+        .carousel-dot-bar {
+            width: 2.5em;
+            background: rgba(var(--rgb-white), 0.6);
+        }
+
+        .carousel-dot-title {
+            max-width: 18em;
+            opacity: 0.65;
+        }
+    }
+}
+
+.carousel-dot-title {
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    transition: max-width 0.3s ease, opacity 0.3s ease;
+}
+
+/* 正在播放的项：标题高亮白色，进度条最长 */
+.carousel-dot.active .carousel-dot-title {
+    max-width: 18em;
+    opacity: 1;
+    color: rgba(var(--rgb-white), 0.95);
+}
+
+/* 未播放项 hover 出现的标题：更暗/更透明，与播放中区分 */
+.carousel-dot:not(.active):hover .carousel-dot-title,
+.carousel-dot:not(.active):focus-visible .carousel-dot-title {
+    color: rgba(var(--rgb-white), 0.65);
+}
+
+.carousel-dot-bar {
+    width: 2em;
+    height: 0.2em;
+    border-radius: 0.1em;
+    background: rgba(var(--rgb-white), 0.35);
+    overflow: hidden;
+    transition: width 0.3s ease, background 0.2s ease;
+    flex-shrink: 0;
+}
+
+/* 正在播放的项：进度条最长，hover 无样式变化 */
+.carousel-dot.active .carousel-dot-bar {
+    width: 4em;
+    background: rgba(var(--rgb-white), 0.35);
+}
+
+.carousel-dot-fill {
+    display: block;
+    width: 0%;
+    height: 100%;
+    background: var(--color-accent);
+}
+
+.carousel-dot.active .carousel-dot-fill {
+    animation: carousel-progress 5s linear forwards;
+}
+
+@keyframes carousel-progress {
+    from { width: 0%; }
+    to { width: 100%; }
 }

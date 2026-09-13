@@ -114,8 +114,12 @@
                     {{ $showMore := gt $totalPhotos 4 }}
                     {{ $imgLimit := cond $showMore 3 4 }}
 
+                    {{ $cfg := $.Site.Params.imageSizes | default dict }}
+                    {{ $timelineSize := $cfg.timeline | default 500 }}
+                    {{ $timelineQuality := $cfg.quality | default 80 }}
+
                     {{ range first $imgLimit .photos }}
-                        {{ $srcUrl := partial "img-url.html" (dict "src" .src "site" $.Site) }}
+                        {{ $srcUrl := partial "img-url.html" (dict "src" .src "site" $.Site "width" $timelineSize "height" $timelineSize "mode" "fill" "format" "webp" "quality" $timelineQuality) }}
                         <div class="timeline-thumb">
                             <img src="{{ $srcUrl }}" alt="{{ .alt }}" loading="lazy" class="photo-img">
                         </div>

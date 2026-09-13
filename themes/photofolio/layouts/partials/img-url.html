@@ -2,9 +2,29 @@
 {{- $site := .site -}}
 {{- $cdn := $site.Params.imageCDN | default "" -}}
 
+{{- $width := .width | default 0 -}}
+{{- $height := .height | default 0 -}}
+{{- $mode := .mode | default "lfit" -}}
+{{- $format := .format | default "webp" -}}
+{{- $quality := .quality | default 85 -}}
+
+{{- $process := slice -}}
+{{- if or (gt $width 0) (gt $height 0) -}}
+    {{- $resize := printf "resize,m_%s" $mode -}}
+    {{- if gt $width 0 }}{{ $resize = printf "%s,w_%d" $resize (int $width) }}{{ end -}}
+    {{- if gt $height 0 }}{{ $resize = printf "%s,h_%d" $resize (int $height) }}{{ end -}}
+    {{- $process = $process | append $resize -}}
+{{- end -}}
+{{- with $format }}{{ $process = $process | append (printf "format,%s" .) }}{{ end -}}
+{{- with $quality }}{{ $process = $process | append (printf "quality,q_%d" (int .)) }}{{ end -}}
+
 {{- if and $cdn (not (strings.HasPrefix $src "http")) -}}
     {{- $cdn = strings.TrimSuffix "/" $cdn -}}
-    {{- printf "%s%s" $cdn $src -}}
+    {{- $query := "" -}}
+    {{- if gt (len $process) 0 -}}
+        {{- $query = printf "?x-oss-process=image/%s" (delimit $process "/") -}}
+    {{- end -}}
+    {{- printf "%s%s%s" $cdn $src $query -}}
 {{- else -}}
     {{- $src -}}
 {{- end -}}
