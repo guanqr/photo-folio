@@ -251,7 +251,8 @@ function rowHeight(W, count, sum, gap, border2) {
    档位：0=超窄屏每行 1 张（占满整行）、1=窄屏每行 2 张、2=中屏每行 3 张、3=宽屏每行 4 张
    （档位判定见 updateTier） */
 function getTargetRowHeight(containerWidth, gap, border2, tier) {
-    const N = tier === 1 ? 2 : (tier === 2 ? 3 : 4);
+    // 档位 0（超窄屏）：单张 3:2 占满整行为基准；其余档位每行 N 张 3:2 基准
+    const N = tier === 0 ? 1 : (tier === 1 ? 2 : (tier === 2 ? 3 : 4));
     return rowHeight(containerWidth, N, N * (3 / 2), gap, border2);
 }
 
