@@ -1,4 +1,4 @@
-# 荷戟獨彷徨 — 摄影作品站
+# 啼鳥怨年華 — 摄影作品站
 
 基于 [Hugo](https://gohugo.io/) 的个人摄影作品展示网站，使用自定义主题 **PhotoFolio**。
 
@@ -6,13 +6,15 @@
 
 ## ✨ 特性
 
-- **两端对齐行布局** — Google Photos 式：行高由本行照片内容自然决定、行宽恰好铺满容器（零拉伸、零粗暴裁切），行高贴近参考值（肉眼看基本一致），按时间顺序逐行加载不乱序，resize 自动重排
+- **两端对齐行布局** — Google Photos 式：行高由本行照片内容自然决定、行宽恰好铺满容器（零拉伸、零粗暴裁切），行高贴近参考值（肉眼看基本一致），按时间顺序逐行加载不乱序，resize 自动重排；超窄屏（≤500px）横构图独占一行、竖构图与相邻照片同行
 - **组图系列** — 支持将多张照片归入同一主题系列，封面图右上角胶囊徽章显示照片数量，点击进入系列详情页
+- **全部作品筛选** — 拍摄年份/拍摄地点/作品类型三组胶囊筛选（可组合、URL 参数同步、分页加载），各维度开关由 `hugo.toml` 的 `[params.galleryFilters]` 控制
+- **足迹世界地图** — 足迹页顶部自绘 SVG 世界地图（按省份/国家聚合金色光点、大小随照片数），悬停显示地名/照片数/年份跨度，点击跳转足迹详情页
 - **Lightbox 灯箱** — 点击照片全屏预览，左右箭头+键盘切换照片，展示 EXIF 参数
 - **暗色/亮色主题切换** — 自动检测系统偏好，支持手动切换
 - **无限滚动加载** — 照片超过 12 张时自动分批加载，位置稳定，列间均匀分布
 - **响应式动画过渡** — 列数切换、足迹时间线、移动端导航均带 FLIP/淡入动画
-- **悬浮元信息** — 鼠标悬停时照片轻微放大，标题以透明渐变底悬浮于照片底部；完整的地点、日期、EXIF 信息在放大查看时显示于图片底部
+- **照片卡片悬浮效果** — 鼠标悬停时整卡轻微上移（带回弹弹簧曲线）；卡片不显示元信息，标题、地点、日期与 EXIF 仅在灯箱放大后展示
 - **足迹时间线** — 按地区整理拍摄足迹
 - **PWA 支持** — Service Worker 离线缓存
 - **Instant.page** — 链接预加载，提升浏览体验
@@ -63,14 +65,17 @@ photo-folio/
 │   ├── animal/          # 动物分类
 │   └── footprint/       # 足迹（按地区归档）
 ├── data/
-│   └── photo.toml       # ★ 照片数据（集中管理）
+│   ├── photo.toml       # ★ 照片数据（集中管理）
+│   └── locations.toml   # 足迹地图坐标（按 location 名键控）
+├── scripts/
+│   └── generate-land.mjs # 足迹地图陆地几何生成管线（一次性，零依赖）
 ├── static/              # 静态文件（CNAME、manifest 等）
 ├── themes/
 │   └── photofolio/      # 自定义主题
 │       ├── assets/      # SCSS / JS 源文件
 │       ├── layouts/     # 页面模板
 │       ├── i18n/        # 国际化
-│       └── static/      # 主题静态资源
+│       └── static/      # 主题静态资源（maps/ 陆地几何数据）
 ├── hugo.toml            # Hugo 配置
 └── .github/workflows/   # CI/CD 自动部署
 ```
@@ -85,7 +90,7 @@ photo-folio/
 [[photo]]
 src = "/images/photos/示例照片.jpg"
 alt = "照片標題"
-category = "landscape"    # city / countryside / landscape / humanist / floral / animal
+category = "scenery"      # scenery / humanist / floral / animal
 focus = "24"              # 焦距 (mm)
 iso = "100"
 aperture = "5.6"
@@ -98,6 +103,20 @@ series = ""               # 组照名称（可选，同一组照的多张照片�
 is_cover = false          # 是否为组照封面（同一组照中仅一张设为 true）
 featured = true           # 精選标记（可选，true 的照片收录进 /featured/ 页面）
 ```
+
+### 足迹地图坐标
+
+足迹页顶部的地图按 `location` 聚合光点，坐标维护在 `data/locations.toml`：
+
+```toml
+[[location]]
+name = "雲南"      # 必须与 photo.toml 的 location 字段逐字一致
+lat = 26.86       # 省份/地区级近似坐标即可
+lng = 100.23
+```
+
+- 没有坐标的地点不出现在地图上（时间线不受影响）；新增地点后地图视图会自动适配到全部拍摄点
+- 地图陆地几何为一次性生成的数据（`themes/photofolio/static/maps/land-110m.json`），如无特殊需要不必重新生成（管线：`node scripts/generate-land.mjs`）
 
 ### 组照（系列作品）
 
@@ -139,6 +158,7 @@ title: "割藺草"
 | `params.enableServiceWorker` | 启用 PWA Service Worker |
 | `params.enableInstantPage` | 启用 Instant.page 预加载 |
 | `params.typography` | 字体设置（fontLinks、字体名称、字号、本地字体注入） |
+| `params.galleryFilters` | 全部作品页筛选维度开关：`year` / `location` / `category`（true 开启、false 关闭；缺省仅开启 year） |
 
 ## 🚢 部署
 

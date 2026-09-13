@@ -1,13 +1,13 @@
 baseURL = "https://photo.guanqr.com/"
 languageCode = "zh-cn"
-title = "荷戟獨彷徨"
+title = "啼鳥怨年華"
 theme = "photofolio"
 
 defaultContentLanguage = "zh-cn"
 
 [params]
-    description = "用鏡頭記錄世界的每一個瞬間"
-    heroTitle = "用鏡頭記錄世界"
+    description = "用鏡頭記錄生活的每一個瞬間"
+    heroTitle = "用鏡頭記錄生活"
     heroSubtitle = "每一幀都是一個故事"
     logo = ""
     # 自定义底部版权文字 (支持 HTML 标签，如 <a> 链接)
@@ -33,7 +33,7 @@ defaultContentLanguage = "zh-cn"
 [params.author]
     name = "Guanqr"
     avatar = "/icons/favicon.svg"
-    bio = "用鏡頭記錄世界的每一個瞬間"
+    bio = "用鏡頭記錄生活的每一個瞬間"
 
     [[params.author.equipment]]
         category = "相機"
