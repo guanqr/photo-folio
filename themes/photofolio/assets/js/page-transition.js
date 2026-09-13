@@ -64,13 +64,15 @@ async function loadContent(url) {
         // 更新导航当前页高亮
         updateActiveNav(url);
 
-        // 关闭移动端菜单（带动画收回）
+        // 关闭移动端菜单（带动画收回），并同步清理 header 上的 menu-open 状态
         const nav = document.getElementById('site-nav');
         const navBtn = document.getElementById('nav-toggle');
+        const header = document.querySelector('.site-header');
         if (nav && nav.classList.contains('active')) {
             nav.style.transition = 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, visibility 0.3s';
             nav.classList.remove('active');
             if (navBtn) navBtn.classList.remove('active');
+            if (header) header.classList.remove('menu-open');
             nav.addEventListener('transitionend', function handler() {
                 nav.removeEventListener('transitionend', handler);
                 nav.style.transition = '';
