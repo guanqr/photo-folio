@@ -30,7 +30,8 @@ export function initMobileNav() {
         nav.classList.toggle('active');
         btn.classList.toggle('active');
 
-        // 菜单开合时同步切换导航栏主体的不透明背景（顶部透明时点开菜单 → 导航栏变不透明）
+        // 菜单开合时同步切换导航栏的 menu-open 状态（滚动时打开菜单需隐藏底边线，
+        // 让导航栏与面板合为一体）；背景整块由菜单面板统一渐变填充，导航栏自身不再渐变
         const header = document.querySelector('.site-header');
         if (header) {
             header.classList.toggle('menu-open', nav.classList.contains('active'));
@@ -52,4 +53,29 @@ export function initMobileNav() {
             toggleMenu();
         }
     });
+
+    // 3. 跨断点导航切换动画：宽→窄时菜单文字向右滑出（转换为汉堡），
+    //    窄→宽时汉堡消失、文字从右侧滑回原位；仅在断点跨越时播放，页面加载不触发
+    const mqDesktop = window.matchMedia('(min-width: 768px)');
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function animateNavCrossing(enteringDesktop) {
+        if (prefersReducedMotion) return;
+        const cls = enteringDesktop ? 'nav-slide-in' : 'nav-slide-out';
+        nav.classList.remove('nav-slide-in', 'nav-slide-out');
+        // 强制重排，保证快速往返切换时动画重新播放
+        void nav.offsetWidth;
+        nav.classList.add(cls);
+    }
+
+    // 动画结束后清理类（监听器常驻，避免快速往返切换时状态残留）
+    nav.addEventListener('animationend', (e) => {
+        if (e.animationName === 'nav-slide-in' || e.animationName === 'nav-slide-out') {
+            nav.classList.remove('nav-slide-in', 'nav-slide-out');
+        }
+    });
+
+    if (mqDesktop.addEventListener) {
+        mqDesktop.addEventListener('change', (e) => animateNavCrossing(e.matches));
+    }
 }

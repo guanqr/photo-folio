@@ -22,17 +22,22 @@
         visibility: visible;
         opacity: 1;
         z-index: 1002;
+        /* 跨断点进入窄屏时汉堡按钮从右侧滑入淡入（display 切换不触发 transition，用 animation） */
+        animation: hamburger-in 0.6s ease both;
     }
 
     .site-nav {
         position: fixed;
-        top: 4.5em;
+        /* 面板从视口顶部开始：背景延伸覆盖导航栏主体区域，
+           开合时由面板统一渐变整块背景，避免与导航栏各自渐变在交界处颜色堆叠 */
+        top: 0;
         left: 0; right: 0;
-        /* 默认透明，菜单展开时由透明逐渐转为不透明（与导航栏主体 0.8s 动画同步） */
+        /* 默认透明，菜单展开时由透明逐渐转为不透明（0.5s，与滚动时导航栏背景渐变一致） */
         background: transparent;
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
-        padding: 2em 1em;
+        /* 内容下移避开顶部导航栏（4.5em）+ 原 2em 间距 */
+        padding: 6.5em 1em 2em;
 
         /* 页面已滚动时：面板直接以不透明打开，不做背景渐变 */
         &.nav-solid {
@@ -43,7 +48,9 @@
         visibility: hidden;
         transform: translateY(-1em);
         pointer-events: none;
-        z-index: 998;
+        /* 负 z-index：垫在导航栏内容（站名等）之下、导航栏背景之上，
+           面板背景从 top:0 统一填充整块区域时不遮挡站名 */
+        z-index: -1;
         height: auto;
         overflow: visible;
         /* 不设 transition，JS 在用户点击汉堡按钮时动态注入，
@@ -79,6 +86,42 @@
         }
     }
 
+    /* 跨断点进入窄屏时的滑出动画：菜单文字临时回到导航栏内向右滑出，
+       结束后恢复为隐藏的下拉面板（类由 JS 添加，动画结束即移除） */
+    .site-nav.nav-slide-out {
+        /* 绝对定位脱离文档流：滑出期间不参与导航栏布局，避免挤压站名；
+           锚定 .header-actions，贴汉堡按钮左侧（含 0.75em 间距） */
+        position: absolute;
+        top: 0;
+        right: calc(100% + 0.75em);
+        height: 100%;
+        display: flex;
+        align-items: center;
+        padding: 0;
+        opacity: 1;
+        visibility: visible;
+        transform: none;
+        pointer-events: none;
+        animation: nav-slide-out 0.6s ease forwards;
+
+        ul {
+            flex-direction: row;
+            gap: 2em;
+            align-items: center;
+            white-space: nowrap;
+        }
+
+        a {
+            font-size: 1em;
+            white-space: nowrap;
+        }
+
+        /* 滑出过程沿用桌面样式（无图标），与切换前的视觉衔接 */
+        .nav-icon {
+            display: none;
+        }
+    }
+
     .back-to-top {
         bottom: 1.5em;
         right: 1.5em;
@@ -105,10 +148,6 @@
 
     .footprint-map-section {
         padding: 2em 0 0;
-
-        .footprint-map-title {
-            font-size: 1.5em;
-        }
     }
 
     /* 列数由 JS 控制 + FLIP 动画 */

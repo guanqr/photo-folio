@@ -97,9 +97,8 @@ img.photo-img {
     .filter-label {
         flex: none;
         font-family: var(--font-meta);
-        font-size: 0.65em;
+        font-size: 1em;
         text-transform: uppercase;
-        letter-spacing: 0.25em;
         color: var(--color-text-muted);
         white-space: nowrap;
         transition: color 0.3s ease;

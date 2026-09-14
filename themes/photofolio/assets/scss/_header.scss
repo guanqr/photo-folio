@@ -1,4 +1,46 @@
 ﻿/* ===== Header ===== */
+
+/* 跨断点导航切换动画：导航文字水平滑动（宽→窄右滑出，窄→宽左滑入）+ 汉堡按钮入场 */
+@keyframes nav-slide-in {
+    from {
+        opacity: 0;
+        transform: translateX(2em);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes nav-slide-out {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(1.5em);
+    }
+}
+
+@keyframes hamburger-in {
+    from {
+        opacity: 0;
+        transform: translateX(0.75em);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* 进入宽屏：导航文字从右侧向左滑回原位（类由 JS 在断点跨越时添加，时长与首页进度条标题切换一致） */
+@media (min-width: 768px) {
+    .site-nav.nav-slide-in {
+        animation: nav-slide-in 0.6s ease both;
+    }
+}
+
 .site-header {
     position: fixed;
     top: 0; left: 0; right: 0;
@@ -9,10 +51,15 @@
     border-bottom: 0.0625em solid transparent;
     transition: background 0.5s ease, box-shadow 0.5s ease, border-color 0.5s ease, backdrop-filter 0.5s ease;
 
-    &.is-scrolled,
-    &.menu-open {
+    &.is-scrolled {
         background: var(--color-nav-bg); /* 完全不透明，无需毛玻璃 */
         border-bottom-color: var(--color-border);
+    }
+
+    /* 菜单展开时：导航栏与下拉面板合为一体（背景由面板从 top:0 统一填充），
+       隐藏底边线（含滚动态），交界处无分隔线、无颜色堆叠 */
+    &.menu-open {
+        border-bottom-color: transparent;
     }
 }
 
@@ -141,6 +188,8 @@
 
 /* ===== Header Actions (右侧操作区) ===== */
 .header-actions {
+    /* 为跨断点滑出动画的绝对定位导航提供锚点 */
+    position: relative;
     display: flex;
     align-items: center;
     gap: 1.5em;

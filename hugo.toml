@@ -9,6 +9,8 @@ defaultContentLanguage = "zh-cn"
     description = "用鏡頭記錄生活的每一個瞬間"
     heroTitle = "用鏡頭記錄生活"
     heroSubtitle = "每一幀都是一個故事"
+    # 首页轮播图数量（1-12 张，超出范围自动钳制到边界值）
+    carouselCount = 6
     logo = ""
     # 自定义底部版权文字 (支持 HTML 标签，如 <a> 链接)
     copyrightText = ""

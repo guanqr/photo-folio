@@ -75,9 +75,6 @@ other = "旅途仍在繼續..."
 [footprint_map_eyebrow]
 other = "FOOTPRINT MAP"
 
-[footprint_map_title]
-other = "拍攝足跡 · 世界地圖"
-
 [footprint_map_description]
 other = "{{ .Count }} 張照片在 {{ .Sites }} 個地點留下足跡。懸停或點擊光點，查看該處的地名、照片數量與拍攝年份跨度。"
 

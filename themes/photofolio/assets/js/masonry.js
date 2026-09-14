@@ -368,6 +368,73 @@ function getCardBorder(grid) {
     return grid._cardBorder;
 }
 
+/* ===== 跨档位重排行的 FLIP 动画 ===== */
+/* 时长/缓动与足迹时间线列数切换一致；档位内的冻结缩放保持实时无动画 */
+const FLIP_TRANSITION = 'transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
+let flipReduced = null;
+
+function flipReducedMotion() {
+    if (flipReduced === null) {
+        flipReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+    return flipReduced;
+}
+
+/* 清除上一次未完成的 FLIP 残留（内联 transform/transition）——
+   残留会使 First 测量包含旧位移，导致新一轮动画起点错位 */
+function clearFlipTransforms(grid) {
+    grid._shownItems.forEach((item) => {
+        if (item.style.transform) item.style.transform = '';
+        if (item.style.transition) item.style.transition = '';
+    });
+}
+
+/* FLIP 收尾：transform 过渡结束后清除内联 transition（transform 已在 Play 时清空）；
+   监听器挂网格上一次（transitionend 冒泡，目标必为照片项自身） */
+function bindFlipCleanup(grid) {
+    if (grid._flipCleanupBound) return;
+    grid._flipCleanupBound = true;
+    grid.addEventListener('transitionend', (e) => {
+        if (e.propertyName !== 'transform') return;
+        if (e.target.classList && e.target.classList.contains('masonry-item')) {
+            e.target.style.transition = '';
+        }
+    });
+}
+
+/* 对重建后的行执行 FLIP：First 旧位置 → 重建（Last）→ Invert 回旧位 → Play 过渡到新位 */
+function flipRebuild(grid, firstRects) {
+    const shown = grid._shownItems;
+    const lastRects = shown.map((item) => item.getBoundingClientRect());
+
+    // Invert：回移到旧位置（无过渡）
+    shown.forEach((item, i) => {
+        const f = firstRects[i];
+        const l = lastRects[i];
+        const dx = f.left - l.left;
+        const dy = f.top - l.top;
+        const sx = f.width / l.width;
+        const sy = f.height / l.height;
+        if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5 &&
+            Math.abs(sx - 1) < 0.001 && Math.abs(sy - 1) < 0.001) return;
+        item.style.transition = 'none';
+        item.style.transformOrigin = 'top left';
+        item.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
+    });
+
+    // 强制重排，确保 Invert 立即生效后再启动过渡
+    shown.forEach((item) => item.offsetHeight);
+
+    // Play：过渡到新位置
+    shown.forEach((item) => {
+        if (!item.style.transform) return;
+        item.style.transition = FLIP_TRANSITION;
+        item.style.transform = '';
+    });
+
+    bindFlipCleanup(grid);
+}
+
 /* ===== resize：逐帧重排（rAF 节流），布局实时跟随窗口宽度 ===== */
 export function initMasonryResize() {
     if (resizeBound) return;
@@ -403,8 +470,8 @@ function relayoutShown(grid) {
 
     if (modeChanged) {
         // 跨档位断点：重新分行——与揭示时同一规则（含边界微调），
-        // 保证档位切换后的布局与初次进入该档位的布局一致
-        rebuildAll(grid, true);
+        // 保证档位切换后的布局与初次进入该档位的布局一致；带 FLIP 动画平滑移动
+        rebuildAll(grid, true, true);
         return;
     }
 
@@ -423,10 +490,18 @@ function relayoutShown(grid) {
 }
 
 /* 对全部已显示照片重新分行并重建行容器（跨断点切换 / 测量完成后的校正）；
-   已用真实比例排布过的行重新计算后结果不变，只有尾部（新批次所在行）会调整 */
-function rebuildAll(grid, refine) {
+   已用真实比例排布过的行重新计算后结果不变，只有尾部（新批次所在行）会调整；
+   flip = true 时对重建后的位置变化执行 FLIP 动画（仅跨档位重排时使用） */
+function rebuildAll(grid, refine, flip) {
     const shown = grid._shownItems;
     if (!shown || shown.length === 0) return;
+
+    // FLIP：重建前记录旧位置（清除上一次动画残留，保证 First 测量干净）
+    let firstRects = null;
+    if (flip && !flipReducedMotion()) {
+        clearFlipTransforms(grid);
+        firstRects = shown.map((item) => item.getBoundingClientRect());
+    }
 
     const W = getGridWidth(grid);
     const gap = getRowGap(grid);
@@ -449,6 +524,8 @@ function rebuildAll(grid, refine) {
     });
 
     applyRows(shown, rows, allRatios, W, gap, border2);
+
+    if (firstRects) flipRebuild(grid, firstRects);
 }
 
 /* ===== 筛选模式（全部作品页） ===== */
