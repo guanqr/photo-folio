@@ -31,7 +31,11 @@ function revealCategoryCards() {
 function initPageModules() {
     initLightbox();
     initLazyLoad();
-    initMasonry();
+    // 带筛选参数的 URL（?y=/?l=/?c=）且页面有筛选栏时，跳过首屏全量揭示，
+    // 由 initGalleryFilter 恢复筛选后统一揭示，避免全量照片闪现
+    const skipReveal = /[?&](y|l|c)=/.test(location.search) &&
+        !!document.querySelector('.gallery-filters');
+    initMasonry(skipReveal);
     initMasonryResize();
     initInfiniteScroll();
     initGalleryFilter();

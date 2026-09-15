@@ -22,6 +22,15 @@ export function initGalleryFilter() {
     if (bar._filterBound) return; // SPA 重复初始化幂等
     bar._filterBound = true;
 
+    /* 首次初始化时记录照片原始 DOM 顺序（= 时间顺序）——
+       筛选切换会拍平/重建行容器，行内照片被插到游离照片之前、DOM 顺序被打乱，
+       重置回「全部」时必须按原始顺序排序，不能直接沿用当前 DOM 顺序 */
+    if (!grid._origOrder) {
+        grid._origOrder = new Map(
+            Array.from(grid.querySelectorAll('.masonry-item')).map((el, i) => [el, i])
+        );
+    }
+
     const groups = Array.from(bar.querySelectorAll('.filter-group'));
     const activeBtnOf = (dim) => {
         const g = groups.find((gr) => gr.dataset.dim === dim);
@@ -85,6 +94,8 @@ export function initGalleryFilter() {
             (!category || item.dataset.category === category);
         const items = Array.from(grid.querySelectorAll('.masonry-item'));
         const matching = active ? items.filter(matches) : items;
+        // 恢复原始时间顺序（DOM 顺序已被历次筛选拍平打乱）
+        matching.sort((a, b) => (grid._origOrder.get(a) ?? 0) - (grid._origOrder.get(b) ?? 0));
 
         // 空状态：筛选激活且无匹配时显示，并隐藏触发器
         let emptyEl = document.getElementById('gallery-filter-empty');

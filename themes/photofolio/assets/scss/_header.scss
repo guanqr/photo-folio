@@ -19,18 +19,18 @@
     }
     to {
         opacity: 0;
-        transform: translateX(1.5em);
+        /* 右滑距离由元素上的 --nav-slide-dist 决定：从宽屏原位向右滑出屏幕边缘 */
+        transform: translateX(var(--nav-slide-dist, 2em));
     }
 }
 
+/* 汉堡按钮入场：原地淡入（不做位移，避免在图标右侧留下移动残影） */
 @keyframes hamburger-in {
     from {
         opacity: 0;
-        transform: translateX(0.75em);
     }
     to {
         opacity: 1;
-        transform: translateX(0);
     }
 }
 

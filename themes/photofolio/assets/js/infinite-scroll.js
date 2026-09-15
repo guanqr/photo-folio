@@ -13,6 +13,13 @@ import { revealBatch } from './masonry.js';
 
 let current = null; // { trigger, grid, onScroll }
 
+/* 标记完成状态：完成文案保留在页面底部，不消失 */
+function markFinished(trigger) {
+    trigger.classList.remove('is-loading');
+    trigger.classList.add('is-finished');
+    trigger.innerHTML = `<span class="load-more-text">${trigger.dataset.finishedText}</span>`;
+}
+
 export function initInfiniteScroll() {
     const trigger = document.getElementById('load-more-trigger');
     const grid = document.getElementById('masonry-grid');
@@ -25,8 +32,17 @@ export function initInfiniteScroll() {
 
     if (!trigger || !grid) return;
     if (!grid._pendingItems) return;
-    // 同一触发器已初始化（滚动监听仍生效）→ 幂等
-    if (current) return;
+    // 同一触发器已初始化（滚动监听仍生效）→ 只同步完成状态后返回：
+    // 筛选重启后待加载队列可能已清空（如仅剩 1 张照片），
+    // 若直接幂等返回，触发器会停留在「载入中」状态
+    if (current) {
+        if (grid._pendingItems.length === 0) {
+            window.removeEventListener('scroll', current.onScroll);
+            current = null;
+            markFinished(trigger);
+        }
+        return;
+    }
 
     const pageSize = parseInt(trigger.dataset.pageSize, 10) || 12;
 
@@ -68,10 +84,7 @@ export function initInfiniteScroll() {
     function finishLoading() {
         window.removeEventListener('scroll', onScroll);
         if (current && current.grid === grid) current = null;
-        trigger.classList.remove('is-loading');
-        trigger.classList.add('is-finished');
-        // 完成文案保留在页面底部，不消失
-        trigger.innerHTML = `<span class="load-more-text">${trigger.dataset.finishedText}</span>`;
+        markFinished(trigger);
     }
 
     // rAF 节流的滚动监听：距页面底部 ≤80px 时触发加载（其余守卫由 loadMore 统一处理）

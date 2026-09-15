@@ -19,7 +19,7 @@ const REVEAL_STAGGER = 60; // 逐张揭示间隔 ms
 let resizeBound = false;
 let gridObserver = null; // 每页只有一个网格；SPA 换页时断开旧观察，避免持有已脱离文档的整棵网格子树
 
-export function initMasonry() {
+export function initMasonry(skipInitialReveal = false) {
     const grid = document.getElementById('masonry-grid');
     if (!grid) return;
 
@@ -55,7 +55,11 @@ export function initMasonry() {
         gridObserver.observe(grid);
     }
 
-    revealBatch(grid, pageSize);
+    // 带筛选参数的 URL 刷新时跳过首屏全量揭示，交由筛选恢复流程统一揭示——
+    // 否则全量首屏照片会先闪现、再被筛选重启隐藏，出现「显示→消失→再显示」的跳变
+    if (!skipInitialReveal) {
+        revealBatch(grid, pageSize);
+    }
 }
 
 /**
