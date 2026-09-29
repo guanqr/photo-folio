@@ -6,7 +6,7 @@
 {{ if reflect.IsMap . }}
     {{ with index . "order" }}{{ $order = . }}{{ end }}
 {{ end }}
-{{ $allPhotos := site.Data.photo.photo | default slice }}
+{{ $allPhotos := hugo.Data.photo.photo | default slice }}
 {{ $withKey := slice }}
 {{ range $idx, $p := $allPhotos }}
     {{ $t := $p.time | time.Format "2006-01-02 15:04:05" }}

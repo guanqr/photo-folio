@@ -29,7 +29,7 @@
         </div>
         {{ else }}
         <div class="empty-state">
-            <div class="empty-icon">{{ $.Site.Data.svg.camera | safeHTML }}</div>
+            <div class="empty-icon">{{ hugo.Data.svg.camera | safeHTML }}</div>
             <h3>{{ i18n "no_series" }}</h3>
             <p class="empty-hint">
                 {{ i18n "no_series_hint" }}

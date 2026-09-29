@@ -1,5 +1,5 @@
 baseURL = "https://photo.guanqr.com/"
-languageCode = "zh-cn"
+locale = "zh-cn"
 title = "啼鳥怨年華"
 theme = "photofolio"
 

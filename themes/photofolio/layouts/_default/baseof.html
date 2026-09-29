@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ .Site.LanguageCode | default "zh-cn" }}">
+<html lang="{{ .Site.Language.Locale | default "zh-cn" }}">
 <head>
     {{- partial "head.html" . -}}
 </head>
@@ -34,14 +34,14 @@
         <img class="lightbox-backdrop" id="lightbox-backdrop-next" alt="">
         <div class="lightbox-topbar">
             <button class="lightbox-close" id="lightbox-close" aria-label="{{ i18n "close" }}">
-                {{ $.Site.Data.svg.x | safeHTML }}
+                {{ hugo.Data.svg.x | safeHTML }}
             </button>
         </div>
         <button class="lightbox-arrow lightbox-prev" id="lightbox-prev" aria-label="{{ i18n "prev_photo" }}">
-            {{ $.Site.Data.svg.chevron_left | safeHTML }}
+            {{ hugo.Data.svg.chevron_left | safeHTML }}
         </button>
         <button class="lightbox-arrow lightbox-next" id="lightbox-next" aria-label="{{ i18n "next_photo" }}">
-            {{ $.Site.Data.svg.chevron_right | safeHTML }}
+            {{ hugo.Data.svg.chevron_right | safeHTML }}
         </button>
         <div class="lightbox-content">
             <div class="lightbox-img-area">
@@ -51,15 +51,15 @@
                 <div class="lightbox-caption" id="lightbox-caption"></div>
                 <div class="lightbox-meta" id="lightbox-meta">
                     <div class="lightbox-meta-group" id="lightbox-meta-place">
-                        <span class="icon">{{ $.Site.Data.svg.location | safeHTML }}</span>
+                        <span class="icon">{{ hugo.Data.svg.location | safeHTML }}</span>
                         <span class="lightbox-meta-text"></span>
                     </div>
                     <div class="lightbox-meta-group" id="lightbox-meta-date">
-                        <span class="icon">{{ $.Site.Data.svg.calendar | safeHTML }}</span>
+                        <span class="icon">{{ hugo.Data.svg.calendar | safeHTML }}</span>
                         <span class="lightbox-meta-text"></span>
                     </div>
                     <div class="lightbox-meta-group" id="lightbox-meta-exif">
-                        <span class="icon">{{ $.Site.Data.svg.settings | safeHTML }}</span>
+                        <span class="icon">{{ hugo.Data.svg.settings | safeHTML }}</span>
                         <span class="lightbox-meta-text"></span>
                     </div>
                 </div>
@@ -69,7 +69,7 @@
 
     <!-- 返回顶部按钮 -->
     <button id="back-to-top" class="back-to-top" aria-label="{{ i18n "back_to_top" }}">
-        {{ $.Site.Data.svg.arrow_up | safeHTML }}
+        {{ hugo.Data.svg.arrow_up | safeHTML }}
     </button>
 
     <!-- 【核心】使用 Hugo Extended 的 js.Build (esbuild) 编译所有 ES6 模块 -->

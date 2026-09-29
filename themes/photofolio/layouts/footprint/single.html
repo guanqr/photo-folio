@@ -38,7 +38,7 @@
         <div class="load-more-trigger" id="load-more-trigger" data-page-size="12" data-finished-text="{{ i18n "no_more_photos" }}"></div>
         {{ else }}
         <div class="empty-state">
-            <div class="empty-icon">{{ $.Site.Data.svg.camera | safeHTML }}</div>
+            <div class="empty-icon">{{ hugo.Data.svg.camera | safeHTML }}</div>
             <h3>{{ i18n "no_photos_under" (dict "Title" .Title) }}</h3>
         </div>
         {{ end }}

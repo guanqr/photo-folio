@@ -110,8 +110,8 @@
     }
 </style>
 
-<!-- 使用 Hugo 0.128.0+ 最新的 css.Sass 语法 -->
-{{ $opts := dict "transpiler" "libsass" "targetPath" "css/style.css" }}
+<!-- 不显式声明 transpiler，使用 Hugo 默认转译器（显式声明 libsass 会触发弃用警告，dartsass 需额外安装） -->
+{{ $opts := dict "targetPath" "css/style.css" }}
 {{ if hugo.IsProduction }}
     {{/* 生产环境下开启压缩 */}}
     {{ $opts = merge $opts (dict "outputStyle" "compressed") }}

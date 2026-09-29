@@ -14,7 +14,7 @@
         {{ $reg = merge $reg (dict $p.Title $entry) }}
     {{ end }}
 {{ end }}
-{{ range site.Data.locations.location }}
+{{ range hugo.Data.locations.location }}
     {{ $entry := index $reg .name }}
     {{ if $entry }}
         {{ $reg = merge $reg (dict .name (merge $entry (dict "lat" .lat "lng" .lng))) }}
