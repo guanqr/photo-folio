@@ -2,6 +2,24 @@
 
 PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)。
 
+## [0.5.14] — 2026-10-01
+
+### Added
+- **首页轮播大字下方新增两个胶囊按钮**：查看全部作品（→ `/gallery/`）、關於我（→ `/about/`），站内链接走 SPA 切换；胶囊为毛玻璃半透明样式（白描边 + 黑底模糊，hover 轮廓变白），overlay 保持 `pointer-events:none`、按钮组单独恢复点击
+- **全部作品页新增「作品範圍」筛选维度**：位于拍攝年份上方，四个互斥胶囊——全部 / 精選（featured 照片）/ 橫構圖 / 豎構圖，与其他维度 AND 组合；URL 参数 `?s=featured|landscape|portrait`（直达链接与后退自动恢复，带参直达跳过首屏闪现）；构图判定：水平长度 ≥ 竖直长度（含相等）为橫構圖
+- **范围筛选激活时组照拆分单独展示**：作品範圍筛选非「全部」时，组照内页（`data-series-inner`）参与匹配与展示——组照可能同时含横/竖构图与单独精選的照片；默认视图（范围=全部）仍只显示封面，内页由网格 `data-hidden-selector` 排除在分页队列外，按需纳入；拆分模式下封面按普通照片对待——右上角组照徽章隐藏、点击封面改开灯箱（网格 `series-split` 状态类：SPA 拦截放行该链接、灯箱接管点击）、灯箱标题显示照片自身名称而非组照名
+- **photo.toml 新增 orientation 字段与回填管线**：`scripts/backfill-orientation.mjs`（Node 零依赖，可重复运行）通过 OSS 图片信息接口（`x-oss-process=image/info`，无需下载图片本体）批量回填全部照片的 orientation——构图判定统一在此脚本完成，新照片缺失时重跑即可；预处理脚本仅将 `orientation` 纳入持久化字段清单（不做二次判定）
+
+### Changed
+- **地点页数据驱动化（不再需要地点 md 文件）**：新增拍摄地点只需在 `data/locations.toml` 加一条（name/slug/lat/lng），`content/footprint/_content.gotmpl`（Hugo content adapter）在构建期自动生成 `/footprint/<slug>/` 地点页，删除 11 个手工维护的地点 md 文件；`location-registry.html` 改为纯 toml 驱动（slug/URL/坐标单一数据源），时间线卡片、地图光点、画廊筛选的 URL 与 slug 均不变
+- **移除独立精選页**：删除 `content/featured/` 与 `/featured/` 页面——精選照片已并入全部作品页的「作品範圍 → 精選」筛选，首页轮播本就由 featured 数据驱动；`_default/list.html` 的精選专属分支（真实集合 / 显示集合 / `asIndividual` 传参）一并清理，`photo-card.html` 的 `asIndividual` 参数保留（组照详情页仍在使用）
+- **SCSS 全面整理**：尺寸统一 em 化（时间线容器、胶囊圆角、模糊滤镜等，媒体查询断点保留 px 惯例）；新增共享占位符 `%pill`（筛选/轮播/地图降级三处胶囊共用）与 `%reveal-entry`（masonry-item/category-card 入场动画共用）；z-index 收敛为语义变量体系（`--z-header/--z-lightbox/...`，9 处引用）；主题切换过渡统一为 `--transition-color/bg/border/opacity` 变量（约 30 处字面量替换）；组件内媒体查询统一 min-width 移动优先（分类网格、灯箱元信息反转方向，行为不变），全局窄屏覆盖收敛 `_responsive.scss`（main.scss 注释记录约定）；移除重复的 `.lightbox-content` 定义、孤儿注释与行尾空白
+- **CI Hugo 版本升级**：GitHub Actions 构建（`.github/workflows/build.yml`）的 Hugo 版本 0.148.2 → 0.164.0，与本地开发环境一致
+
+### Fixed
+- **画廊筛选与灯箱健壮性修复**（代码审查）：带筛选参数但无按钮可匹配（维度已关闭/值过期/空值）时网格不再空白——恢复流程兜底执行 apply 并同步清理过期参数；灯箱箭头集合排除被筛选隐藏的照片；箭头切换先重建列表再取模（SPA 换页后不错位）；拆分模式判定收敛为 `isSeriesSplit` 单一导出（lightbox/page-transition 复用）；组照内页排除谓词复用网格 `data-hidden-selector`（与初始分页队列同源）；筛选参数字母表由 `PARAM_KEYS` 单一来源（main.js skipReveal 正则自动跟随）；infinite-scroll 拆线逻辑抽取共用
+- **数据与构建健壮性**：`_content.gotmpl` 构建期校验 slug 必填且唯一；地点注册表消费点 nil 安全（photo.toml 地点未登记时回退 urlize 而非构建报错）；photo.toml 缺 orientation 时构建期 warnf 提醒补跑回填脚本；baseof 预隐藏脚本同步感知 `data-hidden-selector`（首屏不再闪现组照内页空框）；`backfill-orientation.mjs` 增加请求超时、全失败非零退出、临时文件原子写入、缩进键兼容
+
 ## [0.5.13] — 2026-09-29
 
 ### Changed
