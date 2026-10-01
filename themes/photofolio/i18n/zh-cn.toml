@@ -39,8 +39,26 @@ other = "已展示全部照片"
 [all_photos]
 other = "全部照片"
 
+[hero_view_gallery]
+other = "查看全部作品"
+
+[hero_about_me]
+other = "關於我"
+
 [filter_photos]
 other = "篩選照片"
+
+[filter_scope]
+other = "作品範圍"
+
+[filter_scope_featured]
+other = "精選"
+
+[filter_scope_landscape]
+other = "橫構圖"
+
+[filter_scope_portrait]
+other = "豎構圖"
 
 [filter_year]
 other = "拍攝年份"

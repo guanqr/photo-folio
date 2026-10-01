@@ -30,13 +30,19 @@ export function initMasonry(skipInitialReveal = false) {
     // 否则未揭示的照片会以原始尺寸占据版面，造成大片空白、已排好的行被顶到底部）
     allItems.forEach((item) => item.classList.add('is-hidden'));
 
+    // 网格元素上的 data-hidden-selector（如画廊页的组照内页）：
+    // 匹配项默认不进入分页队列，只有筛选重启显式把其纳入匹配集合时才会揭示
+    const hiddenSel = grid.dataset.hiddenSelector || '';
+
     const trigger = document.getElementById('load-more-trigger');
     const pageSize = trigger ? (parseInt(trigger.dataset.pageSize, 10) || 12) : 12;
 
     // 记忆触发器原始 HTML（筛选模式隐藏触发器，重置筛选时恢复）
     if (trigger && !grid._triggerHtml) grid._triggerHtml = trigger.innerHTML;
 
-    grid._pendingItems = [...allItems];
+    grid._pendingItems = hiddenSel
+        ? allItems.filter((item) => !item.matches(hiddenSel))
+        : [...allItems];
     grid._shownItems = [];
     grid._ratios = new Map();
     grid._cardBorder = 0;

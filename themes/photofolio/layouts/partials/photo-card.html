@@ -25,6 +25,7 @@
 {{ $categoryKey := $photo.category }}
 {{ $seriesName := $photo.series }}
 {{ $isCover := $photo.is_cover }}
+{{ $isInner := and $seriesName (not $isCover) }}
 
 {{/* 计算该组照的真实总照片数（包含内页） */}}
 {{ $seriesCount := 0 }}
@@ -74,7 +75,7 @@
 {{ with $shutter }}{{ $exif = $exif | append (printf "%ss" .) }}{{ end }}
 {{ with $iso }}{{ $exif = $exif | append (printf "ISO%s" .) }}{{ end }}
 
-<div class="masonry-item" data-year="{{ $year }}" data-location="{{ $photo.location }}" data-category="{{ $photo.category }}">
+<div class="masonry-item" data-year="{{ $year }}" data-location="{{ $photo.location }}" data-category="{{ $photo.category }}" data-scope="{{ if $photo.featured }}featured {{ end }}{{ $photo.orientation }}" {{ if $isInner }}data-series-inner="true"{{ end }}>
     <div class="photo-card"
         data-title="{{ $displayTitle }}"
         {{ with $description }}data-description="{{ . }}"{{ end }}

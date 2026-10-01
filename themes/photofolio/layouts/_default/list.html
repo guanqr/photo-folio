@@ -12,13 +12,6 @@
 {{ $realPhotos := slice }}
 {{ if eq $sectionName "gallery" }}
     {{ $realPhotos = $sortedPhotos }}
-{{ else if eq $sectionName "featured" }}
-    {{/* 精选页：收集所有 featured = true 的照片，而不是按 category 过滤 */}}
-    {{ range $sortedPhotos }}
-        {{ if .featured }}
-            {{ $realPhotos = $realPhotos | append . }}
-        {{ end }}
-    {{ end }}
 {{ else }}
     {{ $realPhotos = where $sortedPhotos "category" $sectionName }}
 {{ end }}
@@ -26,16 +19,17 @@
 
 {{/* 【修复 2】再过滤出用于瀑布流显示的卡片（剔除组照内页，只保留单图和封面） */}}
 {{ $displayPhotos := slice }}
-{{ if eq $sectionName "featured" }}
-    {{/* 精選页：哪張標記了精選就單獨展示哪張，組照內頁不隱藏、封面不帶組照鏈接 */}}
-    {{ $displayPhotos = $realPhotos }}
-{{ else }}
-    {{ range $realPhotos }}
-        {{ if or (not .series) .is_cover }}
-            {{ $displayPhotos = $displayPhotos | append . }}
-        {{ end }}
+{{ range $realPhotos }}
+    {{ if or (not .series) .is_cover }}
+        {{ $displayPhotos = $displayPhotos | append . }}
     {{ end }}
 {{ end }}
+
+{{/* 网格渲染集：画廊页额外包含组照内页（带 data-series-inner 标记），
+    默认被网格的 data-hidden-selector 排除在分页队列外；
+    作品範圍筛选激活（非全部）时由 gallery-filter 放行，按横竖构图/精選单独展示 */}}
+{{ $gridPhotos := $displayPhotos }}
+{{ if eq $sectionName "gallery" }}{{ $gridPhotos = $realPhotos }}{{ end }}
 
 {{/* 全部作品页：筛选栏选项（年度 desc、地点/类别按照片数 desc） */}}
 {{ $years := slice }}
@@ -85,9 +79,21 @@
         {{ if gt (len $displayPhotos) 0 }}
         {{/* 筛选栏：仅全部作品页；各维度由 hugo.toml [params.galleryFilters] 控制开关
            （胶囊按钮组，可横向滚动；缺省仅开启 year）——开关解析一次成 dict */}}
-        {{ $filtersCfg := merge (dict "year" true "location" false "category" false) (default dict site.Params.galleryFilters) }}
-        {{ if and (eq $sectionName "gallery") (or $filtersCfg.year $filtersCfg.location $filtersCfg.category) }}
+        {{ $filtersCfg := merge (dict "year" true "location" false "category" false "scope" false) (default dict site.Params.galleryFilters) }}
+        {{ if and (eq $sectionName "gallery") (or $filtersCfg.year $filtersCfg.location $filtersCfg.category $filtersCfg.scope) }}
         <div class="gallery-filters" role="group" aria-label="{{ i18n "filter_photos" }}" data-empty-text="{{ i18n "filter_empty" }}">
+            {{ if $filtersCfg.scope }}
+            <div class="filter-group" data-dim="scope">
+                <span class="filter-label">{{ i18n "filter_scope" }}</span>
+                <div class="filter-options">
+                    <button type="button" data-value="" aria-pressed="true" class="is-active">{{ i18n "filter_all" }}</button>
+                    {{/* 匹配靠照片卡片的 data-scope token 列表（featured 与 orientation 可并存） */}}
+                    <button type="button" data-value="featured" aria-pressed="false">{{ i18n "filter_scope_featured" }}</button>
+                    <button type="button" data-value="landscape" aria-pressed="false">{{ i18n "filter_scope_landscape" }}</button>
+                    <button type="button" data-value="portrait" aria-pressed="false">{{ i18n "filter_scope_portrait" }}</button>
+                </div>
+            </div>
+            {{ end }}
             {{ if $filtersCfg.year }}
             <div class="filter-group" data-dim="year">
                 <span class="filter-label">{{ i18n "filter_year" }}</span>
@@ -121,14 +127,14 @@
             {{ end }}
         </div>
         {{ end }}
-        <div class="masonry-grid" id="masonry-grid">
-            <!-- 渲染时使用过滤后的 displayPhotos -->
-            {{ range $displayPhotos }}
-                {{ partial "photo-card.html" (dict "photo" . "site" $.Site "asIndividual" (eq $sectionName "featured")) }}
+        <div class="masonry-grid" id="masonry-grid" {{ if eq $sectionName "gallery" }}data-hidden-selector="[data-series-inner]"{{ end }}>
+            <!-- 渲染时使用过滤后的 gridPhotos（画廊页含组照内页，默认不进入分页队列） -->
+            {{ range $gridPhotos }}
+                {{ partial "photo-card.html" (dict "photo" . "site" $.Site) }}
             {{ end }}
         </div>
 
-        {{ if gt (len $displayPhotos) 12 }}
+        {{ if gt (len $gridPhotos) 12 }}
         <div class="load-more-trigger" id="load-more-trigger" data-page-size="12" data-finished-text="{{ i18n "no_more_photos" }}">
             <div class="loading-spinner"></div>
             <span class="load-more-text">{{ i18n "loading" }}</span>

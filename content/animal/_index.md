@@ -1,6 +1,6 @@
 ---
 title: "動物"
-description: "偶遇林間生靈，記錄萬物靈動瞬間"
+description: "竹批雙耳峻，風入四蹄輕"
 cover: "/images/photos/变色树蜥.jpg"
 weight: 5
 ---

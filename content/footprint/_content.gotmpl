@@ -1,0 +1,10 @@
+{{- /* 地点页内容适配器（Hugo 0.126+）：构建期从 data/locations.toml 生成 /footprint/<slug>/ 虚拟页面，
+       不再需要手工维护 content/footprint/<slug>.md；新增地点只需在 locations.toml 加一条（name/slug/lat/lng）。 */}}
+{{- range hugo.Data.locations.location }}
+    {{- $page := dict
+        "kind" "page"
+        "path" (.slug | default (.name | urlize))
+        "title" .name
+    }}
+    {{- $.AddPage $page }}
+{{- end }}

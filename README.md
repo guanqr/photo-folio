@@ -8,7 +8,7 @@
 
 - **两端对齐行布局** — Google Photos 式：行高由本行照片内容自然决定、行宽恰好铺满容器（零拉伸、零粗暴裁切），行高贴近参考值（肉眼看基本一致），按时间顺序逐行加载不乱序，resize 自动重排；超窄屏（≤500px）横构图独占一行、竖构图与相邻照片同行
 - **组图系列** — 支持将多张照片归入同一主题系列，封面图右上角胶囊徽章显示照片数量，点击进入系列详情页
-- **全部作品筛选** — 拍摄年份/拍摄地点/作品类型三组胶囊筛选（可组合、URL 参数同步、分页加载），各维度开关由 `hugo.toml` 的 `[params.galleryFilters]` 控制
+- **全部作品筛选** — 作品范围（全部/精選/橫構圖/豎構圖）/拍摄年份/拍摄地点/作品类型四组胶囊筛选（可组合、URL 参数同步、分页加载），各维度开关由 `hugo.toml` 的 `[params.galleryFilters]` 控制
 - **足迹世界地图** — 足迹页顶部自绘 SVG 世界地图（按省份/国家聚合金色光点、大小随照片数），悬停显示地名/照片数/年份跨度，点击跳转足迹详情页
 - **Lightbox 灯箱** — 点击照片全屏预览，左右箭头+键盘切换照片，展示 EXIF 参数
 - **暗色/亮色主题切换** — 自动检测系统偏好，支持手动切换
@@ -58,7 +58,6 @@ photo-folio/
 ├── content/
 │   ├── gallery/         # 全部作品页
 │   ├── series/          # 组照合集（主题系列作品）
-│   ├── featured/        # 精選页（featured = true 的照片）
 │   ├── scenery/         # 風光分类（城市/乡村/山河合并）
 │   ├── humanist/        # 人文分类
 │   ├── floral/          # 花木分类
@@ -101,7 +100,7 @@ location = "雲南"
 description = "照片描述（可选，用于 Lightbox 展示）"
 series = ""               # 组照名称（可选，同一组照的多张照片填写相同名称）
 is_cover = false          # 是否为组照封面（同一组照中仅一张设为 true）
-featured = true           # 精選标记（可选，true 的照片收录进 /featured/ 页面）
+featured = true           # 精選标记（可选，true 的照片进入首页轮播，并可在全部作品页按「作品範圍 → 精選」筛选）
 ```
 
 ### 足迹地图坐标
@@ -146,7 +145,7 @@ title: "割藺草"
 
 ### 精選（featured）
 
-在任意照片记录中添加 `featured = true`，该照片便会收录进 `/featured/` 页面。精選页跨分类收集照片、按时间排序，照片仍保留原分类标签。組照照片標記精選時，只展示該單張（不帶組照鏈接與徽章），不會連帶展示整組照片。首页的精選分类卡片会自动统计精選照片数量，并以最新的精選照片作为封面。
+在任意照片记录中添加 `featured = true`，该照片便会进入首页轮播（按时间排序，数量由 `carouselCount` 配置），并可在全部作品页通过「作品範圍 → 精選」筛选查看。組照照片標記精選時，在范围筛选拆分模式下按單張展示（不帶組照鏈接與徽章）。
 
 ## 🎨 配置
 
@@ -158,7 +157,7 @@ title: "割藺草"
 | `params.enableServiceWorker` | 启用 PWA Service Worker |
 | `params.enableInstantPage` | 启用 Instant.page 预加载 |
 | `params.typography` | 字体设置（fontLinks、字体名称、字号、本地字体注入） |
-| `params.galleryFilters` | 全部作品页筛选维度开关：`year` / `location` / `category`（true 开启、false 关闭；缺省仅开启 year） |
+| `params.galleryFilters` | 全部作品页筛选维度开关：`scope` / `year` / `location` / `category`（true 开启、false 关闭；缺省仅开启 year） |
 
 ## 🚢 部署
 

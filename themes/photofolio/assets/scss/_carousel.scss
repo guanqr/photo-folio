@@ -87,6 +87,37 @@
     }
 }
 
+/* 大字下方的胶囊按钮组（overlay 整体不响应指针，此处单独恢复点击） */
+.carousel-actions {
+    display: flex;
+    gap: 1em;
+    margin-top: 1.2em;
+    pointer-events: auto;
+}
+
+.carousel-action-btn {
+    display: inline-block;
+    padding: 0.55em 1.6em;
+    border: 0.0625em solid rgba(var(--rgb-white), 0.65);
+    border-radius: 9999px;
+    background: rgba(var(--rgb-black), 0.2);
+    backdrop-filter: blur(0.375em);
+    -webkit-backdrop-filter: blur(0.375em);
+    color: rgba(var(--rgb-white), 0.95);
+    font-family: var(--font-body);
+    font-size: 1em;
+    letter-spacing: 0.08em;
+    text-shadow: 0 0.1em 0.5em rgba(var(--rgb-black), 0.5);
+    transition: border-color 0.3s ease;
+
+    &:hover,
+    &:focus-visible {
+        /* 仅轮廓变白，背景与文字保持不变 */
+        border-color: rgba(var(--rgb-white), 1);
+        outline: none;
+    }
+}
+
 /* 向下滚动箭头 */
 .carousel-scroll-down {
     position: absolute;

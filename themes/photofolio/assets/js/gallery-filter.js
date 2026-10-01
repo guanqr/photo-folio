@@ -1,17 +1,17 @@
 /**
- * 全部作品页筛选栏：拍摄年份 / 拍摄地点 / 作品类型（胶囊按钮组，可组合，默认「全部」）
+ * 全部作品页筛选栏：作品範圍 / 拍攝年份 / 拍攝地點 / 作品類型（胶囊按钮组，可组合，默认「全部」）
  *
  * - 筛选切换：以「下拉加载更多」分页模式重启网格——集合外隐藏、集合内重新分页
  *   （首批 12 张揭示，其余滚动加载；无限滚动照常工作，触发器保持可见）
  * - 无匹配时显示空状态文案并隐藏触发器
- * - 筛选状态同步到 URL（参考站同款）：?y=年份 &l=地点 &c=类型（history.replaceState，
+ * - 筛选状态同步到 URL（参考站同款）：?s=范围 &y=年份 &l=地点 &c=类型（history.replaceState，
  *   默认值不写入）；直接打开带参数的 URL 或 SPA 返回时自动恢复筛选
  */
 
 import { restartMasonryGrid } from './masonry.js';
 import { initInfiniteScroll } from './infinite-scroll.js';
 
-const PARAM_KEYS = { year: 'y', location: 'l', category: 'c' };
+const PARAM_KEYS = { scope: 's', year: 'y', location: 'l', category: 'c' };
 
 let resizeBound = false; // 模块级：跨 SPA 页面实例只挂一个窗口监听
 
@@ -84,16 +84,26 @@ export function initGalleryFilter() {
 
     const apply = () => {
         // 每轮筛选只解析一次各维度值（避免在匹配谓词中逐项重复查询 DOM）
+        const scope = valueOf('scope');
         const year = valueOf('year');
         const locLabel = locLabelOf();
         const category = valueOf('category');
-        const active = year !== '' || locLabel !== '' || category !== '';
+        const active = scope !== '' || year !== '' || locLabel !== '' || category !== '';
         const matches = (item) =>
+            // 范围维度匹配卡片 data-scope token 列表（featured 与 orientation 可并存）
+            (!scope || (item.dataset.scope || '').split(/\s+/).includes(scope)) &&
             (!year || item.dataset.year === year) &&
             (!locLabel || item.dataset.location === locLabel) &&
             (!category || item.dataset.category === category);
+        // 拆分模式：范围筛选非「全部」时，封面徽章隐藏、封面点击改开灯箱（见 lightbox.js / page-transition.js）
+        grid.classList.toggle('series-split', scope !== '');
+
         const items = Array.from(grid.querySelectorAll('.masonry-item'));
-        const matching = active ? items.filter(matches) : items;
+        const matching = (active ? items.filter(matches) : items).filter(
+            // 组照内页：仅作品範圍筛选激活（非全部）时参与展示——
+            // 组照可能同时含横/竖构图与单独精選的照片，需拆分单独匹配
+            (item) => scope !== '' || !item.dataset.seriesInner
+        );
         // 恢复原始时间顺序（DOM 顺序已被历次筛选拍平打乱）
         matching.sort((a, b) => (grid._origOrder.get(a) ?? 0) - (grid._origOrder.get(b) ?? 0));
 

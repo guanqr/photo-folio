@@ -41,6 +41,7 @@ defaultContentLanguage = "zh-cn"
 
     # 全部作品页筛选栏：自行选择开启哪些筛选维度（true 开启 / false 关闭）
     [params.galleryFilters]
+        scope = true
         year = true
         location = false
         category = false

@@ -209,6 +209,11 @@ img.photo-img {
     cursor: pointer;
 }
 
+/* 范围筛选拆分模式：封面按普通照片对待，隐藏组照徽章（点击改由灯箱接管） */
+.masonry-grid.series-split .series-badge {
+    display: none;
+}
+
 /* 组照右上角图标与数量 (胶囊形状) */
 .series-badge {
     position: absolute;

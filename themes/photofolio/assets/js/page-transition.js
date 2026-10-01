@@ -23,6 +23,10 @@ export function initPageTransition(reinit) {
 }
 
 function shouldIntercept(link) {
+    // 范围筛选拆分模式：封面链接由灯箱接管（不拦截，交给 lightbox 的 preventDefault）
+    if (link.classList.contains('series-link') && link.closest('.masonry-grid.series-split')) {
+        return false;
+    }
     return (
         link.host === location.host &&
         !link.hash &&

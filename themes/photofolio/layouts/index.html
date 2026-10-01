@@ -40,6 +40,11 @@
             <div class="carousel-overlay">
                 <h2 class="carousel-hero-title">{{ .Site.Params.heroTitle }}</h2>
                 <p class="carousel-hero-subtitle">{{ .Site.Params.heroSubtitle }}</p>
+                {{/* 大字下方的胶囊按钮（站内链接由 SPA 拦截切换页面） */}}
+                <div class="carousel-actions">
+                    <a href="/gallery/" class="carousel-action-btn">{{ i18n "hero_view_gallery" }}</a>
+                    <a href="/about/" class="carousel-action-btn">{{ i18n "hero_about_me" }}</a>
+                </div>
             </div>
 
             {{/* 向下滚动箭头：点击平滑滚动到分类卡片区域 */}}
@@ -54,8 +59,8 @@
 <section class="categories-grid" id="categories-grid">
     <div class="container">
         <div class="grid">
-            {{/* 定义排除名单，过滤掉非分类的独立页面（精選由轮播图直达，不展示标签卡） */}}
-            {{ $excludeSections := slice "gallery" "footprint" "series" "about" "featured" }}
+            {{/* 定义排除名单，过滤掉非分类的独立页面（精選已并入全部作品页的作品範圍筛选，不单独成页） */}}
+            {{ $excludeSections := slice "gallery" "footprint" "series" "about" }}
 
             {{ range .Site.Sections.ByWeight }}
                 {{ $sectionName := .File.ContentBaseName }}
