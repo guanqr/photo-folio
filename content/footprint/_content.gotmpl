@@ -1,9 +1,13 @@
 {{- /* 地点页内容适配器（Hugo 0.126+）：构建期从 data/locations.toml 生成 /footprint/<slug>/ 虚拟页面，
        不再需要手工维护 content/footprint/<slug>.md；新增地点只需在 locations.toml 加一条（name/slug/lat/lng）。 */}}
+{{- $seen := dict }}
 {{- range hugo.Data.locations.location }}
+    {{- if not .slug }}{{ errorf "locations.toml 地点 %q 缺少 slug（地点页 URL 必填）" .name }}{{ end }}
+    {{- if isset $seen .slug }}{{ errorf "locations.toml slug %q 重复（地点页 URL 冲突）" .slug }}{{ end }}
+    {{- $seen = merge $seen (dict .slug true) }}
     {{- $page := dict
         "kind" "page"
-        "path" (.slug | default (.name | urlize))
+        "path" .slug
         "title" .name
     }}
     {{- $.AddPage $page }}

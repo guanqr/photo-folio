@@ -6,11 +6,11 @@
     font-family: var(--font-footer);
     font-size: var(--size-footer);
     flex-shrink: 0;
-    transition: border-color 0.3s ease, color 0.3s ease;
+    transition: border-color var(--transition-border), color var(--transition-color);
 }
 
 .footer-inner {
-    max-width: var(--container-width); 
+    max-width: var(--container-width);
     margin: 0 auto;
     padding: 0 2em;
     display: flex;

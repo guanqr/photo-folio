@@ -2,7 +2,7 @@
 .footprint-page { margin-top: 4.5em; }
 
 .timeline-container {
-    max-width: 1100px;
+    max-width: 68.75em;
     margin: 0 auto;
     padding: 4em 2em 6em;
     position: relative;
@@ -16,7 +16,7 @@
         left: var(--tl-line-left, 1.5em);
         width: 0.125em;
         background: var(--color-border);
-        transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease;
+        transition: left var(--transition-35), background-color var(--transition-bg);
     }
 }
 
@@ -51,8 +51,8 @@
     border-radius: 50%;
     background: var(--color-bg);
     border: 0.125em solid var(--color-accent);
-    z-index: 1;
-    transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1), top 0.35s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease, border-color 0.3s ease;
+    z-index: var(--z-base);
+    transition: left var(--transition-35), top var(--transition-35), background-color var(--transition-bg), border-color var(--transition-border);
 }
 
 .timeline-node.is-visible::after,
@@ -68,7 +68,7 @@
     color: var(--color-text-muted);
     font-weight: 500;
     margin-bottom: 0.6em;
-    transition: color 0.3s ease;
+    transition: color var(--transition-color);
 }
 
 /* 内容卡片 */
@@ -80,7 +80,7 @@ a.timeline-content {
     border: 0.0625em solid var(--color-border);
     border-radius: 0.75em;
     padding: 1.5em;
-    transition: border-color 0.3s, box-shadow var(--transition), transform var(--transition-spring), background-color 0.3s ease;
+    transition: border-color 0.3s, box-shadow var(--transition), transform var(--transition-spring), background-color var(--transition-bg);
 
     &:hover {
         border-color: var(--color-accent-30);
@@ -99,14 +99,14 @@ a.timeline-content {
     font-weight: 600;
     color: var(--color-text);
     margin-bottom: 0.25em;
-    transition: color 0.3s ease;
+    transition: color var(--transition-color);
 }
 
 .timeline-count {
     font-size: 0.85em;
     color: var(--color-text-muted);
     margin-bottom: 1.25em;
-    transition: color 0.3s ease;
+    transition: color var(--transition-color);
 }
 
 .timeline-gallery {
@@ -139,7 +139,7 @@ a.timeline-content {
     font-size: 1.2em;
     font-weight: 600;
     color: var(--color-text-muted);
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition: background-color var(--transition-bg), color var(--transition-color);
 }
 
 .timeline-end {
@@ -149,7 +149,7 @@ a.timeline-content {
     .end-text {
         font-family: var(--font-meta);
         color: var(--color-text-muted);
-        transition: color 0.3s ease;
+        transition: color var(--transition-color);
     }
 }
 
@@ -179,13 +179,13 @@ a.timeline-content {
     letter-spacing: 0.25em;
     color: var(--color-accent);
     margin-bottom: 0.75em;
-    transition: color 0.3s ease;
+    transition: color var(--transition-color);
 }
 
 .footprint-map-desc {
     font-size: var(--size-small);
     color: var(--color-text-secondary);
-    transition: color 0.3s ease;
+    transition: color var(--transition-color);
 }
 
 /* 地图框：边框 + 圆角约束为一个长方形区域；
@@ -198,7 +198,7 @@ a.timeline-content {
     border: 0.0625em solid var(--color-border);
     /* 圆角与时间线内容卡片（a.timeline-content 0.75em）一致 */
     border-radius: 0.75em;
-    transition: background-color 0.3s ease, border-color 0.3s ease;
+    transition: background-color var(--transition-bg), border-color var(--transition-border);
 
     svg {
         display: block;
@@ -271,7 +271,7 @@ a.timeline-content {
     position: absolute;
     left: 0;
     top: 0;
-    z-index: 10;
+    z-index: var(--z-tooltip);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -286,20 +286,20 @@ a.timeline-content {
     opacity: 0;
     visibility: hidden;
     transform: translateY(0.3em);
-    transition: opacity var(--transition), visibility var(--transition), transform var(--transition), background-color 0.3s ease, border-color 0.3s ease;
+    transition: opacity var(--transition), visibility var(--transition), transform var(--transition), background-color var(--transition-bg), border-color var(--transition-border);
 
     strong {
         font-size: var(--size-small);
         font-weight: 600;
         color: var(--color-text);
-        transition: color 0.3s ease;
+        transition: color var(--transition-color);
     }
 
     span {
         font-family: var(--font-meta);
         font-size: 0.8em;
         color: var(--color-text-muted);
-        transition: color 0.3s ease;
+        transition: color var(--transition-color);
 
         &:first-of-type { color: var(--color-accent); }
     }
@@ -321,7 +321,7 @@ a.timeline-content {
     font-size: var(--size-small);
     letter-spacing: 0.15em;
     color: var(--color-text-muted);
-    transition: color 0.3s ease;
+    transition: color var(--transition-color);
 
     .legend-dot {
         width: 0.625em;
@@ -329,7 +329,7 @@ a.timeline-content {
         border-radius: 50%;
         background: var(--color-accent);
         box-shadow: 0 0 0.6em var(--color-accent-30);
-        transition: background-color 0.3s ease;
+        transition: background-color var(--transition-bg);
     }
 }
 
@@ -341,9 +341,9 @@ a.timeline-content {
     justify-content: center;
 
     a {
+        @extend %pill;
         padding: 0.25em 0.75em;
-        border: 0.0625em solid var(--color-border);
-        border-radius: 9999px;
+        border-color: var(--color-border);
         font-size: var(--size-small);
         color: var(--color-text-secondary);
         transition: border-color var(--transition), color var(--transition);

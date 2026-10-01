@@ -5,7 +5,7 @@ import { initMobileNav } from './mobile-nav.js';
 import { initBackToTop } from './back-to-top.js';
 import { initMasonry, initMasonryResize } from './masonry.js';
 import { initInfiniteScroll } from './infinite-scroll.js';
-import { initGalleryFilter } from './gallery-filter.js';
+import { initGalleryFilter, PARAM_KEYS } from './gallery-filter.js';
 import { initTimelineAnim, initTimelineResize } from './timeline-anim.js';
 import { initFootprintMap } from './footprint-map.js';
 import { initPageTransition } from './page-transition.js';
@@ -31,9 +31,10 @@ function revealCategoryCards() {
 function initPageModules() {
     initLightbox();
     initLazyLoad();
-    // 带筛选参数的 URL（?s=/?y=/?l=/?c=）且页面有筛选栏时，跳过首屏全量揭示，
-    // 由 initGalleryFilter 恢复筛选后统一揭示，避免全量照片闪现
-    const skipReveal = /[?&](s|y|l|c)=/.test(location.search) &&
+    // 带筛选参数的 URL（字母表与 PARAM_KEYS 同源，新增维度无需改这里）且页面有筛选栏时，
+    // 跳过首屏全量揭示，由 initGalleryFilter 恢复筛选后统一揭示，避免全量照片闪现
+    const filterParamRe = new RegExp('[?&](' + Object.values(PARAM_KEYS).join('|') + ')=');
+    const skipReveal = filterParamRe.test(location.search) &&
         !!document.querySelector('.gallery-filters');
     initMasonry(skipReveal);
     initMasonryResize();

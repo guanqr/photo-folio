@@ -43,7 +43,7 @@
     font-weight: 700;
     margin-bottom: 0.25em;
     color: var(--color-text);
-    transition: color 0.3s ease;
+    transition: color var(--transition-color);
 }
 
 .about-bio {
@@ -51,7 +51,7 @@
     color: var(--color-text-secondary);
     line-height: 1.7;
     margin: 0;
-    transition: color 0.3s ease;
+    transition: color var(--transition-color);
 }
 
 /* equipment */
@@ -75,7 +75,7 @@
         color: var(--color-accent);
         font-weight: 600;
         margin-bottom: 0.4em;
-        transition: color 0.3s ease;
+        transition: color var(--transition-color);
     }
 }
 
@@ -107,13 +107,13 @@
     margin-top: 3em;
     padding-top: 1.5em;
     border-top: 0.0625em solid var(--color-border);
-    transition: border-color 0.3s ease;
+    transition: border-color var(--transition-border);
 
     p {
         font-size: var(--size-small);
         color: var(--color-text-muted);
         line-height: 1.8;
-        transition: color 0.3s ease;
+        transition: color var(--transition-color);
 
         b { color: var(--color-text-secondary); }
     }
@@ -131,7 +131,7 @@
     color: var(--color-accent);
     line-height: 1;
     margin-bottom: 0.2em;
-    transition: color 0.3s ease;
+    transition: color var(--transition-color);
 }
 
 .error-title {
@@ -139,14 +139,14 @@
     font-size: var(--size-h3);
     color: var(--color-text);
     margin-bottom: 1em;
-    transition: color 0.3s ease;
+    transition: color var(--transition-color);
 }
 
 .error-desc {
     color: var(--color-text-secondary);
     margin-bottom: 2em;
     line-height: 1.8;
-    transition: color 0.3s ease;
+    transition: color var(--transition-color);
 }
 
 .error-home-link {
@@ -156,7 +156,7 @@
     color: var(--color-bg-card);
     border-radius: 0.5em;
     font-weight: 600;
-    transition: opacity 0.2s, background-color 0.3s ease;
+    transition: opacity 0.2s, background-color var(--transition-bg);
 
     &:hover { opacity: 0.85; }
 }

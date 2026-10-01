@@ -24,7 +24,7 @@
         margin-top: 1em;
         color: var(--color-text-muted);
         font-size: 0.9em;
-        transition: color 0.3s ease;
+        transition: color var(--transition-color);
     }
 
     code {
@@ -53,13 +53,13 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    z-index: 990; /* 低于 Header(1000) 和 Mobile Nav(998)，避免遮挡 */
-    
+    z-index: var(--z-back-to-top); /* 低于 Header，避免遮挡 */
+
     /* 初始隐藏状态 */
     opacity: 0;
     visibility: hidden;
     transform: translateY(1.5em);
-    transition: opacity 0.3s ease, visibility 0.3s ease, transform var(--transition-spring), background-color 0.3s ease, color 0.3s ease;
+    transition: opacity var(--transition-opacity), visibility 0.3s ease, transform var(--transition-spring), background-color var(--transition-bg), color var(--transition-color);
 
     &:hover {
         background-color: var(--color-accent);

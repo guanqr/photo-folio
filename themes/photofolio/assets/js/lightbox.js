@@ -1,3 +1,5 @@
+import { isSeriesSplit } from './gallery-filter.js';
+
 let inited = false;
 
 export function initLightbox() {
@@ -28,16 +30,19 @@ export function initLightbox() {
     function collectPhotos() {
         const wrappers = document.querySelectorAll('.photo-wrapper');
         currentPhotos = [];
+        // 拆分模式整页恒定（每页一个网格），页面级查一次而非逐项 closest
+        const split = isSeriesSplit(document.getElementById('masonry-grid'));
         wrappers.forEach(w => {
             // 组照封面也纳入左右箭头浏览（点击封面本身仍跳转组照详情页，由点击守卫处理）
             const img = w.querySelector('img');
             if (!img || !img.getAttribute('src')) return; // 未揭示的照片还没有 src（无限滚动尚未加载），跳过——箭头仅停留在已加载的最后一张
+            const item = w.closest('.masonry-item');
+            if (item && item.classList.contains('is-hidden')) return; // 被当前筛选隐藏的照片不进箭头集合
             const card = w.closest('.photo-card');
-            // 范围筛选拆分模式：封面标题显示照片自身名称（img.alt），而非组照名（data-title）
-            const split = !!w.closest('.masonry-grid.series-split');
             currentPhotos.push({
                 src: img.dataset.fullSrc || img.src,
                 alt: img.alt,
+                // 范围筛选拆分模式：封面标题显示照片自身名称（img.alt），而非组照名（data-title）
                 title: card ? (split ? img.alt : (card.dataset.title || '')) : '',
                 place: card ? (card.dataset.place || '') : '',
                 date: card ? (card.dataset.date || '') : '',
@@ -71,8 +76,7 @@ export function initLightbox() {
     }
 
     function open(index) {
-        // 每次打开都重建列表：筛选/拆分状态变化后标题（封面显示组照名还是自身名）与箭头集合需反映当前网格状态
-        collectPhotos();
+        if (!currentPhotos.length) collectPhotos();
         if (index < 0 || index >= currentPhotos.length) return;
         const isSwitch = lightbox.classList.contains('active');
         // 方向必须在更新 currentIndex 之前计算（与旧索引比较）
@@ -167,14 +171,15 @@ export function initLightbox() {
     }
 
     function prev() {
-        if (!currentPhotos.length) collectPhotos();
+        // 无条件重建：SPA 换页后旧列表已指向销毁的网格，必须先收集再取模
+        collectPhotos();
         if (currentPhotos.length === 0) return;
         const idx = (currentIndex - 1 + currentPhotos.length) % currentPhotos.length;
         open(idx);
     }
 
     function next() {
-        if (!currentPhotos.length) collectPhotos();
+        collectPhotos();
         if (currentPhotos.length === 0) return;
         const idx = (currentIndex + 1) % currentPhotos.length;
         open(idx);
@@ -192,11 +197,10 @@ export function initLightbox() {
         const wrapper = e.target.closest('.photo-wrapper');
         if (!wrapper) return;
         // 范围筛选拆分模式：封面链接不再跳组照详情，改开灯箱（SPA 拦截已对该链接放行）
-        const split = !!wrapper.closest('.masonry-grid.series-split');
+        const split = isSeriesSplit(wrapper);
         const link = e.target.closest('a');
-        if (link && !split) return; // 链接点击（组照封面/分类标签）不触发灯箱
-        if (!split && wrapper.querySelector('a.series-link')) return;
-        if (link && split) e.preventDefault(); // 阻止封面链接默认跳转
+        if (!split && (link || wrapper.querySelector('a.series-link'))) return; // 非拆分：链接点击（组照封面/分类标签）不触发灯箱
+        if (link) e.preventDefault(); // 拆分模式下阻止封面链接默认跳转（非拆分带链接已提前返回）
         const img = wrapper.querySelector('img');
         if (!img) return;
         collectPhotos();

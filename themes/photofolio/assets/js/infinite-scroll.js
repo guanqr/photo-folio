@@ -20,14 +20,20 @@ function markFinished(trigger) {
     trigger.innerHTML = `<span class="load-more-text">${trigger.dataset.finishedText}</span>`;
 }
 
+/* 拆线：移除滚动监听并清空当前实例（换页清理 / 早退分支 / 完成收尾共用） */
+function detach() {
+    if (!current) return;
+    window.removeEventListener('scroll', current.onScroll);
+    current = null;
+}
+
 export function initInfiniteScroll() {
     const trigger = document.getElementById('load-more-trigger');
     const grid = document.getElementById('masonry-grid');
 
     // 先清理旧监听（换页后旧 grid 已脱离文档；同页重置时保持不动）
     if (current && (current.trigger !== trigger || current.grid !== grid)) {
-        window.removeEventListener('scroll', current.onScroll);
-        current = null;
+        detach();
     }
 
     if (!trigger || !grid) return;
@@ -37,8 +43,7 @@ export function initInfiniteScroll() {
     // 若直接幂等返回，触发器会停留在「载入中」状态
     if (current) {
         if (grid._pendingItems.length === 0) {
-            window.removeEventListener('scroll', current.onScroll);
-            current = null;
+            detach();
             markFinished(trigger);
         }
         return;
@@ -82,8 +87,7 @@ export function initInfiniteScroll() {
     }
 
     function finishLoading() {
-        window.removeEventListener('scroll', onScroll);
-        if (current && current.grid === grid) current = null;
+        detach();
         markFinished(trigger);
     }
 

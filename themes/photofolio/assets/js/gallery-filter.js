@@ -11,7 +11,13 @@
 import { restartMasonryGrid } from './masonry.js';
 import { initInfiniteScroll } from './infinite-scroll.js';
 
-const PARAM_KEYS = { scope: 's', year: 'y', location: 'l', category: 'c' };
+export const PARAM_KEYS = { scope: 's', year: 'y', location: 'l', category: 'c' };
+
+/* 拆分模式判定（唯一实现）：lightbox / page-transition 复用，
+   勿在各自模块重复 closest('.masonry-grid.series-split') 判断 */
+export function isSeriesSplit(el) {
+    return !!el.closest('.masonry-grid.series-split');
+}
 
 let resizeBound = false; // 模块级：跨 SPA 页面实例只挂一个窗口监听
 
@@ -89,21 +95,23 @@ export function initGalleryFilter() {
         const locLabel = locLabelOf();
         const category = valueOf('category');
         const active = scope !== '' || year !== '' || locLabel !== '' || category !== '';
+        const scopeToken = scope ? ' ' + scope + ' ' : '';
+        // 组照内页排除复用网格的 data-hidden-selector（与 masonry 初始队列同源，避免两处定义漂移）
+        const hiddenSel = grid.dataset.hiddenSelector || '';
         const matches = (item) =>
             // 范围维度匹配卡片 data-scope token 列表（featured 与 orientation 可并存）
-            (!scope || (item.dataset.scope || '').split(/\s+/).includes(scope)) &&
+            (!scope || (' ' + (item.dataset.scope || '') + ' ').includes(scopeToken)) &&
             (!year || item.dataset.year === year) &&
             (!locLabel || item.dataset.location === locLabel) &&
-            (!category || item.dataset.category === category);
+            (!category || item.dataset.category === category) &&
+            // 组照内页：仅作品範圍筛选激活（非全部）时参与展示——
+            // 组照可能同时含横/竖构图与单独精選的照片，需拆分单独匹配
+            (scope !== '' || !hiddenSel || !item.matches(hiddenSel));
         // 拆分模式：范围筛选非「全部」时，封面徽章隐藏、封面点击改开灯箱（见 lightbox.js / page-transition.js）
         grid.classList.toggle('series-split', scope !== '');
 
         const items = Array.from(grid.querySelectorAll('.masonry-item'));
-        const matching = (active ? items.filter(matches) : items).filter(
-            // 组照内页：仅作品範圍筛选激活（非全部）时参与展示——
-            // 组照可能同时含横/竖构图与单独精選的照片，需拆分单独匹配
-            (item) => scope !== '' || !item.dataset.seriesInner
-        );
+        const matching = items.filter(matches);
         // 恢复原始时间顺序（DOM 顺序已被历次筛选拍平打乱）
         matching.sort((a, b) => (grid._origOrder.get(a) ?? 0) - (grid._origOrder.get(b) ?? 0));
 
@@ -166,5 +174,8 @@ export function initGalleryFilter() {
             restored = true;
         }
     });
-    if (restored) apply();
+    // 带筛选参数但无按钮可匹配（维度已关闭/值过期/空值）时也必须执行 apply——
+    // 否则 skipReveal 跳过了首屏揭示而无人接管，网格整页空白；apply 后过期参数会被 syncUrl 清理
+    const hadFilterParams = Object.values(PARAM_KEYS).some((k) => params.has(k));
+    if (restored || hadFilterParams) apply();
 }

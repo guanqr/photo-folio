@@ -40,9 +40,7 @@ export function initMasonry(skipInitialReveal = false) {
     // 记忆触发器原始 HTML（筛选模式隐藏触发器，重置筛选时恢复）
     if (trigger && !grid._triggerHtml) grid._triggerHtml = trigger.innerHTML;
 
-    grid._pendingItems = hiddenSel
-        ? allItems.filter((item) => !item.matches(hiddenSel))
-        : [...allItems];
+    grid._pendingItems = allItems.filter((item) => !hiddenSel || !item.matches(hiddenSel));
     grid._shownItems = [];
     grid._ratios = new Map();
     grid._cardBorder = 0;

@@ -19,7 +19,7 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition: background-color var(--transition-bg), color var(--transition-color);
 }
 
 /* ===== Skip-to-content 无障碍跳转 ===== */
@@ -27,7 +27,7 @@ body {
     position: absolute;
     top: -100%;
     left: 1em;
-    z-index: 10000;
+    z-index: var(--z-skip-link);
     padding: 0.75em 1.5em;
     background: var(--color-accent);
     color: var(--color-bg-card);
@@ -93,10 +93,30 @@ body {
 
     /* 首页轮播顶部渐变（透明导航栏文字可读性） */
     --carousel-top-overlay: linear-gradient(to bottom, rgba(var(--rgb-black), 0.5), rgba(var(--rgb-black), 0));
-
+    /* 轮播大标题文字投影（标题/副标题/胶囊按钮共用） */
+    --carousel-text-shadow: 0 0.1em 0.5em rgba(var(--rgb-black), 0.5);
 
     --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-35: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-spring: 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    /* 主题切换过渡（全站统一时长与缓动，改主题动画只动这里）——
+       注意：值只含「时长+缓动」，使用时写成 `background-color var(--transition-bg)` 等 */
+    --transition-color: 0.3s ease;
+    --transition-bg: 0.3s ease;
+    --transition-border: 0.3s ease;
+    --transition-opacity: 0.3s ease;
+
+    /* z-index 层级体系（跨组件竞争时统一引用，组件内部局部层级不受影响） */
+    --z-underlay: -1;        /* 窄屏菜单面板（垫在导航栏内容之下） */
+    --z-base: 1;             /* 时间线圆点等基础层 */
+    --z-tooltip: 10;         /* 足迹地图弹层 */
+    --z-back-to-top: 990;    /* 返回顶部（低于 Header） */
+    --z-header: 1000;        /* 顶部导航栏 */
+    --z-nav-toggle: 1002;    /* 汉堡按钮 */
+    --z-lightbox: 9999;      /* 灯箱 */
+    --z-lightbox-arrow: 10000; /* 灯箱箭头 */
+    --z-skip-link: 10000;    /* 无障碍跳转链接 */
+
     --container-width: 87.5em;
 }
 
@@ -131,16 +151,16 @@ body {
 
     /* 首页轮播顶部渐变（亮色主题：白色渐变，保证深色导航文字可读） */
     --carousel-top-overlay: linear-gradient(to bottom, rgba(var(--rgb-white), 0.7), rgba(var(--rgb-white), 0));
+    --carousel-text-shadow: 0 0.1em 0.5em rgba(var(--rgb-black), 0.4);
 
     --color-overlay-subtle: rgba(var(--rgb-black), 0.05);
-
 }
 
 img { max-width: 100%; height: auto; display: block; }
 
 /* 懒加载图片模糊渐清 */
 img[loading="lazy"] {
-    filter: blur(10px);
+    filter: blur(0.625em);
     opacity: 0.6;
     transition: filter 0.4s ease, opacity 0.4s ease;
 
@@ -171,4 +191,24 @@ ul { list-style: none; }
 @keyframes fadeIn {
     from { opacity: 0; }
     to   { opacity: 1; }
+}
+
+/* ===== 共享占位符（须先于使用方定义；组件里用 @extend 引用） ===== */
+
+/* 胶囊几何基类：筛选按钮、轮播胶囊按钮、地图降级链接共用（边框色各自声明） */
+%pill {
+    border-style: solid;
+    border-width: 0.0625em;
+    border-radius: 50em;
+}
+
+/* 滚动入场基类：初始隐藏并下移，揭示时淡入归位（masonry-item / category-card 共用） */
+%reveal-entry {
+    opacity: 0;
+    transform: translateY(1.5em);
+
+    &.is-revealed {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }

@@ -57,7 +57,7 @@ defaultContentLanguage = "zh-cn"
 
     [[params.author.equipment]]
         category = "鏡頭"
-        items = ["NIKKOR Z 24-200mm f/4-6.3 VR", "NIKKOR Z 24-70mm f/4 S"]
+        items = ["NIKKOR Z 24-200mm f/4-6.3 VR", "NIKKOR Z 24-70mm f/4 S", "TAMRON 150-500mm f/5-6.7 Di III VC VXD"]
 
     [[params.author.equipment]]
         category = "後期處理"

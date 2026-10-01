@@ -4,7 +4,7 @@
 .gallery-header {
     padding: 3em 0 2em;
     border-bottom: 0.0625em solid var(--color-border);
-    transition: border-color 0.3s ease;
+    transition: border-color var(--transition-border);
 }
 
 .page-title {
@@ -13,12 +13,12 @@
     font-weight: 700;
     margin-bottom: 0.75em;
     color: var(--color-text);
-    transition: color 0.3s ease;
+    transition: color var(--transition-color);
 }
 
 .masonry-container {
     padding: 2em;
-    max-width: var(--container-width); 
+    max-width: var(--container-width);
     margin: 0 auto;
 }
 
@@ -36,15 +36,9 @@
 }
 
 .masonry-item {
+    @extend %reveal-entry;
     flex: 0 0 auto;
-    opacity: 0;
-    transform: translateY(1.5em);
     transition: transform 0.4s var(--transition-spring), opacity 0.4s ease;
-
-    &.is-revealed {
-        opacity: 1;
-        transform: translateY(0);
-    }
 }
 
 .photo-card {
@@ -52,7 +46,7 @@
     border-radius: 0.25em;
     overflow: hidden;
     border: 0.0625em solid var(--color-border);
-    transition: border-color var(--transition), box-shadow var(--transition), background-color 0.3s ease, transform var(--transition-spring);
+    transition: border-color var(--transition), box-shadow var(--transition), background-color var(--transition-bg), transform var(--transition-spring);
 
     &:hover {
         transform: translateY(-0.15em);
@@ -101,7 +95,7 @@ img.photo-img {
         text-transform: uppercase;
         color: var(--color-text-muted);
         white-space: nowrap;
-        transition: color 0.3s ease;
+        transition: color var(--transition-color);
     }
 
     .filter-options {
@@ -123,17 +117,17 @@ img.photo-img {
         }
 
         button {
+            @extend %pill;
             flex: none;
             font-family: var(--font-meta);
             font-size: var(--size-small);
             letter-spacing: 0.1em;
             color: var(--color-text-secondary);
             background: transparent;
-            border: 0.0625em solid var(--color-border);
-            border-radius: 9999px;
+            border-color: var(--color-border);
             padding: 0.3em 1em;
             cursor: pointer;
-            transition: border-color var(--transition), color 0.3s ease, background-color 0.3s ease;
+            transition: border-color var(--transition), color var(--transition-color), background-color var(--transition-bg);
 
             &:hover {
                 border-color: var(--color-accent-30);
@@ -156,7 +150,7 @@ img.photo-img {
     text-align: center;
     font-family: var(--font-meta);
     color: var(--color-text-muted);
-    transition: color 0.3s ease;
+    transition: color var(--transition-color);
 }
 
 /* ===== Load More Trigger (无限滚动触发器) ===== */
@@ -169,7 +163,7 @@ img.photo-img {
     padding: 3em 0;
     color: var(--color-text-muted);
     font-size: var(--size-small);
-    transition: opacity 0.3s ease;
+    transition: opacity var(--transition-opacity);
 
     .loading-spinner {
         width: 2em;
@@ -234,7 +228,7 @@ img.photo-img {
     align-items: center;
     gap: 0.25em;
 
-    transition: background 0.3s ease, color 0.3s ease, transform var(--transition-spring), border-color 0.3s ease;
+    transition: background 0.3s ease, color var(--transition-color), transform var(--transition-spring), border-color var(--transition-border);
 
     .icon, .count {
         color: inherit;
@@ -264,8 +258,8 @@ img.photo-img {
 
 /* 悬停效果：复用 Lightbox 的深色遮罩和主题色 */
 .photo-card:hover .series-badge {
-    background: var(--color-lightbox-bg); 
-    color: var(--color-accent); 
-    border-color: var(--color-accent-30); 
-    transform: scale(1.05); 
+    background: var(--color-lightbox-bg);
+    color: var(--color-accent);
+    border-color: var(--color-accent-30);
+    transform: scale(1.05);
 }

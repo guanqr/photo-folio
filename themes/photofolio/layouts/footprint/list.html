@@ -97,8 +97,9 @@
         {{ range $timeline }}
         <div class="timeline-node" data-anim="fade-up">
             {{ $loc := .location }}
-            {{/* 安全获取 URL（地点 → 足迹页注册表，无页面时回退 urlize） */}}
-            {{ $targetUrl := default (printf "/footprint/%s/" ($loc | urlize) | relURL) (index $locReg $loc).url }}
+            {{/* 安全获取 URL（地点 → 足迹页注册表；未登记进 locations.toml 时回退 urlize，不触发构建错误） */}}
+            {{ $targetUrl := printf "/footprint/%s/" ($loc | urlize) | relURL }}
+            {{ with index $locReg $loc }}{{ $targetUrl = .url }}{{ end }}
 
             {{ $year := .time | time.Format "2006" }}
             {{ $month := .time | time.Format "01" }}

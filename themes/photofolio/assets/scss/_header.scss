@@ -1,4 +1,4 @@
-﻿/* ===== Header ===== */
+/* ===== Header ===== */
 
 /* 跨断点导航切换动画：导航文字水平滑动（宽→窄右滑出，窄→宽左滑入）+ 汉堡按钮入场 */
 @keyframes nav-slide-in {
@@ -44,7 +44,7 @@
 .site-header {
     position: fixed;
     top: 0; left: 0; right: 0;
-    z-index: 1000;
+    z-index: var(--z-header);
     /* 顶部透明：不遮挡首页轮播；下拉滚动后显示背景（缓慢过渡） */
     background: transparent;
     backdrop-filter: none;
@@ -79,7 +79,7 @@
     font-weight: 700;
     letter-spacing: -0.02em;
     color: var(--color-text);
-    transition: color 0.3s ease;
+    transition: color var(--transition-color);
 }
 
 .site-nav {
@@ -142,13 +142,13 @@
     width: 2.75em;
     height: 2.75em;
     padding: 0;
-    z-index: 1002;
+    z-index: var(--z-nav-toggle);
 
     /* 宽屏完全不渲染（不留空位），仅在窄屏加载 */
     display: none;
     visibility: hidden;
     opacity: 0;
-    transition: opacity 0.3s ease, visibility 0.3s;
+    transition: opacity var(--transition-opacity), visibility 0.3s;
 
     span {
         position: absolute;
@@ -161,9 +161,9 @@
         margin-left: -0.75em;
         background: var(--color-text);
         border-radius: 0.0625em;
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                    background-color 0.3s ease;
+        transition: transform var(--transition),
+                    opacity var(--transition),
+                    background-color var(--transition-bg);
 
         &:nth-child(1) { transform: translateY(-0.475em) rotate(0deg); }
         &:nth-child(2) { transform: scaleX(1); }

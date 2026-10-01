@@ -1,4 +1,7 @@
-// 1. 基础与变量 (必须最先引入)
+// 约定：组件内部断点统一用 min-width（移动优先）；跨组件的全局窄屏覆盖收敛到 _responsive.scss
+// （max-width，最后引入保证优先级）。@import 为 libsass 语法；将来切 dart-sass 时需整体迁移为 @use。
+
+// 1. 基础与变量 (必须最先引入；%pill / %reveal-entry 占位符也在此定义，供后续 @extend)
 @import "base";
 
 // 2. 布局组件

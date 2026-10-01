@@ -56,11 +56,21 @@
     {{ end }}
     {{ $years = sort $years "value" "desc" }}
     {{ range $locNames }}
-        {{ $locList = $locList | append (dict "name" . "slug" (default (. | urlize) (index $locReg .).slug) "count" (index $locCount .)) }}
+        {{/* nil 安全：photo.toml 的 location 未登记进 locations.toml 时回退 urlize，不触发构建错误 */}}
+        {{ $slug := . | urlize }}
+        {{ with index $locReg . }}{{ $slug = .slug }}{{ end }}
+        {{ $locList = $locList | append (dict "name" . "slug" $slug "count" (index $locCount .)) }}
     {{ end }}
     {{ $locList = sort $locList "count" "desc" }}
     {{ range $catNames }}{{ $catList = $catList | append (dict "name" . "count" (index $catCount .)) }}{{ end }}
     {{ $catList = sort $catList "count" "desc" }}
+
+    {{/* 数据完整性：orientation 缺失时橫/豎構圖筛选会静默漏图，构建期提醒补跑 scripts/backfill-orientation.mjs */}}
+    {{ $missingOri := slice }}
+    {{ range $sortedPhotos }}
+        {{ if not .orientation }}{{ $missingOri = $missingOri | append .src }}{{ end }}
+    {{ end }}
+    {{ if $missingOri }}{{ warnf "photo.toml 缺 orientation 字段（橫/豎構圖筛选不匹配）：%s" (delimit $missingOri "、") }}{{ end }}
 {{ end }}
 
 <section class="gallery-page">
@@ -88,9 +98,9 @@
                 <div class="filter-options">
                     <button type="button" data-value="" aria-pressed="true" class="is-active">{{ i18n "filter_all" }}</button>
                     {{/* 匹配靠照片卡片的 data-scope token 列表（featured 与 orientation 可并存） */}}
-                    <button type="button" data-value="featured" aria-pressed="false">{{ i18n "filter_scope_featured" }}</button>
-                    <button type="button" data-value="landscape" aria-pressed="false">{{ i18n "filter_scope_landscape" }}</button>
-                    <button type="button" data-value="portrait" aria-pressed="false">{{ i18n "filter_scope_portrait" }}</button>
+                    {{ range slice "featured" "landscape" "portrait" }}
+                        <button type="button" data-value="{{ . }}" aria-pressed="false">{{ i18n (printf "filter_scope_%s" .) }}</button>
+                    {{ end }}
                 </div>
             </div>
             {{ end }}

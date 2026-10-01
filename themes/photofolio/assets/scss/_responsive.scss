@@ -4,9 +4,9 @@
     .header-inner,
     .container,
     .footer-inner {
-        padding: 0 1em; 
+        padding: 0 1em;
     }
-    
+
     .masonry-container {
         padding: 1em;
     }
@@ -21,7 +21,6 @@
         display: block;
         visibility: visible;
         opacity: 1;
-        z-index: 1002;
         /* 跨断点进入窄屏时汉堡按钮原地淡入（display 切换不触发 transition，用 animation） */
         animation: hamburger-in 0.6s ease both;
     }
@@ -50,7 +49,7 @@
         pointer-events: none;
         /* 负 z-index：垫在导航栏内容（站名等）之下、导航栏背景之上，
            面板背景从 top:0 统一填充整块区域时不遮挡站名 */
-        z-index: -1;
+        z-index: var(--z-underlay);
         height: auto;
         overflow: visible;
         /* 不设 transition，JS 在用户点击汉堡按钮时动态注入，
@@ -138,9 +137,9 @@
     }
 
     .header-actions {
-        gap: 0.75em
+        gap: 0.75em;
     }
-    
+
     .theme-toggle {
         width: 2.75em;
         height: 2.75em;
@@ -157,8 +156,6 @@
     .footprint-map-section {
         padding: 2em 0 0;
     }
-
-    /* 列数由 JS 控制 + FLIP 动画 */
 
     .about-header {
         flex-direction: column;
