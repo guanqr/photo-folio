@@ -5,6 +5,7 @@
  * 离屏 canvas 采样 → 统计三通道 256 桶直方图（窗口 5 平滑、对数纵轴）与
  * 7 个主色色卡（16 级量化 + 贪心种子 + k-means 细化，占比之和 ≈ 100%）。
  * 结果按 src 缓存——切换/回看照片时无需重新探测下载。
+ * 直方图渲染为 SVG（矢量：高 DPI / 缩放 / 窄屏下始终清晰，不随像素密度发糊）。
  */
 
 /* RGB → HSL 文本（如 H210 S12 L70） */
@@ -116,6 +117,7 @@ function computePalette(pixels) {
 
 /* 渲染色卡：每行 = 色块 + (hex / HSL 两行) + 占比 */
 function renderPalette(colors, paletteWrap, paletteEl) {
+    if (!paletteWrap || !paletteEl) return;
     if (!colors || colors.length === 0) {
         paletteWrap.style.display = 'none';
         return;
@@ -143,9 +145,9 @@ function renderPalette(colors, paletteWrap, paletteEl) {
 
         const pctEl = document.createElement('span');
         pctEl.className = 'lightbox-palette-pct';
-        // ≥1% 取整数；<1% 保留一位小数（如 0.4%）
+        // ≥1% 取整数；<1% 只显示「<1%」（不显示具体小数）
         const pct100 = ratio * 100;
-        pctEl.textContent = (pct100 >= 1 ? Math.round(pct100) : pct100.toFixed(1)) + '%';
+        pctEl.textContent = pct100 >= 1 ? Math.round(pct100) + '%' : '<1%';
 
         info.append(hexEl, hslEl);
         row.append(swatch, info, pctEl);
@@ -153,48 +155,48 @@ function renderPalette(colors, paletteWrap, paletteEl) {
     });
 }
 
-/* 把统计结果绘制到可见 canvas（Camera Raw 风格：256 亮度桶、对数纵轴、
-   窗口 5 平滑曲线、RGB 加法混合填充，通道重叠处自然呈现黄/青/品/白） */
-function paintHistogram(buckets, logMax, histogramCanvas) {
+/* 把统计结果渲染为 SVG（Camera Raw 风格：256 亮度桶、对数纵轴、窗口 5 平滑曲线）：
+   viewBox 0 0 256 96——每桶恰为一个单位宽，随容器拉伸缩放仍保持矢量清晰；
+   每通道一个 path，mix-blend-mode: plus-lighter 做加法混合（与 canvas lighter 完全一致），
+   通道重叠处自然呈现黄/青/品/白 */
+const HIST_W = 256;
+const HIST_H = 96;
+
+function paintHistogram(buckets, logMax, histogramSvg) {
+    if (!histogramSvg) return;
     const BINS = buckets[0].length;
-    const W = histogramCanvas.clientWidth || 300;
-    const H = histogramCanvas.clientHeight || 96;
-    histogramCanvas.width = W;
-    histogramCanvas.height = H;
-    const vctx = histogramCanvas.getContext('2d');
-    vctx.clearRect(0, 0, W, H);
-    const channelColors = ['rgba(224, 90, 90, 0.55)', 'rgba(110, 200, 140, 0.55)', 'rgba(110, 150, 230, 0.55)'];
-    vctx.globalCompositeOperation = 'lighter';
-    buckets.forEach((bins, c) => {
-        vctx.beginPath();
-        vctx.moveTo(0, H);
+    const channelColors = ['rgb(224, 90, 90)', 'rgb(110, 200, 140)', 'rgb(110, 150, 230)'];
+    histogramSvg.innerHTML = buckets.map((bins, c) => {
+        let d = `M0 ${HIST_H}`;
         for (let i = 0; i < BINS; i++) {
-            const y = H - (Math.log1p(bins[i]) / logMax) * (H - 1);
-            vctx.lineTo(i / (BINS - 1) * W, y);
+            const x = (i / (BINS - 1)) * HIST_W;
+            const y = HIST_H - (Math.log1p(bins[i]) / logMax) * (HIST_H - 1);
+            d += ` L${x.toFixed(2)} ${y.toFixed(2)}`;
         }
-        vctx.lineTo(W, H);
-        vctx.closePath();
-        vctx.fillStyle = channelColors[c];
-        vctx.fill();
-    });
-    vctx.globalCompositeOperation = 'source-over';
+        d += ` L${HIST_W} ${HIST_H} Z`;
+        return `<path d="${d}" fill="${channelColors[c]}" fill-opacity="0.55" style="mix-blend-mode:plus-lighter"></path>`;
+    }).join('');
 }
 
-export function initPhotoAnalysis({ histogramWrap, histogramCanvas, paletteWrap, paletteEl }) {
+export function initPhotoAnalysis({ histogramWrap, histogramEl, paletteWrap, paletteEl }) {
     const cache = new Map(); // src → { buckets, logMax, palette }
 
     function hideAll() {
-        histogramWrap.style.display = 'none';
-        paletteWrap.style.display = 'none';
+        if (histogramWrap) histogramWrap.style.display = 'none';
+        if (paletteWrap) paletteWrap.style.display = 'none';
     }
 
-    /* 分析指定照片：缓存命中直接重绘；否则探测加载 w_200 缩略图统计 */
+    /* 分析指定照片：缓存命中直接重绘；否则探测加载 w_200 缩略图统计。
+       直方图与色卡区块都被配置关闭时跳过探测（不发请求） */
     function analyze(src) {
+        if (!histogramEl && !paletteEl) return;
         const cached = cache.get(src);
         if (cached) {
-            paintHistogram(cached.buckets, cached.logMax, histogramCanvas);
-            renderPalette(cached.palette, paletteWrap, paletteEl);
-            histogramWrap.style.display = '';
+            if (histogramEl) {
+                paintHistogram(cached.buckets, cached.logMax, histogramEl);
+                histogramWrap.style.display = '';
+            }
+            if (paletteEl) renderPalette(cached.palette, paletteWrap, paletteEl);
             return;
         }
         const probeSrc = src.replace(/w_\d+/, 'w_200');
@@ -234,9 +236,11 @@ export function initPhotoAnalysis({ histogramWrap, histogramCanvas, paletteWrap,
                 const logMax = Math.log1p(max);
                 const palette = computePalette(data);
                 cache.set(src, { buckets, logMax, palette });
-                paintHistogram(buckets, logMax, histogramCanvas);
-                renderPalette(palette, paletteWrap, paletteEl);
-                histogramWrap.style.display = '';
+                if (histogramEl) {
+                    paintHistogram(buckets, logMax, histogramEl);
+                    histogramWrap.style.display = '';
+                }
+                if (paletteEl) renderPalette(palette, paletteWrap, paletteEl);
             } catch (err) {
                 console.warn('[lightbox] 直方图绘制失败:', err);
                 hideAll();

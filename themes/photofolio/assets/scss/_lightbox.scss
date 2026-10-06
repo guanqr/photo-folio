@@ -9,7 +9,8 @@
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s, visibility 0.3s;
-    /* 抽屉拖动手势：禁止浏览器滚动接管（否则拖动一小段即触发 pointercancel） */
+    /* 抽屉拖动手势：禁止浏览器滚动接管（否则拖动一小段即触发 pointercancel）；
+       对整个灯箱生效（含详情区——内容滚动由抽屉统一虚拟位置模型接管，不依赖原生滚动） */
     touch-action: none;
 
     /* 桌面端右侧元信息面板宽度（箭头按钮右移避让用同一变量） */
@@ -55,11 +56,14 @@
     flex-direction: column;
 }
 
-/* 顶部独立一行：关闭按钮绝对定位在右缘；z-index 高于 content（绝对定位后必须，否则被内容层盖住点不到） */
+/* 关闭栏全宽悬浮、不占独立一行（所有宽度）：图片区在整屏高度内垂直居中；
+   z-index 高于 content（绝对定位后必须，否则被内容层盖住点不到） */
 .lightbox-topbar {
-    position: relative;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
     z-index: 3;
-    flex-shrink: 0;
     height: 4em;
 }
 
@@ -173,7 +177,7 @@
     display: flex;
     flex-direction: column;
     border-top: 0.0625em solid var(--color-border);
-    padding: 0.75em 1em 0.9em;
+    padding: 0.8em 1em; /* 上下留白对称 */
     transition: border-color var(--transition-border);
 }
 
@@ -232,13 +236,13 @@
     display: none;
 }
 
-/* 详情区：窄屏折叠（max-height 过渡），展开后限高滚动；桌面端常显并整体滚动 */
+/* 详情区：窄屏折叠（max-height 过渡），展开后限高滚动；桌面端常显并整体滚动
+   （手势由根元素 touch-action: none 统一禁用，无需单独声明） */
 .lightbox-panel-details {
     overflow: hidden;
     max-height: 0;
     opacity: 0;
     transition: max-height 0.4s ease, opacity 0.3s ease;
-    touch-action: pan-y; /* 详情区保留纵向触摸滚动（灯箱其余区域为抽屉拖动） */
     padding-right: 0.5em; /* 内容与滚动条之间留出间距（窄屏） */
     /* 统一细滚动条（窄屏/桌面共用）：细圆角滑块、透明轨道 */
     scrollbar-width: thin;
@@ -462,14 +466,6 @@
 
 /* 桌面端：图片左、面板右（面板常显、详情区内部滚动），下一张箭头右移避让面板 */
 @media (min-width: 769px) {
-    /* 关闭栏脱离文档流：图片区在整屏高度内垂直居中（不再因顶部 4em 关闭栏而整体靠下） */
-    .lightbox-topbar {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-    }
-
     .lightbox-main {
         flex-direction: row;
     }
@@ -485,8 +481,8 @@
         height: 100%;
         border-top: none;
         border-left: 0.0625em solid var(--color-border);
-        /* 顶部留出悬浮关闭按钮的高度（4em + 间距）；右侧留出箭头按钮列（0.75+3+0.5） */
-        padding: 4.5em 1.25em 1em;
+        /* 上下留白对称（叉号悬浮于右侧箭头列，不占面板顶部空间）；右侧留出箭头按钮列 */
+        padding: 2em 1.25em;
         margin-right: 4.25em;
     }
 

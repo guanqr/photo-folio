@@ -49,8 +49,11 @@
                     <img src="" alt="" id="lightbox-img" draggable="false">
                 </div>
                 <aside class="lightbox-panel" id="lightbox-panel">
+                    {{/* 灯箱信息区块开关（hugo.toml [params.lightbox]，缺省全开） */}}
+                    {{ $lbCfg := merge (dict "meta" true "exif" true "histogram" true "palette" true "story" true) (default dict site.Params.lightbox) }}
                     <div class="lightbox-caption" id="lightbox-caption"></div>
                     <div class="lightbox-panel-details" id="lightbox-panel-details">
+                        {{ if $lbCfg.meta }}
                         <div class="lightbox-meta" id="lightbox-meta">
                             <div class="lightbox-meta-group" id="lightbox-meta-place">
                                 <span class="icon">{{ hugo.Data.svg.location | safeHTML }}</span>
@@ -67,6 +70,8 @@
                                 <span class="lightbox-meta-text"></span>
                             </div>
                         </div>
+                        {{ end }}
+                        {{ if $lbCfg.exif }}
                         <ul class="lightbox-exif" id="lightbox-exif">
                             <li data-exif-key="focus">
                                 <span class="exif-icon">{{ hugo.Data.svg.lens | safeHTML }}</span>
@@ -89,18 +94,25 @@
                                 <span class="exif-value"></span>
                             </li>
                         </ul>
+                        {{ end }}
+                        {{ if $lbCfg.histogram }}
                         <div class="lightbox-histogram-wrap" id="lightbox-histogram-wrap">
                             <h4 class="lightbox-section-title">{{ i18n "lightbox_histogram" }}</h4>
-                            <canvas class="lightbox-histogram" id="lightbox-histogram"></canvas>
+                            <svg class="lightbox-histogram" id="lightbox-histogram" viewBox="0 0 256 96" preserveAspectRatio="none" role="img"></svg>
                         </div>
+                        {{ end }}
+                        {{ if $lbCfg.palette }}
                         <div class="lightbox-palette-wrap" id="lightbox-palette-wrap">
                             <h4 class="lightbox-section-title">{{ i18n "lightbox_palette" }}</h4>
                             <div class="lightbox-palette" id="lightbox-palette"></div>
                         </div>
+                        {{ end }}
+                        {{ if $lbCfg.story }}
                         <div class="lightbox-story-wrap" id="lightbox-story-wrap">
                             <h4 class="lightbox-section-title">{{ i18n "lightbox_story" }}</h4>
                             <p class="lightbox-story" id="lightbox-story"></p>
                         </div>
+                        {{ end }}
                     </div>
                     <button class="lightbox-panel-toggle" id="lightbox-panel-toggle" aria-label="{{ i18n "lightbox_expand" }}" aria-expanded="false" data-expand-label="{{ i18n "lightbox_expand" }}" data-collapse-label="{{ i18n "lightbox_collapse" }}">
                         {{ hugo.Data.svg.arrow_down | safeHTML }}

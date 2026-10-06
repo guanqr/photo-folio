@@ -1,0 +1,34 @@
+/* ===== 组照叙事长文（series/single：文字在上、照片全宽在下） ===== */
+
+/* 响应式策略（纯 CSS）：所有宽度下均为单列——文字在上、照片在下；
+   照片网格与全部作品页完全一致（档位按网格宽度自动推导，无每行张数限制） */
+.series-story {
+    display: flex;
+    flex-direction: column;
+    gap: 2.5em;
+    max-width: var(--container-width); /* 与全部作品页同宽 */
+    margin: 0 auto;
+    padding: 1em 1em 4em;
+
+    @media (min-width: 769px) {
+        padding: 2em 2em 5em;
+    }
+}
+
+/* 文字栏：全宽 */
+.story-text-col {
+    width: 100%;
+    font-size: 1.05em;
+    line-height: 1.9;
+    color: var(--color-text);
+    transition: color var(--transition-color);
+
+    p {
+        margin-bottom: 1.2em;
+    }
+}
+
+/* 照片栏：复用 masonry 引擎（两端对齐行、行内等高），全宽 */
+.series-masonry {
+    width: 100%;
+}

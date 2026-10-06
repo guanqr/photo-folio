@@ -24,7 +24,7 @@ export function initLightbox() {
     const panelToggle = document.getElementById('lightbox-panel-toggle');
     const exifList = document.getElementById('lightbox-exif');
     const histogramWrap = document.getElementById('lightbox-histogram-wrap');
-    const histogramCanvas = document.getElementById('lightbox-histogram');
+    const histogramEl = document.getElementById('lightbox-histogram');
     const paletteWrap = document.getElementById('lightbox-palette-wrap');
     const paletteEl = document.getElementById('lightbox-palette');
     const storyWrap = document.getElementById('lightbox-story-wrap');
@@ -35,7 +35,7 @@ export function initLightbox() {
     // 窄屏底部抽屉（<769px）：展开/收起、滚轮与拖动手势（独立模块，见 lightbox-drawer.js）
     const drawer = initPanelDrawer({ lightbox, panel, panelDetails, panelToggle, metaEl: lightboxMeta });
     // 图片分析：直方图与色卡（独立模块，见 lightbox-analysis.js）
-    const analysis = initPhotoAnalysis({ histogramWrap, histogramCanvas, paletteWrap, paletteEl });
+    const analysis = initPhotoAnalysis({ histogramWrap, histogramEl, paletteWrap, paletteEl });
 
     let currentPhotos = [];
     let currentIndex = -1;
@@ -52,7 +52,8 @@ export function initLightbox() {
             if (!img || !img.getAttribute('src')) return; // 未揭示的照片还没有 src（无限滚动尚未加载），跳过——箭头仅停留在已加载的最后一张
             const item = wrapper.closest('.masonry-item');
             if (item && item.classList.contains('is-hidden')) return; // 被当前筛选隐藏的照片不进箭头集合
-            const card = wrapper.closest('.photo-card');
+            // [data-title] 通用化：兼容 photo-card 与组照叙事块两种根元素
+            const card = wrapper.closest('[data-title]');
             currentPhotos.push({
                 src: img.dataset.fullSrc || img.src,
                 alt: img.alt,

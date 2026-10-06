@@ -123,15 +123,15 @@ export function initPanelDrawer({ lightbox, panel, panelDetails, panelToggle, me
         }
     }, { passive: false });
 
-    // 长按拖动（图片区/面板头，除按钮、链接、详情区外）：统一虚拟位置模型——
-    // 上滑先展开抽屉到全开，继续上滑则滚动内容露出直方图等剩余信息；下滑对称回退
+    // 长按拖动（灯箱任意区域、所有指针类型，与滚轮同一套虚拟位置模型，除按钮/链接）：
+    // 上滑先展开抽屉到全开，继续上滑则滚动内容露出直方图等剩余信息；下滑对称回退；
+    // 详情区（元信息面板）同样参与——内容滚动由本模型接管，不依赖原生滚动
     let dragStartY = null;
     let dragStartVirt = 0;
     let dragging = false;
     lightbox.addEventListener('pointerdown', (e) => {
         if (!narrowMedia.matches || !lightbox.classList.contains('active')) return;
         if (e.target.closest('button') || e.target.closest('a')) return;
-        if (e.target.closest('.lightbox-panel-details')) return;
         e.preventDefault(); // 阻止原生图片拖拽/文本选择抢走 pointermove
         dragging = true;
         dragStartY = e.clientY;

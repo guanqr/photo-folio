@@ -34,7 +34,7 @@ defaultContentLanguage = "zh-cn"
         ogQuality = 85         # 社交媒体封面质量
 
     # 启用 Service Worker (仅在 hugo 构建生产环境时生效)
-    enableServiceWorker = true 
+    enableServiceWorker = true
 
     # 是否开启 instant.page 链接预加载加速 (true 为开启，false 为关闭)
     enableInstantPage = true
@@ -45,6 +45,15 @@ defaultContentLanguage = "zh-cn"
         year = true
         location = false
         category = false
+
+    # 灯箱信息区块：自行选择开启哪些区块（true 开启 / false 关闭）
+    # 直方图与色卡都关闭时跳过探测下载（不发请求）
+    [params.lightbox]
+        meta = true          # 地點/日期简行
+        exif = true          # EXIF 分行（焦距/光圈/快門/感光度）
+        histogram = true     # 直方图
+        palette = true       # 色卡
+        story = true         # 背後的故事
 
 [params.author]
     name = "Guanqr"
@@ -70,7 +79,7 @@ defaultContentLanguage = "zh-cn"
         { rel = "preconnect", href = "https://cdn.jsdelivr.net", crossorigin = true },
         # 2. 自定义字体的样式表
         { rel = "stylesheet", href = "https://cdn.jsdelivr.net/gh/guanqr/fonts@build/css/fonts.min.css" },
-        
+
         # 3. Google Fonts (loli镜像) 的预连接
         { rel = "preconnect", href = "https://fonts.loli.net", crossorigin = true },
         # 4. Google Fonts (loli镜像) 的样式表
@@ -82,9 +91,9 @@ defaultContentLanguage = "zh-cn"
     bodyFont = "Glyph Correction, I.MingCP"
     footerFont = "LXGW WenKai TC"
     metaFont = "LXGW WenKai TC"
-    
+
     # 基础字号 (这些是纯数字+单位，不会触发 ZgotmplZ)
-    baseFontSize = "16px" 
+    baseFontSize = "16px"
     sizeH1 = "2.5em"
     sizeH3 = "1.5em"
     sizeBody = "1em"

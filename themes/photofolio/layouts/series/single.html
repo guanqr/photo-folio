@@ -12,6 +12,17 @@
     {{ end }}
 {{ end }}
 
+{{/* 按 front matter 的 photos 列表（文件名，按展示顺序）解析照片 */}}
+{{ $ordered := slice }}
+{{ range .Params.photos }}
+    {{ $name := . }}
+    {{ range $photos }}
+        {{ if or (eq .src $name) (eq (path.Base .src) $name) }}
+            {{ $ordered = $ordered | append . }}
+        {{ end }}
+    {{ end }}
+{{ end }}
+
 <section class="gallery-page">
     <div class="gallery-header">
         <div class="container">
@@ -19,19 +30,28 @@
             {{ with .Params.description }}
                 <p class="page-description">{{ . }}</p>
             {{ end }}
-            <p class="photo-count">{{ i18n "total_photos" (dict "Count" (len $photos)) }}</p>
+            <p class="photo-count">{{ i18n "total_photos" (dict "Count" (len $ordered)) }}</p>
         </div>
     </div>
 
-    <div class="masonry-container">
-        {{ if gt (len $photos) 0 }}
-        <div class="masonry-grid" id="masonry-grid">
-            {{ range $photos }}
-                {{ partial "photo-card.html" (dict "photo" . "site" $.Site "asIndividual" true) }}
-            {{ end }}
+    {{ if gt (len $ordered) 0 }}
+    <div class="series-story">
+        {{/* 正文叙述（md 正文只写文字） */}}
+        <div class="story-text-col">
+            {{ .Content }}
         </div>
-        <div class="load-more-trigger" id="load-more-trigger" data-page-size="12" data-finished-text="{{ i18n "no_more_photos" }}"></div>
-        {{ else }}
+        {{/* 与全部作品页完全一致的瀑布流（两端对齐行、行内等高，复用 masonry 引擎；
+            photo-card asIndividual 无组照徽章） */}}
+        <div class="series-masonry">
+            <div class="masonry-grid" id="masonry-grid">
+                {{ range $ordered }}
+                    {{ partial "photo-card.html" (dict "photo" . "site" $.Site "asIndividual" true) }}
+                {{ end }}
+            </div>
+        </div>
+    </div>
+    {{ else }}
+    <div class="masonry-container">
         <div class="empty-state">
             <div class="empty-icon">{{ hugo.Data.svg.camera | safeHTML }}</div>
             <h3>{{ i18n "no_photos_in_series" (dict "Title" $seriesName) }}</h3>
@@ -39,7 +59,7 @@
                 {{ i18n "no_series_match_hint" }}
             </p>
         </div>
-        {{ end }}
     </div>
+    {{ end }}
 </section>
 {{ end }}
