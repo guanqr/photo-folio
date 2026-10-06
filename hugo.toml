@@ -5,6 +5,15 @@ theme = "photofolio"
 
 defaultContentLanguage = "zh-cn"
 
+# RSS 订阅源（/index.xml）：纯文本模板（isPlainText）——不转义 CDATA、URL 中的中文与日期时间
+[outputFormats.rss]
+    mediaType = "application/rss+xml"
+    baseName = "index"
+    isPlainText = true
+
+[outputs]
+    home = ["HTML", "rss"]
+
 [params]
     description = "用鏡頭記錄生活的每一個瞬間"
     heroTitle = "用鏡頭記錄生活"
@@ -14,6 +23,9 @@ defaultContentLanguage = "zh-cn"
     logo = ""
     # 自定义底部版权文字 (支持 HTML 标签，如 <a> 链接)
     copyrightText = ""
+
+    # 摄影作品订阅源（/index.xml，RSS 2.0）：最近按拍摄日期分组的更新批次数
+    feedCount = 20
 
     # 图床/CDN 基础 URL。
     # 设置后，所有本地图片路径会自动拼接此前缀。

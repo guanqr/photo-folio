@@ -182,3 +182,9 @@ other = "返回首頁"
 
 [about]
 other = "關於"
+
+[feed_description]
+other = "最新發布的攝影作品：按拍攝日期分組，每次更新告知發布張數，並附每張作品的拍攝地點與日期"
+
+[feed_batch_title]
+other = "新發布 {{ .Count }} 張作品（{{ .Day }}）"

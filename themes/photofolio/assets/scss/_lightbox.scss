@@ -179,6 +179,9 @@
     border-top: 0.0625em solid var(--color-border);
     padding: 0.8em 1em; /* 上下留白对称 */
     transition: border-color var(--transition-border);
+    /* 窄屏抽屉手势接管面板：禁止文字选择——拖拽越过可选中文字时浏览器会发起选择
+       并触发 pointercancel 打断拖拽；桌面端恢复可选（见下方媒体查询） */
+    user-select: none;
 }
 
 .lightbox-caption {
@@ -470,9 +473,10 @@
         flex-direction: row;
     }
 
-    /* 图片区左侧留出箭头列（与右侧面板外缘的 4.25em 对称）：照片不贴左缘、不被左箭头遮挡 */
+    /* 图片区左侧留白与右侧对称：右侧面板内容到右缘 = 面板内边距 1.25em + 箭头列 4.25em = 5.5em，
+       左侧同样留 5.5em（箭头列 4.25em + 内边距 1.25em）——照片不贴左缘、不被左箭头遮挡 */
     .lightbox-img-area {
-        padding-left: 4.25em;
+        padding-left: 5.5em;
     }
 
     .lightbox-panel {
@@ -484,6 +488,7 @@
         /* 上下留白对称（叉号悬浮于右侧箭头列，不占面板顶部空间）；右侧留出箭头按钮列 */
         padding: 2em 1.25em;
         margin-right: 4.25em;
+        user-select: text; /* 桌面端面板恢复文字选择（窄屏由抽屉手势接管、禁止选择） */
     }
 
     .lightbox-panel-details {

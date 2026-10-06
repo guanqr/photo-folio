@@ -1,0 +1,48 @@
+{{- /* 摄影作品订阅源（RSS 2.0，/index.xml）：照片来自 data/photo.toml，
+       按拍摄日期分组——每组一条 entry，标题告知当日发布张数，
+       正文以纯文字列出每张作品的作品名 / 拍摄地点 / 拍摄日期（不放图片）；
+       只输出最近 feedCount 组（hugo.toml [params].feedCount，默认 20）。 */ -}}
+{{- $feedCount := site.Params.feedCount | default 20 -}}
+{{- $sorted := partial "photo-sorted.html" . -}}
+{{- /* 按拍摄日期分组（sorted 已按时间倒序，$days 保持倒序） */ -}}
+{{- $byDay := dict -}}
+{{- $days := slice -}}
+{{- range $sorted -}}
+    {{- $day := .time | time.Format "2006-01-02" -}}
+    {{- $list := index $byDay $day | default slice -}}
+    {{- if eq (len $list) 0 -}}
+        {{- $days = $days | append $day -}}
+    {{- end -}}
+    {{- $byDay = merge $byDay (dict $day ($list | append .)) -}}
+{{- end -}}
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+    <title>{{ site.Title }}</title>
+    <link>{{ site.Home.Permalink }}</link>
+    <description>{{ i18n "feed_description" }}</description>
+    <language>zh-cn</language>
+    <lastBuildDate>{{ now | time.Format "Mon, 02 Jan 2006 15:04:05 -0700" }}</lastBuildDate>
+    <atom:link href="{{ "index.xml" | absURL }}" rel="self" type="application/rss+xml" />
+    {{- $shown := 0 -}}
+    {{- range $days -}}
+        {{- if ge $shown $feedCount -}}
+            {{- break -}}
+        {{- end -}}
+        {{- $photos := index $byDay . -}}
+        {{- $p0 := index $photos 0 -}}
+        {{- $shown = add $shown 1 -}}
+    <item>
+        <title>{{ i18n "feed_batch_title" (dict "Count" (len $photos) "Day" .) }}</title>
+        <link>{{ printf "/gallery/?y=%s" ($p0.time | time.Format "2006") | absURL }}</link>
+        <guid isPermaLink="false">{{ . }}</guid>
+        <pubDate>{{ $p0.time | time.Format "Mon, 02 Jan 2006 15:04:05 -0700" }}</pubDate>
+        <description><![CDATA[
+        {{- range $photos -}}
+<p>《{{ .alt }}》{{ with default .location .place }} · {{ . }}{{ end }}{{ with .time }} · {{ . }}{{ end }}</p>
+        {{- end -}}
+        ]]></description>
+    </item>
+    {{- end -}}
+</channel>
+</rss>

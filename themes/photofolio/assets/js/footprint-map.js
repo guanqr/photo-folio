@@ -4,7 +4,7 @@
  * - 自绘 SVG 等距圆柱投影（零外部库），世界陆地几何为一次性生成的简化静态 JSON
  *   （同源 fetch、模块级 Promise 记忆化，sw 自动缓存；失败仅降级为网格 + 光点）
  * - 按省份/国家聚合光点：三层圆（光晕/中层/核心），半径随照片数增长；
- *   交错弹入动画，照片数最多的首点带呼吸脉冲环；reduced-motion 全部降级
+ *   交错弹入动画，照片数最多的首点带呼吸脉冲环
  * - 悬停/键盘聚焦显示弹层（地名 / 张数 / 年份跨度），点击光点跳转足迹详情页（SPA 拦截）
  * - 懒加载：IntersectionObserver rootMargin 600px 进入视口才构建
  * - SPA 页面切换重跑 initFootprintMap：同一节点幂等，旧状态（observers）先销毁
@@ -44,21 +44,20 @@ export function initFootprintMap() {
     }
     if (!Array.isArray(points) || points.length === 0) return;
 
-    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    state = { root, reduced, observer: null, resizeObserver: null };
+    state = { root, observer: null, resizeObserver: null };
 
     if ('IntersectionObserver' in window) {
         state.observer = new IntersectionObserver((entries) => {
             if (!entries[0].isIntersecting) return;
             state.observer.disconnect();
             state.observer = null;
-            build(root, points, reduced).catch((err) => {
+            build(root, points).catch((err) => {
                 console.warn('[footprint-map] 构建失败', err);
             });
         }, { rootMargin: '600px 0px' });
         state.observer.observe(root);
     } else {
-        build(root, points, reduced);
+        build(root, points);
     }
 }
 
@@ -108,7 +107,7 @@ function project(pr, lng, lat) {
 }
 
 /* ===== 构建 ===== */
-async function build(root, points, reduced) {
+async function build(root, points) {
     // 容器宽度为 0 守卫（display:none / SPA 淡出瞬间）：rAF 重试，30 帧后放弃
     let width = root.getBoundingClientRect().width;
     for (let frame = 0; width === 0 && frame < 30; frame++) {
@@ -133,7 +132,7 @@ async function build(root, points, reduced) {
 
     const dots = document.createElementNS(SVG_NS, 'g');
     dots.setAttribute('class', 'fm-dots');
-    points.forEach((p, i) => buildDot(dots, pr, p, i, reduced, countFormat));
+    points.forEach((p, i) => buildDot(dots, pr, p, i, countFormat));
     svg.appendChild(dots);
 
     root.appendChild(svg);
@@ -164,17 +163,23 @@ async function build(root, points, reduced) {
         console.warn('[footprint-map] 陆地几何加载失败，仅显示网格与光点', err);
     }
 
-    // 弹入动画：构建完成后统一点亮（reduced 时直接可见）
-    if (reduced) {
-        dots.querySelectorAll('.fm-dot-link').forEach((el) => {
-            el.style.opacity = '1';
-            el.style.transform = 'none';
-        });
-    } else {
+    // 弹入动画：地图真正进入视口时才点亮——若在视口外提前构建完成（600px 预加载余量），
+    // 交错弹入不会在用户看到之前播完（手机上滚动慢时尤其明显）；已在视口内则立即点亮
+    const revealDots = () => {
         dots.querySelectorAll('.fm-dot-link').forEach((el) => {
             el.style.setProperty('--fm-delay', el.dataset.delay + 'ms');
             el.classList.add('fm-ready');
         });
+    };
+    if ('IntersectionObserver' in window) {
+        const revealIO = new IntersectionObserver((entries) => {
+            if (!entries[0].isIntersecting) return;
+            revealIO.disconnect();
+            revealDots();
+        });
+        revealIO.observe(root);
+    } else {
+        revealDots();
     }
 
     // resize/旋转时关闭弹层（viewBox 等比缩放无需重算布局）
@@ -246,7 +251,7 @@ function round1(v) {
 
 /* 光点：位置 translate 放内层 <g> attribute（弹入 scale 放外层 <a> CSS，两者互不覆盖）；
    弹层所需数据全部写入 <a> 的 dataset（悬停时从元素自身读取，无需回查点数组） */
-function buildDot(g, pr, p, i, reduced, countFormat) {
+function buildDot(g, pr, p, i, countFormat) {
     const r = Math.min(3 + 1.7 * Math.sqrt(p.count - 1), 13);
     const [x, y] = project(pr, p.lng, p.lat);
     const coreR = Math.max(r * 0.45, 2);
@@ -274,7 +279,7 @@ function buildDot(g, pr, p, i, reduced, countFormat) {
     mid.setAttribute('r', r);
     inner.appendChild(mid);
 
-    if (!reduced && i === 0 && p.count > 1) {
+    if (i === 0 && p.count > 1) {
         const pulse = document.createElementNS(SVG_NS, 'circle');
         pulse.setAttribute('class', 'fm-pulse');
         pulse.setAttribute('r', r * 1.7);

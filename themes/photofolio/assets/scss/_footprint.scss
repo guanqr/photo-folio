@@ -356,16 +356,14 @@ a.timeline-content {
     }
 }
 
-/* ===== 地图弹入动画（reduced-motion 时全部关闭，光点直接可见） ===== */
-@media (prefers-reduced-motion: no-preference) {
-    .footprint-map .fm-dot-link.fm-ready {
-        animation: fmPop 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
-        animation-delay: var(--fm-delay, 0ms);
-    }
+/* ===== 地图弹入动画（始终播放：手机等设备即使开启系统减弱动态效果也照常） ===== */
+.footprint-map .fm-dot-link.fm-ready {
+    animation: fmPop 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: var(--fm-delay, 0ms);
+}
 
-    .footprint-map .fm-pulse {
-        animation: fmPulse 2.6s ease-in-out infinite;
-    }
+.footprint-map .fm-pulse {
+    animation: fmPulse 2.6s ease-in-out infinite;
 }
 
 @keyframes fmPop {

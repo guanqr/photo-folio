@@ -7,6 +7,9 @@
 <meta name="description" content="{{ $desc }}">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="{{ .Permalink }}">
+{{ with .OutputFormats.Get "rss" }}
+    <link rel="alternate" type="{{ .MediaType.Type }}" title="{{ site.Title }}" href="{{ .Permalink }}">
+{{ end }}
 
 {{ $cfg := .Site.Params.imageSizes | default dict }}
 {{ $ogWidth := $cfg.ogWidth | default 1200 }}

@@ -29,8 +29,10 @@ export function initPanelDrawer({ lightbox, panel, panelDetails, panelToggle, me
             ? 'max-height 0.4s ease, opacity 0.3s ease'
             : 'none';
         panelDetails.style.maxHeight = px + 'px';
-        // 仅完全展开（图片缩到最小）时详情区可滚动；部分展开时内容不可滑动
-        panelDetails.style.overflowY = (px >= maxHeight() - 1) ? 'auto' : 'hidden';
+        // 溢出始终 hidden（窄屏滚动完全由手势/滚轮模型接管，程序化 scrollTop 不受影响）——
+        // 全开瞬间滚动条弹出会打断进行中的拖拽（浏览器接管滚动条交互触发 pointercancel），
+        // 且滚动条出现在指针下方时第二次按压前的状态不可预期
+        panelDetails.style.overflowY = 'hidden';
         panelDetails.style.opacity = '1';
         const open = px > minHeight;
         panel.classList.toggle('is-open', open);
