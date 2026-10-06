@@ -4,22 +4,22 @@
 other = "首頁"
 
 [portfolio_title]
-other = "照片集"
+other = "作品集"
 
 [photo_count]
-other = "{{ .Count }} 張照片"
+other = "{{ .Count }} 張作品"
 
 [total_photos]
-other = "共 {{ .Count }} 張照片"
+other = "共 {{ .Count }} 張作品"
 
 [no_photos_under]
-other = "{{ .Title }} 下暫無照片"
+other = "{{ .Title }} 下暫無作品"
 
 [hint]
 other = "提示："
 
 [debug_info_list]
-other = "當前頁面未關聯照片數據。如果是分類頁，請檢查 <code>data/photo.toml</code> 中是否有 <code>category = \"{{ .Section }}\"</code> 的數據。"
+other = "當前頁面未關聯作品數據。如果是分類頁，請檢查 <code>data/photo.toml</code> 中是否有 <code>category = \"{{ .Section }}\"</code> 的數據。"
 
 [close]
 other = "關閉"
@@ -37,7 +37,7 @@ other = "載入中..."
 other = "已加载全部作品"
 
 [all_photos]
-other = "全部照片"
+other = "全部作品"
 
 [exif_focus]
 other = "焦距"
@@ -79,7 +79,7 @@ other = "查看全部作品"
 other = "關於我"
 
 [filter_photos]
-other = "篩選照片"
+other = "篩選作品"
 
 [filter_scope]
 other = "作品範圍"
@@ -106,7 +106,7 @@ other = "作品類型"
 other = "全部"
 
 [filter_empty]
-other = "沒有符合條件的照片"
+other = "沒有符合條件的作品"
 
 [footprint]
 other = "攝影足跡"
@@ -118,7 +118,7 @@ other = "{{ .Year }}年{{ .Month }}月"
 other = "{{ .Year }}年{{ .Month }}月{{ .Day }}日"
 
 [timeline_photo_count]
-other = "共 {{ .Count }} 張照片"
+other = "共 {{ .Count }} 張作品"
 
 [journey_continues]
 other = "旅途仍在繼續..."
@@ -127,7 +127,7 @@ other = "旅途仍在繼續..."
 other = "FOOTPRINT MAP"
 
 [footprint_map_description]
-other = "{{ .Count }} 張照片在 {{ .Sites }} 個地點留下足跡。懸停或點擊光點，查看該處的地名、照片數量與拍攝年份跨度。"
+other = "{{ .Count }} 張作品在 {{ .Sites }} 個地點留下足跡。懸停或點擊光點，查看該處的地名、作品數量與拍攝年份跨度。"
 
 [footprint_map_sites]
 other = "{{ .Count }} 處拍攝點"
@@ -135,26 +135,23 @@ other = "{{ .Count }} 處拍攝點"
 [footprint_map_year_range]
 other = "{{ .Min }} — {{ .Max }}"
 
-[view_series]
-other = "查看組照：{{ .Series }}"
-
 [series_collection]
-other = "組照合集"
+other = "系列合集"
 
 [series_count]
-other = "共 {{ .Count }} 組照片"
+other = "共 {{ .Count }} 個系列"
 
 [no_series]
-other = "暫無組照"
+other = "暫無系列"
 
 [no_series_hint]
-other = "請在 data/photo.toml 中為照片添加 series 和 is_cover = true 字段。"
+other = "請在 data/photo.toml 中為作品添加 series 和 is_cover = true 字段。"
 
 [no_photos_in_series]
-other = "未找到屬於《{{ .Title }}》的照片"
+other = "未找到屬於《{{ .Title }}》的作品"
 
 [no_series_match_hint]
-other = "請檢查 data/photo.toml 中照片的 series 字段是否與當前頁面的標題完全一致（注意空格和大小寫）。"
+other = "請檢查 data/photo.toml 中作品的 series 字段是否與當前頁面的標題完全一致（注意空格和大小寫）。"
 
 [copyright_notice]
 other = "本站所有作品均由本人拍攝，歡迎轉發與分享，禁止商用或二次創作。"
@@ -188,3 +185,9 @@ other = "最新發布的攝影作品：按拍攝日期分組，每次更新告�
 
 [feed_batch_title]
 other = "新發布 {{ .Count }} 張作品（{{ .Day }}）"
+
+[categories_title]
+other = "分類"
+
+[series_title]
+other = "系列"

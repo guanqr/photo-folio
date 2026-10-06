@@ -968,6 +968,7 @@ place = "赤峰克什克騰旗烏蘭布統"
 location = "內蒙古"
 width = "1920"
 height = "1279"
+series = "烏蘭布統的秋"
 featured = true
 
 [[photo]]
@@ -983,6 +984,7 @@ place = "赤峰克什克騰旗烏蘭布統"
 location = "內蒙古"
 width = "1920"
 height = "1279"
+series = "烏蘭布統的秋"
 
 [[photo]]
 src = "/images/photos/风拂白鬃.jpg"
@@ -997,6 +999,7 @@ place = "赤峰克什克騰旗烏蘭布統"
 location = "內蒙古"
 width = "1920"
 height = "1280"
+series = "烏蘭布統的秋"
 
 [[photo]]
 src = "/images/photos/踏浪驰风.jpg"
@@ -1011,6 +1014,7 @@ place = "赤峰克什克騰旗烏蘭布統"
 location = "內蒙古"
 width = "1920"
 height = "1279"
+series = "烏蘭布統的秋"
 
 [[photo]]
 src = "/images/photos/萨岭河畔.jpg"
@@ -1025,6 +1029,8 @@ place = "赤峰克什克騰旗烏蘭布統"
 location = "內蒙古"
 width = "1920"
 height = "1280"
+series = "烏蘭布統的秋"
+is_cover = true
 
 [[photo]]
 src = "/images/photos/透风沟的秋色.jpg"
@@ -1039,6 +1045,7 @@ place = "赤峰克什克騰旗烏蘭布統"
 location = "內蒙古"
 width = "1920"
 height = "1279"
+series = "烏蘭布統的秋"
 
 [[photo]]
 src = "/images/photos/天光倾泻.jpg"
@@ -1053,6 +1060,7 @@ place = "赤峰克什克騰旗烏蘭布統"
 location = "內蒙古"
 width = "1920"
 height = "1280"
+series = "烏蘭布統的秋"
 
 [[photo]]
 src = "/images/photos/山坡上的摄影人.jpg"
@@ -1067,3 +1075,4 @@ place = "赤峰克什克騰旗烏蘭布統"
 location = "內蒙古"
 width = "1920"
 height = "1280"
+series = "烏蘭布統的秋"

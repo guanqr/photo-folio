@@ -22,7 +22,7 @@
     margin: 0 auto;
 }
 
-/* 照片网格：纵向排列的显式行容器（引擎行 = 视觉行，杜绝 flex 自动换行与行划分不一致）
+/* 作品网格：纵向排列的显式行容器（引擎行 = 视觉行，杜绝 flex 自动换行与行划分不一致）
    行宽与行高由 JS 按宽高比计算（每行恰好铺满，间距统一） */
 .masonry-grid {
     display: flex;
@@ -69,7 +69,7 @@ img.photo-img {
 
 .photo-img {
     display: block;
-    /* 宽高由 JS 按照片自身比例精确给定；cover 仅兜底取整误差，绝不拉伸 */
+    /* 宽高由 JS 按作品自身比例精确给定；cover 仅兜底取整误差，绝不拉伸 */
     object-fit: cover;
     max-width: none;
 }
@@ -192,52 +192,7 @@ img.photo-img {
     to { transform: rotate(360deg); }
 }
 
-/* 隐藏超出首屏批次的照片卡片 */
+/* 隐藏超出首屏批次的作品卡片 */
 .masonry-item.is-hidden {
     display: none !important;
-}
-
-/* 组照右上角图标（胶囊形状，纯图标链接——点击跳组照详情页） */
-.series-badge {
-    position: absolute;
-    top: 0.5em;
-    right: 0.5em;
-    height: 1.5em;
-    padding: 0 0.5em;
-
-    /* 【核心】100% 复用现有 Design Tokens，不新增变量 */
-    background: var(--color-header-bg);
-    border: 0.0625em solid var(--color-overlay-subtle);
-    color: var(--color-text);
-
-    backdrop-filter: blur(0.375em);
-    -webkit-backdrop-filter: blur(0.375em);
-    border-radius: 0.75em;
-    display: flex;
-    align-items: center;
-    gap: 0.25em;
-
-    transition: background 0.3s ease, color var(--transition-color), transform var(--transition-spring), border-color var(--transition-border);
-
-    .icon {
-        display: flex;
-        transform: none;
-        color: inherit;
-        transition: inherit;
-
-        svg {
-            width: 0.85em;
-            height: 0.85em;
-            stroke: currentColor;
-            fill: none;
-        }
-    }
-}
-
-/* 悬停效果：复用 Lightbox 的深色遮罩和主题色 */
-.photo-card:hover .series-badge {
-    background: var(--color-lightbox-bg);
-    color: var(--color-accent);
-    border-color: var(--color-accent-30);
-    transform: scale(1.05);
 }

@@ -16,9 +16,9 @@ export function initPageTransition(reinit) {
 
     // 浏览器前进/后退
     window.addEventListener('popstate', e => {
-        if (e.state && e.state.url) {
-            loadContent(e.state.url);
-        }
+        // 首次加载的页面（如首页）没有推入过状态（e.state 为 null）——
+        // 此时按当前地址恢复（popstate 触发时 location 已指向目标页），否则无法返回首页
+        loadContent(e.state && e.state.url ? e.state.url : location.href);
     });
 }
 

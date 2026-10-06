@@ -1,15 +1,15 @@
 /**
- * 照片网格引擎（两端对齐行布局，行高自然变化、行宽恰好铺满）
+ * 作品网格引擎（两端对齐行布局，行高自然变化、行宽恰好铺满）
  *
  * - 行高 = (行宽 − 间距 − 边框) / 宽高比之和，由本行内容自然决定，行高可以变化
- * - 每行恰好铺满容器（右缘对齐），照片间间距全局统一（CSS gap 0.5em，引擎读取计算样式）
- * - 贪心分行以参考值 H（最宽布局每行 4 张 3:2 宽幅照片的基准）为目标，
- *   行高天然落在 H 附近；照片严格保持自身长宽比（object-fit: cover 仅兜底取整误差）
+ * - 每行恰好铺满容器（右缘对齐），作品间间距全局统一（CSS gap 0.5em，引擎读取计算样式）
+ * - 贪心分行以参考值 H（最宽布局每行 4 张 3:2 宽幅作品的基准）为目标，
+ *   行高天然落在 H 附近；作品严格保持自身长宽比（object-fit: cover 仅兜底取整误差）
  * - 超窄屏 ≤500px：每行 1–2 张——3:2 横构图独占一行（行高基准 H = 行宽 × 2/3），
- *   竖构图（宽高比 < 1）绝不落单，与相邻照片同行
+ *   竖构图（宽高比 < 1）绝不落单，与相邻作品同行
  * - 最后一行不强行对齐：行高封顶 H、左侧对齐、右侧留白
  * - 逐行加载：按 DOM 顺序逐张淡入（60ms/张）
- * - resize：先按比例缩放照片（行成员冻结，不做排布调整），仅跨窄屏断点（带滞回）才重新分行——
+ * - resize：先按比例缩放作品（行成员冻结，不做排布调整），仅跨窄屏断点（带滞回）才重新分行——
  *   拖拽变宽/变窄时布局稳定，不会来回跳跃
  */
 
@@ -27,7 +27,7 @@ export function initMasonry(skipInitialReveal = false) {
     if (allItems.length === 0) return;
 
     // 全部先隐藏（不依赖 baseof 的内联脚本——SPA 跳转时内联脚本不会执行，
-    // 否则未揭示的照片会以原始尺寸占据版面，造成大片空白、已排好的行被顶到底部）
+    // 否则未揭示的作品会以原始尺寸占据版面，造成大片空白、已排好的行被顶到底部）
     allItems.forEach((item) => item.classList.add('is-hidden'));
 
     const trigger = document.getElementById('load-more-trigger');
@@ -44,7 +44,7 @@ export function initMasonry(skipInitialReveal = false) {
     // 带滞回，防止断点附近来回切换；按当前宽度初始化
     grid._tier = null;
     updateTier(grid);
-    grid._rows = null; // 当前行划分（以全部已显示照片为坐标系；resize 时冻结复用，仅按比例缩放）
+    grid._rows = null; // 当前行划分（以全部已显示作品为坐标系；resize 时冻结复用，仅按比例缩放）
 
     grid.classList.add('masonry-ready');
 
@@ -56,14 +56,14 @@ export function initMasonry(skipInitialReveal = false) {
     }
 
     // 带筛选参数的 URL 刷新时跳过首屏全量揭示，交由筛选恢复流程统一揭示——
-    // 否则全量首屏照片会先闪现、再被筛选重启隐藏，出现「显示→消失→再显示」的跳变
+    // 否则全量首屏作品会先闪现、再被筛选重启隐藏，出现「显示→消失→再显示」的跳变
     if (!skipInitialReveal) {
         revealBatch(grid, pageSize);
     }
 }
 
 /**
- * 揭示下一批照片：测量宽高比 → 计算行布局 → 逐张淡入
+ * 揭示下一批作品：测量宽高比 → 计算行布局 → 逐张淡入
  * 返回 Promise，在全部揭示动画完成后 resolve（供无限滚动等待）
  */
 export async function revealBatch(grid, count) {
@@ -85,7 +85,7 @@ export async function revealBatch(grid, count) {
 
     // 等待测量，最多 800ms：
     // 快速路径（缓存命中等）直接用真实比例排布揭示——动画连贯无校正；
-    // 慢速路径（如首次跳转 CDN 未缓存）先按兜底比例揭示让照片马上可见，
+    // 慢速路径（如首次跳转 CDN 未缓存）先按兜底比例揭示让作品马上可见，
     // 测量完成后等揭示动画全部结束再做校正，避免动画中途跳变
     const measurePromise = measureRatios(grid, batch);
     const measured = await Promise.race([
@@ -143,7 +143,7 @@ function measureRatios(grid, items) {
                 settle(wAttr / hAttr);
                 return;
             }
-            // 无属性（新照片未回填）时沿用加载测量 + 超时兜底路径
+            // 无属性（新作品未回填）时沿用加载测量 + 超时兜底路径
             timer = setTimeout(() => settle(DEFAULT_RATIO), MEASURE_TIMEOUT);
             if (img.complete && img.naturalWidth > 0) {
                 settle(img.naturalWidth / img.naturalHeight);
@@ -156,9 +156,9 @@ function measureRatios(grid, items) {
     }));
 }
 
-/* 揭示新批次时：上一批未完成的尾行与本批照片合并，重新组成完整行——
-   尾行照片的最终大小/裁切由补齐后的行内容决定（其余已显示的行保持不动）；
-   为每个新行创建显式行容器（引擎行 = 视觉行），行起点换算到全部已显示照片的坐标系保存 */
+/* 揭示新批次时：上一批未完成的尾行与本批作品合并，重新组成完整行——
+   尾行作品的最终大小/裁切由补齐后的行内容决定（其余已显示的行保持不动）；
+   为每个新行创建显式行容器（引擎行 = 视觉行），行起点换算到全部已显示作品的坐标系保存 */
 function layoutRows(grid, batch) {
     const W = getGridWidth(grid);
     const gap = getRowGap(grid);
@@ -166,7 +166,7 @@ function layoutRows(grid, batch) {
     updateTier(grid);
     const H = getTargetRowHeight(W, gap, border2, grid._tier);
 
-    // 合并上一批的未完成尾行（若有）与本批照片；
+    // 合并上一批的未完成尾行（若有）与本批作品；
     // 尾行起点由「上一批最后一行是 ragged（左对齐尾行）」推导：
     // 有新批次到达时，ragged 尾行必为待补齐的未完成尾行（真正的最后一行不会有后续批次）
     const lastRow = grid._rows && grid._rows.length > 0 ? grid._rows[grid._rows.length - 1] : null;
@@ -186,8 +186,8 @@ function layoutRows(grid, batch) {
     const combinedRatios = combined.map((item) => grid._ratios.get(item) || DEFAULT_RATIO);
     const rows = partitionRows(combinedRatios, W, H, gap, border2, true, grid._tier);
 
-    // 创建行容器并把照片移入（行容器保证每行是独立 flex 行，绝不与相邻行合并；
-    // 行容器插入在未揭示照片之前，保持 DOM 顺序 = 展示顺序）
+    // 创建行容器并把作品移入（行容器保证每行是独立 flex 行，绝不与相邻行合并；
+    // 行容器插入在未揭示作品之前，保持 DOM 顺序 = 展示顺序）
     rows.forEach((row) => {
         const rowEl = document.createElement('div');
         rowEl.className = 'masonry-row';
@@ -219,7 +219,7 @@ function getRowGap(grid) {
     return grid._gap;
 }
 
-/* 追加行容器：插入在未揭示照片（网格的直接子级）之前，保持 DOM 顺序 = 展示顺序 */
+/* 追加行容器：插入在未揭示作品（网格的直接子级）之前，保持 DOM 顺序 = 展示顺序 */
 function appendRowEl(grid, rowEl) {
     const firstStray = grid.querySelector(':scope > .masonry-item');
     if (firstStray) {
@@ -260,7 +260,7 @@ function rowHeight(W, count, sum, gap, border2) {
     return (W - gap * (count - 1) - border2 * count) / sum;
 }
 
-/* 行高参考值：以「每行 N 张 3:2 宽幅照片（长边 3、宽边 2）」为基准，按实际容器宽度反推
+/* 行高参考值：以「每行 N 张 3:2 宽幅作品（长边 3、宽边 2）」为基准，按实际容器宽度反推
    档位：0=超窄屏每行 1 张（占满整行）、1=窄屏每行 2 张、2=中屏每行 3 张、3=宽屏每行 4 张
    （档位判定见 updateTier） */
 function getTargetRowHeight(containerWidth, gap, border2, tier) {
@@ -274,7 +274,7 @@ function getTargetRowHeight(containerWidth, gap, border2, tier) {
    超窄屏档位 0：每行最多 2 张——横构图（宽高比 ≥ 1）可独占一行；竖构图开头的行必须
    与下一张同行（绝不落单）；行内一张横构图后若下一张是最后一张竖构图，则并入本行；
    其余档位：边界处比较「停在此处 / 纳入下一张」，取行高最接近 H 者；
-   最后一行（照片耗尽）行高封顶 H、右侧留白不强行对齐 */
+   最后一行（作品耗尽）行高封顶 H、右侧留白不强行对齐 */
 function partitionRows(ratios, W, H, gap, border2, refine, tier) {
     const isTier0 = tier === 0;
     const maxPhotos = isTier0 ? 2 : Infinity; // 超窄屏每行最多 2 张
@@ -309,14 +309,14 @@ function partitionRows(ratios, W, H, gap, border2, refine, tier) {
         let ragged = false;
         if (j === n) {
             // 末尾行：无论是否还有后续批次，都按统一行高左对齐（自然宽度、不吸收余量）——
-            // 有后续批次时该行是「未完成尾行」，等待下一批照片补齐后重新组成完整行；
-            // 全部照片加载完后的真正最后一行则保持左对齐留白
+            // 有后续批次时该行是「未完成尾行」，等待下一批作品补齐后重新组成完整行；
+            // 全部作品加载完后的真正最后一行则保持左对齐留白
             const hNatural = hOf(count, sum);
             h = Math.min(hNatural, H);
             ragged = true;
         } else if (refine && count < maxPhotos) {
             // 行边界微调：比较「停在此处 / 纳入下一张」，取行高最接近 H 者。
-            // 注意：不交换照片顺序（JS 数组换序会与 DOM 顺序脱节，导致行划分错位）
+            // 注意：不交换作品顺序（JS 数组换序会与 DOM 顺序脱节，导致行划分错位）
             h = hOf(count, sum);
             const hNext = hOf(count + 1, sum + ratios[j]);
             if (Math.abs(hNext - H) < Math.abs(h - H)) {
@@ -365,7 +365,7 @@ function applyRows(items, rows, ratios, W, gap, border2) {
 }
 
 /* 容器可用宽度：向下取整并留 2px 安全余量
-   （吸收滚动条出现、小数边框等造成的实际行宽波动，杜绝行末照片被挤到下一行） */
+   （吸收滚动条出现、小数边框等造成的实际行宽波动，杜绝行末作品被挤到下一行） */
 function getGridWidth(grid) {
     return Math.max(1, Math.floor(grid.getBoundingClientRect().width) - 2);
 }
@@ -403,7 +403,7 @@ function clearFlipTransforms(grid) {
 }
 
 /* FLIP 收尾：transform 过渡结束后清除内联 transition（transform 已在 Play 时清空）；
-   监听器挂网格上一次（transitionend 冒泡，目标必为照片项自身） */
+   监听器挂网格上一次（transitionend 冒泡，目标必为作品项自身） */
 function bindFlipCleanup(grid) {
     if (grid._flipCleanupBound) return;
     grid._flipCleanupBound = true;
@@ -488,7 +488,7 @@ function relayoutShown(grid) {
         return;
     }
 
-    // 先按比例缩放照片（行成员冻结不动），不做排布调整——彻底消除拖拽时的来回跳跃
+    // 先按比例缩放作品（行成员冻结不动），不做排布调整——彻底消除拖拽时的来回跳跃
     const rows = grid._rows.map((row) => {
         let sum = 0;
         for (let k = 0; k < row.count; k++) {
@@ -502,7 +502,7 @@ function relayoutShown(grid) {
     applyRows(shown, rows, allRatios, W, gap, border2);
 }
 
-/* 对全部已显示照片重新分行并重建行容器（跨断点切换 / 测量完成后的校正）；
+/* 对全部已显示作品重新分行并重建行容器（跨断点切换 / 测量完成后的校正）；
    已用真实比例排布过的行重新计算后结果不变，只有尾部（新批次所在行）会调整；
    flip = true 时对重建后的位置变化执行 FLIP 动画（仅跨档位重排时使用） */
 function rebuildAll(grid, refine, flip) {
@@ -543,10 +543,10 @@ function rebuildAll(grid, refine, flip) {
 
 /* ===== 筛选模式（全部作品页） ===== */
 
-/* 将行容器拍平：所有照片（含隐藏的）回到网格直属子级——
+/* 将行容器拍平：所有作品（含隐藏的）回到网格直属子级——
    后续 rebuildAll 只重排 _shownItems，隐藏项必须留在 DOM 里供再次筛选/重置。
-   【顺序关键】行内照片必须插到第一个游离项之前（appendChild 到末尾会把
-   行内照片挪到游离项之后，破坏时间顺序——筛选切换后照片乱序的根因） */
+   【顺序关键】行内作品必须插到第一个游离项之前（appendChild 到末尾会把
+   行内作品挪到游离项之后，破坏时间顺序——筛选切换后作品乱序的根因） */
 function flattenRows(grid) {
     const firstStray = grid.querySelector(':scope > .masonry-item');
     grid.querySelectorAll('.masonry-row').forEach((row) => {
@@ -560,7 +560,7 @@ function flattenRows(grid) {
 }
 
 /* 筛选切换 / 清空筛选：以「下拉加载更多」分页模式重启网格——
-   仅展示给定照片集合：全部重新隐藏，集合内进入分页队列（首批 12 张由 revealBatch
+   仅展示给定作品集合：全部重新隐藏，集合内进入分页队列（首批 12 张由 revealBatch
    逐批解除隐藏，其余等待滚动加载；无限滚动照常工作，触发器保持可见） */
 export function restartMasonryGrid(grid, items) {
     if (!grid || !grid._shownItems) return;

@@ -3,7 +3,7 @@
 
 {{ $sortedPhotos := partial "photo-sorted.html" . }}
 
-{{/* 该地点全部照片（含组照内页——全站一致拆分展示） */}}
+{{/* 该地点全部作品（含系列内页——全站一致拆分展示） */}}
 {{ $realPhotos := where $sortedPhotos "location" $locationName }}
 {{ $totalRealCount := len $realPhotos }}
 
@@ -21,7 +21,7 @@
     <div class="masonry-container">
         {{ if gt (len $realPhotos) 0 }}
         <div class="masonry-grid" id="masonry-grid">
-            <!-- 渲染全部照片（组照拆分为封面+内页） -->
+            <!-- 渲染全部作品（系列拆分为封面+内页） -->
             {{ range $realPhotos }}
                 {{ partial "photo-card.html" (dict "photo" . "site" $.Site "isInSeriesPage" false) }}
             {{ end }}

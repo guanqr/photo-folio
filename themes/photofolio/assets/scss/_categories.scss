@@ -1,6 +1,19 @@
-/* ===== 首页分类入口（轮播图下方，下拉后可见） ===== */
-.categories-grid {
-    padding: 3.5em 0 5em;
+/* ===== 首页区块（分類 / 系列）：统一外边距与标题样式 =====
+   body 为 flex 纵向布局、边距不折叠——间距只设单侧（margin-top），
+   避免相邻区块的上下边距叠加出大空隙 */
+.home-section {
+    margin-top: 3.5em;
+    padding-bottom: 1.5em; /* 与页脚 margin-top 2em 合计 3.5em，底部间距与区间距一致 */
+}
+
+/* 区块标题：H1 字号，上下留白一致（各 1.25em） */
+.home-section-title {
+    font-family: var(--font-heading);
+    font-size: var(--size-h1);
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 1.25em 0;
+    transition: color var(--transition-color);
 }
 
 /* 移动优先：窄屏单列 → ≥769px 两列 → ≥1001px 三列（769 与汉堡断点一致） */

@@ -1,6 +1,6 @@
 # 足迹地图与地点页统一数据源：name 必须与 data/photo.toml 的 location 字段逐字一致
 # slug 决定地点页 URL（/footprint/<slug>/，由 content/footprint/_content.gotmpl 构建期生成）与画廊筛选参数
-# 坐标为省份/地区级近似值（无 GPS 的照片按拍摄地所在省份定位）
+# 坐标为省份/地区级近似值（无 GPS 的作品按拍摄地所在省份定位）
 # 没有坐标的 location 不会出现在地图上（时间线与地点页不受影响）
 # 地图视图自动适配到全部拍摄地点范围（fit-to-bounds）
 

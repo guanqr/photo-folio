@@ -22,9 +22,9 @@
     }
 }
 
-/* 背景：当前照片铺满屏幕的模糊毛玻璃（参考储卫民摄影站：
+/* 背景：当前作品铺满屏幕的模糊毛玻璃（参考储卫民摄影站：
    cover 填充 + blur(2.5em) brightness(0.55) 压暗，放大 110% 防白边）
-   层级：背景 0 < 灯箱内容 2，绝不遮挡前景照片 */
+   层级：背景 0 < 灯箱内容 2，绝不遮挡前景作品 */
 .lightbox-backdrop {
     position: absolute;
     inset: 0;
@@ -191,6 +191,36 @@
     font-weight: 400;
     margin-bottom: 0.35em;
     transition: opacity var(--transition-opacity);
+}
+
+/* 标题下方分类/系列胶囊行（抽屉头部固定，随标题常显；JS 填充，点击跳转对应页面） */
+.lightbox-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5em;
+    margin-bottom: 0.6em;
+
+    &:empty {
+        display: none; /* 无分类/系列时整行隐藏 */
+    }
+}
+
+.lightbox-tag {
+    @extend %pill;
+    padding: 0.2em 0.8em;
+    border-color: var(--color-accent); /* 默认绿色描边 + 绿色文字 */
+    font-family: var(--font-meta);
+    font-size: var(--size-meta);
+    color: var(--color-accent);
+    background: transparent;
+    transition: background-color var(--transition-bg), border-color var(--transition-border), color var(--transition-color);
+
+    &:hover {
+        /* 填充绿色背景，文字换深色（与筛选按钮激活态一致） */
+        background: var(--color-accent);
+        border-color: var(--color-accent);
+        color: var(--color-bg-card);
+    }
 }
 
 /* 简略信息（地点 / 日期）：位于详情区顶部——收起态默认可见，随内容滚动（仅标题固定） */
@@ -445,7 +475,7 @@
     text-overflow: ellipsis;
 }
 
-/* 照片背后的故事 / 直方图 等区块标题（与 EXIF 标签同款：白色、同字号） */
+/* 作品背后的故事 / 直方图 等区块标题（与 EXIF 标签同款：白色、同字号） */
 .lightbox-story-wrap {
     margin-top: 1.1em;
 }
@@ -474,7 +504,7 @@
     }
 
     /* 图片区左侧留白与右侧对称：右侧面板内容到右缘 = 面板内边距 1.25em + 箭头列 4.25em = 5.5em，
-       左侧同样留 5.5em（箭头列 4.25em + 内边距 1.25em）——照片不贴左缘、不被左箭头遮挡 */
+       左侧同样留 5.5em（箭头列 4.25em + 内边距 1.25em）——作品不贴左缘、不被左箭头遮挡 */
     .lightbox-img-area {
         padding-left: 5.5em;
     }

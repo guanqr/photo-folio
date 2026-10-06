@@ -11,6 +11,7 @@ export function initLightbox() {
     const lightboxBackdrop = document.getElementById('lightbox-backdrop');
     const lightboxBackdropNext = document.getElementById('lightbox-backdrop-next');
     const lightboxCaption = document.getElementById('lightbox-caption');
+    const tagsEl = document.getElementById('lightbox-tags');
     const lightboxMeta = document.getElementById('lightbox-meta');
     const lightboxMetaPlace = document.querySelector('#lightbox-meta-place .lightbox-meta-text');
     const lightboxMetaDate = document.querySelector('#lightbox-meta-date .lightbox-meta-text');
@@ -43,16 +44,16 @@ export function initLightbox() {
     let activeBackdrop = lightboxBackdrop;
     let inactiveBackdrop = lightboxBackdropNext;
 
-    // 收集当前页面所有可预览的照片
+    // 收集当前页面所有可预览的作品
     function collectPhotos() {
         const wrappers = document.querySelectorAll('.photo-wrapper');
         currentPhotos = [];
         wrappers.forEach(wrapper => {
             const img = wrapper.querySelector('img');
-            if (!img || !img.getAttribute('src')) return; // 未揭示的照片还没有 src（无限滚动尚未加载），跳过——箭头仅停留在已加载的最后一张
+            if (!img || !img.getAttribute('src')) return; // 未揭示的作品还没有 src（无限滚动尚未加载），跳过——箭头仅停留在已加载的最后一张
             const item = wrapper.closest('.masonry-item');
-            if (item && item.classList.contains('is-hidden')) return; // 被当前筛选隐藏的照片不进箭头集合
-            // [data-title] 通用化：兼容 photo-card 与组照叙事块两种根元素
+            if (item && item.classList.contains('is-hidden')) return; // 被当前筛选隐藏的作品不进箭头集合
+            // [data-title] 通用化：兼容 photo-card 与系列叙事块两种根元素
             const card = wrapper.closest('[data-title]');
             currentPhotos.push({
                 src: img.dataset.fullSrc || img.src,
@@ -62,6 +63,10 @@ export function initLightbox() {
                 date: card ? (card.dataset.date || '') : '',
                 exif: card ? (card.dataset.exif || '') : '',
                 description: card ? (card.dataset.description || '') : '',
+                category: card ? (card.dataset.category || '') : '',
+                categoryUrl: card ? (card.dataset.categoryUrl || '') : '',
+                series: card ? (card.dataset.series || '') : '',
+                seriesUrl: card ? (card.dataset.seriesUrl || '') : '',
                 focus: card ? (card.dataset.focus || '') : '',
                 aperture: card ? (card.dataset.aperture || '') : '',
                 shutter: card ? (card.dataset.shutter || '') : '',
@@ -115,9 +120,27 @@ export function initLightbox() {
         });
     }
 
-    // 渲染整个元信息面板（标题 / 简行 / EXIF 分行 / 直方图与色卡 / 故事）
+    // 标题下方的分类/系列胶囊（点击跳转对应页面）
+    function renderTags(p) {
+        if (!tagsEl) return;
+        tagsEl.innerHTML = '';
+        const pills = [];
+        if (p.category && p.categoryUrl) pills.push({ text: p.category, url: p.categoryUrl });
+        if (p.series && p.seriesUrl) pills.push({ text: p.series, url: p.seriesUrl });
+        pills.forEach((t) => {
+            const a = document.createElement('a');
+            a.className = 'lightbox-tag';
+            a.href = t.url;
+            a.textContent = t.text;
+            tagsEl.appendChild(a);
+        });
+        tagsEl.style.display = pills.length ? '' : 'none';
+    }
+
+    // 渲染整个元信息面板（标题 / 分类与系列胶囊 / 简行 / EXIF 分行 / 直方图与色卡 / 故事）
     function renderPanel(p) {
         if (lightboxCaption) lightboxCaption.textContent = p.title;
+        renderTags(p);
         setMeta(p);
         renderExif(p);
         if (storyWrap) storyWrap.style.display = p.description ? '' : 'none';
@@ -143,7 +166,7 @@ export function initLightbox() {
         }
 
         if (isSwitch) {
-            // 切换照片（参考储卫民摄影站）：旧图轻微滑出（12%）并淡出 →
+            // 切换作品（参考储卫民摄影站）：旧图轻微滑出（12%）并淡出 →
             // 换内容 → 新图从另一侧轻微滑入归位并淡入；
             // 主图切换完成后，毛玻璃背景再跟随切换（淡出 → 换 → 淡入），更有层次感
 
@@ -247,9 +270,9 @@ export function initLightbox() {
         if (lightboxMeta) lightboxMeta.style.opacity = '1';
     }
 
-    // 点击照片打开
+    // 点击作品打开
     document.addEventListener('click', (e) => {
-        if (e.target.closest('a')) return; // 链接点击（组照徽章等）不触发灯箱
+        if (e.target.closest('a')) return; // 链接点击（站内链接等）不触发灯箱
         const wrapper = e.target.closest('.photo-wrapper');
         if (!wrapper) return;
         const img = wrapper.querySelector('img');
@@ -261,6 +284,13 @@ export function initLightbox() {
 
     // 关闭
     if (lightboxClose) lightboxClose.addEventListener('click', close);
+
+    // 分类/系列胶囊：点击关闭灯箱（跳转由 SPA 常规拦截处理）
+    if (tagsEl) {
+        tagsEl.addEventListener('click', (e) => {
+            if (e.target.closest('a')) close();
+        });
+    }
 
     // 箭头按钮
     if (btnPrev) btnPrev.addEventListener('click', e => { e.stopPropagation(); prev(); });

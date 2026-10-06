@@ -27,6 +27,11 @@ defaultContentLanguage = "zh-cn"
     # 摄影作品订阅源（/index.xml，RSS 2.0）：最近按拍摄日期分组的更新批次数
     feedCount = 20
 
+    # 首页分类卡片封面策略（两种模式互斥）：
+    #   custom           = 仅使用分类页 front matter 的 cover 自定义封面（无则卡片不带图）
+    #   latest-landscape = 默认：忽略自定义封面，取最新一张横构图作品为封面
+    categoryCover = "latest-landscape"
+
     # 图床/CDN 基础 URL。
     # 设置后，所有本地图片路径会自动拼接此前缀。
     # 留空或注释掉则使用本地图片。末尾无需加斜杠。

@@ -1,4 +1,4 @@
-{{- /* 摄影作品订阅源（RSS 2.0，/index.xml）：照片来自 data/photo.toml，
+{{- /* 摄影作品订阅源（RSS 2.0，/index.xml）：作品来自 data/photo.toml，
        按拍摄日期分组——每组一条 entry，标题告知当日发布张数，
        正文以纯文字列出每张作品的作品名 / 拍摄地点 / 拍摄日期（不放图片）；
        只输出最近 feedCount 组（hugo.toml [params].feedCount，默认 20）。 */ -}}

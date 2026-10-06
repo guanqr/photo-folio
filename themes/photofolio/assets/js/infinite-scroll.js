@@ -39,7 +39,7 @@ export function initInfiniteScroll() {
     if (!trigger || !grid) return;
     if (!grid._pendingItems) return;
     // 同一触发器已初始化（滚动监听仍生效）→ 只同步完成状态后返回：
-    // 筛选重启后待加载队列可能已清空（如仅剩 1 张照片），
+    // 筛选重启后待加载队列可能已清空（如仅剩 1 张作品），
     // 若直接幂等返回，触发器会停留在「载入中」状态
     if (current) {
         if (grid._pendingItems.length === 0) {
@@ -70,7 +70,7 @@ export function initInfiniteScroll() {
 
         const batch = Math.min(pageSize, grid._pendingItems.length);
 
-        // 先展示转圈图标 700ms，再测量并揭示照片（revealBatch 完成后恢复状态）
+        // 先展示转圈图标 700ms，再测量并揭示作品（revealBatch 完成后恢复状态）
         setTimeout(async () => {
             await revealBatch(grid, batch);
             isLoading = false;
@@ -79,7 +79,7 @@ export function initInfiniteScroll() {
                 finishLoading();
                 return;
             }
-            // 本批照片未把用户推出底部区域时继续加载，避免卡在「载入中」
+            // 本批作品未把用户推出底部区域时继续加载，避免卡在「载入中」
             if (distToBottom() <= 80) {
                 loadMore();
             }
@@ -105,7 +105,7 @@ export function initInfiniteScroll() {
     current = { trigger, grid, onScroll };
 
     if (grid._pendingItems.length === 0) {
-        // 全部照片已在首屏：直接显示完成文案（保留在页面底部，不消失）
+        // 全部作品已在首屏：直接显示完成文案（保留在页面底部，不消失）
         finishLoading();
         return;
     }

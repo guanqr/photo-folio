@@ -2,23 +2,23 @@
 <!-- ================= 首页轮播：按时间排序最新的精选图，数量由 carouselCount 配置（1-12 张） ================= -->
 <section class="carousel-section">
     {{ $sortedPhotos := partial "photo-sorted.html" . }}
-        {{ $featured := slice }}
-        {{ range $sortedPhotos }}
-            {{ if .featured }}
-                {{ $featured = $featured | append . }}
-            {{ end }}
+    {{ $featured := slice }}
+    {{ range $sortedPhotos }}
+        {{ if .featured }}
+            {{ $featured = $featured | append . }}
         {{ end }}
-        {{/* 轮播图数量：默认 12 张，钳制在 1-12 之间 */}}
-        {{ $carouselCount := .Site.Params.carouselCount | default 12 | int }}
-        {{ if lt $carouselCount 1 }}{{ $carouselCount = 1 }}{{ end }}
-        {{ if gt $carouselCount 12 }}{{ $carouselCount = 12 }}{{ end }}
-        {{ $carouselPhotos := first $carouselCount $featured }}
+    {{ end }}
+    {{/* 轮播图数量：默认 12 张，钳制在 1-12 之间 */}}
+    {{ $carouselCount := .Site.Params.carouselCount | default 12 | int }}
+    {{ if lt $carouselCount 1 }}{{ $carouselCount = 1 }}{{ end }}
+    {{ if gt $carouselCount 12 }}{{ $carouselCount = 12 }}{{ end }}
+    {{ $carouselPhotos := first $carouselCount $featured }}
 
-        {{ $cfg := .Site.Params.imageSizes | default dict }}
-        {{ $carouselWidth := $cfg.carousel | default 1920 }}
-        {{ $carouselQuality := $cfg.ogQuality | default 85 }}
+    {{ $cfg := .Site.Params.imageSizes | default dict }}
+    {{ $carouselWidth := $cfg.carousel | default 1920 }}
+    {{ $carouselQuality := $cfg.ogQuality | default 85 }}
 
-        {{ if gt (len $carouselPhotos) 0 }}
+    {{ if gt (len $carouselPhotos) 0 }}
         <div class="carousel" id="home-carousel">
             <div class="carousel-track">
                 {{ range $i, $photo := $carouselPhotos }}
@@ -56,8 +56,10 @@
 </section>
 
 <!-- ================= 分类入口（轮播图下方，下拉后可见） ================= -->
-<section class="categories-grid" id="categories-grid">
+<section class="home-section" id="categories-grid">
     <div class="container">
+        <h2 class="home-section-title">{{ i18n "categories_title" }}</h2>
+        {{ $coverMode := .Site.Params.categoryCover | default "latest-landscape" }}
         <div class="grid">
             {{/* 定义排除名单，过滤掉非分类的独立页面（精選已并入全部作品页的作品範圍筛选，不单独成页） */}}
             {{ $excludeSections := slice "gallery" "footprint" "series" "about" }}
@@ -71,9 +73,18 @@
                     {{ $categoryPhotos := where $sortedPhotos "category" $sectionName }}
                     {{ $photoCount := len $categoryPhotos }}
 
-                    {{ $coverImg := .Params.cover }}
-                    {{ if and (not $coverImg) (gt $photoCount 0) }}
-                        {{ $coverImg = (index $categoryPhotos 0).src }}
+                    {{/* 封面策略（hugo.toml [params].categoryCover，两种模式互斥）：
+                        custom——仅自定义封面（front matter cover，无则卡片不带图）；
+                        latest-landscape（默认）——忽略自定义封面，取最新一张横构图作品 */}}
+                    {{ $coverImg := "" }}
+                    {{ if eq $coverMode "custom" }}
+                        {{ $coverImg = .Params.cover }}
+                    {{ else }}
+                        {{ range $categoryPhotos }}
+                            {{ if and (not $coverImg) .width .height (ge (int .width) (int .height)) }}
+                                {{ $coverImg = .src }}
+                            {{ end }}
+                        {{ end }}
                     {{ end }}
 
                     {{ $categoryWidth := $cfg.category | default 1000 }}
@@ -100,4 +111,40 @@
         </div>
     </div>
 </section>
+
+<!-- ================= 系列（系列封面卡片，分类下方） ================= -->
+{{ $coverPhotos := slice }}
+{{ range $sortedPhotos }}
+    {{ if and .series .is_cover }}
+        {{ $coverPhotos = $coverPhotos | append . }}
+    {{ end }}
+{{ end }}
+{{ if gt (len $coverPhotos) 0 }}
+{{/* 每系列的总张数（封面 + 内页，series 字段匹配） */}}
+{{ $seriesCounts := dict }}
+{{ range $sortedPhotos }}
+    {{ with .series }}
+        {{ $seriesCounts = merge $seriesCounts (dict . (add (index $seriesCounts . | default 0) 1)) }}
+    {{ end }}
+{{ end }}
+<section class="home-section">
+    <div class="container">
+        <h2 class="home-section-title">{{ i18n "series_title" }}</h2>
+        <div class="grid">
+            {{ range $coverPhotos }}
+                <a href="{{ partial "series-url.html" .series }}" class="category-card">
+                    <div class="category-image">
+                        {{ $coverUrl := partial "img-url.html" (dict "src" .src "site" $.Site "width" $cfg.category "mode" "lfit" "format" "webp" "quality" $cfg.quality) }}
+                        <img src="{{ $coverUrl }}" alt="{{ .series }}" loading="lazy">
+                    </div>
+                    <div class="category-info">
+                        <h3 class="category-title">{{ .series }}</h3>
+                        <p class="category-count">{{ i18n "photo_count" (dict "Count" (index $seriesCounts .series)) }}</p>
+                    </div>
+                </a>
+            {{ end }}
+        </div>
+    </div>
+</section>
+{{ end }}
 {{ end }}

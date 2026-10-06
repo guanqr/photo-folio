@@ -1,7 +1,7 @@
 {{ define "main" }}
 {{ $sortedPhotos := partial "photo-sorted.html" . }}
 
-{{/* 只过滤出所有的“组照封面” */}}
+{{/* 只过滤出所有的“系列封面” */}}
 {{ $coverPhotos := slice }}
 {{ range $sortedPhotos }}
     {{ if and .series .is_cover }}

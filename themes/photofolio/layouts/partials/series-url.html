@@ -1,0 +1,17 @@
+{{- /* 系列名称 → 系列详情页 URL（唯一实现：photo-card 系列徽章与首页系列卡片共用）
+       找不到同名页面时回退 /series/<urlize>/ */ -}}
+{{- $name := . -}}
+{{- $section := site.GetPage "/series" -}}
+{{- $page := false -}}
+{{- if $section -}}
+    {{- range $section.Pages -}}
+        {{- if eq .Title $name -}}
+            {{- $page = . -}}
+        {{- end -}}
+    {{- end -}}
+{{- end -}}
+{{- if $page -}}
+    {{- $page.RelPermalink -}}
+{{- else -}}
+    {{- printf "/series/%s/" ($name | urlize) | relURL -}}
+{{- end -}}

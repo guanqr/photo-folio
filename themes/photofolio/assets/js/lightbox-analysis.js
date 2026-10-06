@@ -4,7 +4,7 @@
  * 管线：探测加载 w_200 缩略图（crossOrigin=anonymous，OSS 未开 CORS 时失败优雅降级）→
  * 离屏 canvas 采样 → 统计三通道 256 桶直方图（窗口 5 平滑、对数纵轴）与
  * 7 个主色色卡（16 级量化 + 贪心种子 + k-means 细化，占比之和 ≈ 100%）。
- * 结果按 src 缓存——切换/回看照片时无需重新探测下载。
+ * 结果按 src 缓存——切换/回看作品时无需重新探测下载。
  * 直方图渲染为 SVG（矢量：高 DPI / 缩放 / 窄屏下始终清晰，不随像素密度发糊）。
  */
 
@@ -180,28 +180,37 @@ function paintHistogram(buckets, logMax, histogramSvg) {
         });
         return `rgb(${Math.min(255, Math.round(sum[0]))},${Math.min(255, Math.round(sum[1]))},${Math.min(255, Math.round(sum[2]))})`;
     };
-    // 每个桶按曲线高度排序（最小 y = 最高），拆成三段矩形，按填色归组输出 path
+    // 桶间线性细分（每桶 4 段）——列式填色的阶梯边缘缩到肉眼不可辨，曲线平滑；
+    // 按每个采样点三通道高度排序（最小 y = 最高），拆成三段，按填色归组输出 path
+    const SAMPLE = 4;
+    const SEG_COUNT = (BINS - 1) * SAMPLE;
     const byFill = new Map();
     const ys = [[], [], []];
     for (let c = 0; c < 3; c++) {
-        for (let i = 0; i < BINS; i++) {
-            ys[c][i] = HIST_H - (Math.log1p(buckets[c][i]) / logMax) * (HIST_H - 1);
+        const src = buckets[c];
+        for (let i = 0; i <= SEG_COUNT; i++) {
+            const x = i / SAMPLE;
+            const lo = Math.floor(x);
+            const hi = Math.min(lo + 1, BINS - 1);
+            const t = x - lo;
+            const v = (1 - t) * Math.log1p(src[lo]) + t * Math.log1p(src[hi]);
+            ys[c].push(HIST_H - (v / logMax) * (HIST_H - 1));
         }
     }
-    for (let i = 0; i < BINS; i++) {
+    for (let i = 0; i < SEG_COUNT; i++) {
         const order = [0, 1, 2].sort((a, b) => ys[a][i] - ys[b][i]);
         const a = ys[order[0]][i];
         const b = ys[order[1]][i];
         const c = ys[order[2]][i];
-        const x0 = i;
-        const x1 = i + 1;
+        const x0 = i / SAMPLE;
+        const x1 = (i + 1) / SAMPLE;
         const segments = [];
         if (b - a > 0.5) segments.push([a, b, [order[0]]]);
         if (c - b > 0.5) segments.push([b, c, [order[0], order[1]]]);
         if (HIST_H - c > 0.5) segments.push([c, HIST_H, [0, 1, 2]]);
         segments.forEach(([top, bot, indices]) => {
             const fill = fillFor(indices);
-            const seg = `M${x0},${top.toFixed(2)} L${x0},${bot.toFixed(2)} L${x1},${bot.toFixed(2)} L${x1},${top.toFixed(2)} Z`;
+            const seg = `M${x0.toFixed(2)},${top.toFixed(2)} L${x0.toFixed(2)},${bot.toFixed(2)} L${x1.toFixed(2)},${bot.toFixed(2)} L${x1.toFixed(2)},${top.toFixed(2)} Z`;
             byFill.set(fill, (byFill.get(fill) || '') + seg);
         });
     }
@@ -218,7 +227,7 @@ export function initPhotoAnalysis({ histogramWrap, histogramEl, paletteWrap, pal
         if (paletteWrap) paletteWrap.style.display = 'none';
     }
 
-    /* 分析指定照片：缓存命中直接重绘；否则探测加载 w_200 缩略图统计。
+    /* 分析指定作品：缓存命中直接重绘；否则探测加载 w_200 缩略图统计。
        直方图与色卡区块都被配置关闭时跳过探测（不发请求） */
     function analyze(src) {
         if (!histogramEl && !paletteEl) return;

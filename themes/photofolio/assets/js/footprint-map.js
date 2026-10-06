@@ -3,8 +3,8 @@
  *
  * - 自绘 SVG 等距圆柱投影（零外部库），世界陆地几何为一次性生成的简化静态 JSON
  *   （同源 fetch、模块级 Promise 记忆化，sw 自动缓存；失败仅降级为网格 + 光点）
- * - 按省份/国家聚合光点：三层圆（光晕/中层/核心），半径随照片数增长；
- *   交错弹入动画，照片数最多的首点带呼吸脉冲环
+ * - 按省份/国家聚合光点：三层圆（光晕/中层/核心），半径随作品数增长；
+ *   交错弹入动画，作品数最多的首点带呼吸脉冲环
  * - 悬停/键盘聚焦显示弹层（地名 / 张数 / 年份跨度），点击光点跳转足迹详情页（SPA 拦截）
  * - 懒加载：IntersectionObserver rootMargin 600px 进入视口才构建
  * - SPA 页面切换重跑 initFootprintMap：同一节点幂等，旧状态（observers）先销毁
@@ -117,7 +117,7 @@ async function build(root, points) {
     if (width === 0 || !root.isConnected) return;
 
     const pr = fitProjection(points);
-    const countFormat = root.dataset.countFormat || '%COUNT% 張照片';
+    const countFormat = root.dataset.countFormat || '%COUNT% 張作品';
     const yearFormat = root.dataset.yearRangeFormat || '%MIN% — %MAX%';
 
     const svg = document.createElementNS(SVG_NS, 'svg');

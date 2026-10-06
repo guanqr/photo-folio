@@ -8,7 +8,7 @@
 
 {{ $sortedPhotos := partial "photo-sorted.html" . }}
 
-{{/* 【修复 1】先获取真实的照片集合（包含组照内页），用于准确统计总数 */}}
+{{/* 【修复 1】先获取真实的作品集合（包含系列内页），用于准确统计总数 */}}
 {{ $realPhotos := slice }}
 {{ if eq $sectionName "gallery" }}
     {{ $realPhotos = $sortedPhotos }}
@@ -17,7 +17,7 @@
 {{ end }}
 {{ $totalRealCount := len $realPhotos }}
 
-{{/* 【修复 2】再过滤出用于瀑布流显示的卡片（剔除组照内页，只保留单图和封面） */}}
+{{/* 【修复 2】再过滤出用于瀑布流显示的卡片（剔除系列内页，只保留单图和封面） */}}
 {{ $displayPhotos := slice }}
 {{ range $realPhotos }}
     {{ if or (not .series) .is_cover }}
@@ -25,12 +25,12 @@
     {{ end }}
 {{ end }}
 
-{{/* 网格渲染集：全站一致——组照拆分为全部照片（封面+内页）展示；
+{{/* 网格渲染集：全站一致——系列拆分为全部作品（封面+内页）展示；
     画廊与分类页均用 $realPhotos（分类页已按 category 过滤，同样含内页）；
     $displayPhotos（仅封面）保留给画廊筛选选项推导 */}}
 {{ $gridPhotos := $realPhotos }}
 
-{{/* 全部作品页：筛选栏选项（年度 desc、地点/类别按照片数 desc） */}}
+{{/* 全部作品页：筛选栏选项（年度 desc、地点/类别按作品数 desc） */}}
 {{ $years := slice }}
 {{ $locList := slice }}
 {{ $catList := slice }}
@@ -79,8 +79,8 @@
             {{ with .Params.description }}
                 <p class="page-description">{{ . }}</p>
             {{ end }}
-            <!-- 【修复 3】使用真实的照片总数进行统计 -->
-            <p class="photo-count">{{ i18n "total_photos" (dict "Count" $totalRealCount) }}</p>
+            <!-- 【修复 3】使用真实的作品总数进行统计；数字包在 span 中供筛选后滚动动画更新 -->
+            <p class="photo-count">{{ i18n "total_photos" (dict "Count" (printf "<span class=\"photo-count-num\" id=\"photo-count-num\">%d</span>" $totalRealCount)) | safeHTML }}</p>
         </div>
     </div>
 
@@ -96,7 +96,7 @@
                 <span class="filter-label">{{ i18n "filter_scope" }}</span>
                 <div class="filter-options">
                     <button type="button" data-value="" aria-pressed="true" class="is-active">{{ i18n "filter_all" }}</button>
-                    {{/* 匹配靠照片卡片的 data-scope token 列表（featured 与 orientation 可并存） */}}
+                    {{/* 匹配靠作品卡片的 data-scope token 列表（featured 与 orientation 可并存） */}}
                     {{ range slice "featured" "landscape" "portrait" }}
                         <button type="button" data-value="{{ . }}" aria-pressed="false">{{ i18n (printf "filter_scope_%s" .) }}</button>
                     {{ end }}
@@ -137,7 +137,7 @@
         </div>
         {{ end }}
         <div class="masonry-grid" id="masonry-grid">
-            <!-- 渲染全部照片（组照拆分为封面+内页） -->
+            <!-- 渲染全部作品（系列拆分为封面+内页） -->
             {{ range $gridPhotos }}
                 {{ partial "photo-card.html" (dict "photo" . "site" $.Site) }}
             {{ end }}

@@ -15,6 +15,21 @@ export const PARAM_KEYS = { scope: 's', year: 'y', location: 'l', category: 'c' 
 
 let resizeBound = false; // 模块级：跨 SPA 页面实例只挂一个窗口监听
 
+/* 作品计数滚动动画：旧值平滑滚动到新值（easeOutCubic，450ms） */
+function animateCount(el, target) {
+    const from = parseInt(el.textContent, 10) || 0;
+    if (from === target) return;
+    const start = performance.now();
+    const DURATION = 450;
+    const step = (now) => {
+        const p = Math.min(1, (now - start) / DURATION);
+        const eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = String(Math.round(from + (target - from) * eased));
+        if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+}
+
 export function initGalleryFilter() {
     const bar = document.querySelector('.gallery-filters');
     const grid = document.getElementById('masonry-grid');
@@ -22,8 +37,8 @@ export function initGalleryFilter() {
     if (bar._filterBound) return; // SPA 重复初始化幂等
     bar._filterBound = true;
 
-    /* 首次初始化时记录照片原始 DOM 顺序（= 时间顺序）——
-       筛选切换会拍平/重建行容器，行内照片被插到游离照片之前、DOM 顺序被打乱，
+    /* 首次初始化时记录作品原始 DOM 顺序（= 时间顺序）——
+       筛选切换会拍平/重建行容器，行内作品被插到游离作品之前、DOM 顺序被打乱，
        重置回「全部」时必须按原始顺序排序，不能直接沿用当前 DOM 顺序 */
     if (!grid._origOrder) {
         grid._origOrder = new Map(
@@ -40,7 +55,7 @@ export function initGalleryFilter() {
         const b = activeBtnOf(dim);
         return b ? b.dataset.value : '';
     };
-    /* 地点按钮：data-value 为英文 slug（URL 参数），匹配照片用按钮中文文本 */
+    /* 地点按钮：data-value 为英文 slug（URL 参数），匹配作品用按钮中文文本 */
     const locLabelOf = () => {
         const b = activeBtnOf('location');
         return b && b.dataset.value ? b.textContent : '';
@@ -117,6 +132,9 @@ export function initGalleryFilter() {
         }
 
         restartMasonryGrid(grid, matching);
+        // 头部计数随筛选结果滚动动画（数字包在 #photo-count-num 中）
+        const countNum = document.getElementById('photo-count-num');
+        if (countNum) animateCount(countNum, matching.length);
         if (active && matching.length === 0) {
             const trigger = document.getElementById('load-more-trigger');
             if (trigger) trigger.style.display = 'none';

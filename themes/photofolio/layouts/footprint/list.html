@@ -1,5 +1,5 @@
 {{ define "main" }}
-{{/* 1. 全站照片时间排序 + 展示过滤（剔除组照内页，只保留单图和封面） */}}
+{{/* 1. 全站作品时间排序 + 展示过滤（剔除系列内页，只保留单图和封面） */}}
 {{ $sortedPhotos := partial "photo-sorted.html" . }}
 {{ $displayPhotos := slice }}
 {{ range $sortedPhotos }}
@@ -8,7 +8,7 @@
     {{ end }}
 {{ end }}
 
-{{/* 2. 按 location 单趟聚合（输入时间降序 → 首见即最新、末见即最早；统计含组照内页） */}}
+{{/* 2. 按 location 单趟聚合（输入时间降序 → 首见即最新、末见即最早；统计含系列内页） */}}
 {{ $locAgg := dict }}
 {{ range $p := $sortedPhotos }}
     {{ with $p.location }}

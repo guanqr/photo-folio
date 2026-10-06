@@ -1,6 +1,5 @@
 {{ $photo := .photo }}
 {{ $site := .site }}
-{{ $asIndividual := .asIndividual | default false }}
 
 {{ $altText := $photo.alt }}
 {{ $src := $photo.src }}
@@ -24,7 +23,6 @@
 {{ $description := $photo.description }}
 {{ $categoryKey := $photo.category }}
 {{ $seriesName := $photo.series }}
-{{ $isCover := $photo.is_cover }}
 
 {{/* 构图方向：一律由真实宽高推导（宽 ≥ 高含相等 = landscape）；orientation 字段已废弃 */}}
 {{ $orientation := "" }}
@@ -35,26 +33,13 @@
 {{ $categoryPage := site.GetPage $categoryKey }}
 {{ $categoryTitle := $categoryPage.Title | default "" }}
 
-{{/* 反查组照的英文 URL (仅在需要渲染组照链接时需要) */}}
+{{/* 反查系列的英文 URL（灯箱系列胶囊跳转用；见 series-url.html 唯一实现） */}}
 {{ $seriesUrl := "" }}
-{{ if and $seriesName (not $asIndividual) }}
-    {{ $seriesSection := site.GetPage "/series" }}
-    {{ $seriesPage := false }}
-    {{ if $seriesSection }}
-        {{ range $seriesSection.Pages }}
-            {{ if eq .Title $seriesName }}
-                {{ $seriesPage = . }}
-            {{ end }}
-        {{ end }}
-    {{ end }}
-    {{ if $seriesPage }}
-        {{ $seriesUrl = $seriesPage.RelPermalink }}
-    {{ else }}
-        {{ $seriesUrl = printf "/series/%s/" ($seriesName | urlize) | relURL }}
-    {{ end }}
+{{ if $seriesName }}
+    {{ $seriesUrl = partial "series-url.html" $seriesName }}
 {{ end }}
 
-{{/* 卡片/灯箱标题：一律显示照片自己的 alt（组照封面点击已改为开灯箱，不再显示组照名） */}}
+{{/* 卡片/灯箱标题：一律显示作品自己的 alt（系列封面点击已改为开灯箱，不再显示系列名） */}}
 {{ $displayTitle := $altText }}
 
 {{/* 灯箱完整元信息（地点 · 分类 · 日期 · EXIF）：通过 data 属性传给灯箱，卡片上仅显示标题 */}}
@@ -77,6 +62,9 @@
         {{ with $description }}data-description="{{ . }}"{{ end }}
         {{ with $place }}data-place="{{ . }}"{{ end }}
         {{ with $categoryTitle }}data-category="{{ . }}"{{ end }}
+        {{ with $categoryPage }}data-category-url="{{ .RelPermalink }}"{{ end }}
+        {{ with $seriesName }}data-series="{{ . }}"{{ end }}
+        {{ with $seriesUrl }}data-series-url="{{ . }}"{{ end }}
         {{ with $dateStr }}data-date="{{ . }}"{{ end }}
         {{ with $exif }}data-exif="{{ delimit . " · " }}"{{ end }}
         {{ with $focus }}data-focus="{{ . }}"{{ end }}
@@ -84,16 +72,10 @@
         {{ with $shutter }}data-shutter="{{ . }}"{{ end }}
         {{ with $iso }}data-iso="{{ . }}"{{ end }}>
 
-        {{/* 照片一律渲染普通 img（点击开灯箱）；组照所有照片（封面+内页）右上角渲染图标链接
-            （仅图标，点击跳组照详情页）。
-            卡片上不显示任何元信息，标题与完整元信息仅在灯箱放大后显示，wrapper 统一用 div 避免 a 嵌套 a */}}
+        {{/* 作品一律渲染普通 img（点击开灯箱）；卡片上不显示任何元信息，
+            标题与完整元信息仅在灯箱放大后显示，wrapper 统一用 div 避免 a 嵌套 a */}}
         <div class="photo-wrapper">
             <img data-src="{{ $srcUrl }}" data-full-src="{{ $fullUrl }}" alt="{{ $altText }}" loading="lazy" class="photo-img" {{ with $photo.width }}width="{{ . }}"{{ end }} {{ with $photo.height }}height="{{ . }}"{{ end }}>
-            {{ if and $seriesName (not $asIndividual) }}
-                <a href="{{ $seriesUrl }}" class="series-badge" title='{{ i18n "view_series" (dict "Series" $seriesName) }}'>
-                    <span class="icon">{{ hugo.Data.svg.layers | safeHTML }}</span>
-                </a>
-            {{ end }}
         </div>
     </div>
 </div>

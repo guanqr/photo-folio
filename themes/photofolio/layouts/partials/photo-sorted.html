@@ -1,7 +1,7 @@
-{{/* 全站照片时间排序管线（唯一实现）：
-     返回按 time 排序的照片 slice（_sortKey 保证同日照片按数据文件顺序稳定排序）
+{{/* 全站作品时间排序管线（唯一实现）：
+     返回按 time 排序的作品 slice（_sortKey 保证同日作品按数据文件顺序稳定排序）
      调用：{{ $sorted := partial "photo-sorted.html" . }}
-     （上下文可传页面，或用 dict "order" "asc" 指定升序——组照内页按拍摄顺序） */}}
+     （上下文可传页面，或用 dict "order" "asc" 指定升序——系列内页按拍摄顺序） */}}
 {{ $order := "desc" }}
 {{ if reflect.IsMap . }}
     {{ with index . "order" }}{{ $order = . }}{{ end }}
