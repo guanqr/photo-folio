@@ -197,18 +197,7 @@ img.photo-img {
     display: none !important;
 }
 
-/* 组照封面链接样式 */
-.series-link {
-    display: block;
-    cursor: pointer;
-}
-
-/* 范围筛选拆分模式：封面按普通照片对待，隐藏组照徽章（点击改由灯箱接管） */
-.masonry-grid.series-split .series-badge {
-    display: none;
-}
-
-/* 组照右上角图标与数量 (胶囊形状) */
+/* 组照右上角图标（胶囊形状，纯图标链接——点击跳组照详情页） */
 .series-badge {
     position: absolute;
     top: 0.5em;
@@ -230,14 +219,11 @@ img.photo-img {
 
     transition: background 0.3s ease, color var(--transition-color), transform var(--transition-spring), border-color var(--transition-border);
 
-    .icon, .count {
-        color: inherit;
-        transition: inherit;
-    }
-
     .icon {
         display: flex;
         transform: none;
+        color: inherit;
+        transition: inherit;
 
         svg {
             width: 0.85em;
@@ -245,14 +231,6 @@ img.photo-img {
             stroke: currentColor;
             fill: none;
         }
-    }
-
-    .count {
-        font-family: var(--font-meta);
-        font-size: 0.7em;
-        font-weight: 600;
-        line-height: 1;
-        padding-bottom: 0.05em;
     }
 }
 

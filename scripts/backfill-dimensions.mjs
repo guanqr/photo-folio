@@ -1,11 +1,15 @@
 /**
- * 回填 photo.toml 的 orientation 字段（零 npm 依赖，Node >= 18）。
+ * 回填 photo.toml 的 width / height 字段，并剥离已废弃的 orientation 行（零 npm 依赖，Node >= 18）。
  *
- * 管线：解析 data/photo.toml → 对缺失 orientation 的条目请求 OSS 图片信息接口
+ * 注意：常规流程中 width/height 已由预处理脚本（E:\预处理摄影作品\处理图片\git，上传照片时）生成，
+ * 构图方向由站点模板从宽高推导（宽 ≥ 高 = landscape）——orientation 字段已废弃，本脚本会移除它；
+ * 本站脚本仅在「历史数据未覆盖/预处理脚本未生成」时兜底补全宽高。
+ *
+ * 管线：解析 data/photo.toml → 对缺 width/height 的条目请求 OSS 图片信息接口
  *      （?x-oss-process=image/info，返回 ImageWidth/ImageHeight，无需下载图片本体）
- *      → 按「水平长度 ≥ 竖直长度 = landscape，否则 portrait」写回 orientation = "..."。
+ *      → 写回 width/height（照片卡懒加载图片的显式尺寸，消除 CLS 审计告警）。
  *
- * 用法：node scripts/backfill-orientation.mjs
+ * 用法：node scripts/backfill-dimensions.mjs
  * 输出：原地更新 data/photo.toml（保留原有全部内容与顺序，UTF-8 无 BOM）；可重复运行（已有字段跳过）。
  */
 import { readFileSync, writeFileSync, renameSync } from 'node:fs';
@@ -37,15 +41,16 @@ function parseBlocks(text) {
         entries.push({
             block,
             src: srcMatch ? srcMatch[1] : null,
-            hasOrientation: /^[ \t]*orientation\s*=/m.test(block),
-            orientation: null,
+            hasDims: /^[ \t]*width\s*=/m.test(block) && /^[ \t]*height\s*=/m.test(block),
+            width: null,
+            height: null,
         });
     }
     return { header: parts[0], entries };
 }
 
-/* ---------- 单条回填：请求 OSS image/info → landscape/portrait ---------- */
-async function fetchOrientation(cdnBase, src) {
+/* ---------- 单条回填：请求 OSS image/info → width/height ---------- */
+async function fetchImageInfo(cdnBase, src) {
     const url = new URL(src, cdnBase);
     url.searchParams.set('x-oss-process', 'image/info');
     // 超时中止：单条请求挂起不得永久占住并发池 worker
@@ -55,7 +60,7 @@ async function fetchOrientation(cdnBase, src) {
     const w = Number(info?.ImageWidth?.value);
     const h = Number(info?.ImageHeight?.value);
     if (!(w > 0 && h > 0)) throw new Error('missing ImageWidth/ImageHeight');
-    return w >= h ? 'landscape' : 'portrait';
+    return { width: w, height: h };
 }
 
 /* ---------- 并发池 ---------- */
@@ -78,53 +83,66 @@ const original = readFileSync(PHOTO_PATH, 'utf8');
 const eol = original.includes('\r\n') ? '\r\n' : '\n';
 const { header, entries } = parseBlocks(original);
 
-const pending = entries.filter((e) => e.src && !e.hasOrientation);
+const pending = entries.filter((e) => e.src && !e.hasDims);
 console.log(`total=${entries.length}  pending=${pending.length}  cdn=${cdnBase}`);
 
 const failed = [];
-await mapPool(pending, CONCURRENCY, async (e) => {
-    try {
-        e.orientation = await fetchOrientation(cdnBase, e.src);
-        console.log(`  ok   ${e.src}`);
-    } catch (err) {
-        failed.push(`${e.src}  (${err.message})`);
-        console.warn(`  FAIL ${e.src}  (${err.message})`);
-    }
-});
-
-const changed = pending.filter((e) => e.orientation).length;
-if (pending.length === 0) {
-    console.log('没有需要回填的条目，文件未修改');
-    process.exit(0);
+if (pending.length > 0) {
+    await mapPool(pending, CONCURRENCY, async (e) => {
+        try {
+            const info = await fetchImageInfo(cdnBase, e.src);
+            e.width = info.width;
+            e.height = info.height;
+            console.log(`  ok   ${e.src}`);
+        } catch (err) {
+            failed.push(`${e.src}  (${err.message})`);
+            console.warn(`  FAIL ${e.src}  (${err.message})`);
+        }
+    });
 }
-if (changed === 0) {
+
+const changed = pending.filter((e) => e.width).length;
+if (pending.length > 0 && changed === 0) {
     // 全部请求失败：以非零退出码报告，避免调用方（CI/手动）误判成功
     console.error(`全部 ${pending.length} 条请求失败，文件未修改：`);
     failed.forEach((f) => console.error(`  ${f}`));
     process.exit(1);
 }
 
-// 重建文件：orientation 行插在 location 行之后（与预处理脚本 FIELDS 顺序一致）
+// 重建文件：剥离已废弃的 orientation 行；width/height 插在 location 行之后（与预处理脚本 FIELDS 顺序一致）
 let out = header;
+let stripped = 0;
 for (const e of entries) {
     let block = e.block;
-    if (e.orientation) {
-        const locMatch = block.match(/^[ \t]*location\s*=\s*"[^"]*"\r?\n/m);
-        if (locMatch) {
-            const insertAt = locMatch.index + locMatch[0].length;
-            block = block.slice(0, insertAt) + `orientation = "${e.orientation}"${eol}` + block.slice(insertAt);
+    const before = block.length;
+    block = block.replace(/^[ \t]*orientation\s*=\s*"[^"]*"[ \t]*(?:\r?\n|$)/gm, '');
+    if (block.length !== before) stripped++;
+
+    let insert = '';
+    if (e.width) insert += `width = "${e.width}"${eol}height = "${e.height}"${eol}`;
+    if (insert) {
+        const anchor = block.match(/^[ \t]*location\s*=\s*"[^"]*"\r?\n/m);
+        if (anchor) {
+            const insertAt = anchor.index + anchor[0].length;
+            block = block.slice(0, insertAt) + insert + block.slice(insertAt);
         } else {
             // 块以换行开头（split 残留）：先剥掉，再补上 [[photo]] 标记后的换行，避免与标记拼在同一行
-            block = eol + `orientation = "${e.orientation}"${eol}` + block.replace(/^\r?\n/, '');
+            block = eol + insert + block.replace(/^\r?\n/, '');
         }
     }
     out += '[[photo]]' + block;
 }
+
+if (changed === 0 && stripped === 0) {
+    console.log('文件无需修改');
+    process.exit(0);
+}
+
 // 原子写入：先写临时文件再 rename，中断（Ctrl-C/断电）不会截断损坏原文件
 const tmpPath = PHOTO_PATH + '.tmp';
 writeFileSync(tmpPath, out, 'utf8');
 renameSync(tmpPath, PHOTO_PATH);
-console.log(`written: ${PHOTO_PATH}  (+${changed} orientation)`);
+console.log(`written: ${PHOTO_PATH}  (+${changed} 条补全，剥离 ${stripped} 条 orientation)`);
 if (failed.length) {
     console.warn(`失败 ${failed.length} 条（未写入字段）：`);
     failed.forEach((f) => console.warn(`  ${f}`));

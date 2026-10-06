@@ -9,3 +9,6 @@ Thumbs.db
 .idea/
 node_modules/
 scripts/vendor/
+
+# 内部设计计划文档，禁止发布
+DESIGN-PLANS.md

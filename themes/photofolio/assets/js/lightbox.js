@@ -1,4 +1,5 @@
-import { isSeriesSplit } from './gallery-filter.js';
+import { initPanelDrawer } from './lightbox-drawer.js';
+import { initPhotoAnalysis } from './lightbox-analysis.js';
 
 let inited = false;
 
@@ -17,8 +18,24 @@ export function initLightbox() {
     const lightboxClose = document.getElementById('lightbox-close');
     const btnPrev = document.getElementById('lightbox-prev');
     const btnNext = document.getElementById('lightbox-next');
+    // 元信息面板（桌面右栏 / 窄屏底部抽屉）
+    const panel = document.getElementById('lightbox-panel');
+    const panelDetails = document.getElementById('lightbox-panel-details');
+    const panelToggle = document.getElementById('lightbox-panel-toggle');
+    const exifList = document.getElementById('lightbox-exif');
+    const histogramWrap = document.getElementById('lightbox-histogram-wrap');
+    const histogramCanvas = document.getElementById('lightbox-histogram');
+    const paletteWrap = document.getElementById('lightbox-palette-wrap');
+    const paletteEl = document.getElementById('lightbox-palette');
+    const storyWrap = document.getElementById('lightbox-story-wrap');
+    const storyEl = document.getElementById('lightbox-story');
 
     if (!lightbox || !lightboxImg) return;
+
+    // 窄屏底部抽屉（<769px）：展开/收起、滚轮与拖动手势（独立模块，见 lightbox-drawer.js）
+    const drawer = initPanelDrawer({ lightbox, panel, panelDetails, panelToggle, metaEl: lightboxMeta });
+    // 图片分析：直方图与色卡（独立模块，见 lightbox-analysis.js）
+    const analysis = initPhotoAnalysis({ histogramWrap, histogramCanvas, paletteWrap, paletteEl });
 
     let currentPhotos = [];
     let currentIndex = -1;
@@ -30,23 +47,24 @@ export function initLightbox() {
     function collectPhotos() {
         const wrappers = document.querySelectorAll('.photo-wrapper');
         currentPhotos = [];
-        // 拆分模式整页恒定（每页一个网格），页面级查一次而非逐项 closest
-        const split = isSeriesSplit(document.getElementById('masonry-grid'));
-        wrappers.forEach(w => {
-            // 组照封面也纳入左右箭头浏览（点击封面本身仍跳转组照详情页，由点击守卫处理）
-            const img = w.querySelector('img');
+        wrappers.forEach(wrapper => {
+            const img = wrapper.querySelector('img');
             if (!img || !img.getAttribute('src')) return; // 未揭示的照片还没有 src（无限滚动尚未加载），跳过——箭头仅停留在已加载的最后一张
-            const item = w.closest('.masonry-item');
+            const item = wrapper.closest('.masonry-item');
             if (item && item.classList.contains('is-hidden')) return; // 被当前筛选隐藏的照片不进箭头集合
-            const card = w.closest('.photo-card');
+            const card = wrapper.closest('.photo-card');
             currentPhotos.push({
                 src: img.dataset.fullSrc || img.src,
                 alt: img.alt,
-                // 范围筛选拆分模式：封面标题显示照片自身名称（img.alt），而非组照名（data-title）
-                title: card ? (split ? img.alt : (card.dataset.title || '')) : '',
+                title: card ? (card.dataset.title || '') : '',
                 place: card ? (card.dataset.place || '') : '',
                 date: card ? (card.dataset.date || '') : '',
-                exif: card ? (card.dataset.exif || '') : ''
+                exif: card ? (card.dataset.exif || '') : '',
+                description: card ? (card.dataset.description || '') : '',
+                focus: card ? (card.dataset.focus || '') : '',
+                aperture: card ? (card.dataset.aperture || '') : '',
+                shutter: card ? (card.dataset.shutter || '') : '',
+                iso: card ? (card.dataset.iso || '') : ''
             });
         });
     }
@@ -57,7 +75,7 @@ export function initLightbox() {
         img.src = url;
     }
 
-    // 元信息单行显示：地点 / 日期 / 拍摄参数（带图标，组间空格分隔）；空项隐藏，全空则隐藏整个区域
+    // 简略信息行：地点 / 日期 / 拍摄参数（带图标，组间空格分隔）；空项隐藏，全空则隐藏整个区域
     function setMeta(p) {
         if (!lightboxMeta) return;
         const rows = [
@@ -73,6 +91,38 @@ export function initLightbox() {
             if (text) any = true;
         });
         lightboxMeta.style.display = any ? '' : 'none';
+    }
+
+    // EXIF 分行列表：行结构（图标/标签）由模板渲染，这里只填值（空项隐藏）
+    function renderExif(p) {
+        if (!exifList) return;
+        const rows = [
+            { key: 'focus', value: p.focus, prefix: '', suffix: 'mm' },
+            { key: 'aperture', value: p.aperture, prefix: 'f/', suffix: '' },
+            { key: 'shutter', value: p.shutter, prefix: '', suffix: 's' },
+            { key: 'iso', value: p.iso, prefix: 'ISO', suffix: '' }
+        ];
+        exifList.querySelectorAll('li').forEach((li) => {
+            const row = rows.find(r => r.key === li.dataset.exifKey);
+            const valueEl = li.querySelector('.exif-value');
+            if (!row || !row.value) {
+                li.style.display = 'none';
+                return;
+            }
+            li.style.display = '';
+            valueEl.textContent = row.prefix + row.value + row.suffix;
+        });
+    }
+
+    // 渲染整个元信息面板（标题 / 简行 / EXIF 分行 / 直方图与色卡 / 故事）
+    function renderPanel(p) {
+        if (lightboxCaption) lightboxCaption.textContent = p.title;
+        setMeta(p);
+        renderExif(p);
+        if (storyWrap) storyWrap.style.display = p.description ? '' : 'none';
+        if (storyEl) storyEl.textContent = p.description || '';
+        analysis.analyze(p.src);
+        if (panelDetails) panelDetails.scrollTop = 0;
     }
 
     function open(index) {
@@ -108,8 +158,7 @@ export function initLightbox() {
                 lightboxImg.style.transform = `translateX(${dir * 12}%)`;
                 lightboxImg.src = p.src;
                 lightboxImg.alt = p.alt;
-                if (lightboxCaption) lightboxCaption.textContent = p.title;
-                setMeta(p);
+                renderPanel(p);
                 lightboxImg.offsetHeight; // 强制 reflow
 
                 // 新图滑入归位并淡入
@@ -134,8 +183,9 @@ export function initLightbox() {
             });
         } else {
             lightboxImg.style.opacity = '0';
-            if (lightboxCaption) { lightboxCaption.style.opacity = '0'; lightboxCaption.textContent = p.title; }
-            setMeta(p);
+            renderPanel(p);
+            // 在灯箱激活前重置抽屉为收起态：避免旧展开状态先显示一帧导致图片大小反弹
+            drawer.reset();
             if (lightboxMeta) lightboxMeta.style.opacity = '0';
 
             lightboxImg.src = p.src;
@@ -150,14 +200,12 @@ export function initLightbox() {
 
             if (lightboxImg.complete) {
                 lightboxImg.style.opacity = '1';
-                if (lightboxCaption) lightboxCaption.style.opacity = '1';
-                if (lightboxMeta) lightboxMeta.style.opacity = '1';
+                revealOverlayText();
             } else {
                 lightboxImg.addEventListener('load', function onLoad() {
                     lightboxImg.removeEventListener('load', onLoad);
                     lightboxImg.style.opacity = '1';
-                    if (lightboxCaption) lightboxCaption.style.opacity = '1';
-                    if (lightboxMeta) lightboxMeta.style.opacity = '1';
+                    revealOverlayText();
                 });
             }
         }
@@ -192,15 +240,17 @@ export function initLightbox() {
         btnNext.style.display = hasMultiple ? '' : 'none';
     }
 
+    // 标题与简行的透明度恢复（图片就绪路径共用）
+    function revealOverlayText() {
+        if (lightboxCaption) lightboxCaption.style.opacity = '1';
+        if (lightboxMeta) lightboxMeta.style.opacity = '1';
+    }
+
     // 点击照片打开
-    document.addEventListener('click', function (e) {
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('a')) return; // 链接点击（组照徽章等）不触发灯箱
         const wrapper = e.target.closest('.photo-wrapper');
         if (!wrapper) return;
-        // 范围筛选拆分模式：封面链接不再跳组照详情，改开灯箱（SPA 拦截已对该链接放行）
-        const split = isSeriesSplit(wrapper);
-        const link = e.target.closest('a');
-        if (!split && (link || wrapper.querySelector('a.series-link'))) return; // 非拆分：链接点击（组照封面/分类标签）不触发灯箱
-        if (link) e.preventDefault(); // 拆分模式下阻止封面链接默认跳转（非拆分带链接已提前返回）
         const img = wrapper.querySelector('img');
         if (!img) return;
         collectPhotos();

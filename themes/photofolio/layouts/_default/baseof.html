@@ -19,13 +19,9 @@
         var grid = document.getElementById('masonry-grid');
         if (!grid) return;
         var pageSize = parseInt(trigger.dataset.pageSize, 10) || 12;
-        // 组照内页等默认不入分页队列的项同样预隐藏（与 masonry 的 data-hidden-selector 同源）
-        var hiddenSel = grid.dataset.hiddenSelector || '';
         var items = grid.querySelectorAll('.masonry-item');
-        for (var i = 0; i < items.length; i++) {
-            if (i >= pageSize || (hiddenSel && items[i].matches(hiddenSel))) {
-                items[i].classList.add('is-hidden');
-            }
+        for (var i = pageSize; i < items.length; i++) {
+            items[i].classList.add('is-hidden');
         }
     })();
     </script>
@@ -48,25 +44,68 @@
             {{ hugo.Data.svg.chevron_right | safeHTML }}
         </button>
         <div class="lightbox-content">
-            <div class="lightbox-img-area">
-                <img src="" alt="" id="lightbox-img">
-            </div>
-            <div class="lightbox-info">
-                <div class="lightbox-caption" id="lightbox-caption"></div>
-                <div class="lightbox-meta" id="lightbox-meta">
-                    <div class="lightbox-meta-group" id="lightbox-meta-place">
-                        <span class="icon">{{ hugo.Data.svg.location | safeHTML }}</span>
-                        <span class="lightbox-meta-text"></span>
-                    </div>
-                    <div class="lightbox-meta-group" id="lightbox-meta-date">
-                        <span class="icon">{{ hugo.Data.svg.calendar | safeHTML }}</span>
-                        <span class="lightbox-meta-text"></span>
-                    </div>
-                    <div class="lightbox-meta-group" id="lightbox-meta-exif">
-                        <span class="icon">{{ hugo.Data.svg.settings | safeHTML }}</span>
-                        <span class="lightbox-meta-text"></span>
-                    </div>
+            <div class="lightbox-main">
+                <div class="lightbox-img-area">
+                    <img src="" alt="" id="lightbox-img" draggable="false">
                 </div>
+                <aside class="lightbox-panel" id="lightbox-panel">
+                    <div class="lightbox-caption" id="lightbox-caption"></div>
+                    <div class="lightbox-panel-details" id="lightbox-panel-details">
+                        <div class="lightbox-meta" id="lightbox-meta">
+                            <div class="lightbox-meta-group" id="lightbox-meta-place">
+                                <span class="icon">{{ hugo.Data.svg.location | safeHTML }}</span>
+                                <span class="lightbox-meta-label">{{ i18n "lightbox_place" }}</span>
+                                <span class="lightbox-meta-text"></span>
+                            </div>
+                            <div class="lightbox-meta-group" id="lightbox-meta-date">
+                                <span class="icon">{{ hugo.Data.svg.calendar | safeHTML }}</span>
+                                <span class="lightbox-meta-label">{{ i18n "lightbox_date" }}</span>
+                                <span class="lightbox-meta-text"></span>
+                            </div>
+                            <div class="lightbox-meta-group" id="lightbox-meta-exif">
+                                <span class="icon">{{ hugo.Data.svg.settings | safeHTML }}</span>
+                                <span class="lightbox-meta-text"></span>
+                            </div>
+                        </div>
+                        <ul class="lightbox-exif" id="lightbox-exif">
+                            <li data-exif-key="focus">
+                                <span class="exif-icon">{{ hugo.Data.svg.lens | safeHTML }}</span>
+                                <span class="exif-label">{{ i18n "exif_focus" }}</span>
+                                <span class="exif-value"></span>
+                            </li>
+                            <li data-exif-key="aperture">
+                                <span class="exif-icon">{{ hugo.Data.svg.aperture | safeHTML }}</span>
+                                <span class="exif-label">{{ i18n "exif_aperture" }}</span>
+                                <span class="exif-value"></span>
+                            </li>
+                            <li data-exif-key="shutter">
+                                <span class="exif-icon">{{ hugo.Data.svg.shutter | safeHTML }}</span>
+                                <span class="exif-label">{{ i18n "exif_shutter" }}</span>
+                                <span class="exif-value"></span>
+                            </li>
+                            <li data-exif-key="iso">
+                                <span class="exif-icon">{{ hugo.Data.svg.iso | safeHTML }}</span>
+                                <span class="exif-label">{{ i18n "exif_iso" }}</span>
+                                <span class="exif-value"></span>
+                            </li>
+                        </ul>
+                        <div class="lightbox-histogram-wrap" id="lightbox-histogram-wrap">
+                            <h4 class="lightbox-section-title">{{ i18n "lightbox_histogram" }}</h4>
+                            <canvas class="lightbox-histogram" id="lightbox-histogram"></canvas>
+                        </div>
+                        <div class="lightbox-palette-wrap" id="lightbox-palette-wrap">
+                            <h4 class="lightbox-section-title">{{ i18n "lightbox_palette" }}</h4>
+                            <div class="lightbox-palette" id="lightbox-palette"></div>
+                        </div>
+                        <div class="lightbox-story-wrap" id="lightbox-story-wrap">
+                            <h4 class="lightbox-section-title">{{ i18n "lightbox_story" }}</h4>
+                            <p class="lightbox-story" id="lightbox-story"></p>
+                        </div>
+                    </div>
+                    <button class="lightbox-panel-toggle" id="lightbox-panel-toggle" aria-label="{{ i18n "lightbox_expand" }}" aria-expanded="false" data-expand-label="{{ i18n "lightbox_expand" }}" data-collapse-label="{{ i18n "lightbox_collapse" }}">
+                        {{ hugo.Data.svg.arrow_down | safeHTML }}
+                    </button>
+                </aside>
             </div>
         </div>
     </div>

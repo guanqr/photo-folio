@@ -5,10 +5,15 @@
     z-index: var(--z-lightbox);
     background: var(--color-lightbox-bg);
     display: flex;
-    flex-direction: column; /* 上下分区：上方图片区、底部信息区 */
+    flex-direction: column; /* 上下分区：顶部关闭栏、下方主区 */
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s, visibility 0.3s;
+    /* 抽屉拖动手势：禁止浏览器滚动接管（否则拖动一小段即触发 pointercancel） */
+    touch-action: none;
+
+    /* 桌面端右侧元信息面板宽度（箭头按钮右移避让用同一变量） */
+    --lightbox-panel-w: 22em;
 
     &.active {
         opacity: 1;
@@ -33,7 +38,7 @@
     transition: opacity var(--transition-opacity); /* 两层背景交叉淡入淡出 */
 }
 
-/* 上下分区：上方图片区（flex:1 自适应）、底部固定信息区，互不干涉、都能完整显示 */
+/* 主区：移动优先纵向（图片上、元信息下），桌面端横向（图片左、元信息面板右） */
 .lightbox-content {
     position: relative;
     z-index: 2;
@@ -43,19 +48,26 @@
     flex-direction: column;
 }
 
-/* 顶部独立一行：关闭按钮吸附顶部 */
+.lightbox-main {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 顶部独立一行：关闭按钮绝对定位在右缘；z-index 高于 content（绝对定位后必须，否则被内容层盖住点不到） */
 .lightbox-topbar {
     position: relative;
-    z-index: 2;
+    z-index: 3;
     flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
     height: 4em;
-    padding: 0 1em;
 }
 
 .lightbox-close {
+    /* 与左右箭头同一套定位机制：绝对定位 + right: 1em，保证与箭头严格同列 */
+    position: absolute;
+    top: 0.5em; /* 顶栏 4em 内垂直居中 */
+    right: 1em;
     background: var(--color-lightbox-ctrl-bg);
     border: none;
     color: var(--color-lightbox-ctrl-text);
@@ -91,25 +103,23 @@
     color: var(--color-lightbox-ctrl-text);
     cursor: pointer;
     width: 3em;
-    height: 4.8em;
+    height: 3em;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 0.375em;
-    opacity: 0;
-    transition: background 0.2s, color 0.2s, transform var(--transition-35), opacity 0.35s ease;
+    border-radius: 50%; /* 与关闭（叉号）按钮一致：圆形 */
+    transition: background 0.2s, color 0.2s, transform var(--transition-35);
     z-index: var(--z-lightbox-arrow);
     -webkit-tap-highlight-color: transparent;
 
     &:hover {
-        opacity: 1;
         background: var(--color-lightbox-ctrl-hover);
         color: var(--color-lightbox-ctrl-text-hover);
     }
 
     svg {
-        width: 1.8em;
-        height: 1.8em;
+        width: 1.5em;
+        height: 1.5em;
     }
 
     &:active {
@@ -118,14 +128,15 @@
 }
 
 .lightbox-prev {
-    left: 0.75em;
-    &:hover { transform: translateY(-50%) translateX(-0.25em); }
-    &:active { transform: translateY(-50%) translateX(-0.25em) scale(0.9); }
+    left: 1em; /* 与顶栏内边距一致 */
+    /* 无水平位移：与叉号保持同一列对齐（悬停仅变背景/颜色） */
+    &:hover { transform: translateY(-50%); }
+    &:active { transform: translateY(-50%) scale(0.9); }
 }
 .lightbox-next {
-    right: 0.75em;
-    &:hover { transform: translateY(-50%) translateX(0.25em); }
-    &:active { transform: translateY(-50%) translateX(0.25em) scale(0.9); }
+    right: 1em; /* 与顶部叉号右缘对齐（同为 3em 宽、右边距 1em） */
+    &:hover { transform: translateY(-50%); }
+    &:active { transform: translateY(-50%) scale(0.9); }
 }
 
 .lightbox-img-area {
@@ -136,6 +147,8 @@
     justify-content: center;
     overflow: hidden; /* 水平滑动切换时图片裁剪在图片区内 */
     padding: 1em;
+    user-select: none; /* 长按拖动抽屉时避免选中/拖图 */
+    transition: padding 0.4s ease; /* 断点切换时左侧留白平滑过渡 */
 
     img {
         max-width: 100%;
@@ -146,22 +159,22 @@
            参考储卫民摄影站的主图同样无阴影，靠毛玻璃背景衬出 */
         opacity: 0;
         transition: opacity var(--transition-opacity);
+        /* 禁用浏览器原生图片拖拽（会吞掉 pointermove，导致抽屉拖动失效） */
+        -webkit-user-drag: none;
+        user-drag: none;
     }
 }
 
-/* 底部固定信息区：吸附底部，高度固定不变（不随照片比例变化） */
-.lightbox-info {
-    flex-shrink: 0;
-    align-self: center;
-    max-width: 50em;
+/* 元信息面板：移动优先——图片下方，折叠态只露简行，点箭头展开详情 */
+.lightbox-panel {
+    flex: none;
+    position: relative; /* 右侧下拉进度条的定位包含块 */
     width: 100%;
-    height: 10em;
-    max-height: 30vh;
-    overflow-y: auto;
-    text-align: center;
-    padding: 0.75em 1em;
-    scrollbar-width: none;
-    &::-webkit-scrollbar { display: none; }
+    display: flex;
+    flex-direction: column;
+    border-top: 0.0625em solid var(--color-border);
+    padding: 0.75em 1em 0.9em;
+    transition: border-color var(--transition-border);
 }
 
 .lightbox-caption {
@@ -169,28 +182,18 @@
     font-family: var(--font-heading);
     font-size: 1.2em;
     font-weight: 400;
-    margin-bottom: 0.5em;
+    margin-bottom: 0.35em;
     transition: opacity var(--transition-opacity);
 }
 
-/* 完整元信息（地点 / 日期 / 拍摄参数），位于放大图底部，带图标显示、组间空格分隔；
-   移动优先：窄屏每组一行，桌面端恢复单行 */
+/* 简略信息（地点 / 日期）：位于详情区顶部——收起态默认可见，随内容滚动（仅标题固定） */
 .lightbox-meta {
     display: flex;
     flex-wrap: nowrap;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35em;
-    margin-top: 0.5em;
+    align-items: stretch;
+    gap: 0.25em;
     transition: opacity var(--transition-opacity);
-}
-
-@media (min-width: 769px) {
-    .lightbox-meta {
-        flex-direction: row;
-        gap: 0.75em;
-    }
 }
 
 .lightbox-meta-group {
@@ -202,6 +205,16 @@
     font-family: var(--font-meta);
     font-size: 0.9em;
 
+    .lightbox-meta-label {
+        color: var(--color-text);
+        flex: none;
+    }
+
+    .lightbox-meta-text {
+        margin-left: auto;
+        text-align: right;
+    }
+
     .icon {
         color: var(--color-accent);
         display: flex;
@@ -211,5 +224,292 @@
             width: 0.9em;
             height: 0.9em;
         }
+    }
+}
+
+/* 简行 EXIF 组全局隐藏：EXIF 已由分行列表完整展示（折叠态仅保留标题/地點/日期） */
+#lightbox-meta-exif {
+    display: none;
+}
+
+/* 详情区：窄屏折叠（max-height 过渡），展开后限高滚动；桌面端常显并整体滚动 */
+.lightbox-panel-details {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.4s ease, opacity 0.3s ease;
+    touch-action: pan-y; /* 详情区保留纵向触摸滚动（灯箱其余区域为抽屉拖动） */
+    padding-right: 0.5em; /* 内容与滚动条之间留出间距（窄屏） */
+    /* 统一细滚动条（窄屏/桌面共用）：细圆角滑块、透明轨道 */
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+
+    &::-webkit-scrollbar {
+        width: 0.375em;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: var(--color-border);
+        border-radius: 9999px;
+
+        &:hover {
+            background: var(--color-text-muted);
+        }
+    }
+
+    &::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .lightbox-panel.is-open & {
+        /* 兜底值（JS 会按「50% 视口 − 面板头部」精确覆盖）：下拉到底图片区不小于页面一半 */
+        max-height: calc(50vh - 9em);
+        opacity: 1;
+        overflow-y: auto;
+    }
+}
+
+/* 展开/收起箭头：窄屏显示（点击一次到达最底部/再点收起），桌面端隐藏 */
+.lightbox-panel-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    background: none;
+    border: none;
+    color: var(--color-lightbox-ctrl-text);
+    cursor: pointer;
+    padding: 0.2em 1em;
+    -webkit-tap-highlight-color: transparent;
+    transition: color 0.2s;
+
+    &:hover { color: var(--color-lightbox-ctrl-text-hover); }
+
+    svg {
+        width: 1.1em;
+        height: 1.1em;
+        transition: transform var(--transition-spring);
+    }
+
+    .lightbox-panel.is-open & svg {
+        transform: rotate(180deg);
+    }
+}
+
+/* EXIF 分行列表（图标/标签/值，行结构由模板渲染）；顶距与行距一致（0.45em），
+   与上方简行（日期）之间的间距不比其他行大 */
+.lightbox-exif {
+    list-style: none;
+    margin-top: 0.45em;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45em;
+    font-family: var(--font-meta);
+    font-size: 0.9em;
+
+    li {
+        display: flex;
+        align-items: center;
+        gap: 0.5em;
+    }
+
+    .exif-icon {
+        display: flex;
+        flex: none;
+        color: var(--color-accent);
+
+        svg {
+            width: 0.95em;
+            height: 0.95em;
+        }
+    }
+
+    .exif-label {
+        color: var(--color-text);
+        flex: none;
+    }
+
+    .exif-value {
+        color: var(--color-text);
+        margin-left: auto;
+        text-align: right;
+    }
+}
+
+/* 色彩直方图：JS 计算绘制（Camera Raw 风格——对数纵轴平滑曲线、RGB 加法混合）；
+   CORS 未开启时整块隐藏（优雅降级） */
+.lightbox-histogram-wrap {
+    margin-top: 1.1em;
+}
+
+.lightbox-histogram {
+    display: block;
+    width: 100%;
+    height: 6em;
+    border-radius: 0.25em;
+    background: var(--color-lightbox-ctrl-bg);
+}
+
+/* 断点切换过渡：布局方向（列↔行）是离散跳变，用面板/图片区的动画柔化；
+   prefers-reduced-motion 时关闭 */
+@media (prefers-reduced-motion: no-preference) {
+    .lightbox.is-layout-switching .lightbox-panel {
+        animation: panel-layout-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .lightbox.is-layout-switching .lightbox-img-area {
+        animation: img-layout-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+}
+
+@keyframes panel-layout-in {
+    from {
+        opacity: 0;
+        transform: translateY(2.5em) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes img-layout-in {
+    from {
+        opacity: 0.5;
+        transform: scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* 色卡：JS 提取的 7 个主色（与直方图共用采样管线）——每行：色块 + hex + 占比 */
+.lightbox-palette-wrap {
+    margin-top: 1.1em;
+}
+
+.lightbox-palette {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6em;
+    margin-top: 0.5em;
+}
+
+.lightbox-palette-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    font-family: var(--font-meta);
+    font-size: 0.8em;
+}
+
+.lightbox-palette-swatch {
+    width: 3em;
+    height: 3em;
+    flex: none;
+    border-radius: 0.3em; /* 圆角正方形 */
+    border: 0.0625em solid var(--color-overlay-subtle);
+}
+
+.lightbox-palette-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.lightbox-palette-hex {
+    color: var(--color-text-secondary);
+}
+
+.lightbox-palette-pct {
+    color: var(--color-text);
+    flex: none;
+    align-self: center; /* 靠右、上下均中（相对 hex/HSL 两行） */
+    margin-left: auto;
+}
+
+.lightbox-palette-hsl {
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 照片背后的故事 / 直方图 等区块标题（与 EXIF 标签同款：白色、同字号） */
+.lightbox-story-wrap {
+    margin-top: 1.1em;
+}
+
+.lightbox-section-title {
+    font-family: var(--font-meta);
+    font-size: 0.9em;
+    font-weight: 400;
+    color: var(--color-text);
+    margin-bottom: 0.5em;
+    transition: color var(--transition-color);
+}
+
+.lightbox-story {
+    font-size: 0.9em;
+    line-height: 1.8;
+    color: var(--color-text-secondary);
+    margin: 0;
+    transition: color var(--transition-color);
+}
+
+/* 桌面端：图片左、面板右（面板常显、详情区内部滚动），下一张箭头右移避让面板 */
+@media (min-width: 769px) {
+    /* 关闭栏脱离文档流：图片区在整屏高度内垂直居中（不再因顶部 4em 关闭栏而整体靠下） */
+    .lightbox-topbar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+    }
+
+    .lightbox-main {
+        flex-direction: row;
+    }
+
+    /* 图片区左侧留出箭头列（与右侧面板外缘的 4.25em 对称）：照片不贴左缘、不被左箭头遮挡 */
+    .lightbox-img-area {
+        padding-left: 4.25em;
+    }
+
+    .lightbox-panel {
+        flex: none;
+        width: var(--lightbox-panel-w);
+        height: 100%;
+        border-top: none;
+        border-left: 0.0625em solid var(--color-border);
+        /* 顶部留出悬浮关闭按钮的高度（4em + 间距）；右侧留出箭头按钮列（0.75+3+0.5） */
+        padding: 4.5em 1.25em 1em;
+        margin-right: 4.25em;
+    }
+
+    .lightbox-panel-details {
+        flex: 1;
+        min-height: 0;
+        max-height: none;
+        opacity: 1;
+        overflow-y: auto;
+        padding-right: 0.75em; /* 内容与滚动条之间留出间距（桌面） */
+        scrollbar-width: thin;
+    }
+
+    .lightbox-panel-toggle {
+        display: none;
+    }
+
+    /* 箭头边距与顶栏一致（向右箭头与叉号右缘对齐） */
+    .lightbox-prev {
+        left: 1em;
+    }
+
+    .lightbox-next {
+        right: 1em;
     }
 }

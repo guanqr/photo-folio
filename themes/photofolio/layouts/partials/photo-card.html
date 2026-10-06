@@ -25,12 +25,11 @@
 {{ $categoryKey := $photo.category }}
 {{ $seriesName := $photo.series }}
 {{ $isCover := $photo.is_cover }}
-{{ $isInner := and $seriesName (not $isCover) }}
 
-{{/* 计算该组照的真实总照片数（包含内页） */}}
-{{ $seriesCount := 0 }}
-{{ if and $seriesName $isCover }}
-    {{ $seriesCount = len (where hugo.Data.photo.photo "series" $seriesName) }}
+{{/* 构图方向：一律由真实宽高推导（宽 ≥ 高含相等 = landscape）；orientation 字段已废弃 */}}
+{{ $orientation := "" }}
+{{ if and $photo.width $photo.height }}
+    {{ $orientation = cond (ge (int $photo.width) (int $photo.height)) "landscape" "portrait" }}
 {{ end }}
 
 {{ $categoryPage := site.GetPage $categoryKey }}
@@ -38,7 +37,7 @@
 
 {{/* 反查组照的英文 URL (仅在需要渲染组照链接时需要) */}}
 {{ $seriesUrl := "" }}
-{{ if and $seriesName $isCover (not $asIndividual) }}
+{{ if and $seriesName (not $asIndividual) }}
     {{ $seriesSection := site.GetPage "/series" }}
     {{ $seriesPage := false }}
     {{ if $seriesSection }}
@@ -55,11 +54,8 @@
     {{ end }}
 {{ end }}
 
-{{/* 【核心逻辑 1】决定显示的标题：如果渲染组照链接且是组照封面，显示组照名；否则显示照片自己的 alt */}}
+{{/* 卡片/灯箱标题：一律显示照片自己的 alt（组照封面点击已改为开灯箱，不再显示组照名） */}}
 {{ $displayTitle := $altText }}
-{{ if and $seriesName $isCover (not $asIndividual) }}
-    {{ $displayTitle = $seriesName }}
-{{ end }}
 
 {{/* 灯箱完整元信息（地点 · 分类 · 日期 · EXIF）：通过 data 属性传给灯箱，卡片上仅显示标题 */}}
 {{ $dateStr := "" }}
@@ -75,28 +71,28 @@
 {{ with $shutter }}{{ $exif = $exif | append (printf "%ss" .) }}{{ end }}
 {{ with $iso }}{{ $exif = $exif | append (printf "ISO%s" .) }}{{ end }}
 
-<div class="masonry-item" data-year="{{ $year }}" data-location="{{ $photo.location }}" data-category="{{ $photo.category }}" data-scope="{{ if $photo.featured }}featured {{ end }}{{ $photo.orientation }}" {{ if $isInner }}data-series-inner="true"{{ end }}>
+<div class="masonry-item" data-year="{{ $year }}" data-location="{{ $photo.location }}" data-category="{{ $photo.category }}" data-scope="{{ if $photo.featured }}featured {{ end }}{{ $orientation }}">
     <div class="photo-card"
         data-title="{{ $displayTitle }}"
         {{ with $description }}data-description="{{ . }}"{{ end }}
         {{ with $place }}data-place="{{ . }}"{{ end }}
         {{ with $categoryTitle }}data-category="{{ . }}"{{ end }}
         {{ with $dateStr }}data-date="{{ . }}"{{ end }}
-        {{ with $exif }}data-exif="{{ delimit . " · " }}"{{ end }}>
+        {{ with $exif }}data-exif="{{ delimit . " · " }}"{{ end }}
+        {{ with $focus }}data-focus="{{ . }}"{{ end }}
+        {{ with $aperture }}data-aperture="{{ . }}"{{ end }}
+        {{ with $shutter }}data-shutter="{{ . }}"{{ end }}
+        {{ with $iso }}data-iso="{{ . }}"{{ end }}>
 
-        {{/* 【核心逻辑 2】组照封面渲染为 a 标签带图标（仅包裹图片）；否则渲染普通 img 支持 Lightbox 放大。
+        {{/* 照片一律渲染普通 img（点击开灯箱）；组照所有照片（封面+内页）右上角渲染图标链接
+            （仅图标，点击跳组照详情页）。
             卡片上不显示任何元信息，标题与完整元信息仅在灯箱放大后显示，wrapper 统一用 div 避免 a 嵌套 a */}}
         <div class="photo-wrapper">
-            {{ if and $seriesName $isCover (not $asIndividual) }}
-                <a href="{{ $seriesUrl }}" class="series-link" title='{{ i18n "view_series" (dict "Series" $seriesName) }}'>
-                    <img data-src="{{ $srcUrl }}" data-full-src="{{ $fullUrl }}" alt="{{ $altText }}" loading="lazy" class="photo-img">
-                </a>
-                <div class="series-badge">
+            <img data-src="{{ $srcUrl }}" data-full-src="{{ $fullUrl }}" alt="{{ $altText }}" loading="lazy" class="photo-img" {{ with $photo.width }}width="{{ . }}"{{ end }} {{ with $photo.height }}height="{{ . }}"{{ end }}>
+            {{ if and $seriesName (not $asIndividual) }}
+                <a href="{{ $seriesUrl }}" class="series-badge" title='{{ i18n "view_series" (dict "Series" $seriesName) }}'>
                     <span class="icon">{{ hugo.Data.svg.layers | safeHTML }}</span>
-                    <span class="count">{{ $seriesCount }}</span>
-                </div>
-            {{ else }}
-                <img data-src="{{ $srcUrl }}" data-full-src="{{ $fullUrl }}" alt="{{ $altText }}" loading="lazy" class="photo-img">
+                </a>
             {{ end }}
         </div>
     </div>

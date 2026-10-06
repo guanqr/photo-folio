@@ -25,11 +25,10 @@
     {{ end }}
 {{ end }}
 
-{{/* 网格渲染集：画廊页额外包含组照内页（带 data-series-inner 标记），
-    默认被网格的 data-hidden-selector 排除在分页队列外；
-    作品範圍筛选激活（非全部）时由 gallery-filter 放行，按横竖构图/精選单独展示 */}}
-{{ $gridPhotos := $displayPhotos }}
-{{ if eq $sectionName "gallery" }}{{ $gridPhotos = $realPhotos }}{{ end }}
+{{/* 网格渲染集：全站一致——组照拆分为全部照片（封面+内页）展示；
+    画廊与分类页均用 $realPhotos（分类页已按 category 过滤，同样含内页）；
+    $displayPhotos（仅封面）保留给画廊筛选选项推导 */}}
+{{ $gridPhotos := $realPhotos }}
 
 {{/* 全部作品页：筛选栏选项（年度 desc、地点/类别按照片数 desc） */}}
 {{ $years := slice }}
@@ -65,12 +64,12 @@
     {{ range $catNames }}{{ $catList = $catList | append (dict "name" . "count" (index $catCount .)) }}{{ end }}
     {{ $catList = sort $catList "count" "desc" }}
 
-    {{/* 数据完整性：orientation 缺失时橫/豎構圖筛选会静默漏图，构建期提醒补跑 scripts/backfill-orientation.mjs */}}
-    {{ $missingOri := slice }}
+    {{/* 数据完整性：缺宽高时橫/豎構圖筛选会静默漏图（宽高由预处理脚本生成、构图由模板推导） */}}
+    {{ $missingDims := slice }}
     {{ range $sortedPhotos }}
-        {{ if not .orientation }}{{ $missingOri = $missingOri | append .src }}{{ end }}
+        {{ if or (not .width) (not .height) }}{{ $missingDims = $missingDims | append .src }}{{ end }}
     {{ end }}
-    {{ if $missingOri }}{{ warnf "photo.toml 缺 orientation 字段（橫/豎構圖筛选不匹配）：%s" (delimit $missingOri "、") }}{{ end }}
+    {{ if $missingDims }}{{ warnf "photo.toml 缺 width/height（橫/豎構圖筛选不匹配）：%s" (delimit $missingDims "、") }}{{ end }}
 {{ end }}
 
 <section class="gallery-page">
@@ -137,8 +136,8 @@
             {{ end }}
         </div>
         {{ end }}
-        <div class="masonry-grid" id="masonry-grid" {{ if eq $sectionName "gallery" }}data-hidden-selector="[data-series-inner]"{{ end }}>
-            <!-- 渲染时使用过滤后的 gridPhotos（画廊页含组照内页，默认不进入分页队列） -->
+        <div class="masonry-grid" id="masonry-grid">
+            <!-- 渲染全部照片（组照拆分为封面+内页） -->
             {{ range $gridPhotos }}
                 {{ partial "photo-card.html" (dict "photo" . "site" $.Site) }}
             {{ end }}

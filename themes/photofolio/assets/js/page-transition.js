@@ -1,8 +1,6 @@
 /**
  * 页面切换：拦截站内导航，仅替换主内容区，保持 header/footer 不重载
  */
-import { isSeriesSplit } from './gallery-filter.js';
-
 let reinitFn = null;
 
 export function initPageTransition(reinit) {
@@ -25,11 +23,6 @@ export function initPageTransition(reinit) {
 }
 
 function shouldIntercept(link) {
-    // 范围筛选拆分模式：网格内链接由灯箱接管（不拦截，交给 lightbox 的 preventDefault；
-    // 判定复用 gallery-filter 导出的 isSeriesSplit，与灯箱侧条件同源）
-    if (isSeriesSplit(link)) {
-        return false;
-    }
     return (
         link.host === location.host &&
         !link.hash &&

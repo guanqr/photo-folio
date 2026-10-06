@@ -30,17 +30,13 @@ export function initMasonry(skipInitialReveal = false) {
     // 否则未揭示的照片会以原始尺寸占据版面，造成大片空白、已排好的行被顶到底部）
     allItems.forEach((item) => item.classList.add('is-hidden'));
 
-    // 网格元素上的 data-hidden-selector（如画廊页的组照内页）：
-    // 匹配项默认不进入分页队列，只有筛选重启显式把其纳入匹配集合时才会揭示
-    const hiddenSel = grid.dataset.hiddenSelector || '';
-
     const trigger = document.getElementById('load-more-trigger');
     const pageSize = trigger ? (parseInt(trigger.dataset.pageSize, 10) || 12) : 12;
 
     // 记忆触发器原始 HTML（筛选模式隐藏触发器，重置筛选时恢复）
     if (trigger && !grid._triggerHtml) grid._triggerHtml = trigger.innerHTML;
 
-    grid._pendingItems = allItems.filter((item) => !hiddenSel || !item.matches(hiddenSel));
+    grid._pendingItems = [...allItems];
     grid._shownItems = [];
     grid._ratios = new Map();
     grid._cardBorder = 0;
@@ -139,6 +135,15 @@ function measureRatios(grid, items) {
                 grid._ratios.set(item, ratio);
                 resolve();
             };
+            // 显式宽高属性（photo.toml 回填的真实像素尺寸）立即给出精确比例：
+            // 竖构图不再先按兜底横构图比例（1.5）排布、等图片加载完再校正闪现
+            const wAttr = parseFloat(img.getAttribute('width'));
+            const hAttr = parseFloat(img.getAttribute('height'));
+            if (wAttr > 0 && hAttr > 0) {
+                settle(wAttr / hAttr);
+                return;
+            }
+            // 无属性（新照片未回填）时沿用加载测量 + 超时兜底路径
             timer = setTimeout(() => settle(DEFAULT_RATIO), MEASURE_TIMEOUT);
             if (img.complete && img.naturalWidth > 0) {
                 settle(img.naturalWidth / img.naturalHeight);

@@ -34,10 +34,43 @@ other = "切換主題"
 other = "載入中..."
 
 [no_more_photos]
-other = "已展示全部照片"
+other = "已加载全部作品"
 
 [all_photos]
 other = "全部照片"
+
+[exif_focus]
+other = "焦距"
+
+[exif_aperture]
+other = "光圈"
+
+[exif_shutter]
+other = "快門"
+
+[exif_iso]
+other = "感光度"
+
+[lightbox_place]
+other = "地點"
+
+[lightbox_date]
+other = "日期"
+
+[lightbox_histogram]
+other = "直方圖"
+
+[lightbox_palette]
+other = "色卡"
+
+[lightbox_expand]
+other = "展開詳情"
+
+[lightbox_collapse]
+other = "收起詳情"
+
+[lightbox_story]
+other = "背後的故事"
 
 [hero_view_gallery]
 other = "查看全部作品"

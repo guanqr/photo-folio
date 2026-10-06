@@ -9,7 +9,8 @@ shutter = "1/200"
 time = "2015-08-27"
 place = "天津薊州"
 location = "天津"
-orientation = "landscape"
+width = "1920"
+height = "1279"
 description = "黄崖关长城位于天津市蓟州区，是明代长城的重要关隘之一。夕阳下的长城显得格外壮丽，金色的阳光洒在古老的城砖上，仿佛在诉说着历史的沧桑。"
 featured = true
 
@@ -24,7 +25,8 @@ shutter = "1/2900"
 time = "2017-07-25"
 place = "青海茶卡鹽湖"
 location = "青海"
-orientation = "landscape"
+width = "1920"
+height = "1278"
 
 [[photo]]
 src = "/images/photos/东京铁路.jpg"
@@ -37,7 +39,8 @@ shutter = "1/280"
 time = "2018-07-16"
 place = "日本东京"
 location = "日本"
-orientation = "landscape"
+width = "1920"
+height = "1280"
 featured = true
 
 [[photo]]
@@ -51,7 +54,8 @@ shutter = "1/250"
 time = "2024-05-02"
 place = "廈門鼓浪嶼"
 location = "福建"
-orientation = "landscape"
+width = "1920"
+height = "1281"
 featured = true
 
 [[photo]]
@@ -65,7 +69,8 @@ shutter = "1/125"
 time = "2024-05-03"
 place = "廈門植物園"
 location = "福建"
-orientation = "landscape"
+width = "1920"
+height = "1281"
 featured = true
 
 [[photo]]
@@ -79,7 +84,8 @@ shutter = "1/160"
 time = "2024-10-05"
 place = "安徽宏村"
 location = "安徽"
-orientation = "landscape"
+width = "1920"
+height = "1281"
 
 [[photo]]
 src = "/images/photos/宏村月沼.jpg"
@@ -92,7 +98,8 @@ shutter = "1/125"
 time = "2024-10-06"
 place = "安徽宏村"
 location = "安徽"
-orientation = "landscape"
+width = "1920"
+height = "1281"
 featured = true
 
 [[photo]]
@@ -106,7 +113,8 @@ shutter = "1/60"
 time = "2024-10-06"
 place = "安徽宏村"
 location = "安徽"
-orientation = "landscape"
+width = "1920"
+height = "1281"
 
 [[photo]]
 src = "/images/photos/家训.jpg"
@@ -119,7 +127,8 @@ shutter = "1/125"
 time = "2024-10-06"
 place = "安徽宏村"
 location = "安徽"
-orientation = "landscape"
+width = "1920"
+height = "1281"
 
 [[photo]]
 src = "/images/photos/卢村秋景.jpg"
@@ -132,7 +141,8 @@ shutter = "1/250"
 time = "2024-10-06"
 place = "安徽盧村"
 location = "安徽"
-orientation = "landscape"
+width = "1920"
+height = "1281"
 featured = true
 
 [[photo]]
@@ -146,7 +156,8 @@ shutter = "1/250"
 time = "2024-10-06"
 place = "安徽盧村"
 location = "安徽"
-orientation = "landscape"
+width = "1920"
+height = "1281"
 
 [[photo]]
 src = "/images/photos/满觉陇汤屋.jpg"
@@ -159,7 +170,8 @@ shutter = "1/100"
 time = "2024-10-07"
 place = "杭州滿覺隴"
 location = "浙江"
-orientation = "landscape"
+width = "1920"
+height = "1280"
 
 [[photo]]
 src = "/images/photos/深秋绿叶.jpg"
@@ -172,7 +184,8 @@ shutter = "1/160"
 time = "2024-11-30"
 place = "杭州虎跑公園"
 location = "浙江"
-orientation = "landscape"
+width = "1920"
+height = "1281"
 
 [[photo]]
 src = "/images/photos/德寿红梅.jpg"
@@ -185,7 +198,8 @@ shutter = "1/800"
 time = "2025-03-01"
 place = "杭州德壽宮"
 location = "浙江"
-orientation = "landscape"
+width = "1920"
+height = "1281"
 
 [[photo]]
 src = "/images/photos/上海空山基展.jpg"
@@ -198,7 +212,8 @@ shutter = "1/250"
 time = "2025-03-15"
 place = "上海空山基展"
 location = "上海"
-orientation = "portrait"
+width = "1281"
+height = "1920"
 
 [[photo]]
 src = "/images/photos/白纱下的凝视.jpg"
@@ -211,7 +226,8 @@ shutter = "1/125"
 time = "2025-10-01"
 place = "上海玩物藏志集"
 location = "上海"
-orientation = "landscape"
+width = "1920"
+height = "1281"
 
 [[photo]]
 src = "/images/photos/老场坊.jpg"
@@ -224,7 +240,8 @@ shutter = "1/125"
 time = "2025-10-01"
 place = "上海 1933 老場坊"
 location = "上海"
-orientation = "landscape"
+width = "1920"
+height = "1079"
 
 [[photo]]
 src = "/images/photos/玉龙雪山.jpg"
@@ -237,7 +254,8 @@ shutter = "1/250"
 time = "2025-10-05"
 place = "雲南麗江"
 location = "雲南"
-orientation = "landscape"
+width = "1920"
+height = "1281"
 featured = true
 
 [[photo]]
@@ -251,7 +269,8 @@ shutter = "1/250"
 time = "2025-10-05"
 place = "雲南麗江"
 location = "雲南"
-orientation = "landscape"
+width = "1920"
+height = "1281"
 
 [[photo]]
 src = "/images/photos/蓝月嬉水.jpg"
@@ -264,7 +283,8 @@ shutter = "1/400"
 time = "2025-10-05"
 place = "雲南麗江"
 location = "雲南"
-orientation = "landscape"
+width = "1920"
+height = "1281"
 
 [[photo]]
 src = "/images/photos/木窗瓷韵.jpg"
@@ -277,7 +297,8 @@ shutter = "1/60"
 time = "2025-10-06"
 place = "雲南麗江"
 location = "雲南"
-orientation = "landscape"
+width = "1920"
+height = "1281"
 
 [[photo]]
 src = "/images/photos/镜中世界.jpg"
@@ -290,7 +311,8 @@ shutter = "1/250"
 time = "2025-10-06"
 place = "雲南麗江"
 location = "雲南"
-orientation = "landscape"
+width = "1920"
+height = "1281"
 
 [[photo]]
 src = "/images/photos/荒野之国.jpg"
@@ -303,7 +325,8 @@ shutter = "1/320"
 time = "2025-10-06"
 place = "雲南麗江"
 location = "雲南"
-orientation = "landscape"
+width = "1920"
+height = "1281"
 
 [[photo]]
 src = "/images/photos/金檐青霄.jpg"
@@ -316,7 +339,8 @@ shutter = "1/250"
 time = "2025-10-07"
 place = "雲南香格里拉"
 location = "雲南"
-orientation = "landscape"
+width = "1920"
+height = "1281"
 
 [[photo]]
 src = "/images/photos/独克宗古城.jpg"
@@ -329,7 +353,8 @@ shutter = "1/250"
 time = "2025-10-07"
 place = "雲南香格里拉"
 location = "雲南"
-orientation = "portrait"
+width = "1281"
+height = "1920"
 
 [[photo]]
 src = "/images/photos/松赞一隅.jpg"
@@ -342,7 +367,8 @@ shutter = "1/320"
 time = "2025-10-07"
 place = "雲南香格里拉"
 location = "雲南"
-orientation = "landscape"
+width = "1920"
+height = "1281"
 
 [[photo]]
 src = "/images/photos/松赞林寺.jpg"
@@ -355,7 +381,8 @@ shutter = "1/250"
 time = "2025-10-07"
 place = "雲南香格里拉"
 location = "雲南"
-orientation = "landscape"
+width = "1920"
+height = "1281"
 featured = true
 
 [[photo]]
@@ -369,7 +396,8 @@ shutter = "1/500"
 time = "2025-10-07"
 place = "雲南香格里拉"
 location = "雲南"
-orientation = "landscape"
+width = "1920"
+height = "1281"
 
 [[photo]]
 src = "/images/photos/望仙谷舞龙.jpg"
@@ -382,7 +410,8 @@ shutter = "1/100"
 time = "2026-02-22"
 place = "江西上饒"
 location = "江西"
-orientation = "landscape"
+width = "1920"
+height = "1281"
 
 [[photo]]
 src = "/images/photos/滕王阁.jpg"
@@ -395,7 +424,8 @@ shutter = "1/200"
 time = "2026-02-23"
 place = "江西南昌"
 location = "江西"
-orientation = "portrait"
+width = "1281"
+height = "1920"
 
 [[photo]]
 src = "/images/photos/绳金塔.jpg"
@@ -408,7 +438,8 @@ shutter = "1/125"
 time = "2026-02-23"
 place = "江西南昌"
 location = "江西"
-orientation = "portrait"
+width = "1281"
+height = "1920"
 
 [[photo]]
 src = "/images/photos/赣江两岸.jpg"
@@ -421,7 +452,8 @@ shutter = "1/5"
 time = "2026-02-23"
 place = "江西南昌"
 location = "江西"
-orientation = "landscape"
+width = "1920"
+height = "1281"
 featured = true
 
 [[photo]]
@@ -435,7 +467,8 @@ shutter = "6"
 time = "2026-03-15"
 place = "江西婺源"
 location = "江西"
-orientation = "landscape"
+width = "1920"
+height = "1281"
 featured = true
 
 [[photo]]
@@ -449,7 +482,8 @@ shutter = "1/400"
 time = "2026-05-01"
 place = "福建霞浦"
 location = "福建"
-orientation = "landscape"
+width = "1920"
+height = "1281"
 featured = true
 
 [[photo]]
@@ -463,7 +497,8 @@ shutter = "1/125"
 time = "2026-05-01"
 place = "福建霞浦"
 location = "福建"
-orientation = "landscape"
+width = "1920"
+height = "1281"
 featured = true
 
 [[photo]]
@@ -477,7 +512,8 @@ shutter = "1/160"
 time = "2026-05-01"
 place = "福建霞浦"
 location = "福建"
-orientation = "landscape"
+width = "1920"
+height = "1281"
 
 [[photo]]
 src = "/images/photos/半山铁骨.jpg"
@@ -490,7 +526,8 @@ shutter = "1/250"
 time = "2026-05-16"
 place = "杭州杭钢公园"
 location = "浙江"
-orientation = "landscape"
+width = "1920"
+height = "1280"
 
 [[photo]]
 src = "/images/photos/黄线迷宫.jpg"
@@ -503,7 +540,8 @@ shutter = "1/125"
 time = "2026-05-16"
 place = "杭州杭钢公园"
 location = "浙江"
-orientation = "portrait"
+width = "1280"
+height = "1920"
 
 [[photo]]
 src = "/images/photos/金光穿洞.jpg"
@@ -516,7 +554,8 @@ shutter = "1/6"
 time = "2026-05-17"
 place = "杭州曲院風荷"
 location = "浙江"
-orientation = "landscape"
+width = "1920"
+height = "1280"
 featured = true
 
 [[photo]]
@@ -530,7 +569,8 @@ shutter = "3"
 time = "2026-05-30"
 place = "寧波鎮海煉化"
 location = "浙江"
-orientation = "landscape"
+width = "1920"
+height = "1280"
 featured = true
 
 [[photo]]
@@ -544,7 +584,8 @@ shutter = "1/1000"
 time = "2026-06-14"
 place = "寧波海曙區古林鎮茂新村"
 location = "浙江"
-orientation = "landscape"
+width = "1920"
+height = "1280"
 series = "割藺草"
 is_cover = true
 featured = true
@@ -560,7 +601,8 @@ shutter = "1/1000"
 time = "2026-06-14"
 place = "寧波海曙區古林鎮茂新村"
 location = "浙江"
-orientation = "landscape"
+width = "1920"
+height = "1279"
 series = "割藺草"
 
 [[photo]]
@@ -574,7 +616,8 @@ shutter = "1/1250"
 time = "2026-06-14"
 place = "寧波海曙區古林鎮茂新村"
 location = "浙江"
-orientation = "portrait"
+width = "1280"
+height = "1920"
 series = "割藺草"
 
 [[photo]]
@@ -588,7 +631,8 @@ shutter = "1/1250"
 time = "2026-06-14"
 place = "寧波海曙區古林鎮茂新村"
 location = "浙江"
-orientation = "portrait"
+width = "1280"
+height = "1920"
 series = "割藺草"
 
 [[photo]]
@@ -602,7 +646,8 @@ shutter = "1/1250"
 time = "2026-06-14"
 place = "寧波海曙區古林鎮茂新村"
 location = "浙江"
-orientation = "portrait"
+width = "1279"
+height = "1920"
 series = "割藺草"
 
 [[photo]]
@@ -616,7 +661,8 @@ shutter = "1/1250"
 time = "2026-06-14"
 place = "寧波海曙區古林鎮茂新村"
 location = "浙江"
-orientation = "portrait"
+width = "1280"
+height = "1920"
 series = "割藺草"
 
 [[photo]]
@@ -630,7 +676,8 @@ shutter = "1/1250"
 time = "2026-06-14"
 place = "寧波海曙區古林鎮茂新村"
 location = "浙江"
-orientation = "portrait"
+width = "1280"
+height = "1920"
 series = "割藺草"
 
 [[photo]]
@@ -644,7 +691,8 @@ shutter = "1/1250"
 time = "2026-06-14"
 place = "寧波海曙區古林鎮茂新村"
 location = "浙江"
-orientation = "portrait"
+width = "1280"
+height = "1920"
 series = "割藺草"
 
 [[photo]]
@@ -658,7 +706,8 @@ shutter = "1/200"
 time = "2026-06-18"
 place = "廣州地鐵一號線"
 location = "廣東"
-orientation = "landscape"
+width = "1920"
+height = "1280"
 
 [[photo]]
 src = "/images/photos/车门一瞬.jpg"
@@ -671,7 +720,8 @@ shutter = "1/200"
 time = "2026-06-18"
 place = "廣州地鐵一號線"
 location = "廣東"
-orientation = "landscape"
+width = "1920"
+height = "1280"
 
 [[photo]]
 src = "/images/photos/骑楼拥圣心.jpg"
@@ -684,7 +734,8 @@ shutter = "1/200"
 time = "2026-06-18"
 place = "廣州聖心大教堂"
 location = "廣東"
-orientation = "landscape"
+width = "1920"
+height = "1279"
 featured = true
 
 [[photo]]
@@ -698,7 +749,8 @@ shutter = "1/100"
 time = "2026-06-18"
 place = "廣州聖心大教堂"
 location = "廣東"
-orientation = "landscape"
+width = "1920"
+height = "1280"
 
 [[photo]]
 src = "/images/photos/冼村龙舟招景-1.jpg"
@@ -711,7 +763,8 @@ shutter = "1/1000"
 time = "2026-06-19"
 place = "廣州天河區冼村"
 location = "廣東"
-orientation = "landscape"
+width = "1920"
+height = "1280"
 series = "冼村龍舟招景"
 is_cover = true
 
@@ -726,7 +779,8 @@ shutter = "1/1000"
 time = "2026-06-19"
 place = "廣州天河區冼村"
 location = "廣東"
-orientation = "landscape"
+width = "1920"
+height = "1280"
 series = "冼村龍舟招景"
 
 [[photo]]
@@ -740,7 +794,8 @@ shutter = "1/1000"
 time = "2026-06-19"
 place = "廣州天河區冼村"
 location = "廣東"
-orientation = "landscape"
+width = "1920"
+height = "1279"
 series = "冼村龍舟招景"
 
 [[photo]]
@@ -754,7 +809,8 @@ shutter = "30"
 time = "2026-06-19"
 place = "珠海香洲區"
 location = "廣東"
-orientation = "landscape"
+width = "1920"
+height = "1280"
 
 [[photo]]
 src = "/images/photos/古檐贝影.jpg"
@@ -767,7 +823,8 @@ shutter = "1/200"
 time = "2026-06-19"
 place = "珠海香洲區"
 location = "廣東"
-orientation = "landscape"
+width = "1920"
+height = "1280"
 
 [[photo]]
 src = "/images/photos/爱情邮局灯塔.jpg"
@@ -780,7 +837,8 @@ shutter = "8"
 time = "2026-06-20"
 place = "珠海香洲區"
 location = "廣東"
-orientation = "landscape"
+width = "1920"
+height = "1280"
 
 [[photo]]
 src = "/images/photos/变色树蜥.jpg"
@@ -793,7 +851,8 @@ shutter = "1/1000"
 time = "2026-06-20"
 place = "珠海香洲區"
 location = "廣東"
-orientation = "landscape"
+width = "1920"
+height = "1279"
 
 [[photo]]
 src = "/images/photos/曲框望塔.jpg"
@@ -806,7 +865,8 @@ shutter = "1/200"
 time = "2026-06-20"
 place = "廣州天河區"
 location = "廣東"
-orientation = "portrait"
+width = "1280"
+height = "1920"
 
 [[photo]]
 src = "/images/photos/花城中轴夜序.jpg"
@@ -819,7 +879,8 @@ shutter = "5"
 time = "2026-06-20"
 place = "廣州天河區"
 location = "廣東"
-orientation = "landscape"
+width = "1920"
+height = "1280"
 
 [[photo]]
 src = "/images/photos/花城流动的脉络.jpg"
@@ -832,7 +893,8 @@ shutter = "13"
 time = "2026-06-20"
 place = "廣州天河區"
 location = "廣東"
-orientation = "portrait"
+width = "1280"
+height = "1920"
 
 [[photo]]
 src = "/images/photos/叠滘龙舟漂移-1.jpg"
@@ -845,7 +907,8 @@ shutter = "1/1600"
 time = "2026-06-21"
 place = "佛山南海區疊滘水鄉"
 location = "廣東"
-orientation = "landscape"
+width = "1920"
+height = "1279"
 series = "疊滘龍舟漂移"
 is_cover = true
 
@@ -860,7 +923,8 @@ shutter = "1/1000"
 time = "2026-06-21"
 place = "佛山南海區疊滘水鄉"
 location = "廣東"
-orientation = "landscape"
+width = "1920"
+height = "1279"
 series = "疊滘龍舟漂移"
 
 [[photo]]
@@ -874,7 +938,8 @@ shutter = "1/1250"
 time = "2026-06-21"
 place = "佛山南海區疊滘水鄉"
 location = "廣東"
-orientation = "landscape"
+width = "1920"
+height = "1280"
 series = "疊滘龍舟漂移"
 
 [[photo]]
@@ -888,7 +953,8 @@ shutter = "1/1600"
 time = "2026-06-21"
 place = "佛山南海區疊滘水鄉"
 location = "廣東"
-orientation = "landscape"
+width = "1920"
+height = "1280"
 series = "疊滘龍舟漂移"
 
 [[photo]]
@@ -902,7 +968,8 @@ shutter = "1/1600"
 time = "2026-06-21"
 place = "佛山南海區疊滘水鄉"
 location = "廣東"
-orientation = "landscape"
+width = "1920"
+height = "1280"
 series = "疊滘龍舟漂移"
 
 [[photo]]
@@ -916,7 +983,8 @@ shutter = "1/1250"
 time = "2026-06-21"
 place = "佛山南海區疊滘水鄉"
 location = "廣東"
-orientation = "landscape"
+width = "1920"
+height = "1280"
 series = "疊滘龍舟漂移"
 
 [[photo]]
@@ -930,7 +998,8 @@ shutter = "1/1250"
 time = "2026-06-21"
 place = "佛山南海區疊滘水鄉"
 location = "廣東"
-orientation = "landscape"
+width = "1920"
+height = "1279"
 series = "疊滘龍舟漂移"
 
 [[photo]]
@@ -944,7 +1013,8 @@ shutter = "1/200"
 time = "2026-06-22"
 place = "佛山禪城區祖廟"
 location = "廣東"
-orientation = "portrait"
+width = "1280"
+height = "1920"
 
 [[photo]]
 src = "/images/photos/舞狮.jpg"
@@ -957,7 +1027,8 @@ shutter = "1/1250"
 time = "2026-06-22"
 place = "佛山禪城區祖廟"
 location = "廣東"
-orientation = "portrait"
+width = "1279"
+height = "1920"
 
 [[photo]]
 src = "/images/photos/龙潭龙母诞-1.jpg"
@@ -970,7 +1041,8 @@ shutter = "1/1250"
 time = "2026-06-22"
 place = "佛山順德區杏壇鎮龍潭村"
 location = "廣東"
-orientation = "landscape"
+width = "1920"
+height = "1279"
 series = "龍潭龍母誕"
 is_cover = true
 
@@ -985,7 +1057,8 @@ shutter = "1/1250"
 time = "2026-06-22"
 place = "佛山順德區杏壇鎮龍潭村"
 location = "廣東"
-orientation = "landscape"
+width = "1920"
+height = "1280"
 series = "龍潭龍母誕"
 
 [[photo]]
@@ -999,7 +1072,8 @@ shutter = "1/1250"
 time = "2026-06-22"
 place = "佛山順德區杏壇鎮龍潭村"
 location = "廣東"
-orientation = "landscape"
+width = "1920"
+height = "1280"
 series = "龍潭龍母誕"
 
 [[photo]]
@@ -1013,7 +1087,8 @@ shutter = "1/1250"
 time = "2026-06-22"
 place = "佛山順德區杏壇鎮龍潭村"
 location = "廣東"
-orientation = "landscape"
+width = "1920"
+height = "1280"
 series = "龍潭龍母誕"
 
 [[photo]]
@@ -1027,7 +1102,8 @@ shutter = "1/1250"
 time = "2026-06-22"
 place = "佛山順德區杏壇鎮龍潭村"
 location = "廣東"
-orientation = "landscape"
+width = "1920"
+height = "1280"
 series = "龍潭龍母誕"
 
 [[photo]]
@@ -1041,7 +1117,8 @@ shutter = "1/1250"
 time = "2026-06-22"
 place = "佛山順德區杏壇鎮龍潭村"
 location = "廣東"
-orientation = "portrait"
+width = "1280"
+height = "1920"
 series = "龍潭龍母誕"
 
 [[photo]]
@@ -1055,7 +1132,8 @@ shutter = "1/1250"
 time = "2026-06-22"
 place = "佛山順德區杏壇鎮龍潭村"
 location = "廣東"
-orientation = "portrait"
+width = "1280"
+height = "1920"
 series = "龍潭龍母誕"
 
 [[photo]]
@@ -1069,7 +1147,8 @@ shutter = "1/1600"
 time = "2026-09-25"
 place = "赤峰克什克騰旗烏蘭布統"
 location = "內蒙古"
-orientation = "landscape"
+width = "1920"
+height = "1279"
 featured = true
 
 [[photo]]
@@ -1083,7 +1162,8 @@ shutter = "1/1600"
 time = "2026-09-25"
 place = "赤峰克什克騰旗烏蘭布統"
 location = "內蒙古"
-orientation = "landscape"
+width = "1920"
+height = "1279"
 
 [[photo]]
 src = "/images/photos/风拂白鬃.jpg"
@@ -1096,7 +1176,8 @@ shutter = "1/1600"
 time = "2026-09-25"
 place = "赤峰克什克騰旗烏蘭布統"
 location = "內蒙古"
-orientation = "landscape"
+width = "1920"
+height = "1280"
 
 [[photo]]
 src = "/images/photos/踏浪驰风.jpg"
@@ -1109,7 +1190,8 @@ shutter = "1/1250"
 time = "2026-09-26"
 place = "赤峰克什克騰旗烏蘭布統"
 location = "內蒙古"
-orientation = "landscape"
+width = "1920"
+height = "1279"
 
 [[photo]]
 src = "/images/photos/萨岭河畔.jpg"
@@ -1122,10 +1204,12 @@ shutter = "1/200"
 time = "2026-09-27"
 place = "赤峰克什克騰旗烏蘭布統"
 location = "內蒙古"
-orientation = "landscape"
+width = "1920"
+height = "1280"
 
 [[photo]]
-orientation = "landscape"
+width = "1920"
+height = "1279"
 
 src = "/images/photos/透风沟的秋色.jpg"
 alt = "透風溝的秋色"
@@ -1149,7 +1233,8 @@ shutter = "1/400"
 time = "2026-09-27"
 place = "赤峰克什克騰旗烏蘭布統"
 location = "內蒙古"
-orientation = "landscape"
+width = "1920"
+height = "1280"
 
 [[photo]]
 src = "/images/photos/山坡上的摄影人.jpg"
@@ -1162,4 +1247,5 @@ shutter = "1/250"
 time = "2026-09-27"
 place = "赤峰克什克騰旗烏蘭布統"
 location = "內蒙古"
-orientation = "landscape"
+width = "1920"
+height = "1280"
