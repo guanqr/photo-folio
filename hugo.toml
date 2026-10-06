@@ -5,6 +5,10 @@ theme = "photofolio"
 
 defaultContentLanguage = "zh-cn"
 
+# 清空 Hugo 内置分类法（默认 tag/categories 不用）——否则 content/categories/ 会被
+# 识别为「categories 分类法」而非普通 Section，子目录变成 term 页
+[taxonomies]
+
 # RSS 订阅源（/index.xml）：纯文本模板（isPlainText）——不转义 CDATA、URL 中的中文与日期时间
 [outputFormats.rss]
     mediaType = "application/rss+xml"
@@ -129,8 +133,33 @@ defaultContentLanguage = "zh-cn"
         name = "作品"
         url = "/gallery/"
         weight = 2
+        identifier = "works"
         [menu.main.params]
         icon = "grid"
+
+    [[menu.main]]
+        name = "作品分類"
+        url = "/categories/"
+        weight = 1
+        parent = "works"
+        [menu.main.params]
+        icon = "lens"
+
+    [[menu.main]]
+        name = "系列合集"
+        url = "/series/"
+        weight = 2
+        parent = "works"
+        [menu.main.params]
+        icon = "layers"
+
+    [[menu.main]]
+        name = "全部作品"
+        url = "/gallery/"
+        weight = 3
+        parent = "works"
+        [menu.main.params]
+        icon = "camera"
     [[menu.main]]
         name = "足跡"
         url = "/footprint/"

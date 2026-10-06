@@ -1,0 +1,28 @@
+{{ define "main" }}
+{{ $sortedPhotos := partial "photo-sorted.html" . }}
+{{ $coverMode := .Site.Params.categoryCover | default "latest-landscape" }}
+
+<section class="gallery-page">
+    <div class="gallery-header">
+        <div class="container">
+            <h1 class="page-title">{{ .Title }}</h1>
+            {{ with .Params.description }}
+                <p class="page-description">{{ . }}</p>
+            {{ end }}
+            <p class="photo-count">{{ i18n "category_count" (dict "Count" (len .Sections)) }}</p>
+        </div>
+    </div>
+
+    <div class="container section-list-grid">
+        {{ if gt (len .Sections) 0 }}
+            {{/* 分类目录：与首页分类区块同款卡片（封面图 + 分类名 + 作品数） */}}
+            {{ partial "categories-cards.html" (dict "sections" .Sections.ByWeight "allPhotos" $sortedPhotos "coverMode" $coverMode) }}
+        {{ else }}
+        <div class="empty-state">
+            <div class="empty-icon">{{ hugo.Data.svg.camera | safeHTML }}</div>
+            <h3>{{ i18n "no_photos_under" (dict "Title" .Title) }}</h3>
+        </div>
+        {{ end }}
+    </div>
+</section>
+{{ end }}

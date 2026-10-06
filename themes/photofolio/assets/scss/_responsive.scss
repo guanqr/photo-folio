@@ -35,7 +35,7 @@
         background: transparent;
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
-        /* 内容下移避开顶部导航栏（4.5em）+ 原 2em 间距 */
+        /* 内容下移避开顶部导航栏（4.5em）+ 原 2em 间距；左右 1em 页边距与窄屏 header-inner 一致 */
         padding: 6.5em 1em 2em;
 
         /* 页面已滚动时：面板直接以不透明打开，不做背景渐变 */
@@ -66,22 +66,109 @@
         ul {
             display: flex;
             flex-direction: column;
-            gap: 1.5em;
-            align-items: center;
+            gap: 1em;
+            align-items: stretch; /* 整行拉伸：文字固定最左、圆点可定位到最右 */
         }
 
-        a {
+        a, .nav-parent {
+            position: relative;
             font-size: 1.25em;
             font-weight: 500;
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start; /* 文字固定在最左，不缩进 */
         }
 
         .nav-icon {
             display: inline-flex;
             align-items: center;
             transform: translateY(-0.05em);
+        }
+
+        /* 选中态：窄屏不用下划线，改为贴屏幕最右侧的小圆点（本块已嵌套在 .site-nav 内）；
+           nav-text 恢复 static，圆点以整行拉伸的 a 为定位基准 */
+        .nav-text {
+            position: static;
+        }
+
+        .nav-text::after {
+            left: auto;
+            right: 0;
+            bottom: auto;
+            top: 50%;
+            width: 0.4em;
+            height: 0.4em;
+            border-radius: 50%;
+            transform: translateY(-50%) scale(0);
+        }
+
+        /* 圆点：可导航链接（a）与父项 active（当前在子导航页面）时显示；
+           父项仅 hover 不显示（需显式压制——桌面 hover 规则的 scaleX(1) 会漏进来） */
+        a:hover .nav-text::after,
+        a.active .nav-text::after {
+            transform: translateY(-50%) scale(1);
+        }
+
+        .nav-parent:hover .nav-text::after {
+            transform: translateY(-50%) scale(0);
+        }
+
+        .nav-parent.active .nav-text::after {
+            transform: translateY(-50%) scale(1);
+        }
+
+        /* 下拉菜单：窄屏为手风琴——grid-template-rows 0fr↔1fr 平滑过渡展开收起；
+           内层为唯一网格子项（overflow 裁剪），子项整行拉伸、相对总导航缩进 1.5em */
+        .nav-dropdown {
+            position: static;
+            display: grid;
+            grid-template-rows: 0fr;
+            margin-top: 0; /* 清除桌面端悬浮间距（否则折叠态多占 0.5em） */
+            padding: 0;    /* 清除桌面端上下留白（否则折叠态多占 0.5em） */
+            opacity: 0;
+            visibility: hidden;
+            transform: none;
+            min-width: 0;
+            background: none;
+            border: none;
+            box-shadow: none;
+            transition: grid-template-rows var(--transition), opacity var(--transition),
+                        visibility 0.3s;
+        }
+
+        .nav-dropdown-inner {
+            overflow: hidden;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.2em;
+            padding: 0 0 0 1.5em; /* 只保留左右缩进，不增加上下行距 */
+            align-items: stretch; /* 子项整行拉伸：文字保持缩进、圆点贴屏幕最右 */
+        }
+
+        .nav-dropdown a {
+            font-size: 1em;
+            padding: 0.2em 0;
+        }
+
+        /* 窄屏箭头旋转只跟随 sub-open——触屏点击后 :hover 粘性保持，
+           若沿用桌面悬停旋转规则，箭头在展开前已旋转、开合时无变化；
+           需覆盖 hover-ready 变体（桌面规则带 .hover-ready 前置，特异性更高） */
+        .has-dropdown:hover .nav-caret,
+        .has-dropdown.hover-ready:hover .nav-caret,
+        .has-dropdown:focus-within .nav-caret,
+        .has-dropdown.hover-ready:focus-within .nav-caret {
+            transform: none;
+        }
+
+        .has-dropdown.sub-open .nav-dropdown {
+            grid-template-rows: 1fr;
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .has-dropdown.sub-open .nav-caret {
+            transform: rotate(180deg);
         }
     }
 

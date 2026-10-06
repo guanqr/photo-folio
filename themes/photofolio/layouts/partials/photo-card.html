@@ -30,7 +30,7 @@
     {{ $orientation = cond (ge (int $photo.width) (int $photo.height)) "landscape" "portrait" }}
 {{ end }}
 
-{{ $categoryPage := site.GetPage $categoryKey }}
+{{ $categoryPage := site.GetPage (printf "/categories/%s" $categoryKey) }}
 {{ $categoryTitle := $categoryPage.Title | default "" }}
 
 {{/* 反查系列的英文 URL（灯箱系列胶囊跳转用；见 series-url.html 唯一实现） */}}

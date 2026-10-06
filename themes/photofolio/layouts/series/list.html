@@ -20,13 +20,10 @@
         </div>
     </div>
 
-    <div class="masonry-container">
+    <div class="container section-list-grid">
         {{ if gt (len $coverPhotos) 0 }}
-        <div class="masonry-grid" id="masonry-grid">
-            {{ range $coverPhotos }}
-                {{ partial "photo-card.html" (dict "photo" . "site" $.Site "isInSeriesPage" false) }}
-            {{ end }}
-        </div>
+            {{/* 系列目录：与首页系列区块同款卡片（封面图 + 系列名 + 总张数） */}}
+            {{ partial "series-cards.html" (dict "covers" $coverPhotos "allPhotos" $sortedPhotos) }}
         {{ else }}
         <div class="empty-state">
             <div class="empty-icon">{{ hugo.Data.svg.camera | safeHTML }}</div>

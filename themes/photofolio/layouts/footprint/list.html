@@ -1,14 +1,8 @@
 {{ define "main" }}
-{{/* 1. 全站作品时间排序 + 展示过滤（剔除系列内页，只保留单图和封面） */}}
+{{/* 1. 全站作品时间排序（时间线画廊展示全部作品，含系列内页——与全站拆分一致） */}}
 {{ $sortedPhotos := partial "photo-sorted.html" . }}
-{{ $displayPhotos := slice }}
-{{ range $sortedPhotos }}
-    {{ if or (not .series) .is_cover }}
-        {{ $displayPhotos = $displayPhotos | append . }}
-    {{ end }}
-{{ end }}
 
-{{/* 2. 按 location 单趟聚合（输入时间降序 → 首见即最新、末见即最早；统计含系列内页） */}}
+{{/* 2. 按 location 单趟聚合（输入时间降序 → 首见即最新、末见即最早） */}}
 {{ $locAgg := dict }}
 {{ range $p := $sortedPhotos }}
     {{ with $p.location }}
@@ -21,9 +15,7 @@
             {{ $count = add $cur.realCount 1 }}
             {{ $displays = $cur.photos }}
         {{ end }}
-        {{ if or (not $p.series) $p.is_cover }}
-            {{ $displays = $displays | append $p }}
-        {{ end }}
+        {{ $displays = $displays | append $p }}
         {{ $locAgg = merge $locAgg (dict . (dict "time" $latest "earliest" $p.time "realCount" $count "photos" $displays)) }}
     {{ end }}
 {{ end }}

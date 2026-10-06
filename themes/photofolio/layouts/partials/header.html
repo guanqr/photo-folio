@@ -12,13 +12,43 @@
             <nav class="site-nav" id="site-nav">
                 <ul>
                     {{ range .Site.Menus.main }}
-                    <li>
+                    <li class="{{ if .HasChildren }}has-dropdown{{ end }}">
+                        {{ if .HasChildren }}
+                        {{/* 带子菜单的父项不跳转（仅悬停展开）；子页面时高亮（URL 前缀匹配）；
+                           图标仅窄屏显示（nav-icon 桌面端隐藏） */}}
+                        {{ $parentActive := strings.HasPrefix $.RelPermalink .URL }}
+                        {{ range .Children }}
+                            {{ if strings.HasPrefix $.RelPermalink .URL }}{{ $parentActive = true }}{{ end }}
+                        {{ end }}
+                        <span class="nav-parent {{ if $parentActive }}active{{ end }}">
+                            {{ with .Params.icon }}
+                                <span class="nav-icon">{{ index hugo.Data.svg . | safeHTML }}</span>
+                            {{ end }}
+                            <span class="nav-text">{{ .Name }}</span>
+                            <span class="nav-caret">{{ hugo.Data.svg.arrow_down | safeHTML }}</span>
+                        </span>
+                        {{ else }}
                         <a href="{{ .URL }}" {{ if eq $.RelPermalink .URL }}class="active"{{ end }}>
                             {{ with .Params.icon }}
                                 <span class="nav-icon">{{ index hugo.Data.svg . | safeHTML }}</span>
                             {{ end }}
                             <span class="nav-text">{{ .Name }}</span>
                         </a>
+                        {{ end }}
+                        {{ if .HasChildren }}
+                        <div class="nav-dropdown">
+                            <div class="nav-dropdown-inner">
+                                {{ range .Children }}
+                                <a href="{{ .URL }}" {{ if strings.HasPrefix $.RelPermalink .URL }}class="active"{{ end }}>
+                                    {{ with .Params.icon }}
+                                        <span class="nav-icon">{{ index hugo.Data.svg . | safeHTML }}</span>
+                                    {{ end }}
+                                    <span class="nav-text">{{ .Name }}</span>
+                                </a>
+                                {{ end }}
+                            </div>
+                        </div>
+                        {{ end }}
                     </li>
                     {{ end }}
                 </ul>

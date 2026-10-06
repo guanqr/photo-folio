@@ -59,56 +59,11 @@
 <section class="home-section" id="categories-grid">
     <div class="container">
         <h2 class="home-section-title">{{ i18n "categories_title" }}</h2>
-        {{ $coverMode := .Site.Params.categoryCover | default "latest-landscape" }}
-        <div class="grid">
-            {{/* 定义排除名单，过滤掉非分类的独立页面（精選已并入全部作品页的作品範圍筛选，不单独成页） */}}
-            {{ $excludeSections := slice "gallery" "footprint" "series" "about" }}
-
-            {{ range .Site.Sections.ByWeight }}
-                {{ $sectionName := .File.ContentBaseName }}
-
-                {{/* 只有不在排除名单中的 Section，才会渲染为分类卡片 */}}
-                {{ if not (in $excludeSections $sectionName) }}
-
-                    {{ $categoryPhotos := where $sortedPhotos "category" $sectionName }}
-                    {{ $photoCount := len $categoryPhotos }}
-
-                    {{/* 封面策略（hugo.toml [params].categoryCover，两种模式互斥）：
-                        custom——仅自定义封面（front matter cover，无则卡片不带图）；
-                        latest-landscape（默认）——忽略自定义封面，取最新一张横构图作品 */}}
-                    {{ $coverImg := "" }}
-                    {{ if eq $coverMode "custom" }}
-                        {{ $coverImg = .Params.cover }}
-                    {{ else }}
-                        {{ range $categoryPhotos }}
-                            {{ if and (not $coverImg) .width .height (ge (int .width) (int .height)) }}
-                                {{ $coverImg = .src }}
-                            {{ end }}
-                        {{ end }}
-                    {{ end }}
-
-                    {{ $categoryWidth := $cfg.category | default 1000 }}
-                    {{ $categoryQuality := $cfg.quality | default 80 }}
-
-                    <a href="{{ .RelPermalink }}" class="category-card">
-                        <div class="category-image">
-                            {{ with $coverImg }}
-                                {{ $coverUrl := partial "img-url.html" (dict "src" . "site" $.Site "width" $categoryWidth "mode" "lfit" "format" "webp" "quality" $categoryQuality) }}
-                                <img src="{{ $coverUrl }}" alt="{{ $.Title }}" loading="lazy">
-                            {{ end }}
-                        </div>
-                        <div class="category-info">
-                            <h3 class="category-title">{{ .Title }}</h3>
-                            <p class="category-count">{{ i18n "photo_count" (dict "Count" $photoCount) }}</p>
-                            {{ with .Params.description }}
-                                <p class="category-desc">{{ . }}</p>
-                            {{ end }}
-                        </div>
-                    </a>
-
-                {{ end }}
-            {{ end }}
-        </div>
+        {{/* 分类目录卡片（与 /categories/ 合集页同款；见 categories-cards.html） */}}
+        {{ $categoriesSection := site.GetPage "categories" }}
+        {{ if $categoriesSection }}
+            {{ partial "categories-cards.html" (dict "sections" $categoriesSection.Sections.ByWeight "allPhotos" $sortedPhotos "coverMode" (.Site.Params.categoryCover | default "latest-landscape")) }}
+        {{ end }}
     </div>
 </section>
 
@@ -120,30 +75,10 @@
     {{ end }}
 {{ end }}
 {{ if gt (len $coverPhotos) 0 }}
-{{/* 每系列的总张数（封面 + 内页，series 字段匹配） */}}
-{{ $seriesCounts := dict }}
-{{ range $sortedPhotos }}
-    {{ with .series }}
-        {{ $seriesCounts = merge $seriesCounts (dict . (add (index $seriesCounts . | default 0) 1)) }}
-    {{ end }}
-{{ end }}
 <section class="home-section">
     <div class="container">
         <h2 class="home-section-title">{{ i18n "series_title" }}</h2>
-        <div class="grid">
-            {{ range $coverPhotos }}
-                <a href="{{ partial "series-url.html" .series }}" class="category-card">
-                    <div class="category-image">
-                        {{ $coverUrl := partial "img-url.html" (dict "src" .src "site" $.Site "width" $cfg.category "mode" "lfit" "format" "webp" "quality" $cfg.quality) }}
-                        <img src="{{ $coverUrl }}" alt="{{ .series }}" loading="lazy">
-                    </div>
-                    <div class="category-info">
-                        <h3 class="category-title">{{ .series }}</h3>
-                        <p class="category-count">{{ i18n "photo_count" (dict "Count" (index $seriesCounts .series)) }}</p>
-                    </div>
-                </a>
-            {{ end }}
-        </div>
+        {{ partial "series-cards.html" (dict "covers" $coverPhotos "allPhotos" $sortedPhotos) }}
     </div>
 </section>
 {{ end }}

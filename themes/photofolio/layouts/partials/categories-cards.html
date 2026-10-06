@@ -1,0 +1,39 @@
+{{- /* 分类目录卡片网格（首页分类区块与分類合集页共用）：
+       输入：.sections（分类 Section 集合，按 weight 排序）、.allPhotos（全站时间排序作品集）、
+       .coverMode（custom / latest-landscape，见 hugo.toml [params].categoryCover，互斥） */ -}}
+{{- $cfg := site.Params.imageSizes | default dict -}}
+<div class="grid">
+    {{- range .sections -}}
+        {{- $sectionName := .File.ContentBaseName -}}
+        {{- $cardTitle := .Title -}}
+        {{- $cardDesc := .Params.description -}}
+        {{- $cardLink := .RelPermalink -}}
+        {{- $categoryPhotos := where $.allPhotos "category" $sectionName -}}
+        {{- $photoCount := len $categoryPhotos -}}
+        {{- $coverImg := "" -}}
+        {{- if eq $.coverMode "custom" -}}
+            {{- $coverImg = .Params.cover -}}
+        {{- else -}}
+            {{- range $categoryPhotos -}}
+                {{- if and (not $coverImg) .width .height (ge (int .width) (int .height)) -}}
+                    {{- $coverImg = .src -}}
+                {{- end -}}
+            {{- end -}}
+        {{- end -}}
+        <a href="{{ $cardLink }}" class="category-card">
+            <div class="category-image">
+                {{- with $coverImg -}}
+                    {{ $coverUrl := partial "img-url.html" (dict "src" . "site" site "width" ($cfg.category | default 1000) "mode" "lfit" "format" "webp" "quality" ($cfg.quality | default 80)) }}
+                    <img src="{{ $coverUrl }}" alt="{{ $cardTitle }}" loading="lazy">
+                {{- end -}}
+            </div>
+            <div class="category-info">
+                <h3 class="category-title">{{ $cardTitle }}</h3>
+                <p class="category-count">{{ i18n "photo_count" (dict "Count" $photoCount) }}</p>
+                {{- with $cardDesc -}}
+                    <p class="category-desc">{{ . }}</p>
+                {{- end -}}
+            </div>
+        </a>
+    {{- end -}}
+</div>

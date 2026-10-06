@@ -2,6 +2,7 @@ import { initLightbox } from './lightbox.js';
 import { initLazyLoad } from './lazy-load.js';
 import { initHeaderScroll } from './header-scroll.js';
 import { initMobileNav } from './mobile-nav.js';
+import { initNavDropdown } from './nav-dropdown.js';
 import { initBackToTop } from './back-to-top.js';
 import { initMasonry, initMasonryResize } from './masonry.js';
 import { initInfiniteScroll } from './infinite-scroll.js';
@@ -55,6 +56,7 @@ function initGlobalModules() {
     globalInited = true;
     initHeaderScroll();
     initMobileNav();
+    initNavDropdown();
 }
 
 // 首次加载

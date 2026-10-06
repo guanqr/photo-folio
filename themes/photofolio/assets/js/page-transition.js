@@ -11,6 +11,8 @@ export function initPageTransition(reinit) {
         const link = e.target.closest('a');
         if (!link || !shouldIntercept(link)) return;
         e.preventDefault();
+        // 下拉子项点击后移出焦点：否则 :focus-within 会让下拉菜单在鼠标移出后仍保持展开
+        if (link.closest('.nav-dropdown')) link.blur();
         navigateTo(link.href);
     });
 
@@ -104,11 +106,16 @@ function sleep(ms) {
 }
 
 function updateActiveNav(url) {
-    const links = document.querySelectorAll('.site-nav a');
-    links.forEach(a => {
-        a.classList.remove('active');
-        if (a.href === url || a.href === url + '/') {
-            a.classList.add('active');
+    // 包含 .nav-parent（带子菜单的父项是 span，无 href）——跳转后要一并清除其高亮，
+    // 否则从子页面跳到其他页面时父项的横线不消失
+    const links = document.querySelectorAll('.site-nav a, .site-nav .nav-parent');
+    links.forEach(el => {
+        const match = el.tagName === 'A' && (el.href === url || el.href === url + '/');
+        el.classList.toggle('active', match);
+        // 下拉子项匹配时，父级菜单项（如「作品」）一并高亮
+        if (match && el.closest('.nav-dropdown')) {
+            const parentLink = el.closest('li.has-dropdown').querySelector(':scope > a, :scope > .nav-parent');
+            if (parentLink) parentLink.classList.add('active');
         }
     });
     // 首页特殊处理

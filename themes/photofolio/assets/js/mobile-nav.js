@@ -1,3 +1,11 @@
+/**
+ * 移动端导航菜单面板（<768px 全屏面板）
+ * - 汉堡按钮开合、点击空白处收起；跨断点进入宽屏时自动收起
+ * - 宽→窄/窄→宽切换的文字滑出/滑入动画
+ * - 子导航手风琴与桌面悬停门控见 nav-dropdown.js
+ */
+import { resetSubMenus } from './nav-dropdown.js';
+
 export function initMobileNav() {
     const btn = document.getElementById('nav-toggle');
     const nav = document.getElementById('site-nav');
@@ -27,8 +35,14 @@ export function initMobileNav() {
         };
         nav.addEventListener('transitionend', onEnd);
 
+        const closing = nav.classList.contains('active');
         nav.classList.toggle('active');
         btn.classList.toggle('active');
+
+        // 收起菜单时同步重置子导航展开态：下次打开菜单时子导航保持收起
+        if (closing) {
+            resetSubMenus(nav);
+        }
 
         // 菜单开合时同步切换导航栏的 menu-open 状态（滚动时打开菜单需隐藏底边线，
         // 让导航栏与面板合为一体）；背景整块由菜单面板统一渐变填充，导航栏自身不再渐变
@@ -76,6 +90,12 @@ export function initMobileNav() {
     });
 
     if (mqDesktop.addEventListener) {
-        mqDesktop.addEventListener('change', (e) => animateNavCrossing(e.matches));
+        mqDesktop.addEventListener('change', (e) => {
+            // 进入宽屏时自动收起菜单——子导航展开态与悬停门控由 nav-dropdown.js 处理
+            if (e.matches && nav.classList.contains('active')) {
+                toggleMenu();
+            }
+            animateNavCrossing(e.matches);
+        });
     }
 }

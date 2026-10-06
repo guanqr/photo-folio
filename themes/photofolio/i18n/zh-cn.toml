@@ -1,11 +1,5 @@
 # i18n/zh-cn.toml
 
-[home]
-other = "首頁"
-
-[portfolio_title]
-other = "作品集"
-
 [photo_count]
 other = "{{ .Count }} 張作品"
 
@@ -15,29 +9,17 @@ other = "共 {{ .Count }} 張作品"
 [no_photos_under]
 other = "{{ .Title }} 下暫無作品"
 
-[hint]
-other = "提示："
-
-[debug_info_list]
-other = "當前頁面未關聯作品數據。如果是分類頁，請檢查 <code>data/photo.toml</code> 中是否有 <code>category = \"{{ .Section }}\"</code> 的數據。"
-
 [close]
 other = "關閉"
 
 [back_to_top]
 other = "返回頂部"
 
-[theme_toggle]
-other = "切換主題"
-
 [loading]
 other = "載入中..."
 
 [no_more_photos]
 other = "已加载全部作品"
-
-[all_photos]
-other = "全部作品"
 
 [exif_focus]
 other = "焦距"
@@ -108,9 +90,6 @@ other = "全部"
 [filter_empty]
 other = "沒有符合條件的作品"
 
-[footprint]
-other = "攝影足跡"
-
 [date_format_year_month]
 other = "{{ .Year }}年{{ .Month }}月"
 
@@ -134,9 +113,6 @@ other = "{{ .Count }} 處拍攝點"
 
 [footprint_map_year_range]
 other = "{{ .Min }} — {{ .Max }}"
-
-[series_collection]
-other = "系列合集"
 
 [series_count]
 other = "共 {{ .Count }} 個系列"
@@ -177,9 +153,6 @@ other = "下一張"
 [back_to_home]
 other = "返回首頁"
 
-[about]
-other = "關於"
-
 [feed_description]
 other = "最新發布的攝影作品：按拍攝日期分組，每次更新告知發布張數，並附每張作品的拍攝地點與日期"
 
@@ -191,3 +164,6 @@ other = "分類"
 
 [series_title]
 other = "系列"
+
+[category_count]
+other = "共 {{ .Count }} 個分類"
