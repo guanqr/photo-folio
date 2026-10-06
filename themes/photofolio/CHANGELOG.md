@@ -2,7 +2,7 @@
 
 PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)。
 
-## [0.5.15] — Unreleased
+## [0.5.15] — 2026-10-06
 
 ### Added
 - **灯箱左右分栏与丰富元信息**：
