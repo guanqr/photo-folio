@@ -156,26 +156,58 @@ function renderPalette(colors, paletteWrap, paletteEl) {
 }
 
 /* 把统计结果渲染为 SVG（Camera Raw 风格：256 亮度桶、对数纵轴、窗口 5 平滑曲线）：
-   viewBox 0 0 256 96——每桶恰为一个单位宽，随容器拉伸缩放仍保持矢量清晰；
-   每通道一个 path，mix-blend-mode: plus-lighter 做加法混合（与 canvas lighter 完全一致），
-   通道重叠处自然呈现黄/青/品/白 */
+   viewBox 0 0 256 96——每桶恰为一个单位宽，随容器拉伸缩放仍保持矢量清晰。
+   加法混合不用 mix-blend-mode（手机浏览器/webview 对 SVG 元素支持参差，忽略后重叠区
+   会被最后绘制的通道盖成其本色）——按列把三通道高度排序分成三段（单通道/双通道叠加/
+   三通道叠加），每段直接填「底色 + 0.55×通道色之和」的不透明色，与 canvas lighter 完全等价 */
 const HIST_W = 256;
 const HIST_H = 96;
+const CHANNEL_ALPHA = 0.55; // 与 canvas 版 rgba 透明度一致
 
 function paintHistogram(buckets, logMax, histogramSvg) {
     if (!histogramSvg) return;
     const BINS = buckets[0].length;
-    const channelColors = ['rgb(224, 90, 90)', 'rgb(110, 200, 140)', 'rgb(110, 150, 230)'];
-    histogramSvg.innerHTML = buckets.map((bins, c) => {
-        let d = `M0 ${HIST_H}`;
+    const channelColors = [[224, 90, 90], [110, 200, 140], [110, 150, 230]];
+    // 底色（加法混合基准）从元素计算样式读取，主题变量变化时自动跟随
+    const bgCss = getComputedStyle(histogramSvg).backgroundColor;
+    const bgMatch = bgCss && bgCss.match(/rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)/);
+    const bg = bgMatch ? [parseFloat(bgMatch[1]), parseFloat(bgMatch[2]), parseFloat(bgMatch[3])] : [24, 26, 32];
+    // 某段区域（活跃通道集合）的填色 = 底色 + 0.55×通道色之和（钳制）
+    const fillFor = (indices) => {
+        const sum = [bg[0], bg[1], bg[2]];
+        indices.forEach((idx) => {
+            for (let k = 0; k < 3; k++) sum[k] += channelColors[idx][k] * CHANNEL_ALPHA;
+        });
+        return `rgb(${Math.min(255, Math.round(sum[0]))},${Math.min(255, Math.round(sum[1]))},${Math.min(255, Math.round(sum[2]))})`;
+    };
+    // 每个桶按曲线高度排序（最小 y = 最高），拆成三段矩形，按填色归组输出 path
+    const byFill = new Map();
+    const ys = [[], [], []];
+    for (let c = 0; c < 3; c++) {
         for (let i = 0; i < BINS; i++) {
-            const x = (i / (BINS - 1)) * HIST_W;
-            const y = HIST_H - (Math.log1p(bins[i]) / logMax) * (HIST_H - 1);
-            d += ` L${x.toFixed(2)} ${y.toFixed(2)}`;
+            ys[c][i] = HIST_H - (Math.log1p(buckets[c][i]) / logMax) * (HIST_H - 1);
         }
-        d += ` L${HIST_W} ${HIST_H} Z`;
-        return `<path d="${d}" fill="${channelColors[c]}" fill-opacity="0.55" style="mix-blend-mode:plus-lighter"></path>`;
-    }).join('');
+    }
+    for (let i = 0; i < BINS; i++) {
+        const order = [0, 1, 2].sort((a, b) => ys[a][i] - ys[b][i]);
+        const a = ys[order[0]][i];
+        const b = ys[order[1]][i];
+        const c = ys[order[2]][i];
+        const x0 = i;
+        const x1 = i + 1;
+        const segments = [];
+        if (b - a > 0.5) segments.push([a, b, [order[0]]]);
+        if (c - b > 0.5) segments.push([b, c, [order[0], order[1]]]);
+        if (HIST_H - c > 0.5) segments.push([c, HIST_H, [0, 1, 2]]);
+        segments.forEach(([top, bot, indices]) => {
+            const fill = fillFor(indices);
+            const seg = `M${x0},${top.toFixed(2)} L${x0},${bot.toFixed(2)} L${x1},${bot.toFixed(2)} L${x1},${top.toFixed(2)} Z`;
+            byFill.set(fill, (byFill.get(fill) || '') + seg);
+        });
+    }
+    histogramSvg.innerHTML = Array.from(byFill.entries())
+        .map(([fill, d]) => `<path d="${d}" fill="${fill}"></path>`)
+        .join('');
 }
 
 export function initPhotoAnalysis({ histogramWrap, histogramEl, paletteWrap, paletteEl }) {
