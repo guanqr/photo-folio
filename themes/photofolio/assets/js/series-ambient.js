@@ -1,6 +1,6 @@
 // 系列页氛围粒子引擎：canvas 单 rAF 循环 + 离屏 sprite 预渲染（动画期仅 drawImage 变换）。
 // 主题由 series/single.html 渲染的 data-ambient 键驱动：
-//   falling-leaves——白桦落叶随风飘摆 + 偶发风痕；firecracker——鞭炮爆裂碎屑 + 火星升腾；
+//   falling-leaves——白桦落叶随风飘摆；firecracker——鞭炮爆裂碎屑 + 火星升腾；
 //   dust——空气中悬浮的尘土：全视口缓慢漂移、微微沉浮、明暗闪烁。
 // SPA 约定（main.js initPageModules 每次换页重入）：先销毁旧状态再初始化（root 幂等）；
 // 换页销毁子树时同步 cancel rAF / disconnect observers（footprint-map.js 同款生命周期）。
@@ -59,20 +59,6 @@ function makeLeafSprite(rgb) {
     ctx.moveTo(34, 23.5);
     ctx.lineTo(35, 13);
     ctx.stroke();
-    return c;
-}
-
-// 风痕：横向渐变短线（透明 → 主题色 → 透明，逻辑尺寸 100×2）
-function makeStreakSprite(rgb) {
-    const c = makeCanvas(200, 4);
-    const ctx = c.getContext('2d');
-    ctx.scale(2, 2);
-    const g = ctx.createLinearGradient(0, 0, 100, 0);
-    g.addColorStop(0, `rgba(${rgb}, 0)`);
-    g.addColorStop(0.5, `rgba(${rgb}, 1)`);
-    g.addColorStop(1, `rgba(${rgb}, 0)`);
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, 100, 2);
     return c;
 }
 
@@ -138,17 +124,9 @@ function makeDustSprite(rgb) {
 
 /* ---- 各主题粒子构建（数组插入顺序即绘制顺序，先入先画） ---- */
 
-// 秋原：4 风痕（间歇漂过）+ 24 白桦落叶（7-12s 全程下落、横摆、旋转）
+// 秋原：24 白桦落叶（7-12s 全程下落、横摆、旋转）
 function buildAutumn(st) {
     const parts = [];
-    for (let i = 0; i < 4; i++) {
-        parts.push({
-            kind: 'streak',
-            x: rand(-st.w * 0.5, st.w), y: rand(st.h * 0.1, st.h * 0.85),
-            vx: rand(5, 9) * st.em, len: rand(5, 10) * st.em,
-            alpha: rand(0.1, 0.2), delay: rand(0, 2.5),
-        });
-    }
     for (let i = 0; i < 24; i++) {
         const dur = rand(7, 12);
         parts.push({
@@ -204,20 +182,31 @@ function buildDragon(st) {
 }
 
 // 农田：空气中悬浮的尘土——全视口缓慢漂移、微微沉浮、明暗闪烁（下半部略密）
+const DUST_MIN = 30; // 数量下限（窄屏）
+const DUST_MAX = 80; // 数量上限（超宽屏，控制每帧成本）
+const DUST_DENSITY = 24; // 每 24px 视口宽度一粒
+
+function dustCount(st) {
+    return Math.min(DUST_MAX, Math.max(DUST_MIN, Math.round(st.w / DUST_DENSITY)));
+}
+
+function makeDustParticle(st) {
+    const yFrac = Math.pow(Math.random(), 0.6); // 分布偏向地面
+    return {
+        kind: 'dust',
+        x: rand(0, st.w), y0: st.h * (0.15 + yFrac * 0.75),
+        vx: rand(0.15, 0.5) * st.em * (Math.random() < 0.5 ? -1 : 1),
+        bobA: rand(0.1, 0.35) * st.em, bobT: rand(5, 10), phase: rand(0, Math.PI * 2),
+        t: rand(0, 10),
+        alphaBase: rand(0.3, 0.5), alphaA: rand(0.1, 0.16), alphaT: rand(3, 6), alphaPhase: rand(0, Math.PI * 2),
+        size: rand(0.5, 1.4) * st.em,
+    };
+}
+
 function buildFarm(st) {
     const parts = [];
-    const count = Math.min(80, Math.max(30, Math.round(st.w / 24))); // 超宽屏封顶，控制每帧成本
-    for (let i = 0; i < count; i++) {
-        const yFrac = Math.pow(Math.random(), 0.6); // 分布偏向地面
-        parts.push({
-            kind: 'dust',
-            x: rand(0, st.w), y0: st.h * (0.15 + yFrac * 0.75),
-            vx: rand(0.15, 0.5) * st.em * (Math.random() < 0.5 ? -1 : 1),
-            bobA: rand(0.1, 0.35) * st.em, bobT: rand(5, 10), phase: rand(0, Math.PI * 2),
-            t: rand(0, 10),
-            alphaBase: rand(0.3, 0.5), alphaA: rand(0.1, 0.16), alphaT: rand(3, 6), alphaPhase: rand(0, Math.PI * 2),
-            size: rand(0.5, 1.4) * st.em,
-        });
+    for (let i = 0; i < dustCount(st); i++) {
+        parts.push(makeDustParticle(st));
     }
     return parts;
 }
@@ -227,6 +216,59 @@ const THEME_SPECS = {
     'firecracker': buildDragon,
     'dust': buildFarm,
 };
+
+/* ---- 窗口缩放保活（不清屏重建）：既有粒子坐标等比缩放、尘土数量差值增减 ---- */
+
+// 粒子绝对坐标随视口比例缩放：时间轴/相位/速度等运动状态全部保留，动画连续无跳变
+function rescaleParticles(st, oldW, oldH) {
+    const kx = st.w / oldW;
+    const ky = st.h / oldH;
+    for (const p of st.particles) {
+        switch (p.kind) {
+            case 'leaf':
+                p.x0 *= kx;
+                p.y0 *= ky;
+                break;
+            case 'spark':
+                p.x0 *= kx;
+                break;
+            case 'dust':
+                p.x *= kx;
+                p.y0 *= ky;
+                break;
+            case 'burst':
+                // 爆裂点位每次随机生成无需缩放；仅飞行中的碎屑坐标按比例缩放
+                //（数组中的 flash/debris 条目与 pool 内对象为同一引用，无需单独处理；
+                //  flash 不缩放：坐标在下次爆裂时重掷——若缩放恰逢闪光的 0.18s 生命期，
+                //  闪光与碎屑短暂偏移缩放差值，随下一次爆裂自愈，可接受）
+                for (const d of p.pool) {
+                    if (!d.active) continue;
+                    d.x *= kx;
+                    d.y *= ky;
+                }
+                break;
+        }
+    }
+}
+
+// 尘土数量随宽度变化：多退少补——既有粒子状态不动，新增的随机分布、多余的从尾部移除
+function adjustDustCount(st) {
+    const target = dustCount(st);
+    if (target === st.dustTarget) return; // 数量未变时跳过（拖动窗口时多数帧无需重建数组）
+    st.dustTarget = target;
+    let kept = 0;
+    st.particles = st.particles.filter((p) => {
+        if (p.kind !== 'dust') return true;
+        if (kept < target) {
+            kept++;
+            return true;
+        }
+        return false;
+    });
+    for (let i = kept; i < target; i++) {
+        st.particles.push(makeDustParticle(st));
+    }
+}
 
 /* ---- 粒子更新与绘制 ---- */
 
@@ -247,21 +289,6 @@ function stepParticle(st, p, dt) {
             p.y = p.y0 + (st.h + p.size * 4) * (p.t / p.dur);
             p.x = p.x0 + p.swayA * sway;
             p.rot = sway * 0.5 + p.spin * p.t; // 摆动倾角 ±0.5rad + 慢自旋
-            break;
-        }
-        case 'streak': {
-            if (p.delay > 0) {
-                p.delay -= dt;
-                break;
-            }
-            p.x += p.vx * dt;
-            if (p.x - p.len > st.w) {
-                // 漂出右缘：左侧重生并进入间歇
-                p.x = -p.len;
-                p.y = rand(st.h * 0.1, st.h * 0.85);
-                p.alpha = rand(0.1, 0.2);
-                p.delay = rand(1, 3);
-            }
             break;
         }
         case 'burst': {
@@ -369,12 +396,6 @@ function drawParticle(ctx, st, p) {
             ctx.restore();
             break;
         }
-        case 'streak': {
-            if (p.delay > 0) break; // 间歇期（visible 可由 delay 推导，不单独存状态）
-            ctx.globalAlpha = p.alpha;
-            ctx.drawImage(st.sprites.streak, p.x, p.y, p.len, 2);
-            break;
-        }
         case 'debris': {
             if (!p.active) break;
             ctx.save();
@@ -472,12 +493,12 @@ export function initSeriesAmbient() {
 
     state = {
         root: canvas,
+        theme: section.dataset.ambient,
         ctx: canvas.getContext('2d'), w: 0, h: 0,
         em: parseFloat(getComputedStyle(document.documentElement).fontSize) || 16,
         particles: [],
         sprites: {
             leaf: makeLeafSprite(rgbParticle),
-            streak: makeStreakSprite(rgbParticle),
             shards: [makeShardSprite(rgbParticle), makeShardSprite(rgbWhite)],
             flash: makeFlashSprite(rgbParticle),
             spark: makeSparkSprite(rgbParticle),
@@ -486,6 +507,8 @@ export function initSeriesAmbient() {
         rafId: 0, running: false, lastT: null,
         resizeObserver: null, onVisibility: null,
         measureFrames: 0,
+        snapshot: document.createElement('canvas'), // 后备存储调整时的可复用快照
+        dustTarget: null, // 上次调整后的尘土数量（相等时跳过重建）
     };
 
     // 本 init 的 state 令牌：销毁/重初始化后，残留的 measure/RO 回调对不上令牌即自停
@@ -505,22 +528,41 @@ export function initSeriesAmbient() {
         const bw = Math.round(w * dpr);
         const bh = Math.round(h * dpr);
         if (canvas.width !== bw || canvas.height !== bh) {
+            // 调整后备存储会清空画布——先把旧画面复制到可复用快照，尺寸调整后按像素
+            // 原样贴回，下一帧完整重绘覆盖；拖动窗口时避免每步「清空→重绘」的频闪
+            const snap = state.snapshot;
+            snap.width = canvas.width;
+            snap.height = canvas.height;
+            snap.getContext('2d').drawImage(canvas, 0, 0);
             canvas.width = bw;
             canvas.height = bh;
-            state.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            state.ctx.drawImage(snap, 0, 0); // 像素 1:1 贴回（此时变换被尺寸赋值重置为恒等）
         }
-        // 仅宽度变化才重建粒子（移动端地址栏伸缩只改高度——重建会让粒子位置/相位
-        // 全部重置、画面瞬间跳变；高度变化只更新尺寸，运动参数在 step 中实时适配）。
-        // 注意先更新尺寸再构建——builder 从 state 读取 w/h，旧值会让粒子全挤在 x=0 边缘
+        // 尺寸赋值会重置上下文变换，且 dpr 可能随浏览器缩放变化——每次同步
+        state.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        // 尺寸变化不清屏重建：先更新尺寸，再对既有粒子做保活缩放（时间轴/相位保留）、
+        // 尘土数量多退少补——动画连续无跳变（首次构建除外）
+        const sizeChanged = state.w !== w || state.h !== h;
         const widthChanged = state.w !== w;
+        const oldW = state.w;
+        const oldH = state.h;
         state.w = w;
         state.h = h;
-        if (widthChanged) state.particles = builder(state);
+        if (sizeChanged) {
+            if (oldW > 0) {
+                rescaleParticles(state, oldW, oldH);
+                // 尘土数量随宽度变化：仅尘土主题执行（其余主题无尘土粒子，
+                // 若无条件调用会把目标数量全部补齐，凭空多出雾点）
+                if (widthChanged && state.theme === 'dust') adjustDustCount(state);
+            } else {
+                state.particles = builder(state); // 首次构建（此时 w/h 已更新）
+            }
+        }
         start();
     };
 
-    // 视口尺寸变化（旋转/断点/桌面窗口调整）：停帧 → 重建尺寸与粒子。
-    // 拖动窗口时 RO 密集触发：rAF 合并为每帧至多一次重建，防每帧重建全粒子
+    // 视口尺寸变化（旋转/断点/桌面窗口调整）：不停帧（保持连续动画），
+    // 仅更新尺寸与保活缩放。拖动窗口时 RO 密集触发：rAF 合并为每帧至多一次
     let resizeQueued = false;
     state.resizeObserver = new ResizeObserver(() => {
         if (resizeQueued) return;
@@ -528,7 +570,6 @@ export function initSeriesAmbient() {
         requestAnimationFrame(() => {
             resizeQueued = false;
             if (!myState || state !== myState) return;
-            stop();
             measure();
         });
     });

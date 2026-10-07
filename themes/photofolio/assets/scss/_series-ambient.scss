@@ -18,7 +18,7 @@
 /* 各主题粒子配色（--rgb-particle，仅由 series-ambient.js 读取）：
    页面强调色不随主题变化，保持站点默认 teal */
 .series-themed[data-ambient="falling-leaves"] {
-    --rgb-particle: 207, 164, 89; /* #cfa459 白桦秋金：落叶/风痕配色 */
+    --rgb-particle: 207, 164, 89; /* #cfa459 白桦秋金：落叶配色 */
 }
 
 .series-themed[data-ambient="firecracker"] {

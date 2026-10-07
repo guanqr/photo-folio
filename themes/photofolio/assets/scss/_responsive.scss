@@ -2,9 +2,15 @@
 
 @media (max-width: 768px) {
     .header-inner,
-    .container,
     .footer-inner {
         padding: 0 1em;
+    }
+
+    /* 只收敛横向留白：纵向 padding 由组件自身声明（section-list-grid / page-others
+       的顶部留白等）——用简写会把组件纵向留白一并清零（窄屏下标题与分隔线无间隙） */
+    .container {
+        padding-left: 1em;
+        padding-right: 1em;
     }
 
     .masonry-container {
