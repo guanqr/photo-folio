@@ -2,7 +2,26 @@
 
 PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)。
 
-## [0.5.16] — 2026-10-07
+## [0.14.0] — 2026-10-07
+
+### Added
+- **分类/系列卡片网格换行 FLIP 动画**：新增 `cards-flip.js`——断点切换（769/1001px）列数变化时，卡片以与瀑布流换行同款的过渡动画（`transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)`）滑至新位置；列数档位由 JS 驱动带 20px 滞回（边界不抖动），受控 FLIP 同任务量测（基准不过期），SPA 换页自动清理旧观察器，`prefers-reduced-motion` 时跳过
+- **hugo.toml 新增两个可配置项**：`carouselInterval`（首页轮播自动播放间隔毫秒，经 `#home-carousel` 的 `data-autoplay-ms` 传入；0 禁用自动播放、其余最小 1200——与淡入淡出时长一致；进度条时长经 CSS 变量同步）与 `pageSize`（瀑布流每批加载作品数量，全部作品页的加载触发条件与 `data-page-size`、足迹单页同源；无触发器页面一次性全部揭示）
+- **系列/分类详情页底部联动入口**：页面最下端新增「其他系列 / 其他分類」卡片区块（复用 `series-cards.html` / `categories-cards.html` 与目录页同款卡片样式，排除当前系列/分类、经 SPA 跳转，滚动进入视口交错渐入复用 `revealCategoryCards`；新增 `other_series` / `other_categories` i18n 键，样式类统一为 `page-others`）；typography 新增 `sizeH2` 档位（`[params.typography].sizeH2` = 2em → `--size-h2`），该区块 H2 标题使用新档位
+- **系列页主题氛围背景**：三个系列详情页新增 `theme` front matter（`falling-leaves` / `firecracker` / `dust`，加法字段无迁移），`series/single.html` 据此给页面 section 追加 `series-themed` 类与 `data-ambient` 键并挂载氛围 canvas；新增 `series-ambient.js`（canvas 背景粒子铺满视口——白桦落叶飘摆 / 鞭炮爆裂碎屑（随机点位爆裂，闪光 + 红纸屑四溅坠落）+ 火星升腾 / 空气中悬浮的尘土（全视口缓慢漂移、微微沉浮、明暗闪烁，土黄褐 `--rgb-particle`），单 rAF 循环 + 离屏 sprite 预渲染、DPR 上限 2；`prefers-reduced-motion` 跳过粒子（CSS 兜底隐藏 canvas）；页面切后台停帧；SPA 换页先销毁旧状态再初始化）；新增 `_series-ambient.scss` 各主题声明 `--rgb-particle` 粒子配色（秋金 / 鞭炮红 / 土黄褐，仅由 JS 读取，页面强调色保持站点默认 teal 不变）；氛围层全程 `pointer-events: none`、垫于内容之下（`--z-ambient`），不拦截点击、不遮挡灯箱
+
+### Changed
+- **足迹页改版为分栏联动**：桌面端（≥769px，与汉堡断点一致）地图左栏 + 右侧**地点预览面板**（分类卡片同款：3:2 封面满铺出血 + 信息块，展示最新一张横构图作品、整块链接进地点详情页；初始为操作提示卡片——同尺寸骨架 + 居中图标与文案）；地图框高度随卡片尺寸自适应（投影按等高框重算，宽高比漂移 >1% 或跨断点时**增量重投影**——viewBox + 组仿射变换 + 光点重定位，不重建 DOM、不重投影陆地路径，拖动窗口无卡顿）；跨断点布局切换带与瀑布流同款的 FLIP 动画；移除英文眉题与说明文字，图例跨栏铺满；时间线整体移除（`timeline-anim.js`、相关 i18n 与 SCSS 一并清理），新增 `footprint_preview_more` / `footprint_preview_hint` i18n
+- **全站最小边距统一为 1em**：`.container` / 导航栏 / 页脚 / 瀑布流 / 系列正文 / 关于页 / 足迹布局的横向留白由 2em 统一为 1em（与窄屏一致）；分类/系列卡片网格间距 2em → 1em；hugo.toml 移除孤儿的 `imageSizes.timeline`
+- **灯箱元信息与图片同步淡入**：原先仅标题与地点日期简行随图片加载淡入，其余元信息先于图片出现；改为打开时全部元信息隐藏、图片加载完成后统一随照片淡入（`revealSynced` 元素组 + 各块补 `transition: opacity`）；图片加载失败时元信息照常显示（新增 `error` 处理）
+- **代码评审重构**：prefers-reduced-motion 记忆化查询与 FLIP 过渡常量收敛到新增 `utils.js`（masonry/carousel/mobile-nav/gallery-filter/series-ambient/cards-flip 共用）；系列封面枚举提取为 `series-covers.html` partial（首页/系列合集/系列详情三处共用，支持排除当前系列）；页底联动区块提取为 `page-others.html`（系列/分类详情页共用）；新增 `%section-heading` 占位符统一区块标题字体栈、`--z-ambient` 层级 token；系列氛围 canvas 移至 section 直接子级；氛围引擎清理死字段（layer/visible）并加固 measure 生命周期（init 令牌防陈旧回调、重试预算按次归零）；`theme` 键未注册时构建期 warnf 警告
+
+### Fixed
+- **窄屏「其他系列/分類」标题与分隔线无间隙**：`_responsive.scss` 窄屏 `.container { padding: 0 1em }` 简写把 `page-others` / `section-list-grid` 的纵向留白一并清零；改为仅收敛横向留白（纵向 padding 由组件自身声明）
+- **无限滚动触发位置**：页底新增「其他系列/分類」卡片区后，加载判定仍以整个文档底部为基准——用户必须滚过卡片区才触发加载；改为以 `#load-more-trigger` 触发器位置为界（触发器越过视口底部边缘 40px 后加载），滚过瀑布流底部即加载、无需越过页底卡片区
+- **系列氛围粒子窗口缩放不清屏重生**：尺寸变化（含高度）时既有粒子坐标等比缩放（时间轴/相位/运动状态全部保留）、尘土数量多退少补；调整后备存储时旧画面快照（可复用）像素级贴回、缩放期间不停帧、变换每次同步——动画连续无跳变无频闪（此前按宽度重建会让粒子瞬间清空重生，且画布清空+停帧造成拖动窗口频闪）
+
+## [0.13.0] — 2026-10-07
 
 ### Changed
 - **照片设备信息**：photo.toml 新增 `camera`/`lens` 字段（预处理脚本 exif_utils 提取 Make/Model 与 LensModel、FIELDS 持久化，`backfill_camera_lens.py` 从 original_photos 批量回填历史条目；镜头仅记录在 toml、不在灯箱展示）；灯箱 EXIF 区新增「設備」行（置于焦距之前）——**信息缺失时以删除线占位「—」展示**（`is-missing` 样式），其余 EXIF 项仍按空值隐藏
@@ -23,18 +42,18 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 - **SPA 无法返回首页**：popstate 恢复内容只在 `e.state.url` 存在时执行——首次加载的首页条目没有推入过状态（state 为 null），从任何页面点浏览器返回都因状态为空被跳过、页面原地不动；改为**state 为空时按当前地址恢复**（popstate 触发时 location 已指向目标页）
 - **手机浏览器直方图白色区域显示为蓝色**：`mix-blend-mode: plus-lighter` 在旧版 iOS Safari/部分安卓 webview 的 SVG 元素上不支持，混合模式被忽略后退化为普通半透明叠加——最后绘制的蓝色通道把重叠区（本应黄/白）盖成蓝色；改为**纯填色分段渲染**：按列把三通道高度排序拆成三段（单通道/双通道叠加/三通道叠加），每段直接填「底色 + 0.55×通道色之和」的不透明色（与 canvas `lighter` 数学等价）——不依赖混合模式，所有浏览器渲染一致
 
-## [0.5.15] — 2026-10-06
+## [0.12.0] — 2026-10-06
 
 ### Added
+- **摄影作品订阅源（RSS 2.0，`/index.xml`）**：照片数据（`data/photo.toml`）按**拍摄日期分组**生成订阅条目——标题告知当日发布张数（「新發布 N 張作品（日期）」），正文以**纯文字**列出每张作品的**作品名 / 拍摄地点 / 拍摄日期**（不放图片），条目链接指向对应年份筛选的全部作品页；只输出最近 `feedCount` 组（hugo.toml `[params].feedCount`，默认 20）；`head` 增加 RSS 自动发现链接
+
+### Changed
 - **灯箱左右分栏与丰富元信息**：
   - **桌面端**：图片居左、元信息面板居右（22em 独立滚动，标题固定、详情区内部滚动；图片区左侧留出箭头列与右侧对称，关闭栏绝对定位使图片整屏垂直居中；左右箭头与叉号同尺寸圆形、同列对齐）
   - **元信息扩充**：標題/地點/日期简行（带标签与图标）、EXIF 分行（焦距/光圈/快門/感光度各带图标，单位后置）、**Camera Raw 风格直方图**（前端 SVG 矢量渲染：w_200 采样 → RGB 256 桶 + 窗口 5 平滑 + 对数纵轴 + 加法混合（mix-blend-mode: plus-lighter），重叠处自然呈黄/青/品/白；高 DPI/放大/窄屏下始终清晰）、**色卡**（7 主色：16 级量化 + 贪心种子 + k-means 细化聚类，全部像素计入占比之和 ≈100%；每行色块 + hex 大写 + `H·S·L` 两行 + 占比——≥1% 取整数、<1% 显示「<1%」）、**背後的故事**（复用 `description` 字段）
   - **窄屏底部抽屉**：收起态显示標題+地點+日期；滚轮（灯箱任意区域）/ 长按拖动（虚拟位置统一滚动模型，防原生图片拖拽与 pointercancel 接管）/ 底部箭头三种交互渐进展开；全开后内容才可滚动；**下拉到底图片区域恰为页面一半**（头部高度每次打开重测、测量前禁用过渡）；断点切换带面板/图片区过渡动画；跨断点自动清理内联样式恢复桌面布局
   - **优雅降级**：OSS 未配置 CORS 时直方图/色卡探测失败自动隐藏，配置规则后自动生效
 - **灯箱代码模块化**：抽屉交互抽出 `lightbox-drawer.js`（`initPanelDrawer`），直方图/色卡统计抽出 `lightbox-analysis.js`（`initPhotoAnalysis`，结果按 src 缓存），主文件只保留打开/切换/关闭流程
-- **摄影作品订阅源（RSS 2.0，`/index.xml`）**：照片数据（`data/photo.toml`）按**拍摄日期分组**生成订阅条目——标题告知当日发布张数（「新發布 N 張作品（日期）」），正文以**纯文字**列出每张作品的**作品名 / 拍摄地点 / 拍摄日期**（不放图片），条目链接指向对应年份筛选的全部作品页；只输出最近 `feedCount` 组（hugo.toml `[params].feedCount`，默认 20）；`head` 增加 RSS 自动发现链接
-
-### Changed
 - **组照详情页叙事式改版**：瀑布流改为**叙事长文**——所有宽度下均为单列（**文字在上、照片全宽在下**，md 正文只写文字），照片以**与全部作品页完全一致的瀑布流**排布（复用 masonry 引擎与 photo-card partial，两端对齐行、行内等高，档位按网格宽度自动推导、无每行张数限制，asIndividual 无组照徽章）；照片顺序由 md front matter 的 `photos` 列表（文件名数组）决定，未列出的照片不显示；照片点击开灯箱（`lightbox.js` 收集器通用化为 `closest('[data-title]')`）；新 `_series.scss`；无分页
 - **组照全站拆分展示**：**所有照片网格（全部作品/各分类页/足迹单页）一律展示组照全部照片**（封面 + 内页，不再只显示封面）；**组照所有照片（封面+内页）右上角均显示组照图标链接**（纯图标、取消数量显示，title 提示系列名）——点击图标跳组照详情页、点击图片本身一律开灯箱；灯箱标题统一显示照片自身名称；原「拆分模式」机制整体移除——`data-hidden-selector`、`series-split` 网格状态类、`isSeriesSplit` 导出、`data-series-inner` 标记及 gallery-filter/lightbox/page-transition/masonry 中的相关分支全部删除，筛选谓词恢复为四条件 AND；`$gridPhotos = $realPhotos` 全站统一，`$displayPhotos`（仅封面）仅保留给画廊筛选选项推导；组照合集页（series/list）保持封面墙作为系列入口
 - **orientation 字段废弃**：构图方向不再存库——一律由模板从 `width`/`height` 推导（宽 ≥ 高含相等 = landscape），photo.toml 中 86 条 orientation 行已剥离；`scripts/backfill-orientation.mjs` 改名 `backfill-dimensions.mjs`，只负责宽高兜底补全并剥离废弃字段；预处理脚本 `FIELDS` 移除 orientation
@@ -47,7 +66,7 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 - **懒加载图片补显式尺寸（CLS 审计）**：瀑布流照片卡 `<img>` 增加真实 `width`/`height` 属性——**常规流程由预处理脚本在上传照片时生成宽高**（新照片随 EXIF 提取记录像素尺寸、历史条目从 output_photos 回填），`scripts/backfill-dimensions.mjs` 仅作兜底；构图方向由模板从宽高推导（脚本只生成 raw 宽高、不做判定）；首页分类封面与足迹时间线缩略图的 img 补 `aspect-ratio`（与容器一致）
 - **竖构图照片慢网下先显示横构图方块再跳变**：`measureRatios` 优先读取 `width`/`height` 属性立即给出精确比例——不再等图片加载完成（原 800ms 超时按兜底比例 1.5 先排布、加载后再校正的路径仅保留给无属性的照片），竖构图揭示即正确形状
 
-## [0.5.14] — 2026-10-01
+## [0.11.0] — 2026-10-01
 
 ### Added
 - **首页轮播大字下方新增两个胶囊按钮**：查看全部作品（→ `/gallery/`）、關於我（→ `/about/`），站内链接走 SPA 切换；胶囊为毛玻璃半透明样式（白描边 + 黑底模糊，hover 轮廓变白），overlay 保持 `pointer-events:none`、按钮组单独恢复点击
@@ -65,7 +84,7 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 - **画廊筛选与灯箱健壮性修复**（代码审查）：带筛选参数但无按钮可匹配（维度已关闭/值过期/空值）时网格不再空白——恢复流程兜底执行 apply 并同步清理过期参数；灯箱箭头集合排除被筛选隐藏的照片；箭头切换先重建列表再取模（SPA 换页后不错位）；拆分模式判定收敛为 `isSeriesSplit` 单一导出（lightbox/page-transition 复用）；组照内页排除谓词复用网格 `data-hidden-selector`（与初始分页队列同源）；筛选参数字母表由 `PARAM_KEYS` 单一来源（main.js skipReveal 正则自动跟随）；infinite-scroll 拆线逻辑抽取共用
 - **数据与构建健壮性**：`_content.gotmpl` 构建期校验 slug 必填且唯一；地点注册表消费点 nil 安全（photo.toml 地点未登记时回退 urlize 而非构建报错）；photo.toml 缺 orientation 时构建期 warnf 提醒补跑回填脚本；baseof 预隐藏脚本同步感知 `data-hidden-selector`（首屏不再闪现组照内页空框）；`backfill-orientation.mjs` 增加请求超时、全失败非零退出、临时文件原子写入、缩进键兼容
 
-## [0.5.13] — 2026-09-29
+## [0.10.3] — 2026-09-29
 
 ### Changed
 - **Hugo 0.164 兼容性清理（消除全部弃用警告）**：`hugo.toml` 的 `languageCode` 改 `locale`；`baseof.html` 的 `.Site.LanguageCode` 改 `.Site.Language.Locale`；全站数据访问统一 `hugo.Data`（替换 `.Site.Data`、`$site.Data`、`site.Data` 三种写法，含 photo-card/photo-sorted/location-registry 等 partial）；`head.html` 移除显式 `transpiler = "libsass"` 声明改用 Hugo 默认转译器（显式声明在 0.153+ 触发弃用警告，dartsass 需另行安装 Dart Sass，本机未装）
@@ -78,7 +97,7 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 
 ---
 
-## [0.5.12] — 2026-09-14
+## [0.10.2] — 2026-09-14
 
 ### Added
 - **首页轮播图数量可配置**：`hugo.toml` 新增 `carouselCount` 参数控制首页轮播展示的精选图数量，取值自动钳制在 1–12 张（默认 12 张，超界按边界值处理）
@@ -99,9 +118,9 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 
 ---
 
-## [0.5.11] — 2026-09-13
+## [0.10.1] — 2026-09-13
 
-### Added
+### Changed
 - **图片 OSS 多尺寸 + WebP 优化**：扩展 `img-url.html` 支持阿里云 OSS 图片处理参数，按场景输出不同尺寸与格式的图片
   - 瀑布流照片卡片：输出 `w_800` 缩略图与 `w_1920` 灯箱大图，分别通过 `data-src` 与 `data-full-src` 加载
   - 首页轮播图：`w_1920` WebP 占满视口
@@ -117,7 +136,7 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 
 ---
 
-## [0.5.10] — 2026-09-13
+## [0.10.0] — 2026-09-13
 
 ### Added
 - **足跡世界地圖**：`/footprint/` 时间线顶部新增 SVG 世界地图（自绘等距圆柱投影，零外部库/瓦片；世界陆地几何为一次性生成的简化静态 JSON，同源 fetch 并记忆化已解析数据——SPA 返回重进本页照常渲染，失败降级为网格+光点且下次重试）——按省份/国家聚合金色光点（大小随照片数），悬停/键盘聚焦弹层显示地名、照片数与年份跨度，点击光点跳转对应足跡详情页（SPA 无缝切换）；视图自动适配到全部拍摄地点（fit-to-bounds + 纵横比锁定）；带边框圆角的长方形地图框架（内容裁剪到视图内不外溢），区块宽度与导航栏一致；IntersectionObserver 懒加载（rootMargin 600px）；交错弹入动画与多照片首点呼吸脉冲环；`prefers-reduced-motion` 完整降级；明暗主题全变量适配；坐标数据新增 `data/locations.toml`（无坐标地点自动跳过）
@@ -139,14 +158,13 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 
 ---
 
-## [0.5.9] — 2026-07-01
+## [0.9.0] — 2026-07-01
 
 ### Added
 - **精選分類**：新增 `/featured/` 页面，自动收集所有标记 `featured = true` 的照片（跨分类、按时间排序）；首页分类卡片自动统计精选数量并以最新精选照片为封面，精選卡片置於首位（其余分类权重依次后移）
 - **精選单张展示**：組照照片標記精選時僅展示該單張（不帶組照鏈接與徽章，標題為照片自身 alt），組照內頁標記精選也照常顯示；`photo-card` 参数 `isInSeriesPage` 重命名为 `asIndividual`
 
 ### Changed
-- **分类重组**：城市、乡村、山河合并为「風光」（`scenery`，43 张）；人文、花木、動物保持不变；首页分类卡片顺序：風光、人文、花木、動物
 - **首页改版为全屏轮播**：轮播展示按时间降序最新的 12 张精选图（`featured=true`），充满整个页面（`object-fit: cover` 居中适当裁剪、无白边）；标题与副标题悬浮在轮播图左下角（底部渐变压暗保证可读）；自动播放 4s/张 + 左右箭头 + 圆点，悬停/聚焦暂停；点击照片可打开灯箱；分类入口移到轮播图下方，下拉滚动后可见（滚动进入视口时交错渐入）
 - **顶部导航栏透明**：页面顶部时 header 背景完全透明（无背景/边框/模糊），下拉滚动（>10px）后显示背景色与毛玻璃
 - **照片网格改为两端对齐行布局（自然行高，零裁切）**：行高 = (行宽 − 间距 − 边框) / 宽高比之和，由本行照片内容自然决定、恰好铺满容器；贪心分行以「每行 N 张 3:2 宽幅照片」为参考值，边界处比较「停在此处 / 纳入下一张」取行高最接近参考值的方案——行高天然落在参考值 ±10% 内（肉眼看基本一致）；**行基准档位与屏幕宽度对应（断点与汉堡图标一致）**：≤768px 每行 2 张基准、769–1000px 每行 3 张基准、>1000px 每行 4 张基准（滞回 788/1020）；照片严格保持自身长宽比（`object-fit: cover` 仅兜底取整误差），绝不拉伸、绝不粗暴裁切、行末不留空白；**最后一行（照片耗尽、只剩一两张时）不强行对齐：行高封顶参考值、右侧留白，照片高度与其他行一致**；宽屏每行至少 2 张，独占一行的照片按自然比例显示；按时间顺序横向逐行加载（60ms/张），resize 由 JS 重排（不改变照片顺序）；间距 0.25em；灯箱放大仍为原图比例
@@ -174,7 +192,7 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 
 ---
 
-## [0.5.8] — 2026-07-01
+## [0.8.0] — 2026-07-01
 
 ### Added
 - **404 页面**：含返回首页链接，完整 i18n
@@ -195,7 +213,7 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 
 ---
 
-## [0.5.7] — 2026-06-29
+## [0.7.1] — 2026-06-29
 
 ### Changed
 - **移动端导航图标**：菜单文字左侧显示图标（首页/作品/足迹/关于），宽屏隐藏；图标 0.85em + 微调对齐；下划线仅划文字不划图标
@@ -218,7 +236,7 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 
 ---
 
-## [0.5.6] — 2026-06-29
+## [0.7.0] — 2026-06-29
 
 ### Changed
 - **全局动画增强**：新增 `--transition-spring` 变量（弹性缓动）、`body` 明暗主题过渡、`fadeInUp/Down` 全局关键帧
@@ -245,7 +263,7 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 
 ---
 
-## [0.5.5] — 2026-06-28
+## [0.6.0] — 2026-06-28
 
 ### Changed
 - **全部按需分配列**：首批照片也不再预分配，改为逐张揭示时实时测最矮列放入（`revealBatch`），确保加载过程中的列高始终均衡
@@ -255,7 +273,6 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 - **关于页面**：新增 `/about/` 页面，展示头像、个人简介、设备工具列表，配置集中在 `hugo.toml` 的 `[params.author]`
 - **SVG 统一管理**：所有 SVG 图标集中到 `data/svg.toml`，模板通过 `{{ $.Site.Data.svg.xxx | safeHTML }}` 引用，`baseof.html` 三处硬编码改为引用；新增 `x`、`chevron_left`、`chevron_right` 图标
 - 关于页去除大标题「設備與工具」，保留分类小标题；清理冗余 `.about-section` 包裹层及 SCSS、i18n 无用键值
-- 导航栏隐藏博客外链
 
 ### Fixed
 - 修复首批 12 张照片在列高相等时全部堆积到第一列
@@ -343,7 +360,7 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 
 ---
 
-## [0.4.1] — 2026-06-16
+## [0.4.0] — 2026-06-16
 
 ### Added
 - **组照徽章数量显示**：组照封面图右上角徽章新增照片数量，胶囊形状展示图标 + 数字
@@ -352,14 +369,13 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 - **统一颜色变量形式**：所有基础色值从 `#hex` 统一改为 `rgba()` 形式，保持与语义化变量一致
 - **足迹时间线布局优化**：最大宽度从 800px 放宽至 1100px，时间列加宽（60px → 80px），间距增大（2em → 2.5em），时间字体略微放大
 - **样式组织**：组照徽章窄屏响应式样式从 `_gallery.scss` 迁移至 `_responsive.scss`
-- 更新首页 Hero 封面图
 
 ### Fixed
 - **修复组照照片数量统计**：各分类页、足迹页、地区详情页的照片总数现在正确计入组照内页照片，而非仅统计封面和单图
 
 ---
 
-## [0.4.0] — 2026-06-15
+## [0.3.0] — 2026-06-15
 
 ### Added
 - **组图系列功能**：多张照片可归入同一主题系列，封面图显示组照图标，点击跳转至系列详情页
@@ -379,17 +395,14 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 
 ---
 
-## [0.3.1] — 2026-06-11
-
-### Changed
-- 分类「folk（民俗）」重命名为「humanist（人文）」，对应目录 `content/folk/` → `content/humanist/`
+## [0.2.2] — 2026-06-11
 
 ### Removed
 - `_footprint.scss` 独立样式文件，足迹样式合并至 `_responsive.scss`
 
 ---
 
-## [0.3.0] — 2026-06-10
+## [0.2.1] — 2026-06-10
 
 ### Fixed
 - 修复文字显示异常

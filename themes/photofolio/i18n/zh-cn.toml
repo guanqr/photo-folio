@@ -93,23 +93,14 @@ other = "全部"
 [filter_empty]
 other = "沒有符合條件的作品"
 
-[date_format_year_month]
-other = "{{ .Year }}年{{ .Month }}月"
-
 [date_format_full]
 other = "{{ .Year }}年{{ .Month }}月{{ .Day }}日"
 
-[timeline_photo_count]
-other = "共 {{ .Count }} 張作品"
+[footprint_preview_more]
+other = "查看全部 {{ .Count }} 張作品 →"
 
-[journey_continues]
-other = "旅途仍在繼續..."
-
-[footprint_map_eyebrow]
-other = "FOOTPRINT MAP"
-
-[footprint_map_description]
-other = "{{ .Count }} 張作品在 {{ .Sites }} 個地點留下足跡。懸停或點擊光點，查看該處的地名、作品數量與拍攝年份跨度。"
+[footprint_preview_hint]
+other = "點擊地圖上的光點，查看該地點的作品與詳情"
 
 [footprint_map_sites]
 other = "{{ .Count }} 處拍攝點"

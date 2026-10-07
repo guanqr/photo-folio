@@ -50,7 +50,6 @@ defaultContentLanguage = "zh-cn"
         gallery = 800          # 瀑布流缩略图
         carousel = 1920        # 首页轮播图
         category = 1000        # 分类卡片封面
-        timeline = 500         # 足迹时间线缩略图
         lightbox = 1920        # 灯箱大图
         ogWidth = 1200         # Open Graph 宽度
         ogHeight = 630         # Open Graph 高度

@@ -6,12 +6,7 @@
         padding: 0 1em;
     }
 
-    /* 只收敛横向留白：纵向 padding 由组件自身声明（section-list-grid / page-others
-       的顶部留白等）——用简写会把组件纵向留白一并清零（窄屏下标题与分隔线无间隙） */
-    .container {
-        padding-left: 1em;
-        padding-right: 1em;
-    }
+    /* .container 的窄屏横向留白已在 _base 统一为 1em，此处无需再声明 */
 
     .masonry-container {
         padding: 1em;
@@ -181,7 +176,7 @@
     /* 跨断点进入窄屏时的滑出动画：菜单文字临时回到导航栏内向右滑出，
        结束后恢复为隐藏的下拉面板（类由 JS 添加，动画结束即移除） */
     .site-nav.nav-slide-out {
-        /* 锚定偏移 = 桌面/窄屏 .header-inner 内边距差（2em − 1em）：
+        /* 锚定偏移 = 桌面/窄屏 .header-inner 内边距差（现两态均为 1em）：
            窄屏下汉堡占据了导航原区域、actions 盒右移 1em，按此回退到宽屏原位，
            动画从文字的原位置开始，不闪现到汉堡左侧 */
         --nav-desktop-offset: 1em;
@@ -240,14 +235,6 @@
             width: 1.4em;
             height: 1.4em;
         }
-    }
-
-    .timeline-container {
-        padding: 2em 1em 4em;
-    }
-
-    .footprint-map-section {
-        padding: 2em 0 0;
     }
 
     .about-header {

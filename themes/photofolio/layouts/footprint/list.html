@@ -1,5 +1,5 @@
 {{ define "main" }}
-{{/* 1. 全站作品时间排序（时间线画廊展示全部作品，含系列内页——与全站拆分一致） */}}
+{{/* 1. 全站作品时间排序（按地点聚合展示全部作品，含系列内页——与全站拆分一致） */}}
 {{ $sortedPhotos := partial "photo-sorted.html" . }}
 
 {{/* 2. 按 location 单趟聚合（输入时间降序 → 首见即最新、末见即最早） */}}
@@ -23,29 +23,46 @@
 {{ range $loc, $d := $locAgg }}
     {{ $locationData = $locationData | append (merge $d (dict "location" $loc)) }}
 {{ end }}
-{{ $timeline := sort $locationData "time" "desc" }}
+{{ $locations := sort $locationData "time" "desc" }}
 
-{{/* 3. 足迹地点注册表（slug/url/坐标一次构建，时间线与地图共用） */}}
+{{/* 3. 足迹地点注册表（slug/url/坐标一次构建，地图与预览面板共用） */}}
 {{ $locReg := partial "location-registry.html" . }}
 
-{{/* 4. 地图光点：有坐标的地点进入地图（时间线不受影响） */}}
+{{/* 4. 地图光点 + 预览面板数据：单趟遍历地点列表——
+      地图光点仅收录有坐标的地点；预览面板每地点取最新一张横构图（全竖构图回退最新一张） */}}
+{{ $cfg := site.Params.imageSizes | default dict }}
+{{ $coverWidth := $cfg.category | default 1000 }}
+{{ $coverQuality := $cfg.quality | default 80 }}
 {{ $mapPoints := slice }}
 {{ $totalMapPhotos := 0 }}
-{{ range $item := $timeline }}
+{{ $previewData := slice }}
+{{ range $item := $locations }}
     {{ $loc := $item.location }}
-    {{ $entry := index $locReg $loc }}
-    {{ if and $entry $entry.lat }}
-        {{ $targetUrl := default (printf "/footprint/%s/" ($loc | urlize) | relURL) $entry.url }}
-        {{ $mapPoints = $mapPoints | append (dict
-            "name" $loc
-            "lat" $entry.lat
-            "lng" $entry.lng
-            "count" (int $item.realCount)
-            "minYear" (int ($item.earliest | time.Format "2006"))
-            "maxYear" (int ($item.time | time.Format "2006"))
-            "url" $targetUrl
-        ) }}
-        {{ $totalMapPhotos = add $totalMapPhotos (int $item.realCount) }}
+    {{ $targetUrl := printf "/footprint/%s/" ($loc | urlize) | relURL }}
+    {{ $slug := $loc | urlize }}
+    {{ with index $locReg $loc }}{{ $targetUrl = .url }}{{ with .slug }}{{ $slug = . }}{{ end }}{{ end }}
+
+    {{ $cover := index $item.photos 0 }}
+    {{ range $p := $item.photos }}
+        {{ if and (ge (int $p.width) (int $p.height)) }}{{ $cover = $p }}{{ break }}{{ end }}
+    {{ end }}
+    {{ $coverUrl := partial "img-url.html" (dict "src" $cover.src "site" site "width" $coverWidth "mode" "lfit" "format" "webp" "quality" $coverQuality) }}
+    {{ $previewData = $previewData | append (dict "slug" $slug "name" $loc "url" $targetUrl "count" (int $item.realCount) "cover" (dict "src" $coverUrl "alt" $cover.alt)) }}
+
+    {{ with index $locReg $loc }}
+        {{ if .lat }}
+            {{ $mapPoints = $mapPoints | append (dict
+                "name" $loc
+                "lat" .lat
+                "lng" .lng
+                "slug" $slug
+                "count" (int $item.realCount)
+                "minYear" (int ($item.earliest | time.Format "2006"))
+                "maxYear" (int ($item.time | time.Format "2006"))
+                "url" $targetUrl
+            ) }}
+            {{ $totalMapPhotos = add $totalMapPhotos (int $item.realCount) }}
+        {{ end }}
     {{ end }}
 {{ end }}
 {{ $mapPoints = sort $mapPoints "count" "desc" }}
@@ -60,78 +77,45 @@
         </div>
     </div>
 
-    {{/* 足迹地图：位于时间线上方；无坐标地点时整块不渲染 */}}
+    {{/* 桌面分栏（地图框 + 地点预览面板），窄屏上下堆叠；无坐标地点时地图整块不渲染。
+        头部说明与图例跨栏铺满；预览面板随地图光点点击联动更新 */}}
+    <div class="footprint-layout{{ if gt (len $mapPoints) 0 }} with-map{{ end }}">
     {{ if gt (len $mapPoints) 0 }}
-    <section class="footprint-map-section" aria-labelledby="footprint-map-title">
-        <div class="container">
-            <div class="footprint-map-head">
-                <p class="footprint-map-eyebrow" id="footprint-map-title">{{ i18n "footprint_map_eyebrow" }}</p>
-                <p class="footprint-map-desc">{{ i18n "footprint_map_description" (dict "Count" $totalMapPhotos "Sites" (len $mapPoints)) }}</p>
-            </div>
-            <div class="footprint-map" id="footprint-map"
-                 data-count-format='{{ i18n "photo_count" (dict "Count" "%COUNT%") }}'
-                 data-year-range-format='{{ i18n "footprint_map_year_range" (dict "Min" "%MIN%" "Max" "%MAX%") }}'>
-                <noscript>
-                    <ul class="footprint-map-fallback">
-                        {{ range $mapPoints }}
-                        <li><a href="{{ .url }}">{{ .name }}</a></li>
-                        {{ end }}
-                    </ul>
-                </noscript>
-            </div>
-            <p class="footprint-map-legend"><span class="legend-dot"></span>{{ i18n "footprint_map_sites" (dict "Count" (len $mapPoints)) }}</p>
-            <script type="application/json" id="footprint-map-data">{{ $mapPoints | jsonify | safeJS }}</script>
+    <section class="footprint-map-section">
+        <div class="footprint-map" id="footprint-map"
+             data-count-format='{{ i18n "photo_count" (dict "Count" "%COUNT%") }}'
+             data-year-range-format='{{ i18n "footprint_map_year_range" (dict "Min" "%MIN%" "Max" "%MAX%") }}'>
+            <noscript>
+                <ul class="footprint-map-fallback">
+                    {{ range $mapPoints }}
+                    <li><a href="{{ .url }}">{{ .name }}</a></li>
+                    {{ end }}
+                </ul>
+            </noscript>
         </div>
+        <script type="application/json" id="footprint-map-data">{{ $mapPoints | jsonify | safeJS }}</script>
     </section>
+    <p class="footprint-map-legend"><span class="legend-dot"></span>{{ i18n "footprint_map_sites" (dict "Count" (len $mapPoints)) }}</p>
     {{ end }}
 
-    <div class="timeline-container">
-        {{ range $timeline }}
-        <div class="timeline-node" data-anim="fade-up">
-            {{ $loc := .location }}
-            {{/* 安全获取 URL（地点 → 足迹页注册表；未登记进 locations.toml 时回退 urlize，不触发构建错误） */}}
-            {{ $targetUrl := printf "/footprint/%s/" ($loc | urlize) | relURL }}
-            {{ with index $locReg $loc }}{{ $targetUrl = .url }}{{ end }}
-
-            {{ $year := .time | time.Format "2006" }}
-            {{ $month := .time | time.Format "01" }}
-            <time class="timeline-date" datetime="{{ .time }}">{{ i18n "date_format_year_month" (dict "Year" $year "Month" $month) }}</time>
-
-            <a href="{{ $targetUrl }}" class="timeline-content">
-                <h3 class="timeline-location">{{ .location }}</h3>
-                <p class="timeline-count">{{ i18n "timeline_photo_count" (dict "Count" .realCount) }}</p>
-
-                <div class="timeline-gallery">
-                    {{ $totalPhotos := .realCount }}
-                    {{ $showMore := gt $totalPhotos 4 }}
-                    {{ $imgLimit := cond $showMore 3 4 }}
-
-                    {{ $cfg := $.Site.Params.imageSizes | default dict }}
-                    {{ $timelineSize := $cfg.timeline | default 500 }}
-                    {{ $timelineQuality := $cfg.quality | default 80 }}
-
-                    {{ range first $imgLimit .photos }}
-                        {{ $srcUrl := partial "img-url.html" (dict "src" .src "site" $.Site "width" $timelineSize "height" $timelineSize "mode" "fill" "format" "webp" "quality" $timelineQuality) }}
-                        <div class="timeline-thumb">
-                            <img src="{{ $srcUrl }}" alt="{{ .alt }}" loading="lazy" class="photo-img">
-                        </div>
-                    {{ end }}
-
-                    {{ if $showMore }}
-                        <div class="timeline-more">
-                            <span>+{{ sub $totalPhotos 3 }}</span>
-                        </div>
-                    {{ end }}
-                </div>
-            </a>
-        </div>
-        {{ end }}
-        
-        <div class="timeline-end" data-anim="fade-up">
-            <div class="timeline-content-static">
-                <p class="end-text">{{ i18n "journey_continues" }}</p>
+    <div class="footprint-preview-wrap">
+        {{/* 预览面板：初始为操作提示卡片（无 JS 时同样可见）；点击地图光点后由 JS 渲染
+            对应地点内容，整块链接进地点详情页。
+            外轮廓与地点态一致（同尺寸骨架撑起高度），提示内容 absolute 覆盖整卡居中 */}}
+        <a class="footprint-preview is-hint" id="footprint-preview"
+           data-more-format='{{ i18n "footprint_preview_more" (dict "Count" "%COUNT%") }}'>
+            <div class="preview-media" aria-hidden="true"></div>
+            <div class="preview-info" aria-hidden="true">
+                <h3 class="preview-name">&nbsp;</h3>
+                <span class="preview-more">&nbsp;</span>
             </div>
-        </div>
+            <div class="preview-hint">
+                <div class="preview-hint-icon" aria-hidden="true">{{ hugo.Data.svg.map_pin | safeHTML }}</div>
+                <p class="preview-hint-text">{{ i18n "footprint_preview_hint" }}</p>
+            </div>
+        </a>
+    </div>
+    <script type="application/json" id="footprint-preview-data">{{ $previewData | jsonify | safeJS }}</script>
     </div>
 </section>
 {{ end }}

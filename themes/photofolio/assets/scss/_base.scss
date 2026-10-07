@@ -176,7 +176,7 @@ ul { list-style: none; }
 .container {
     max-width: var(--container-width);
     margin: 0 auto;
-    padding: 0 2em;
+    padding: 0 1em; /* 与窄屏一致的最小边距 */
 }
 
 .icon {

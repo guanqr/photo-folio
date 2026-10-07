@@ -17,7 +17,7 @@
 }
 
 .masonry-container {
-    padding: 2em;
+    padding: 2em 1em; /* 横向最小边距与窄屏一致（1em） */
     max-width: var(--container-width);
     margin: 0 auto;
 }

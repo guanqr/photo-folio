@@ -31,6 +31,12 @@ export function initLightbox() {
     const storyWrap = document.getElementById('lightbox-story-wrap');
     const storyEl = document.getElementById('lightbox-story');
 
+    // 随图片同步淡入的元信息元素：打开时全部隐藏，图片加载完成后统一揭示——
+    // 标题 / 分类与系列胶囊 / 地点日期简行 / EXIF / 直方图与色卡 / 故事全部与照片同节奏
+    const revealSynced = [
+        lightboxCaption, tagsEl, lightboxMeta, exifList, histogramWrap, paletteWrap, storyWrap,
+    ].filter(Boolean);
+
     if (!lightbox || !lightboxImg) return;
 
     // 窄屏底部抽屉（<769px）：展开/收起、滚轮与拖动手势（独立模块，见 lightbox-drawer.js）
@@ -40,9 +46,13 @@ export function initLightbox() {
 
     let currentPhotos = [];
     let currentIndex = -1;
+    let switching = false; // 切换动画进行中（滑出/滑入期间 onLoad 不强制图片透明度，避免覆盖过渡）
     // 两层毛玻璃背景：active 为当前显示层，inactive 用于交叉淡入新背景
     let activeBackdrop = lightboxBackdrop;
     let inactiveBackdrop = lightboxBackdropNext;
+
+    // 图片加载失败（404/CDN 异常）：仍显示全部元信息，避免灯箱整片空白
+    lightboxImg.addEventListener('error', () => revealOverlayText());
 
     // 收集当前页面所有可预览的作品
     function collectPhotos() {
@@ -188,6 +198,7 @@ export function initLightbox() {
 
             lightboxImg.addEventListener('transitionend', function slideOutDone() {
                 lightboxImg.removeEventListener('transitionend', slideOutDone);
+                switching = true; // 滑入期间 onLoad 不强制透明度
 
                 // 换内容：新图在进入侧待命
                 lightboxImg.style.transition = 'none';
@@ -203,6 +214,7 @@ export function initLightbox() {
                 lightboxImg.style.opacity = '1';
                 lightboxImg.addEventListener('transitionend', function slideInDone() {
                     lightboxImg.removeEventListener('transitionend', slideInDone);
+                    switching = false;
                     lightboxImg.style.transition = '';
                     lightboxImg.style.transform = '';
 
@@ -222,7 +234,8 @@ export function initLightbox() {
             renderPanel(p);
             // 在灯箱激活前重置抽屉为收起态：避免旧展开状态先显示一帧导致图片大小反弹
             drawer.reset();
-            if (lightboxMeta) lightboxMeta.style.opacity = '0';
+            // 元信息与图片同步：先全部隐藏，图片加载完成后随照片一起淡入
+            revealSynced.forEach((el) => { el.style.opacity = '0'; });
 
             lightboxImg.src = p.src;
             lightboxImg.alt = p.alt;
@@ -240,7 +253,9 @@ export function initLightbox() {
             } else {
                 lightboxImg.addEventListener('load', function onLoad() {
                     lightboxImg.removeEventListener('load', onLoad);
-                    lightboxImg.style.opacity = '1';
+                    // 切换动画进行中不强制透明度（slideIn 过渡会将其归位）——
+                    // 否则慢图恰在滑出期间加载完成时会闪一下满透明覆盖过渡
+                    if (!switching) lightboxImg.style.opacity = '1';
                     revealOverlayText();
                 });
             }
@@ -278,8 +293,7 @@ export function initLightbox() {
 
     // 标题与简行的透明度恢复（图片就绪路径共用）
     function revealOverlayText() {
-        if (lightboxCaption) lightboxCaption.style.opacity = '1';
-        if (lightboxMeta) lightboxMeta.style.opacity = '1';
+        revealSynced.forEach((el) => { el.style.opacity = '1'; });
     }
 
     // 点击作品打开

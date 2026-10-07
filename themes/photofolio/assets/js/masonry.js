@@ -13,7 +13,7 @@
  *   拖拽变宽/变窄时布局稳定，不会来回跳跃
  */
 
-import { prefersReducedMotion } from './utils.js';
+import { prefersReducedMotion, FLIP_TRANSITION } from './utils.js';
 
 const DEFAULT_RATIO = 1.5; // 图片宽高比读取失败时的兜底值（3:2）
 const REVEAL_STAGGER = 60; // 逐张揭示间隔 ms
@@ -386,8 +386,7 @@ function getCardBorder(grid) {
 }
 
 /* ===== 跨档位重排行的 FLIP 动画 ===== */
-/* 时长/缓动与足迹时间线列数切换一致；档位内的冻结缩放保持实时无动画 */
-const FLIP_TRANSITION = 'transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
+/* 时长/缓动见 utils.js 的 FLIP_TRANSITION；档位内的冻结缩放保持实时无动画 */
 
 /* 清除上一次未完成的 FLIP 残留（内联 transform/transition）——
    残留会使 First 测量包含旧位移，导致新一轮动画起点错位 */

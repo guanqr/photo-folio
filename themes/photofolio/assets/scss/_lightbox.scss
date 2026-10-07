@@ -199,6 +199,7 @@
     flex-wrap: wrap;
     gap: 0.5em;
     margin-bottom: 0.6em;
+    transition: opacity var(--transition-opacity); /* 随图片同步淡入 */
 
     &:empty {
         display: none; /* 无分类/系列时整行隐藏 */
@@ -353,6 +354,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.45em;
+    transition: opacity var(--transition-opacity); /* 随图片同步淡入 */
     font-family: var(--font-meta);
     font-size: 0.9em;
 
@@ -396,6 +398,7 @@
    CORS 未开启时整块隐藏（优雅降级） */
 .lightbox-histogram-wrap {
     margin-top: 1.1em;
+    transition: opacity var(--transition-opacity); /* 随图片同步淡入 */
 }
 
 .lightbox-histogram {
@@ -443,6 +446,7 @@
 /* 色卡：JS 提取的 7 个主色（与直方图共用采样管线）——每行：色块 + hex + 占比 */
 .lightbox-palette-wrap {
     margin-top: 1.1em;
+    transition: opacity var(--transition-opacity); /* 随图片同步淡入 */
 }
 
 .lightbox-palette {
@@ -497,6 +501,7 @@
 /* 作品背后的故事 / 直方图 等区块标题（与 EXIF 标签同款：白色、同字号） */
 .lightbox-story-wrap {
     margin-top: 1.1em;
+    transition: opacity var(--transition-opacity); /* 随图片同步淡入 */
 }
 
 .lightbox-section-title {

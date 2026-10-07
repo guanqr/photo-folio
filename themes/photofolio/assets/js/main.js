@@ -7,8 +7,8 @@ import { initBackToTop } from './back-to-top.js';
 import { initMasonry, initMasonryResize } from './masonry.js';
 import { initInfiniteScroll } from './infinite-scroll.js';
 import { initGalleryFilter, PARAM_KEYS } from './gallery-filter.js';
-import { initTimelineAnim, initTimelineResize } from './timeline-anim.js';
 import { initFootprintMap } from './footprint-map.js';
+import { initCardsFlip } from './cards-flip.js';
 import { initSeriesAmbient } from './series-ambient.js';
 import { initPageTransition } from './page-transition.js';
 import { initCarousel } from './carousel.js';
@@ -42,13 +42,12 @@ function initPageModules() {
     initMasonryResize();
     initInfiniteScroll();
     initGalleryFilter();
-    initTimelineAnim();
-    initTimelineResize();
     initFootprintMap();
     initSeriesAmbient();
     initBackToTop();
     initCarousel();
     revealCategoryCards();
+    initCardsFlip();
 }
 
 // 全局模块（仅首次初始化，页面切换后不重复执行）
