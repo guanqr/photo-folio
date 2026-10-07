@@ -7,15 +7,16 @@
 ## ✨ 特性
 
 - **两端对齐行布局** — Google Photos 式：行高由本行照片内容自然决定、行宽恰好铺满容器（零拉伸、零粗暴裁切），行高贴近参考值（肉眼看基本一致），按时间顺序逐行加载不乱序，resize 自动重排；超窄屏（≤500px）横构图独占一行、竖构图与相邻照片同行
-- **组图系列** — 支持将多张照片归入同一主题系列，封面图右上角胶囊徽章显示照片数量，点击进入系列详情页
-- **全部作品筛选** — 作品范围（全部/精選/橫構圖/豎構圖）/拍摄年份/拍摄地点/作品类型四组胶囊筛选（可组合、URL 参数同步、分页加载），各维度开关由 `hugo.toml` 的 `[params.galleryFilters]` 控制
-- **足迹世界地图** — 足迹页顶部自绘 SVG 世界地图（按省份/国家聚合金色光点、大小随照片数），悬停显示地名/照片数/年份跨度，点击跳转足迹详情页
-- **Lightbox 灯箱** — 点击照片全屏预览，左右箭头+键盘切换照片；桌面端右侧元信息面板（EXIF 分行 / Camera Raw 风格直方图 / 七色色卡 / 背後的故事），窄屏为可拖动的底部抽屉
-- **暗色/亮色主题切换** — 自动检测系统偏好，支持手动切换
+- **系列作品** — 多张照片可归入同一主题系列；首页「系列」区块与「系列合集」页以目录卡片展示（封面/名称/张数），详情页单列展示全部照片；灯箱标题下方有分类/系列胶囊入口
+- **作品分類目录** — `/categories/` 目录页与首页「分類」区块同款卡片（封面策略可配置：自定义封面或最新横构图作品），各分类页位于 `/categories/<key>/`
+- **全部作品筛选** — 作品范围（全部/精選/橫構圖/豎構圖）/拍摄年份/拍摄地点/作品类型四组胶囊筛选（可组合、URL 参数同步、分页加载、计数滚动动画），各维度开关由 `hugo.toml` 的 `[params.galleryFilters]` 控制
+- **足迹世界地图** — 足迹页顶部自绘 SVG 世界地图（按省份/国家聚合光点、大小随照片数），悬停显示地名/照片数/年份跨度，点击跳转足迹详情页
+- **Lightbox 灯箱** — 点击照片全屏预览，左右箭头+键盘切换照片；桌面端右侧元信息面板（設備/EXIF 分行 / Camera Raw 风格直方图 / 七色色卡 / 背後的故事，设备信息缺失时以删除线展示），窄屏为可拖动的底部抽屉（滚动条按需显示、预留空间不挤动文字）
+- **摄影作品订阅源** — RSS 2.0（`/index.xml`），按拍摄日期分组通知新发布作品（张数/作品名/地点/日期），批次数量由 `feedCount` 配置
 - **无限滚动加载** — 照片超过 12 张时自动分批加载，位置稳定，列间均匀分布
 - **响应式动画过渡** — 列数切换、足迹时间线、移动端导航均带 FLIP/淡入动画
 - **照片卡片悬浮效果** — 鼠标悬停时整卡轻微上移（带回弹弹簧曲线）；卡片不显示元信息，标题、地点、日期与 EXIF 仅在灯箱放大后展示
-- **足迹时间线** — 按地区整理拍摄足迹
+- **足迹时间线** — 按地区整理拍摄足迹（展示该地区全部作品，含系列内页）
 - **PWA 支持** — Service Worker 离线缓存
 - **Instant.page** — 链接预加载，提升浏览体验
 - **中文排版优化** — 使用 Glyph Correction、Noto Serif TC、I.MingCP、LXGW WenKai TC 等中文字体，支持本地字体注入
@@ -57,11 +58,12 @@ photo-folio/
 ├── assets/              # Hugo 资源（jsconfig.json）
 ├── content/
 │   ├── gallery/         # 全部作品页
-│   ├── series/          # 组照合集（主题系列作品）
-│   ├── scenery/         # 風光分类（城市/乡村/山河合并）
-│   ├── humanist/        # 人文分类
-│   ├── floral/          # 花木分类
-│   ├── animal/          # 动物分类
+│   ├── series/          # 系列合集（主题系列作品）
+│   ├── categories/      # 作品分類目录（各分类位于其下）
+│   │   ├── scenery/     # 風光分类（城市/乡村/山河合并）
+│   │   ├── humanist/    # 人文分类
+│   │   ├── floral/      # 花木分类
+│   │   └── animal/      # 动物分类
 │   └── footprint/       # 足迹（按地区归档）
 ├── data/
 │   ├── photo.toml       # ★ 照片数据（集中管理）
@@ -88,7 +90,7 @@ photo-folio/
 ```toml
 [[photo]]
 src = "/images/photos/示例照片.jpg"
-alt = "照片標題"
+alt = "作品標題"
 category = "scenery"      # scenery / humanist / floral / animal
 focus = "24"              # 焦距 (mm)
 iso = "100"
@@ -97,9 +99,13 @@ shutter = "1/250"
 time = "2025-10-05"
 place = "雲南麗江"
 location = "雲南"
+width = "1920"            # 原始像素宽高（由预处理脚本生成，横/竖构图据此推导）
+height = "1280"
+camera = "NIKON Z 5"      # 设备（灯箱「設備」行展示，缺失时以删除线占位）
+lens = "NIKKOR Z 24-200mm f/4-6.3 VR"  # 镜头（仅记录在 toml，不在灯箱展示）
 description = "照片描述（可选，用于 Lightbox 展示）"
-series = ""               # 组照名称（可选，同一组照的多张照片填写相同名称）
-is_cover = false          # 是否为组照封面（同一组照中仅一张设为 true）
+series = ""               # 系列名称（可选，同一系列的多张照片填写相同名称）
+is_cover = false          # 是否为系列封面（同一系列中仅一张设为 true）
 featured = true           # 精選标记（可选，true 的照片进入首页轮播，并可在全部作品页按「作品範圍 → 精選」筛选）
 ```
 
@@ -117,9 +123,9 @@ lng = 100.23
 - 没有坐标的地点不出现在地图上（时间线不受影响）；新增地点后地图视图会自动适配到全部拍摄点
 - 地图陆地几何为一次性生成的数据（`themes/photofolio/static/maps/land-110m.json`），如无特殊需要不必重新生成（管线：`node scripts/generate-land.mjs`）
 
-### 组照（系列作品）
+### 系列作品
 
-多张照片可归入同一个「组照」（如"割藺草"系列）。在非组照页面中，组照的封面图会显示为带图标的链接，点击后跳转到独立组照详情页浏览全部照片。
+多张照片可归入同一个系列（如「割藺草」系列）。封面（`is_cover = true`）用于首页「系列」区块与「系列合集」页的目录卡片，点击卡片进入系列详情页浏览全部照片。
 
 ```toml
 # 封面图
@@ -128,24 +134,25 @@ series = "割藺草"
 is_cover = true
 # ... 其他字段
 
-# 同组其他照片
+# 同系列其他照片
 [[photo]]
 series = "割藺草"
 is_cover = false
 # ... 其他字段
 ```
 
-同时在 `content/series/` 目录下创建对应的 Markdown 文件：
+同时在 `content/series/` 目录下创建对应的 Markdown 文件（`photos` 列表决定详情页的展示顺序）：
 
 ```markdown
 ---
 title: "割藺草"
+photos: ["割蔺草-1.jpg", "割蔺草-2.jpg", "割蔺草-3.jpg"]
 ---
 ```
 
 ### 精選（featured）
 
-在任意照片记录中添加 `featured = true`，该照片便会进入首页轮播（按时间排序，数量由 `carouselCount` 配置），并可在全部作品页通过「作品範圍 → 精選」筛选查看。組照照片標記精選時，在范围筛选拆分模式下按單張展示（不帶組照鏈接與徽章）。
+在任意照片记录中添加 `featured = true`，该照片便会进入首页轮播（按时间排序，数量由 `carouselCount` 配置），并可在全部作品页通过「作品範圍 → 精選」筛选查看。
 
 ## 🎨 配置
 
@@ -154,10 +161,15 @@ title: "割藺草"
 | 配置项 | 说明 |
 |---|---|
 | `params.imageCDN` | 图片 CDN 前缀（如阿里云 OSS），留空则使用本地图片 |
+| `params.carouselCount` | 首页轮播精选图数量（1–12 张） |
+| `params.categoryCover` | 首页/分类目录卡片封面策略：`custom`（仅自定义封面）/ `latest-landscape`（默认，取最新横构图作品） |
+| `params.feedCount` | 摄影作品订阅源（`/index.xml`）输出的更新批次数 |
+| `params.lightbox` | 灯箱信息区块开关：`meta` / `exif` / `histogram` / `palette` / `story`（缺省全开） |
 | `params.enableServiceWorker` | 启用 PWA Service Worker |
 | `params.enableInstantPage` | 启用 Instant.page 预加载 |
 | `params.typography` | 字体设置（fontLinks、字体名称、字号、本地字体注入） |
 | `params.galleryFilters` | 全部作品页筛选维度开关：`scope` / `year` / `location` / `category`（true 开启、false 关闭；缺省仅开启 year） |
+| `taxonomies` | 已清空（站点不使用 Hugo 内置分类法；`content/categories/` 为普通 Section 层级） |
 
 ## 🚢 部署
 

@@ -143,7 +143,7 @@ defaultContentLanguage = "zh-cn"
         weight = 1
         parent = "works"
         [menu.main.params]
-        icon = "lens"
+        icon = "tag"
 
     [[menu.main]]
         name = "系列合集"
@@ -159,13 +159,13 @@ defaultContentLanguage = "zh-cn"
         weight = 3
         parent = "works"
         [menu.main.params]
-        icon = "camera"
+        icon = "images"
     [[menu.main]]
         name = "足跡"
         url = "/footprint/"
         weight = 3
         [menu.main.params]
-        icon = "map_pin"
+        icon = "footprints"
     [[menu.main]]
         name = "關於"
         url = "/about/"

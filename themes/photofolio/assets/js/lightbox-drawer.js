@@ -87,6 +87,17 @@ export function initPanelDrawer({ lightbox, panel, panelDetails, panelToggle, me
         });
     }
 
+    // 滚动条按需显示：滚轮/拖动内容时挂 is-scrolling、停止约 0.6s 后移除——
+    // scroll 事件同时覆盖桌面原生滚轮滚动与窄屏程序化滚动（拖拽/滚轮手动 scrollTop）
+    let scrollIdleTimer = null;
+    const markScrolling = () => {
+        panel.classList.add('is-scrolling');
+        clearTimeout(scrollIdleTimer);
+        scrollIdleTimer = setTimeout(() => panel.classList.remove('is-scrolling'), 600);
+    };
+    panelDetails.addEventListener('scroll', markScrolling, { passive: true });
+    lightbox.addEventListener('wheel', markScrolling, { passive: true });
+
     // 滚轮（灯箱任意区域，与拖动手势同一套滚动模型）：未全开时下滚一律展开抽屉；
     // 全开后滚轮手动滚动内容（光标位置无关，与拖动一致）；内容到底后无操作（图片区域保持半页不回弹）；
     // 上滚时内容回滚，到顶后渐进收起（至少保留地点/日期简行）

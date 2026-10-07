@@ -2,6 +2,27 @@
 
 PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)。
 
+## [0.5.16] — 2026-10-07
+
+### Changed
+- **照片设备信息**：photo.toml 新增 `camera`/`lens` 字段（预处理脚本 exif_utils 提取 Make/Model 与 LensModel、FIELDS 持久化，`backfill_camera_lens.py` 从 original_photos 批量回填历史条目；镜头仅记录在 toml、不在灯箱展示）；灯箱 EXIF 区新增「設備」行（置于焦距之前）——**信息缺失时以删除线占位「—」展示**（`is-missing` 样式），其余 EXIF 项仍按空值隐藏
+- **i18n 清理与导航模块化**：删除 9 个已无引用的 i18n 键（home/about/footprint——菜单名已由配置/内容标题驱动；portfolio_title/series_collection——页面标题已由内容 front matter 驱动；theme_toggle——主题切换已移除；all_photos——被 filter_all 取代；hint/debug_info_list——调试 partial 已移除）；下拉菜单逻辑从 `mobile-nav.js` 提取为 `nav-dropdown.js`（手风琴、hover-ready 门控、resetSubMenus 导出），mobile-nav 只保留面板开合与跨断点动画
+- **导航栏「作品」下拉菜单**：悬停/键盘聚焦展开三个入口——作品分類（/categories/）、系列合集（/series/）、全部作品（/gallery/），配置走 `[menu.main]` 的 `identifier`/`parent` 父子结构；桌面端悬浮下拉面板（一级图标仅窄屏显示、二级图标与一级不重复；子导航文字左缘与总导航对齐；点击子项后 blur 移出焦点、鼠标移出即收起；`hover-ready` 门控防触屏粘性 :hover 跨断点误展开）；窄屏为手风琴（点击父项展开/收起，grid-template-rows 0fr↔1fr 过渡动画，收起菜单时重置展开态）；选中态窄屏为行最右小圆点（父项仅子页面当前时显示）；菜单高亮按 URL 前缀匹配（IsMenuCurrent/HasMenuCurrent 在该菜单结构下不生效，已弃用），SPA 切换后由 updateActiveNav 同步（含 .nav-parent 清除）
+- **分类目录页与 URL 层级调整**：新增 `/categories/` 目录页（与首页分类区块同款卡片），分类页统一移入该目录下（`/categories/<key>/`）；hugo.toml 清空内置 `[taxonomies]`（否则 `content/categories/` 会被识别为「categories 分类法」而非普通 Section，子目录变 term 页）；分类卡片渲染提取为 `categories-cards.html` partial（首页与目录页共用，封面策略逻辑单处实现）；photo-card 的分类反查同步改为 `/categories/<key>` 路径
+- **系列合集页改为目录卡片**：与首页系列区块同款卡片样式（封面图 + 系列名 + 总张数，点击进系列详情页），替换原瀑布流——系列卡片网格提取为 `series-cards.html` partial（首页与合集页共用，统计逻辑单处实现）
+- **灯箱直方图曲线平滑**：桶间线性细分（每桶 4 段）——列式填色的阶梯边缘缩至肉眼不可辨，曲线呈现平滑形态（数据统计与配色不变）
+- **首页分类卡片封面策略可配置**：hugo.toml 新增 `[params].categoryCover`，两种模式互斥——`latest-landscape`（默认）：**忽略自定义封面**，取最新一张横构图作品为封面（按宽≥高判定，仅统计有宽高数据的作品）；`custom`：仅自定义封面、无则卡片不带图
+- **移除瀑布流右上角系列图标**：灯箱中已有系列胶囊入口，作品卡片不再渲染 `.series-badge` 图标链接（相关 SCSS、`view_series` i18n、photo-card 的 `asIndividual` 参数一并清理）
+- **灯箱标题下方新增分类/系列胶囊行**：展示作品所属**分类**与**系列**（如有，胶囊样式，复用 `%pill` 占位符），点击跳转对应页面并关闭灯箱；photo-card 新增 `data-category-url` / `data-series` / `data-series-url` 属性供灯箱读取
+- **全部作品页计数随筛选滚动动画**：头部「共 N 張作品」的数字随筛选结果更新，切换筛选时旧值**平滑滚动**到新值（easeOutCubic 450ms，数字包在 `#photo-count-num` 中）
+- **全站术语统一**：用户可见文案与代码注释中的「組照」→「系列」、「照片」→「作品」（系列合集页标题、作品计数、筛选、灯箱、足迹地图、订阅源等全部文案与注释同步；数据标识符如 `series` 字段、`photo.toml` 文件名不变）
+- **首页新增「分類」「系列」两个区块标题**（H1 字号），分类下方新增**系列区块**——系列封面以**与分类一致的卡片**展示（封面图 + 系列名称 + 该系列总张数，`series` + `is_cover` 照片，点击进系列详情页）；系列 URL 反查提取为 `series-url.html` partial（photo-card 系列徽章与首页系列卡片共用，唯一实现）
+
+### Fixed
+- **足迹时间线只展示系列封面/单图**：列表页聚合时用 `or (not .series) .is_cover` 过滤——一个地点的作品全部属于系列时，卡片画廊只剩 1 张封面、与计数不符；改为**画廊展示全部作品（含系列内页）**，与全部作品页/分类页/足迹单页的全站拆分一致，顺带清除了列表页已无引用的 `$displayPhotos` 变量
+- **SPA 无法返回首页**：popstate 恢复内容只在 `e.state.url` 存在时执行——首次加载的首页条目没有推入过状态（state 为 null），从任何页面点浏览器返回都因状态为空被跳过、页面原地不动；改为**state 为空时按当前地址恢复**（popstate 触发时 location 已指向目标页）
+- **手机浏览器直方图白色区域显示为蓝色**：`mix-blend-mode: plus-lighter` 在旧版 iOS Safari/部分安卓 webview 的 SVG 元素上不支持，混合模式被忽略后退化为普通半透明叠加——最后绘制的蓝色通道把重叠区（本应黄/白）盖成蓝色；改为**纯填色分段渲染**：按列把三通道高度排序拆成三段（单通道/双通道叠加/三通道叠加），每段直接填「底色 + 0.55×通道色之和」的不透明色（与 canvas `lighter` 数学等价）——不依赖混合模式，所有浏览器渲染一致
+
 ## [0.5.15] — 2026-10-06
 
 ### Added

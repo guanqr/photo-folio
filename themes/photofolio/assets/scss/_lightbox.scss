@@ -169,14 +169,14 @@
     }
 }
 
-/* 元信息面板：移动优先——图片下方，折叠态只露简行，点箭头展开详情 */
+/* 元信息面板：移动优先——图片下方，折叠态只露简行，点箭头展开详情
+   （窄屏不加顶部分隔线；桌面端以左边线分隔，见媒体查询） */
 .lightbox-panel {
     flex: none;
     position: relative; /* 右侧下拉进度条的定位包含块 */
     width: 100%;
     display: flex;
     flex-direction: column;
-    border-top: 0.0625em solid var(--color-border);
     padding: 0.8em 1em; /* 上下留白对称 */
     transition: border-color var(--transition-border);
     /* 窄屏抽屉手势接管面板：禁止文字选择——拖拽越过可选中文字时浏览器会发起选择
@@ -277,21 +277,19 @@
     opacity: 0;
     transition: max-height 0.4s ease, opacity 0.3s ease;
     padding-right: 0.5em; /* 内容与滚动条之间留出间距（窄屏） */
-    /* 统一细滚动条（窄屏/桌面共用）：细圆角滑块、透明轨道 */
+    /* 统一细滚动条：始终预留空间（scrollbar-gutter），空闲时隐藏、
+       滚动中显示（面板 is-scrolling 类由 JS 控制）——出现/隐藏不引起文字横向移动 */
     scrollbar-width: thin;
-    scrollbar-color: var(--color-border) transparent;
+    scrollbar-gutter: stable;
+    scrollbar-color: transparent transparent;
 
     &::-webkit-scrollbar {
         width: 0.375em;
     }
 
     &::-webkit-scrollbar-thumb {
-        background: var(--color-border);
+        background: transparent;
         border-radius: 9999px;
-
-        &:hover {
-            background: var(--color-text-muted);
-        }
     }
 
     &::-webkit-scrollbar-track {
@@ -303,6 +301,20 @@
         max-height: calc(50vh - 9em);
         opacity: 1;
         overflow-y: auto;
+    }
+}
+
+/* 滚动条按需显示：滚动中（面板 is-scrolling，JS 在滚轮/拖动时挂上、停止约 0.6s 后移除）
+   显示细圆角滑块；空闲时透明隐藏——scrollbar-gutter 始终预留空间，文字不横向移动 */
+.lightbox-panel.is-scrolling .lightbox-panel-details {
+    scrollbar-color: var(--color-border) transparent;
+
+    &::-webkit-scrollbar-thumb {
+        background: var(--color-border);
+
+        &:hover {
+            background: var(--color-text-muted);
+        }
     }
 }
 
@@ -370,6 +382,13 @@
         color: var(--color-text);
         margin-left: auto;
         text-align: right;
+    }
+
+    /* 相机/镜头信息缺失：删除线占位样式 */
+    .exif-value.is-missing {
+        text-decoration: line-through;
+        color: var(--color-text-muted);
+        transition: color var(--transition-color);
     }
 }
 

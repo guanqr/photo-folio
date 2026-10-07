@@ -70,7 +70,8 @@
         {{ with $focus }}data-focus="{{ . }}"{{ end }}
         {{ with $aperture }}data-aperture="{{ . }}"{{ end }}
         {{ with $shutter }}data-shutter="{{ . }}"{{ end }}
-        {{ with $iso }}data-iso="{{ . }}"{{ end }}>
+        {{ with $iso }}data-iso="{{ . }}"{{ end }}
+        {{ with $photo.camera }}data-camera="{{ . }}"{{ end }}>
 
         {{/* 作品一律渲染普通 img（点击开灯箱）；卡片上不显示任何元信息，
             标题与完整元信息仅在灯箱放大后显示，wrapper 统一用 div 避免 a 嵌套 a */}}

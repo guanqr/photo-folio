@@ -70,7 +70,8 @@ export function initLightbox() {
                 focus: card ? (card.dataset.focus || '') : '',
                 aperture: card ? (card.dataset.aperture || '') : '',
                 shutter: card ? (card.dataset.shutter || '') : '',
-                iso: card ? (card.dataset.iso || '') : ''
+                iso: card ? (card.dataset.iso || '') : '',
+                camera: card ? (card.dataset.camera || '') : ''
             });
         });
     }
@@ -99,10 +100,12 @@ export function initLightbox() {
         lightboxMeta.style.display = any ? '' : 'none';
     }
 
-    // EXIF 分行列表：行结构（图标/标签）由模板渲染，这里只填值（空项隐藏）
+    // EXIF 分行列表：行结构（图标/标签）由模板渲染，这里只填值
+    // （普通项空值隐藏；设备（相机）缺失时显示删除线占位「—」）
     function renderExif(p) {
         if (!exifList) return;
         const rows = [
+            { key: 'camera', value: p.camera, prefix: '', suffix: '', showMissing: true },
             { key: 'focus', value: p.focus, prefix: '', suffix: 'mm' },
             { key: 'aperture', value: p.aperture, prefix: 'f/', suffix: '' },
             { key: 'shutter', value: p.shutter, prefix: '', suffix: 's' },
@@ -111,12 +114,21 @@ export function initLightbox() {
         exifList.querySelectorAll('li').forEach((li) => {
             const row = rows.find(r => r.key === li.dataset.exifKey);
             const valueEl = li.querySelector('.exif-value');
-            if (!row || !row.value) {
+            if (!row) {
                 li.style.display = 'none';
                 return;
             }
-            li.style.display = '';
-            valueEl.textContent = row.prefix + row.value + row.suffix;
+            valueEl.classList.remove('is-missing');
+            if (row.value) {
+                li.style.display = '';
+                valueEl.textContent = row.prefix + row.value + row.suffix;
+            } else if (row.showMissing) {
+                li.style.display = '';
+                valueEl.textContent = '—';
+                valueEl.classList.add('is-missing');
+            } else {
+                li.style.display = 'none';
+            }
         });
     }
 

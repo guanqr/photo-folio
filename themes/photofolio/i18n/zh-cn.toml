@@ -21,6 +21,9 @@ other = "載入中..."
 [no_more_photos]
 other = "已加载全部作品"
 
+[exif_device]
+other = "設備"
+
 [exif_focus]
 other = "焦距"
 

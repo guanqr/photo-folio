@@ -117,12 +117,13 @@
             transform: translateY(-50%) scale(1);
         }
 
-        /* 下拉菜单：窄屏为手风琴——grid-template-rows 0fr↔1fr 平滑过渡展开收起；
-           内层为唯一网格子项（overflow 裁剪），子项整行拉伸、相对总导航缩进 1.5em */
+        /* 下拉菜单：窄屏为手风琴——max-height 过渡展开收起（全浏览器支持；
+           手机浏览器不支持 grid-template-rows 过渡，0fr↔1fr 会瞬间跳变） */
         .nav-dropdown {
             position: static;
-            display: grid;
-            grid-template-rows: 0fr;
+            display: block;
+            max-height: 0;
+            overflow: hidden;
             margin-top: 0; /* 清除桌面端悬浮间距（否则折叠态多占 0.5em） */
             padding: 0;    /* 清除桌面端上下留白（否则折叠态多占 0.5em） */
             opacity: 0;
@@ -132,8 +133,7 @@
             background: none;
             border: none;
             box-shadow: none;
-            transition: grid-template-rows var(--transition), opacity var(--transition),
-                        visibility 0.3s;
+            transition: max-height 0.35s ease, opacity var(--transition), visibility 0.3s;
         }
 
         .nav-dropdown-inner {
@@ -162,7 +162,7 @@
         }
 
         .has-dropdown.sub-open .nav-dropdown {
-            grid-template-rows: 1fr;
+            max-height: 10em; /* 足够容纳当前 3 个子项（约 7.5em），上限贴近实际高度、开合无明显延迟感 */
             opacity: 1;
             visibility: visible;
         }

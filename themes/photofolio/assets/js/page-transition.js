@@ -1,6 +1,8 @@
 /**
  * 页面切换：拦截站内导航，仅替换主内容区，保持 header/footer 不重载
  */
+import { resetSubMenus } from './nav-dropdown.js';
+
 let reinitFn = null;
 
 export function initPageTransition(reinit) {
@@ -66,7 +68,8 @@ async function loadContent(url) {
         // 更新导航当前页高亮
         updateActiveNav(url);
 
-        // 关闭移动端菜单（带动画收回），并同步清理 header 上的 menu-open 状态
+        // 关闭移动端菜单（带动画收回），并同步清理 header 上的 menu-open 状态；
+        // 子导航展开态一并重置——否则下次打开菜单时子导航仍是展开的
         const nav = document.getElementById('site-nav');
         const navBtn = document.getElementById('nav-toggle');
         const header = document.querySelector('.site-header');
@@ -75,6 +78,7 @@ async function loadContent(url) {
             nav.classList.remove('active');
             if (navBtn) navBtn.classList.remove('active');
             if (header) header.classList.remove('menu-open');
+            resetSubMenus(nav);
             nav.addEventListener('transitionend', function handler() {
                 nav.removeEventListener('transitionend', handler);
                 nav.style.transition = '';

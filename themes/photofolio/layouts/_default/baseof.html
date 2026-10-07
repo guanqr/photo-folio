@@ -75,6 +75,11 @@
                         {{ end }}
                         {{ if $lbCfg.exif }}
                         <ul class="lightbox-exif" id="lightbox-exif">
+                            <li data-exif-key="camera">
+                                <span class="exif-icon">{{ hugo.Data.svg.camera | safeHTML }}</span>
+                                <span class="exif-label">{{ i18n "exif_device" }}</span>
+                                <span class="exif-value"></span>
+                            </li>
                             <li data-exif-key="focus">
                                 <span class="exif-icon">{{ hugo.Data.svg.lens | safeHTML }}</span>
                                 <span class="exif-label">{{ i18n "exif_focus" }}</span>
