@@ -1,5 +1,6 @@
 ---
 title: "割藺草"
+theme: dust
 photos: ["割蔺草-1.jpg", "割蔺草-2.jpg", "割蔺草-3.jpg", "割蔺草-4.jpg", "割蔺草-5.jpg", "割蔺草-6.jpg", "割蔺草-7.jpg", "割蔺草-8.jpg"]
 ---
 

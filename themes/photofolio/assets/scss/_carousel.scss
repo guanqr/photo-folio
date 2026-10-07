@@ -343,7 +343,13 @@
     }
 
     .carousel-dot.active .carousel-dot-fill {
-        animation: carousel-progress 5s linear forwards;
+        /* 时长由 JS 按 carouselInterval 注入 --carousel-progress-duration，与自动播放同步 */
+        animation: carousel-progress var(--carousel-progress-duration, 5s) linear forwards;
+    }
+
+    /* 自动播放已禁用（carouselInterval = 0）：进度条不再填充 */
+    .carousel.no-autoplay .carousel-dot.active .carousel-dot-fill {
+        animation: none;
     }
 }
 

@@ -1,0 +1,9 @@
+{{- /* 页面底端「其他系列/分類」联动卡片区块（系列详情页与分类详情页共用）：
+       上下文 = dict "titleKey"（i18n 键）"cardPartial"（卡片 partial 名）
+       "cardCtx"（卡片 partial 上下文）"hasCards"（是否有卡片） */ -}}
+{{- if .hasCards -}}
+<div class="container section-list-grid page-others">
+    <h2 class="page-others-title">{{ i18n .titleKey }}</h2>
+    {{ partial .cardPartial .cardCtx }}
+</div>
+{{- end -}}

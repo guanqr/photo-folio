@@ -3,13 +3,13 @@
  * 窄屏指示器为小圆点（当前项绿色放大），桌面端为横条进度条；自动播放始终由 JS 定时器驱动
  */
 
-const AUTOPLAY_MS = 5000;
+import { prefersReducedMotion } from './utils.js';
+
 const SLIDE_TRANSITION_MS = 1200;
 
 // 自定义平滑滚动：start fast, end slow（类似返回顶部按钮的弹簧感，但无回弹）
 function smoothScrollTo(targetY, duration = 700) {
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) {
+    if (prefersReducedMotion()) {
         window.scrollTo({ top: targetY });
         return;
     }
@@ -40,6 +40,14 @@ export function initCarousel() {
     const carousel = document.getElementById('home-carousel');
     if (!carousel) return;
 
+    // 自动播放间隔：hugo.toml [params].carouselInterval 经容器 data 属性传入
+    //（0 = 禁用自动播放；未配置/非法值回退 5000ms；其余钳制最小 1200ms，与淡入淡出时长一致防重叠）
+    const autoplayMs = parseInt(carousel.dataset.autoplayMs, 10);
+    const AUTOPLAY_MS = Number.isNaN(autoplayMs) ? 5000 : (autoplayMs <= 0 ? 0 : Math.max(SLIDE_TRANSITION_MS, autoplayMs));
+    // 进度条时长与自动播放间隔同步；禁用时进度条不再填充
+    carousel.style.setProperty('--carousel-progress-duration', `${AUTOPLAY_MS > 0 ? AUTOPLAY_MS : 5000}ms`);
+    if (AUTOPLAY_MS === 0) carousel.classList.add('no-autoplay');
+
     const slides = [...carousel.querySelectorAll('.carousel-slide')];
     const dotsEl = carousel.querySelector('.carousel-dots');
 
@@ -50,7 +58,7 @@ export function initCarousel() {
 
     function startAutoplay() {
         stopAutoplay();
-        if (slides.length > 1) {
+        if (AUTOPLAY_MS > 0 && slides.length > 1) {
             autoplayTimer = setInterval(next, AUTOPLAY_MS);
         }
     }

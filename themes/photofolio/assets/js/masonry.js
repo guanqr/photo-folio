@@ -13,6 +13,8 @@
  *   拖拽变宽/变窄时布局稳定，不会来回跳跃
  */
 
+import { prefersReducedMotion } from './utils.js';
+
 const DEFAULT_RATIO = 1.5; // 图片宽高比读取失败时的兜底值（3:2）
 const REVEAL_STAGGER = 60; // 逐张揭示间隔 ms
 
@@ -31,7 +33,9 @@ export function initMasonry(skipInitialReveal = false) {
     allItems.forEach((item) => item.classList.add('is-hidden'));
 
     const trigger = document.getElementById('load-more-trigger');
-    const pageSize = trigger ? (parseInt(trigger.dataset.pageSize, 10) || 12) : 12;
+    // 无触发器（系列详情页、作品数不足一批的页面）：一次性全部揭示——
+    // 若沿用固定 12，且模板按 pageSize 判定不渲染触发器时，13..pageSize 张会被永久隐藏
+    const pageSize = trigger ? (parseInt(trigger.dataset.pageSize, 10) || 12) : allItems.length;
 
     // 记忆触发器原始 HTML（筛选模式隐藏触发器，重置筛选时恢复）
     if (trigger && !grid._triggerHtml) grid._triggerHtml = trigger.innerHTML;
@@ -384,14 +388,6 @@ function getCardBorder(grid) {
 /* ===== 跨档位重排行的 FLIP 动画 ===== */
 /* 时长/缓动与足迹时间线列数切换一致；档位内的冻结缩放保持实时无动画 */
 const FLIP_TRANSITION = 'transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
-let flipReduced = null;
-
-function flipReducedMotion() {
-    if (flipReduced === null) {
-        flipReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    }
-    return flipReduced;
-}
 
 /* 清除上一次未完成的 FLIP 残留（内联 transform/transition）——
    残留会使 First 测量包含旧位移，导致新一轮动画起点错位 */
@@ -511,7 +507,7 @@ function rebuildAll(grid, refine, flip) {
 
     // FLIP：重建前记录旧位置（清除上一次动画残留，保证 First 测量干净）
     let firstRects = null;
-    if (flip && !flipReducedMotion()) {
+    if (flip && !prefersReducedMotion()) {
         clearFlipTransforms(grid);
         firstRects = shown.map((item) => item.getBoundingClientRect());
     }
@@ -582,6 +578,6 @@ export function restartMasonryGrid(grid, items) {
         if (grid._triggerHtml) trigger.innerHTML = grid._triggerHtml;
     }
 
-    const pageSize = trigger ? (parseInt(trigger.dataset.pageSize, 10) || 12) : 12;
+    const pageSize = trigger ? (parseInt(trigger.dataset.pageSize, 10) || 12) : items.length;
     revealBatch(grid, pageSize);
 }

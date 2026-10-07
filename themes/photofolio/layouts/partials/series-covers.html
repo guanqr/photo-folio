@@ -1,0 +1,10 @@
+{{- /* 系列封面作品集（.series 且 .is_cover），可排除指定系列：
+       上下文 = dict "photos"（作品集）"exclude"（系列名，可空）——
+       首页系列区块 / 系列合集页 / 系列详情页联动入口共用，封面语义单处维护 */ -}}
+{{- $covers := slice -}}
+{{- range .photos -}}
+    {{- if and .series .is_cover (ne .series $.exclude) -}}
+        {{- $covers = $covers | append . -}}
+    {{- end -}}
+{{- end -}}
+{{- return $covers -}}

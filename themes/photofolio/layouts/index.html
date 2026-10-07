@@ -19,7 +19,7 @@
     {{ $carouselQuality := $cfg.ogQuality | default 85 }}
 
     {{ if gt (len $carouselPhotos) 0 }}
-        <div class="carousel" id="home-carousel">
+        <div class="carousel" id="home-carousel" data-autoplay-ms="{{ .Site.Params.carouselInterval }}">
             <div class="carousel-track">
                 {{ range $i, $photo := $carouselPhotos }}
                 {{ $srcUrl := partial "img-url.html" (dict "src" $photo.src "site" $.Site "width" $carouselWidth "mode" "lfit" "format" "webp" "quality" $carouselQuality) }}
@@ -68,12 +68,7 @@
 </section>
 
 <!-- ================= 系列（系列封面卡片，分类下方） ================= -->
-{{ $coverPhotos := slice }}
-{{ range $sortedPhotos }}
-    {{ if and .series .is_cover }}
-        {{ $coverPhotos = $coverPhotos | append . }}
-    {{ end }}
-{{ end }}
+{{ $coverPhotos := partial "series-covers.html" (dict "photos" $sortedPhotos) }}
 {{ if gt (len $coverPhotos) 0 }}
 <section class="home-section">
     <div class="container">

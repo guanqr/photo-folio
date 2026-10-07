@@ -170,3 +170,9 @@ other = "系列"
 
 [category_count]
 other = "共 {{ .Count }} 個分類"
+
+[other_series]
+other = "其他系列"
+
+[other_categories]
+other = "其他分類"

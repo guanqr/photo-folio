@@ -10,6 +10,7 @@
 
 import { restartMasonryGrid } from './masonry.js';
 import { initInfiniteScroll } from './infinite-scroll.js';
+import { prefersReducedMotion } from './utils.js';
 
 export const PARAM_KEYS = { scope: 's', year: 'y', location: 'l', category: 'c' };
 
@@ -93,7 +94,7 @@ export function initGalleryFilter() {
         const active = g.querySelector('button.is-active');
         if (!box || !active) return;
         const target = active.offsetLeft - box.clientWidth / 2 + active.clientWidth / 2;
-        box.scrollTo({ left: target, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+        box.scrollTo({ left: target, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
         updateMask(box);
     };
 

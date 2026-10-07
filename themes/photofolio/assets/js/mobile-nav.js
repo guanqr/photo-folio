@@ -5,6 +5,7 @@
  * - 子导航手风琴与桌面悬停门控见 nav-dropdown.js
  */
 import { resetSubMenus } from './nav-dropdown.js';
+import { prefersReducedMotion } from './utils.js';
 
 export function initMobileNav() {
     const btn = document.getElementById('nav-toggle');
@@ -71,10 +72,9 @@ export function initMobileNav() {
     // 3. 跨断点导航切换动画：宽→窄时菜单文字向右滑出（转换为汉堡），
     //    窄→宽时汉堡消失、文字从右侧滑回原位；仅在断点跨越时播放，页面加载不触发
     const mqDesktop = window.matchMedia('(min-width: 768px)');
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     function animateNavCrossing(enteringDesktop) {
-        if (prefersReducedMotion) return;
+        if (prefersReducedMotion()) return;
         const cls = enteringDesktop ? 'nav-slide-in' : 'nav-slide-out';
         nav.classList.remove('nav-slide-in', 'nav-slide-out');
         // 强制重排，保证快速往返切换时动画重新播放

@@ -8,12 +8,9 @@
 
 /* 区块标题：H1 字号，上下留白一致（各 1.25em） */
 .home-section-title {
-    font-family: var(--font-heading);
+    @extend %section-heading;
     font-size: var(--size-h1);
-    font-weight: 600;
-    color: var(--color-text);
     margin: 1.25em 0;
-    transition: color var(--transition-color);
 }
 
 /* 移动优先：窄屏单列 → ≥769px 两列 → ≥1001px 三列（769 与汉堡断点一致） */

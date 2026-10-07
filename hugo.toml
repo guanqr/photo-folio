@@ -24,6 +24,10 @@ defaultContentLanguage = "zh-cn"
     heroSubtitle = "每一幀都是一個故事"
     # 首页轮播图数量（1-12 张，超出范围自动钳制到边界值）
     carouselCount = 6
+    # 首页轮播自动播放间隔（毫秒；0 禁用自动播放，其余最小 1200——与淡入淡出时长一致）
+    carouselInterval = 5000
+    # 瀑布流每批加载作品数量（全部作品页与足迹单页）
+    pageSize = 12
     logo = ""
     # 自定义底部版权文字 (支持 HTML 标签，如 <a> 链接)
     copyrightText = ""
@@ -116,6 +120,7 @@ defaultContentLanguage = "zh-cn"
     # 基础字号 (这些是纯数字+单位，不会触发 ZgotmplZ)
     baseFontSize = "16px"
     sizeH1 = "2.5em"
+    sizeH2 = "2em"
     sizeH3 = "1.5em"
     sizeBody = "1em"
     sizeSmall = "0.875em"

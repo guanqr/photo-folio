@@ -2,7 +2,8 @@
  * 无限滚动加载
  *
  * masonry.js 已处理首批揭示，这里接管后续批次。
- * 只在滚动到页面最底部（距底部 ≤80px）时触发加载。
+ * 滚动到触发器（瀑布流底部）越过视口底部边缘 40px 后触发加载——
+ * 以触发器位置为界，不受页底其他内容（如「其他系列/分類」卡片区）影响。
  *
  * 可重入：SPA 页面切换 / 筛选重置后重复调用 initInfiniteScroll()——
  * 同一触发器已挂载监听时幂等跳过；换页时旧监听在下次初始化时清理
@@ -54,8 +55,12 @@ export function initInfiniteScroll() {
     let isLoading = false;
     let rafPending = false;
 
+    // 以触发器位置为界（而非整个文档底部——页底还可能有「其他系列/分類」卡片区，
+    // 用文档底部判定会让用户必须滚过卡片区才触发加载）：触发器顶部距视口底部的距离；
+    // 需越过视口底部边缘 TRIGGER_OFFSET 距离才加载（负值 = 触发器已进入视口该距离）
+    const TRIGGER_OFFSET = -40;
     function distToBottom() {
-        return document.documentElement.scrollHeight - window.scrollY - window.innerHeight;
+        return trigger.getBoundingClientRect().top - window.innerHeight;
     }
 
     function loadMore() {
@@ -79,8 +84,8 @@ export function initInfiniteScroll() {
                 finishLoading();
                 return;
             }
-            // 本批作品未把用户推出底部区域时继续加载，避免卡在「载入中」
-            if (distToBottom() <= 80) {
+            // 本批作品未把用户推出触发区时继续加载，避免卡在「载入中」
+            if (distToBottom() <= TRIGGER_OFFSET) {
                 loadMore();
             }
         }, 700);
@@ -91,14 +96,15 @@ export function initInfiniteScroll() {
         markFinished(trigger);
     }
 
-    // rAF 节流的滚动监听：距页面底部 ≤80px 时触发加载（其余守卫由 loadMore 统一处理）
+    // rAF 节流的滚动监听：触发器越过视口底部边缘 TRIGGER_OFFSET 距离后触发加载
+    //（其余守卫由 loadMore 统一处理）
     function onScroll() {
         if (rafPending) return;
         rafPending = true;
         requestAnimationFrame(() => {
             rafPending = false;
             if (isLoading || !grid.isConnected) return;
-            if (distToBottom() <= 80) loadMore();
+            if (distToBottom() <= TRIGGER_OFFSET) loadMore();
         });
     }
     window.addEventListener('scroll', onScroll, { passive: true });

@@ -8,6 +8,9 @@
 
 {{ $sortedPhotos := partial "photo-sorted.html" . }}
 
+{{/* 瀑布流每批加载数量：hugo.toml [params].pageSize（JS 兜底默认 12 同源） */}}
+{{ $pageSize := site.Params.pageSize | default 12 | int }}
+
 {{/* 【修复 1】先获取真实的作品集合（包含系列内页），用于准确统计总数 */}}
 {{ $realPhotos := slice }}
 {{ if eq $sectionName "gallery" }}
@@ -143,8 +146,8 @@
             {{ end }}
         </div>
 
-        {{ if gt (len $gridPhotos) 12 }}
-        <div class="load-more-trigger" id="load-more-trigger" data-page-size="12" data-finished-text="{{ i18n "no_more_photos" }}">
+        {{ if gt (len $gridPhotos) $pageSize }}
+        <div class="load-more-trigger" id="load-more-trigger" data-page-size="{{ $pageSize }}" data-finished-text="{{ i18n "no_more_photos" }}">
             <div class="loading-spinner"></div>
             <span class="load-more-text">{{ i18n "loading" }}</span>
         </div>
@@ -157,5 +160,17 @@
         </div>
         {{ end }}
     </div>
+
+    {{/* 联动跳转：分类页底部展示其他分类入口卡片（排除当前分类；全部作品页不渲染） */}}
+    {{ if eq .Section "categories" }}
+    {{ $catHome := site.GetPage "/categories" }}
+    {{ $otherSections := slice }}
+    {{ range $catHome.Sections.ByWeight }}
+        {{ if ne .RelPermalink $.RelPermalink }}
+            {{ $otherSections = $otherSections | append . }}
+        {{ end }}
+    {{ end }}
+    {{ partial "page-others.html" (dict "titleKey" "other_categories" "cardPartial" "categories-cards.html" "cardCtx" (dict "sections" $otherSections "allPhotos" $sortedPhotos "coverMode" (site.Params.categoryCover | default "latest-landscape")) "hasCards" (gt (len $otherSections) 0)) }}
+    {{ end }}
 </section>
 {{ end }}

@@ -1,0 +1,37 @@
+/* ===== Series Page Ambient (系列页主题氛围背景) =====
+   作用域仅限 series-themed 系列详情页（.gallery-page 为五个布局共用，不能全局改动）。
+   结构：背景粒子 canvas（.series-canvas，fixed 铺满视口、垫在内容之下）——
+   粒子行为由 series-ambient.js 按 data-ambient 驱动。 */
+
+/* 背景粒子层：负 z-index 绘制于根堆叠上下文背景之上、全部页面内容之下；
+   fixed 垫满视口，随页面滚动不消失；不拦截任何点击 */
+.series-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-ambient);
+    width: 100%;
+    height: 100%;
+    display: block;
+    pointer-events: none;
+}
+
+/* 各主题粒子配色（--rgb-particle，仅由 series-ambient.js 读取）：
+   页面强调色不随主题变化，保持站点默认 teal */
+.series-themed[data-ambient="falling-leaves"] {
+    --rgb-particle: 207, 164, 89; /* #cfa459 白桦秋金：落叶/风痕配色 */
+}
+
+.series-themed[data-ambient="firecracker"] {
+    --rgb-particle: 201, 92, 63; /* #c95c3f 鞭炮红：碎屑/闪光/火星配色 */
+}
+
+.series-themed[data-ambient="dust"] {
+    --rgb-particle: 187, 152, 96; /* #bb9860 土黄褐：尘土配色 */
+}
+
+/* 减弱动态：JS 已跳过粒子初始化，此处兜底隐藏 canvas */
+@media (prefers-reduced-motion: reduce) {
+    .series-canvas {
+        display: none;
+    }
+}

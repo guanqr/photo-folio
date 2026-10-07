@@ -23,7 +23,13 @@
     {{ end }}
 {{ end }}
 
-<section class="gallery-page">
+{{ $ambientTheme := .Params.theme | default "" }}
+{{/* 校验 theme 键：未注册键会在构建期警告（否则粒子静默失效） */}}
+{{ if and $ambientTheme (not (in (slice "falling-leaves" "firecracker" "dust") $ambientTheme)) }}
+    {{ warnf "系列《%s》的 theme 键「%s」未注册（可用：falling-leaves / firecracker / dust），氛围粒子不会渲染" .Title $ambientTheme }}
+{{ end }}
+<section class="gallery-page{{ with $ambientTheme }} series-themed{{ end }}"{{ with $ambientTheme }} data-ambient="{{ . }}"{{ end }}>
+    {{ with $ambientTheme }}<canvas class="series-canvas" aria-hidden="true"></canvas>{{ end }}
     <div class="gallery-header">
         <div class="container">
             <h1 class="page-title">{{ .Title }}</h1>
@@ -60,5 +66,9 @@
         </div>
     </div>
     {{ end }}
+
+    {{/* 联动跳转：页面最下端以卡片展示其他系列入口（排除当前系列） */}}
+    {{ $otherCovers := partial "series-covers.html" (dict "photos" $sortedPhotos "exclude" $seriesName) }}
+    {{ partial "page-others.html" (dict "titleKey" "other_series" "cardPartial" "series-cards.html" "cardCtx" (dict "covers" $otherCovers "allPhotos" $sortedPhotos) "hasCards" (gt (len $otherCovers) 0)) }}
 </section>
 {{ end }}

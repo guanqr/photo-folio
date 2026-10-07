@@ -108,6 +108,7 @@ body {
 
     /* z-index 层级体系（跨组件竞争时统一引用，组件内部局部层级不受影响） */
     --z-underlay: -1;        /* 窄屏菜单面板（垫在导航栏内容之下） */
+    --z-ambient: -1;         /* 系列页氛围粒子层（垫于页面内容之下、页面背景之上） */
     --z-base: 1;             /* 时间线圆点等基础层 */
     --z-tooltip: 10;         /* 足迹地图弹层 */
     --z-back-to-top: 990;    /* 返回顶部（低于 Header） */
@@ -211,4 +212,13 @@ ul { list-style: none; }
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* 区块标题基类：字体栈/字重/颜色/过渡统一（home-section-title / page-others-title 共用，
+   字号与间距由使用方按 h1/h2 档位声明） */
+%section-heading {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    color: var(--color-text);
+    transition: color var(--transition-color);
 }

@@ -38,3 +38,17 @@
     padding-top: 2.5em;
     padding-bottom: 5em;
 }
+
+/* 系列/分类详情页底端「其他系列/分類」联动入口：与目录页同款卡片，顶部加分隔线 */
+.page-others {
+    padding-top: 3em;
+    border-top: 0.0625em solid var(--color-border);
+    transition: border-color var(--transition-border);
+}
+
+/* H2 标题：typography 的 sizeH2 档位（介于 H1 区块标题与 H3 之间） */
+.page-others-title {
+    @extend %section-heading;
+    font-size: var(--size-h2);
+    margin-bottom: 1.25em;
+}

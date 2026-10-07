@@ -2,12 +2,7 @@
 {{ $sortedPhotos := partial "photo-sorted.html" . }}
 
 {{/* 只过滤出所有的“系列封面” */}}
-{{ $coverPhotos := slice }}
-{{ range $sortedPhotos }}
-    {{ if and .series .is_cover }}
-        {{ $coverPhotos = $coverPhotos | append . }}
-    {{ end }}
-{{ end }}
+{{ $coverPhotos := partial "series-covers.html" (dict "photos" $sortedPhotos) }}
 
 <section class="gallery-page">
     <div class="gallery-header">

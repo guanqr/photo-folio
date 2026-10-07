@@ -9,6 +9,7 @@ import { initInfiniteScroll } from './infinite-scroll.js';
 import { initGalleryFilter, PARAM_KEYS } from './gallery-filter.js';
 import { initTimelineAnim, initTimelineResize } from './timeline-anim.js';
 import { initFootprintMap } from './footprint-map.js';
+import { initSeriesAmbient } from './series-ambient.js';
 import { initPageTransition } from './page-transition.js';
 import { initCarousel } from './carousel.js';
 
@@ -44,6 +45,7 @@ function initPageModules() {
     initTimelineAnim();
     initTimelineResize();
     initFootprintMap();
+    initSeriesAmbient();
     initBackToTop();
     initCarousel();
     revealCategoryCards();

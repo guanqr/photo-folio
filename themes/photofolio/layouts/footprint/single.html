@@ -26,7 +26,7 @@
                 {{ partial "photo-card.html" (dict "photo" . "site" $.Site "isInSeriesPage" false) }}
             {{ end }}
         </div>
-        <div class="load-more-trigger" id="load-more-trigger" data-page-size="12" data-finished-text="{{ i18n "no_more_photos" }}"></div>
+        <div class="load-more-trigger" id="load-more-trigger" data-page-size="{{ site.Params.pageSize | default 12 | int }}" data-finished-text="{{ i18n "no_more_photos" }}"></div>
         {{ else }}
         <div class="empty-state">
             <div class="empty-icon">{{ hugo.Data.svg.camera | safeHTML }}</div>
