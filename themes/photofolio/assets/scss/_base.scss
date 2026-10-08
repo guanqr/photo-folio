@@ -80,9 +80,15 @@ body {
 
     --color-border: rgb(var(--rgb-border));
 
+    /* 影调分析色温渐变端点（冷蓝 → 暖橙） */
+    --rgb-temp-cold: 74, 144, 217; /* #4a90d9 */
+    --rgb-temp-warm: 232, 146, 60; /* #e8923c */
+    --color-temp-cold: rgb(var(--rgb-temp-cold));
+    --color-temp-warm: rgb(var(--rgb-temp-warm));
+
     --color-header-bg: rgba(var(--rgb-bg), 0.85);
     --color-nav-bg: rgb(var(--rgb-bg)); /* 完全不透明 */
-    --color-lightbox-bg: rgba(var(--rgb-card), 0.95);
+    --color-lightbox-bg: rgba(var(--rgb-black), 0.95); /* 纯黑底（与参考网站灯箱一致；背景层未就绪时作为衬底） */
 
     --color-overlay-subtle: rgba(var(--rgb-white), 0.1);
 
@@ -146,9 +152,15 @@ body {
 
     --color-border: rgb(var(--rgb-border));
 
+    /* 影调分析色温渐变端点（冷蓝 → 暖橙） */
+    --rgb-temp-cold: 74, 144, 217; /* #4a90d9 */
+    --rgb-temp-warm: 232, 146, 60; /* #e8923c */
+    --color-temp-cold: rgb(var(--rgb-temp-cold));
+    --color-temp-warm: rgb(var(--rgb-temp-warm));
+
     --color-header-bg: rgba(var(--rgb-bg), 0.85);
     --color-nav-bg: rgb(var(--rgb-bg)); /* 完全不透明 */
-    --color-lightbox-bg: rgba(var(--rgb-card), 0.95);
+    --color-lightbox-bg: rgba(var(--rgb-black), 0.95); /* 纯黑底（与参考网站灯箱一致；背景层未就绪时作为衬底） */
 
     /* 首页轮播顶部渐变（亮色主题：白色渐变，保证深色导航文字可读） */
     --carousel-top-overlay: linear-gradient(to bottom, rgba(var(--rgb-white), 0.7), rgba(var(--rgb-white), 0));

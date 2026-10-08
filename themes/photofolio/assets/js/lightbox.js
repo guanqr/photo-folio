@@ -3,11 +3,20 @@ import { initPhotoAnalysis } from './lightbox-analysis.js';
 
 let inited = false;
 
+// 镜头型号展示缩减：仅保留到光圈值（f/x-x）为止，其后的字母/系列后缀
+// （VR、S、Di III VC VXD…）不展示——photo.toml 原始记录不动，仅灯箱展示截断
+const shortLens = (lens) => {
+    const m = lens.match(/f\/\d+(?:[.,]\d+)?(?:[-–]\d+(?:[.,]\d+)?)?/i);
+    return m ? lens.slice(0, m.index + m[0].length) : lens;
+};
+
 export function initLightbox() {
     if (inited) return;
 
     const lightbox = document.getElementById('lightbox');
     const lightboxImg = document.getElementById('lightbox-img');
+    const lightboxImgGlow = document.getElementById('lightbox-img-glow');
+    const lightboxImgLoading = document.getElementById('lightbox-img-loading');
     const lightboxBackdrop = document.getElementById('lightbox-backdrop');
     const lightboxBackdropNext = document.getElementById('lightbox-backdrop-next');
     const lightboxCaption = document.getElementById('lightbox-caption');
@@ -15,7 +24,6 @@ export function initLightbox() {
     const lightboxMeta = document.getElementById('lightbox-meta');
     const lightboxMetaPlace = document.querySelector('#lightbox-meta-place .lightbox-meta-text');
     const lightboxMetaDate = document.querySelector('#lightbox-meta-date .lightbox-meta-text');
-    const lightboxMetaExif = document.querySelector('#lightbox-meta-exif .lightbox-meta-text');
     const lightboxClose = document.getElementById('lightbox-close');
     const btnPrev = document.getElementById('lightbox-prev');
     const btnNext = document.getElementById('lightbox-next');
@@ -30,19 +38,36 @@ export function initLightbox() {
     const paletteEl = document.getElementById('lightbox-palette');
     const storyWrap = document.getElementById('lightbox-story-wrap');
     const storyEl = document.getElementById('lightbox-story');
+    const tonalWrap = document.getElementById('lightbox-tonal-wrap');
+    const tonalName = document.getElementById('lightbox-tonal-name');
+    const tonalHint = document.getElementById('lightbox-tonal-hint');
+    const tonalMean = document.getElementById('lightbox-tonal-mean');
+    const tonalSigma = document.getElementById('lightbox-tonal-sigma');
+    const tonalSpan = document.getElementById('lightbox-tonal-span');
+    const tonalTemp = document.getElementById('lightbox-tonal-temp');
+    const tonalTempMarker = document.getElementById('lightbox-tonal-temp-marker');
+    const tonalTempNum = document.getElementById('lightbox-tonal-temp-num');
+    const tonalTendency = document.getElementById('lightbox-tonal-tendency-result');
 
     // 随图片同步淡入的元信息元素：打开时全部隐藏，图片加载完成后统一揭示——
     // 标题 / 分类与系列胶囊 / 地点日期简行 / EXIF / 直方图与色卡 / 故事全部与照片同节奏
     const revealSynced = [
-        lightboxCaption, tagsEl, lightboxMeta, exifList, histogramWrap, paletteWrap, storyWrap,
+        lightboxCaption, tagsEl, lightboxMeta, exifList, histogramWrap, paletteWrap, tonalWrap, storyWrap,
     ].filter(Boolean);
 
     if (!lightbox || !lightboxImg) return;
 
-    // 窄屏底部抽屉（<769px）：展开/收起、滚轮与拖动手势（独立模块，见 lightbox-drawer.js）
+    // 窄屏/中屏底部抽屉（≤1000px）：展开/收起、滚轮与拖动手势（独立模块，见 lightbox-drawer.js）
     const drawer = initPanelDrawer({ lightbox, panel, panelDetails, panelToggle, metaEl: lightboxMeta });
-    // 图片分析：直方图与色卡（独立模块，见 lightbox-analysis.js）
-    const analysis = initPhotoAnalysis({ histogramWrap, histogramEl, paletteWrap, paletteEl });
+    // 图片分析：直方图/色卡/影调（独立模块，见 lightbox-analysis.js）
+    const analysis = initPhotoAnalysis({
+        histogramWrap, histogramEl, paletteWrap, paletteEl,
+        tonal: {
+            wrap: tonalWrap, name: tonalName, hint: tonalHint,
+            mean: tonalMean, sigma: tonalSigma, span: tonalSpan,
+            temp: tonalTemp, tempMarker: tonalTempMarker, tempNum: tonalTempNum, tendency: tonalTendency
+        }
+    });
 
     let currentPhotos = [];
     let currentIndex = -1;
@@ -51,8 +76,47 @@ export function initLightbox() {
     let activeBackdrop = lightboxBackdrop;
     let inactiveBackdrop = lightboxBackdropNext;
 
+    // 滑动动画同时作用于主图与辉光层：辉光随主图一起移动与淡入淡出
+    const slideStyle = (transform, opacity, transition) => {
+        lightboxImg.style.transform = transform;
+        lightboxImg.style.opacity = opacity;
+        if (transition !== undefined) lightboxImg.style.transition = transition;
+        if (lightboxImgGlow) {
+            lightboxImgGlow.style.transform = transform;
+            lightboxImgGlow.style.opacity = opacity;
+            if (transition !== undefined) lightboxImgGlow.style.transition = transition;
+        }
+    };
+
+    // 在途切图监听（load/error 成对）：新切换前先摘除旧对，避免陈旧闭包重放
+    let pendingSwitchLoad = null;
+    let pendingSwitchError = null;
+    const clearPendingSwitch = () => {
+        if (pendingSwitchLoad) {
+            lightboxImg.removeEventListener('load', pendingSwitchLoad);
+            pendingSwitchLoad = null;
+        }
+        if (pendingSwitchError) {
+            lightboxImg.removeEventListener('error', pendingSwitchError);
+            pendingSwitchError = null;
+        }
+    };
+
+    // 图片加载转圈：新图未就绪时隐藏图片与辉光并显示（与瀑布流加载指示器同款），就绪后滑入消失
+    const showImgLoading = () => {
+        if (lightboxImgLoading) lightboxImgLoading.classList.add('is-active');
+        if (lightboxImgGlow) lightboxImgGlow.style.opacity = '0'; // 加载期间辉光同藏，不残留旧图轮廓
+    };
+    const hideImgLoading = () => {
+        if (lightboxImgLoading) lightboxImgLoading.classList.remove('is-active');
+        if (lightboxImgGlow) lightboxImgGlow.style.opacity = '';
+    };
+
     // 图片加载失败（404/CDN 异常）：仍显示全部元信息，避免灯箱整片空白
-    lightboxImg.addEventListener('error', () => revealOverlayText());
+    lightboxImg.addEventListener('error', () => {
+        hideImgLoading();
+        revealOverlayText();
+    });
 
     // 收集当前页面所有可预览的作品
     function collectPhotos() {
@@ -71,7 +135,6 @@ export function initLightbox() {
                 title: card ? (card.dataset.title || '') : '',
                 place: card ? (card.dataset.place || '') : '',
                 date: card ? (card.dataset.date || '') : '',
-                exif: card ? (card.dataset.exif || '') : '',
                 description: card ? (card.dataset.description || '') : '',
                 category: card ? (card.dataset.category || '') : '',
                 categoryUrl: card ? (card.dataset.categoryUrl || '') : '',
@@ -81,24 +144,30 @@ export function initLightbox() {
                 aperture: card ? (card.dataset.aperture || '') : '',
                 shutter: card ? (card.dataset.shutter || '') : '',
                 iso: card ? (card.dataset.iso || '') : '',
-                camera: card ? (card.dataset.camera || '') : ''
+                camera: card ? (card.dataset.camera || '') : '',
+                lens: shortLens(card ? (card.dataset.lens || '') : '')
             });
         });
     }
 
+    // 预加载左右邻居（保留 Image 引用：切图时用于同步探测缓存状态，避免重复请求）
+    const preloadCache = new Map();
     function preload(url) {
-        if (!url) return;
+        if (!url || preloadCache.has(url)) return;
         const img = new Image();
         img.src = url;
+        preloadCache.set(url, img);
     }
 
-    // 简略信息行：地点 / 日期 / 拍摄参数（带图标，组间空格分隔）；空项隐藏，全空则隐藏整个区域
+    // 简略信息行：地点 / 日期（带图标，组间空格分隔）；空项隐藏，全空则隐藏整个区域。
+    // 拍摄参数简行已整体移除（EXIF 由下方分行列表完整展示）——此前 setMeta 的内联
+    // display:'' 会压过样式表的全局隐藏规则让它复活，中屏双列下其超长 nowrap 内容
+    // 把第一列轨道撑宽，地点/日期列整体右移、与 EXIF 行错位
     function setMeta(p) {
         if (!lightboxMeta) return;
         const rows = [
             [lightboxMetaPlace, p.place],
-            [lightboxMetaDate, p.date],
-            [lightboxMetaExif, p.exif]
+            [lightboxMetaDate, p.date]
         ];
         let any = false;
         rows.forEach(([el, text]) => {
@@ -111,11 +180,13 @@ export function initLightbox() {
     }
 
     // EXIF 分行列表：行结构（图标/标签）由模板渲染，这里只填值
-    // （普通项空值隐藏；设备（相机）缺失时显示删除线占位「—」）
+    // （普通项空值隐藏；设备（相机）缺失时显示删除线占位「—」，
+    //   镜头缺失时以英文 N/A 表示——删除线在长型号旁视觉不佳）
     function renderExif(p) {
         if (!exifList) return;
         const rows = [
             { key: 'camera', value: p.camera, prefix: '', suffix: '', showMissing: true },
+            { key: 'lens', value: p.lens, prefix: '', suffix: '', showMissing: true, missingText: 'N/A' },
             { key: 'focus', value: p.focus, prefix: '', suffix: 'mm' },
             { key: 'aperture', value: p.aperture, prefix: 'f/', suffix: '' },
             { key: 'shutter', value: p.shutter, prefix: '', suffix: 's' },
@@ -134,8 +205,8 @@ export function initLightbox() {
                 valueEl.textContent = row.prefix + row.value + row.suffix;
             } else if (row.showMissing) {
                 li.style.display = '';
-                valueEl.textContent = '—';
-                valueEl.classList.add('is-missing');
+                valueEl.textContent = row.missingText || '—';
+                if (!row.missingText) valueEl.classList.add('is-missing');
             } else {
                 li.style.display = 'none';
             }
@@ -159,6 +230,50 @@ export function initLightbox() {
         tagsEl.style.display = pills.length ? '' : 'none';
     }
 
+    // 背景毛玻璃切换（参考储卫民摄影站）：新背景载入后旧层与新层同步 0.7s 交叉溶解——
+    // 慢速过渡让旧背景在切换中柔和残留，不经过黑场；新背景未就绪时旧背景保持
+    function crossfadeBackdrop(src) {
+        if (!activeBackdrop || !inactiveBackdrop) return;
+        // 摘除上一次挂在该层上的待决监听（背景加载失败/被覆盖时 once 监听不会触发，
+        // 会残留到下一次 load 与新监听一起执行、把层序换回旧图）
+        if (inactiveBackdrop._backdropLoad) {
+            inactiveBackdrop.removeEventListener('load', inactiveBackdrop._backdropLoad);
+        }
+        inactiveBackdrop.style.transition = 'none';
+        inactiveBackdrop.style.opacity = '0';
+        inactiveBackdrop.src = src;
+        const start = () => {
+            inactiveBackdrop._backdropLoad = null;
+            inactiveBackdrop.style.transition = 'opacity 0.7s ease';
+            activeBackdrop.style.transition = 'opacity 0.7s ease';
+            inactiveBackdrop.style.opacity = '1';
+            activeBackdrop.style.opacity = '0';
+            const tmp = activeBackdrop;
+            activeBackdrop = inactiveBackdrop;
+            inactiveBackdrop = tmp;
+        };
+        inactiveBackdrop._backdropLoad = start;
+        if (inactiveBackdrop.complete && inactiveBackdrop.naturalWidth > 0) {
+            start();
+        } else {
+            inactiveBackdrop.addEventListener('load', start, { once: true });
+        }
+    }
+
+    // 新图滑入归位并淡入（切换路径共用）；完成后收尾并切换毛玻璃背景
+    function startSlideIn(p) {
+        hideImgLoading();
+        slideStyle('translateX(0)', '1', 'transform 0.25s ease, opacity 0.25s ease');
+        lightboxImg.addEventListener('transitionend', function slideInDone() {
+            lightboxImg.removeEventListener('transitionend', slideInDone);
+            switching = false;
+            slideStyle('', '1', ''); // 保留内联 opacity=1（CSS 基础值为 0，清掉会不可见）
+
+            // 主图切换完成：背景毛玻璃 0.7s 交叉溶解（不经过黑场）
+            crossfadeBackdrop(p.src);
+        });
+    }
+
     // 渲染整个元信息面板（标题 / 分类与系列胶囊 / 简行 / EXIF 分行 / 直方图与色卡 / 故事）
     function renderPanel(p) {
         if (lightboxCaption) lightboxCaption.textContent = p.title;
@@ -169,6 +284,9 @@ export function initLightbox() {
         if (storyEl) storyEl.textContent = p.description || '';
         analysis.analyze(p.src);
         if (panelDetails) panelDetails.scrollTop = 0;
+        // 切图后内容高度变化、scrollTop 归零——刷新箭头状态：
+        // 内容短且原已到底时归零不触发 scroll 事件，必须显式同步
+        drawer.refresh();
     }
 
     function open(index) {
@@ -183,54 +301,66 @@ export function initLightbox() {
         const p = currentPhotos[index];
 
         if (currentPhotos.length > 1) {
-            preload(currentPhotos[(currentIndex + 1) % currentPhotos.length].src);
-            preload(currentPhotos[(currentIndex - 1 + currentPhotos.length) % currentPhotos.length].src);
+            const nextSrc = currentPhotos[(currentIndex + 1) % currentPhotos.length].src;
+            const prevSrc = currentPhotos[(currentIndex - 1 + currentPhotos.length) % currentPhotos.length].src;
+            // 只保留当前图与左右邻居的预载引用：防止长时间翻看累积解码位图（每张 w_1920 约 10MB）
+            preloadCache.forEach((_, url) => {
+                if (url !== p.src && url !== nextSrc && url !== prevSrc) {
+                    preloadCache.delete(url);
+                }
+            });
+            preload(nextSrc);
+            preload(prevSrc);
         }
 
         if (isSwitch) {
             // 切换作品（参考储卫民摄影站）：旧图轻微滑出（12%）并淡出 →
             // 换内容 → 新图从另一侧轻微滑入归位并淡入；
-            // 主图切换完成后，毛玻璃背景再跟随切换（淡出 → 换 → 淡入），更有层次感
+            // 主图切换完成后，毛玻璃背景再跟随切换（淡出 → 换 → 淡入），更有层次感。
+            // 新图未缓存时浏览器在 src 加载期间仍显示旧图——隐藏图片并转圈，
+            // 加载完成后再滑入（与瀑布流加载指示器同款）
+            const cachedImg = preloadCache.get(p.src);
+            const cached = !!(cachedImg && cachedImg.complete && cachedImg.naturalWidth > 0);
 
-            lightboxImg.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
-            lightboxImg.style.transform = `translateX(${-dir * 12}%)`;
-            lightboxImg.style.opacity = '0';
+            slideStyle(`translateX(${-dir * 12}%)`, '0', 'transform 0.25s ease, opacity 0.25s ease');
 
             lightboxImg.addEventListener('transitionend', function slideOutDone() {
                 lightboxImg.removeEventListener('transitionend', slideOutDone);
                 switching = true; // 滑入期间 onLoad 不强制透明度
 
                 // 换内容：新图在进入侧待命
-                lightboxImg.style.transition = 'none';
-                lightboxImg.style.transform = `translateX(${dir * 12}%)`;
+                slideStyle(`translateX(${dir * 12}%)`, '0', 'none');
                 lightboxImg.src = p.src;
                 lightboxImg.alt = p.alt;
+                if (lightboxImgGlow) lightboxImgGlow.src = p.src; // 辉光层随主图同步切换
                 renderPanel(p);
                 lightboxImg.offsetHeight; // 强制 reflow
 
-                // 新图滑入归位并淡入
-                lightboxImg.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
-                lightboxImg.style.transform = 'translateX(0)';
-                lightboxImg.style.opacity = '1';
-                lightboxImg.addEventListener('transitionend', function slideInDone() {
-                    lightboxImg.removeEventListener('transitionend', slideInDone);
-                    switching = false;
-                    lightboxImg.style.transition = '';
-                    lightboxImg.style.transform = '';
-
-                    // 主图切换完成，背景交叉切换：旧层淡出的同时新层淡入
-                    if (activeBackdrop && inactiveBackdrop) {
-                        inactiveBackdrop.src = p.src; // 新背景载入非活动层
-                        activeBackdrop.style.opacity = '0';
-                        inactiveBackdrop.style.opacity = '1';
-                        const tmp = activeBackdrop;
-                        activeBackdrop = inactiveBackdrop;
-                        inactiveBackdrop = tmp;
-                    }
-                });
+                if (cached) {
+                    startSlideIn(p);
+                } else {
+                    // 未就绪：隐藏图片（仍在显示旧图）并转圈，加载完成后再滑入。
+                    // 监听以模块级引用登记：新切换/关闭灯箱时先摘除旧对，防止陈旧
+                    // 闭包用旧作品重放滑入与背景切换
+                    clearPendingSwitch();
+                    lightboxImg.style.opacity = '0';
+                    showImgLoading();
+                    pendingSwitchLoad = () => {
+                        clearPendingSwitch();
+                        startSlideIn(p);
+                    };
+                    pendingSwitchError = () => {
+                        clearPendingSwitch();
+                        hideImgLoading();
+                        startSlideIn(p); // 加载失败：元信息照常，滑入后显示失败占位
+                    };
+                    lightboxImg.addEventListener('load', pendingSwitchLoad);
+                    lightboxImg.addEventListener('error', pendingSwitchError);
+                }
             });
         } else {
             lightboxImg.style.opacity = '0';
+            if (lightboxImgGlow) lightboxImgGlow.style.opacity = '0';
             renderPanel(p);
             // 在灯箱激活前重置抽屉为收起态：避免旧展开状态先显示一帧导致图片大小反弹
             drawer.reset();
@@ -239,6 +369,7 @@ export function initLightbox() {
 
             lightboxImg.src = p.src;
             lightboxImg.alt = p.alt;
+            if (lightboxImgGlow) lightboxImgGlow.src = p.src; // 辉光层随主图同步切换
             if (activeBackdrop) {
                 activeBackdrop.src = p.src; // 当前层显示背景
                 activeBackdrop.style.opacity = '1';
@@ -247,8 +378,13 @@ export function initLightbox() {
             lightbox.classList.add('active');
             document.body.style.overflow = 'hidden';
 
+            // 首开未缓存：转圈等待（缓存命中时 complete 立即为真，无需转圈）
+            if (!(lightboxImg.complete && lightboxImg.naturalWidth > 0)) {
+                showImgLoading();
+            }
             if (lightboxImg.complete) {
                 lightboxImg.style.opacity = '1';
+                hideImgLoading();
                 revealOverlayText();
             } else {
                 lightboxImg.addEventListener('load', function onLoad() {
@@ -256,6 +392,7 @@ export function initLightbox() {
                     // 切换动画进行中不强制透明度（slideIn 过渡会将其归位）——
                     // 否则慢图恰在滑出期间加载完成时会闪一下满透明覆盖过渡
                     if (!switching) lightboxImg.style.opacity = '1';
+                    hideImgLoading();
                     revealOverlayText();
                 });
             }
@@ -265,7 +402,11 @@ export function initLightbox() {
 
     function close() {
         lightbox.classList.remove('active');
+        hideImgLoading();
+        switching = false; // 转圈期关闭：残留的 switching 会阻塞下次首开的透明度恢复
+        clearPendingSwitch(); // 摘除在途切图监听，防陈旧闭包在下一次打开时重放
         lightboxImg.style.opacity = '0';
+        if (lightboxImgGlow) lightboxImgGlow.style.opacity = '0';
         document.body.style.overflow = '';
     }
 

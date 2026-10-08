@@ -46,11 +46,13 @@
         <div class="lightbox-content">
             <div class="lightbox-main">
                 <div class="lightbox-img-area">
+                    <img class="lightbox-img-glow" id="lightbox-img-glow" alt="" aria-hidden="true" draggable="false">
                     <img src="" alt="" id="lightbox-img" draggable="false">
+                    <span class="lightbox-img-loading" id="lightbox-img-loading"></span>
                 </div>
                 <aside class="lightbox-panel" id="lightbox-panel">
                     {{/* 灯箱信息区块开关（hugo.toml [params.lightbox]，缺省全开） */}}
-                    {{ $lbCfg := merge (dict "meta" true "exif" true "histogram" true "palette" true "story" true) (default dict site.Params.lightbox) }}
+                    {{ $lbCfg := merge (dict "meta" true "exif" true "histogram" true "palette" true "story" true "tonal" true) (default dict site.Params.lightbox) }}
                     <div class="lightbox-caption" id="lightbox-caption"></div>
                     {{/* 标题下方：分类/系列胶囊行（JS 填充，点击跳转对应页面） */}}
                     <div class="lightbox-tags" id="lightbox-tags"></div>
@@ -67,10 +69,6 @@
                                 <span class="lightbox-meta-label">{{ i18n "lightbox_date" }}</span>
                                 <span class="lightbox-meta-text"></span>
                             </div>
-                            <div class="lightbox-meta-group" id="lightbox-meta-exif">
-                                <span class="icon">{{ hugo.Data.svg.settings | safeHTML }}</span>
-                                <span class="lightbox-meta-text"></span>
-                            </div>
                         </div>
                         {{ end }}
                         {{ if $lbCfg.exif }}
@@ -80,8 +78,13 @@
                                 <span class="exif-label">{{ i18n "exif_device" }}</span>
                                 <span class="exif-value"></span>
                             </li>
-                            <li data-exif-key="focus">
+                            <li data-exif-key="lens">
                                 <span class="exif-icon">{{ hugo.Data.svg.lens | safeHTML }}</span>
+                                <span class="exif-label">{{ i18n "exif_lens" }}</span>
+                                <span class="exif-value"></span>
+                            </li>
+                            <li data-exif-key="focus">
+                                <span class="exif-icon">{{ hugo.Data.svg.focal | safeHTML }}</span>
                                 <span class="exif-label">{{ i18n "exif_focus" }}</span>
                                 <span class="exif-value"></span>
                             </li>
@@ -102,10 +105,53 @@
                             </li>
                         </ul>
                         {{ end }}
+                        {{ $chartsTwo := and $lbCfg.histogram $lbCfg.tonal }}
+                        {{ if $chartsTwo }}
+                        <div class="lightbox-charts">
+                        {{ end }}
                         {{ if $lbCfg.histogram }}
                         <div class="lightbox-histogram-wrap" id="lightbox-histogram-wrap">
                             <h4 class="lightbox-section-title">{{ i18n "lightbox_histogram" }}</h4>
                             <svg class="lightbox-histogram" id="lightbox-histogram" viewBox="0 0 256 96" preserveAspectRatio="none" role="img"></svg>
+                        </div>
+                        {{ end }}
+                        {{ if $lbCfg.tonal }}
+                        <div class="lightbox-tonal-wrap" id="lightbox-tonal-wrap"
+                            data-key-names="{{ i18n "tonal_key_low" }}|{{ i18n "tonal_key_mid" }}|{{ i18n "tonal_key_high" }}"
+                            data-range-names="{{ i18n "tonal_range_short" }}|{{ i18n "tonal_range_mid" }}|{{ i18n "tonal_range_long" }}"
+                            data-full-long="{{ i18n "tonal_full_long" }}"
+                            data-near="{{ i18n "tonal_hint_near" }}"
+                            data-span-apparent="{{ i18n "tonal_hint_span" }}"
+                            data-na="{{ i18n "tonal_na" }}"
+                            data-cold="{{ i18n "tonal_cold" }}"
+                            data-warm="{{ i18n "tonal_warm" }}"
+                            data-neutral="{{ i18n "tonal_neutral" }}">
+                            <h4 class="lightbox-section-title">
+                                <span>{{ i18n "lightbox_tonal" }}</span>
+                                <span class="lightbox-tonal-name" id="lightbox-tonal-name"></span>
+                                <span class="lightbox-tonal-hint" id="lightbox-tonal-hint"></span>
+                            </h4>
+                            <div class="lightbox-tonal-stats">
+                                <span class="lightbox-tonal-stat"><span class="lightbox-tonal-stat-label">{{ i18n "tonal_luma_mean" }}</span><span class="lightbox-tonal-stat-value" id="lightbox-tonal-mean"></span></span>
+                                <span class="lightbox-tonal-stat"><span class="lightbox-tonal-stat-label">{{ i18n "tonal_luma" }}</span><span class="lightbox-tonal-stat-value" id="lightbox-tonal-sigma"></span></span>
+                                <span class="lightbox-tonal-stat"><span class="lightbox-tonal-stat-label">{{ i18n "tonal_luma_width" }}</span><span class="lightbox-tonal-stat-value" id="lightbox-tonal-span"></span></span>
+                            </div>
+                            <div class="lightbox-tonal-temp" id="lightbox-tonal-temp">
+                                <div class="lightbox-tonal-tendency">
+                                    <span class="lightbox-tonal-tendency-label">{{ i18n "tonal_tendency" }}</span>
+                                    <span class="lightbox-tonal-tendency-result" id="lightbox-tonal-tendency-result"></span>
+                                </div>
+                                <div class="lightbox-tonal-temp-bar">
+                                    <span class="lightbox-tonal-temp-marker" id="lightbox-tonal-temp-marker"></span>
+                                </div>
+                                <div class="lightbox-tonal-temp-value">
+                                    <span class="lightbox-tonal-temp-label">{{ i18n "tonal_temp" }}</span>
+                                    <span class="lightbox-tonal-temp-num" id="lightbox-tonal-temp-num"></span>
+                                </div>
+                            </div>
+                        </div>
+                        {{ end }}
+                        {{ if $chartsTwo }}
                         </div>
                         {{ end }}
                         {{ if $lbCfg.palette }}
@@ -121,7 +167,7 @@
                         </div>
                         {{ end }}
                     </div>
-                    <button class="lightbox-panel-toggle" id="lightbox-panel-toggle" aria-label="{{ i18n "lightbox_expand" }}" aria-expanded="false" data-expand-label="{{ i18n "lightbox_expand" }}" data-collapse-label="{{ i18n "lightbox_collapse" }}">
+                    <button class="lightbox-panel-toggle" id="lightbox-panel-toggle" aria-label="{{ i18n "lightbox_expand" }}" aria-expanded="false" data-expand-label="{{ i18n "lightbox_expand" }}" data-collapse-label="{{ i18n "lightbox_collapse" }}" data-top-label="{{ i18n "back_to_top" }}">
                         {{ hugo.Data.svg.arrow_down | safeHTML }}
                     </button>
                 </aside>

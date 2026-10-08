@@ -24,6 +24,9 @@ other = "已加载全部作品"
 [exif_device]
 other = "設備"
 
+[exif_lens]
+other = "鏡頭"
+
 [exif_focus]
 other = "焦距"
 
@@ -43,7 +46,7 @@ other = "地點"
 other = "日期"
 
 [lightbox_histogram]
-other = "直方圖"
+other = "RGB 直方圖"
 
 [lightbox_palette]
 other = "色卡"
@@ -56,6 +59,63 @@ other = "收起詳情"
 
 [lightbox_story]
 other = "背後的故事"
+
+[lightbox_tonal]
+other = "影調"
+
+[tonal_key_low]
+other = "低調"
+
+[tonal_key_mid]
+other = "中間調"
+
+[tonal_key_high]
+other = "高調"
+
+[tonal_range_short]
+other = "短調"
+
+[tonal_range_mid]
+other = "中調"
+
+[tonal_range_long]
+other = "長調"
+
+[tonal_full_long]
+other = "全長調"
+
+[tonal_hint_near]
+other = "邊界·接近"
+
+[tonal_hint_span]
+other = "跨度為表觀值"
+
+[tonal_luma_mean]
+other = "明度均值"
+
+[tonal_luma]
+other = "明度"
+
+[tonal_luma_width]
+other = "明度寬度"
+
+[tonal_temp]
+other = "平均色溫"
+
+[tonal_na]
+other = "不適用"
+
+[tonal_tendency]
+other = "冷暖傾向"
+
+[tonal_cold]
+other = "偏冷"
+
+[tonal_warm]
+other = "偏暖"
+
+[tonal_neutral]
+other = "中性"
 
 [hero_view_gallery]
 other = "查看全部作品"

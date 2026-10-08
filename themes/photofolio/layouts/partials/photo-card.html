@@ -50,11 +50,6 @@
     {{ $day := . | time.Format "02" }}
     {{ $dateStr = i18n "date_format_full" (dict "Year" $year "Month" $month "Day" $day) }}
 {{ end }}
-{{ $exif := slice }}
-{{ with $focus }}{{ $exif = $exif | append (printf "%smm" .) }}{{ end }}
-{{ with $aperture }}{{ $exif = $exif | append (printf "f/%s" .) }}{{ end }}
-{{ with $shutter }}{{ $exif = $exif | append (printf "%ss" .) }}{{ end }}
-{{ with $iso }}{{ $exif = $exif | append (printf "ISO%s" .) }}{{ end }}
 
 <div class="masonry-item" data-year="{{ $year }}" data-location="{{ $photo.location }}" data-category="{{ $photo.category }}" data-scope="{{ if $photo.featured }}featured {{ end }}{{ $orientation }}">
     <div class="photo-card"
@@ -66,12 +61,12 @@
         {{ with $seriesName }}data-series="{{ . }}"{{ end }}
         {{ with $seriesUrl }}data-series-url="{{ . }}"{{ end }}
         {{ with $dateStr }}data-date="{{ . }}"{{ end }}
-        {{ with $exif }}data-exif="{{ delimit . " · " }}"{{ end }}
         {{ with $focus }}data-focus="{{ . }}"{{ end }}
         {{ with $aperture }}data-aperture="{{ . }}"{{ end }}
         {{ with $shutter }}data-shutter="{{ . }}"{{ end }}
         {{ with $iso }}data-iso="{{ . }}"{{ end }}
-        {{ with $photo.camera }}data-camera="{{ . }}"{{ end }}>
+        {{ with $photo.camera }}data-camera="{{ . }}"{{ end }}
+        {{ with $photo.lens }}data-lens="{{ . }}"{{ end }}>
 
         {{/* 作品一律渲染普通 img（点击开灯箱）；卡片上不显示任何元信息，
             标题与完整元信息仅在灯箱放大后显示，wrapper 统一用 div 避免 a 嵌套 a */}}
