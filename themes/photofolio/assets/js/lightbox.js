@@ -17,8 +17,6 @@ export function initLightbox() {
     const lightboxImg = document.getElementById('lightbox-img');
     const lightboxImgGlow = document.getElementById('lightbox-img-glow');
     const lightboxImgLoading = document.getElementById('lightbox-img-loading');
-    const lightboxBackdrop = document.getElementById('lightbox-backdrop');
-    const lightboxBackdropNext = document.getElementById('lightbox-backdrop-next');
     const lightboxCaption = document.getElementById('lightbox-caption');
     const tagsEl = document.getElementById('lightbox-tags');
     const lightboxMeta = document.getElementById('lightbox-meta');
@@ -57,6 +55,9 @@ export function initLightbox() {
 
     if (!lightbox || !lightboxImg) return;
 
+    // 背景层的插入点：顶栏之前（层按 DOM 顺序叠放，新层在后、天然压在上层）
+    const backdropInsertBefore = lightbox.querySelector('.lightbox-topbar');
+
     // 窄屏/中屏底部抽屉（≤1000px）：展开/收起、滚轮与拖动手势（独立模块，见 lightbox-drawer.js）
     const drawer = initPanelDrawer({ lightbox, panel, panelDetails, panelToggle, metaEl: lightboxMeta });
     // 图片分析：直方图/色卡/影调（独立模块，见 lightbox-analysis.js）
@@ -72,9 +73,11 @@ export function initLightbox() {
     let currentPhotos = [];
     let currentIndex = -1;
     let switching = false; // 切换动画进行中（滑出/滑入期间 onLoad 不强制图片透明度，避免覆盖过渡）
-    // 两层毛玻璃背景：active 为当前显示层，inactive 用于交叉淡入新背景
-    let activeBackdrop = lightboxBackdrop;
-    let inactiveBackdrop = lightboxBackdropNext;
+    // 毛玻璃背景层（机制对齐参考站灯箱）：每张作品一层 <img>，
+    // 切换时旧层**立即**淡出（0.7s，不等新层就绪——加载慢时背景短暂为纯黑底，
+    // 与参考站一致）、新层就绪后淡入（0.7s）；新层淡入后约 750ms 移除所有旧层
+    let backdropLayers = []; // { el, on, off, pruned }
+    let backdropPruneTimer = null;
 
     // 滑动动画同时作用于主图与辉光层：辉光随主图一起移动与淡入淡出
     const slideStyle = (transform, opacity, transition) => {
@@ -131,6 +134,7 @@ export function initLightbox() {
             const card = wrapper.closest('[data-title]');
             currentPhotos.push({
                 src: img.dataset.fullSrc || img.src,
+                thumb: img.src, // 网格缩略图（w_800）：背景毛玻璃与辉光层用——解码快、模糊后观感一致
                 alt: img.alt,
                 title: card ? (card.dataset.title || '') : '',
                 place: card ? (card.dataset.place || '') : '',
@@ -230,37 +234,113 @@ export function initLightbox() {
         tagsEl.style.display = pills.length ? '' : 'none';
     }
 
-    // 背景毛玻璃切换（参考储卫民摄影站）：新背景载入后旧层与新层同步 0.7s 交叉溶解——
-    // 慢速过渡让旧背景在切换中柔和残留，不经过黑场；新背景未就绪时旧背景保持
-    function crossfadeBackdrop(src) {
-        if (!activeBackdrop || !inactiveBackdrop) return;
-        // 摘除上一次挂在该层上的待决监听（背景加载失败/被覆盖时 once 监听不会触发，
-        // 会残留到下一次 load 与新监听一起执行、把层序换回旧图）
-        if (inactiveBackdrop._backdropLoad) {
-            inactiveBackdrop.removeEventListener('load', inactiveBackdrop._backdropLoad);
+    // 新建背景层：thumb 源 + blur 压暗（样式见 _lightbox.scss）；切图淡入淡出
+    // 一律 0.7s cubic-bezier(0.4, 0, 0.2, 1)（参考站 duration-700 同款）
+    const backdropTransition = 'opacity 0.7s cubic-bezier(0.4, 0, 0.2, 1)';
+    const createBackdropEl = () => {
+        const el = document.createElement('img');
+        el.className = 'lightbox-backdrop';
+        el.alt = '';
+        el.setAttribute('aria-hidden', 'true');
+        el.setAttribute('draggable', 'false');
+        return el;
+    };
+    const appendBackdropEl = (el) => {
+        lightbox.insertBefore(el, backdropInsertBefore || null);
+    };
+
+    // 只保留最新一层：旧层此时已完全淡出（0.7s < 750ms），移除不可见
+    const pruneBackdrops = () => {
+        while (backdropLayers.length > 1) {
+            const old = backdropLayers.shift();
+            old.pruned = true;
+            old.el.remove();
         }
-        inactiveBackdrop.style.transition = 'none';
-        inactiveBackdrop.style.opacity = '0';
-        inactiveBackdrop.src = src;
-        const start = () => {
-            inactiveBackdrop._backdropLoad = null;
-            inactiveBackdrop.style.transition = 'opacity 0.7s ease';
-            activeBackdrop.style.transition = 'opacity 0.7s ease';
-            inactiveBackdrop.style.opacity = '1';
-            activeBackdrop.style.opacity = '0';
-            const tmp = activeBackdrop;
-            activeBackdrop = inactiveBackdrop;
-            inactiveBackdrop = tmp;
+    };
+
+    // 首开：清空上一轮残留，新建一层淡入当前作品（随灯箱容器 0.3s 一同淡入）
+    function openBackdrop(src) {
+        if (backdropPruneTimer) {
+            clearTimeout(backdropPruneTimer);
+            backdropPruneTimer = null;
+        }
+        backdropLayers.forEach((layer) => { layer.pruned = true; layer.el.remove(); });
+        backdropLayers = [];
+        const el = createBackdropEl();
+        appendBackdropEl(el);
+        el.src = src;
+        el.offsetHeight; // 强制 reflow：让 opacity 走 CSS 过渡淡入
+        el.style.opacity = '1';
+        backdropLayers.push({ el, on: true, off: false, pruned: false });
+    }
+
+    // 切图（对齐参考站灯箱机制）：旧层**立即**淡出 0.7s（不等新层就绪，
+    // 加载慢时背景短暂为纯黑底）、新层就绪后淡入 0.7s——淡出与图片切换同刻开始，
+    // 背景变化贯穿整个切换过程，不在图片稳定后突生变化；新层加载失败时丢弃该层
+    // 并让上一层淡回显示；回调只操作本层元素，无跨层状态可翻转
+    function switchBackdrop(src) {
+        if (backdropPruneTimer) {
+            clearTimeout(backdropPruneTimer);
+            backdropPruneTimer = null;
+        }
+        backdropLayers.forEach((layer) => {
+            layer.off = true;
+            layer.el.style.transition = backdropTransition;
+            layer.el.style.opacity = '0';
+        });
+        const el = createBackdropEl();
+        el.style.transition = backdropTransition;
+        el.style.opacity = '0';
+        el.src = src;
+        appendBackdropEl(el);
+        const layer = { el, on: false, off: false, pruned: false };
+        backdropLayers.push(layer);
+        const show = () => {
+            if (layer.pruned || layer.on || layer.off) return;
+            layer.on = true;
+            // 强制 reflow 让 opacity 0 先生效：缓存图 complete 同步为真时（同一帧内
+            // 0→1 变化不触发过渡）同样走 0.7s 淡入，与参考站一致
+            el.offsetHeight;
+            el.style.opacity = '1';
+            backdropPruneTimer = setTimeout(pruneBackdrops, 750);
         };
-        inactiveBackdrop._backdropLoad = start;
-        if (inactiveBackdrop.complete && inactiveBackdrop.naturalWidth > 0) {
-            start();
+        if (el.complete && el.naturalWidth > 0) {
+            show();
         } else {
-            inactiveBackdrop.addEventListener('load', start, { once: true });
+            el.addEventListener('load', show, { once: true });
+            el.addEventListener('error', () => {
+                const idx = backdropLayers.indexOf(layer);
+                if (idx < 0) return;
+                backdropLayers.splice(idx, 1);
+                layer.pruned = true;
+                el.remove();
+                if (idx === backdropLayers.length) {
+                    // 失败的是最新层：上一层淡回显示
+                    const prev = backdropLayers[backdropLayers.length - 1];
+                    if (prev) {
+                        prev.off = false;
+                        prev.on = true;
+                        prev.el.style.transition = backdropTransition;
+                        prev.el.style.opacity = '1';
+                    }
+                }
+            }, { once: true });
         }
     }
 
-    // 新图滑入归位并淡入（切换路径共用）；完成后收尾并切换毛玻璃背景
+    // 关闭：移除所有背景层（下次首开重建，不残留旧作品背景）
+    function closeBackdrop() {
+        if (backdropPruneTimer) {
+            clearTimeout(backdropPruneTimer);
+            backdropPruneTimer = null;
+        }
+        backdropLayers.forEach((layer) => { layer.pruned = true; layer.el.remove(); });
+        backdropLayers = [];
+    }
+
+    // 新图滑入归位并淡入（切换路径共用）；毛玻璃背景已在滑出开始同步切换
+    // （见 open 的 isSwitch 分支）：旧层淡出与图片切换同刻开始、新层就绪后
+    // 淡入，背景变化贯穿整个切换过程
     function startSlideIn(p) {
         hideImgLoading();
         slideStyle('translateX(0)', '1', 'transform 0.25s ease, opacity 0.25s ease');
@@ -268,9 +348,6 @@ export function initLightbox() {
             lightboxImg.removeEventListener('transitionend', slideInDone);
             switching = false;
             slideStyle('', '1', ''); // 保留内联 opacity=1（CSS 基础值为 0，清掉会不可见）
-
-            // 主图切换完成：背景毛玻璃 0.7s 交叉溶解（不经过黑场）
-            crossfadeBackdrop(p.src);
         });
     }
 
@@ -314,15 +391,21 @@ export function initLightbox() {
         }
 
         if (isSwitch) {
-            // 切换作品（参考储卫民摄影站）：旧图轻微滑出（12%）并淡出 →
+            // 切换作品：旧图轻微滑出（12%）并淡出 →
             // 换内容 → 新图从另一侧轻微滑入归位并淡入；
-            // 主图切换完成后，毛玻璃背景再跟随切换（淡出 → 换 → 淡入），更有层次感。
+            // 毛玻璃背景在滑出开始即同步切换（对齐参考站：旧层立即淡出、
+            // 新层就绪后淡入），背景变化贯穿整个切换过程。
             // 新图未缓存时浏览器在 src 加载期间仍显示旧图——隐藏图片并转圈，
             // 加载完成后再滑入（与瀑布流加载指示器同款）
             const cachedImg = preloadCache.get(p.src);
             const cached = !!(cachedImg && cachedImg.complete && cachedImg.naturalWidth > 0);
 
             slideStyle(`translateX(${-dir * 12}%)`, '0', 'transform 0.25s ease, opacity 0.25s ease');
+
+            // 背景毛玻璃随滑出开始切换（对齐参考站）：旧层立即淡出 0.7s、新层
+            // 就绪后淡入 0.7s——旧层不保持等待，背景变化与图片切换同刻开始、
+            // 贯穿整个切换过程，不在图片稳定后突生变化
+            switchBackdrop(p.thumb || p.src);
 
             lightboxImg.addEventListener('transitionend', function slideOutDone() {
                 lightboxImg.removeEventListener('transitionend', slideOutDone);
@@ -332,7 +415,7 @@ export function initLightbox() {
                 slideStyle(`translateX(${dir * 12}%)`, '0', 'none');
                 lightboxImg.src = p.src;
                 lightboxImg.alt = p.alt;
-                if (lightboxImgGlow) lightboxImgGlow.src = p.src; // 辉光层随主图同步切换
+                if (lightboxImgGlow) lightboxImgGlow.src = p.thumb || p.src; // 辉光层随主图同步切换
                 renderPanel(p);
                 lightboxImg.offsetHeight; // 强制 reflow
 
@@ -341,7 +424,7 @@ export function initLightbox() {
                 } else {
                     // 未就绪：隐藏图片（仍在显示旧图）并转圈，加载完成后再滑入。
                     // 监听以模块级引用登记：新切换/关闭灯箱时先摘除旧对，防止陈旧
-                    // 闭包用旧作品重放滑入与背景切换
+                    // 闭包用旧作品重放滑入
                     clearPendingSwitch();
                     lightboxImg.style.opacity = '0';
                     showImgLoading();
@@ -369,12 +452,8 @@ export function initLightbox() {
 
             lightboxImg.src = p.src;
             lightboxImg.alt = p.alt;
-            if (lightboxImgGlow) lightboxImgGlow.src = p.src; // 辉光层随主图同步切换
-            if (activeBackdrop) {
-                activeBackdrop.src = p.src; // 当前层显示背景
-                activeBackdrop.style.opacity = '1';
-                if (inactiveBackdrop) inactiveBackdrop.style.opacity = '0';
-            }
+            if (lightboxImgGlow) lightboxImgGlow.src = p.thumb || p.src; // 辉光层随主图同步切换
+            openBackdrop(p.thumb || p.src);
             lightbox.classList.add('active');
             document.body.style.overflow = 'hidden';
 
@@ -405,6 +484,7 @@ export function initLightbox() {
         hideImgLoading();
         switching = false; // 转圈期关闭：残留的 switching 会阻塞下次首开的透明度恢复
         clearPendingSwitch(); // 摘除在途切图监听，防陈旧闭包在下一次打开时重放
+        closeBackdrop(); // 移除所有背景层（下次首开重建，不残留旧作品背景）
         lightboxImg.style.opacity = '0';
         if (lightboxImgGlow) lightboxImgGlow.style.opacity = '0';
         document.body.style.overflow = '';

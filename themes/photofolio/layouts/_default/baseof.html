@@ -30,8 +30,7 @@
 
     <!-- Lightbox 全局容器 -->
     <div class="lightbox" id="lightbox">
-        <img class="lightbox-backdrop" id="lightbox-backdrop" alt="">
-        <img class="lightbox-backdrop" id="lightbox-backdrop-next" alt="">
+        <!-- 毛玻璃背景层由 JS 动态创建（每张作品一层） -->
         <div class="lightbox-topbar">
             <button class="lightbox-close" id="lightbox-close" aria-label="{{ i18n "close" }}">
                 {{ hugo.Data.svg.x | safeHTML }}

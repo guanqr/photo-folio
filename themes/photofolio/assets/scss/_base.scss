@@ -88,7 +88,7 @@ body {
 
     --color-header-bg: rgba(var(--rgb-bg), 0.85);
     --color-nav-bg: rgb(var(--rgb-bg)); /* 完全不透明 */
-    --color-lightbox-bg: rgba(var(--rgb-black), 0.95); /* 纯黑底（与参考网站灯箱一致；背景层未就绪时作为衬底） */
+    --color-lightbox-bg: rgb(var(--rgb-black)); /* 不透光纯黑（与参考网站灯箱一致；移动端高亮屏不透视站内文字） */
 
     --color-overlay-subtle: rgba(var(--rgb-white), 0.1);
 
@@ -160,7 +160,7 @@ body {
 
     --color-header-bg: rgba(var(--rgb-bg), 0.85);
     --color-nav-bg: rgb(var(--rgb-bg)); /* 完全不透明 */
-    --color-lightbox-bg: rgba(var(--rgb-black), 0.95); /* 纯黑底（与参考网站灯箱一致；背景层未就绪时作为衬底） */
+    --color-lightbox-bg: rgb(var(--rgb-black)); /* 不透光纯黑（与参考网站灯箱一致；移动端高亮屏不透视站内文字） */
 
     /* 首页轮播顶部渐变（亮色主题：白色渐变，保证深色导航文字可读） */
     --carousel-top-overlay: linear-gradient(to bottom, rgba(var(--rgb-white), 0.7), rgba(var(--rgb-white), 0));

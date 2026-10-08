@@ -22,7 +22,7 @@
     }
 }
 
-/* 背景：当前作品铺满屏幕的模糊毛玻璃（参考储卫民摄影站：
+/* 背景：当前作品铺满屏幕的模糊毛玻璃（
    cover 填充 + blur(2.5em) brightness(0.55) 压暗，放大 110% 防白边）
    层级：背景 0 < 灯箱内容 2，绝不遮挡前景作品 */
 .lightbox-backdrop {
@@ -36,7 +36,7 @@
     transform: scale(1.1); /* 放大避免模糊边缘露白 */
     pointer-events: none;
     opacity: 0;
-    transition: opacity var(--transition-opacity); /* 两层背景交叉淡入淡出 */
+    transition: opacity var(--transition-opacity); /* 首开淡入；切图淡入淡出由 JS 内联 0.7s 驱动（对齐参考站 duration-700） */
 }
 
 /* 主区：移动优先纵向（图片上、元信息下），桌面端横向（图片左、元信息面板右） */
@@ -172,7 +172,7 @@
         object-fit: contain;
         border-radius: 0.25em;
         /* 无阴影：图片区 overflow:hidden 会裁剪横向阴影，造成上下暗边不对称；
-           参考储卫民摄影站的主图同样无阴影，靠毛玻璃背景衬出 */
+           主图同样无阴影，靠毛玻璃背景衬出 */
         opacity: 0;
         transition: opacity var(--transition-opacity);
         /* 禁用浏览器原生图片拖拽（会吞掉 pointermove，导致抽屉拖动失效） */
@@ -181,7 +181,7 @@
     }
 }
 
-/* 图片辉光层：与主图同框的模糊副本（参考储卫民灯箱的 blur 占位层）——
+/* 图片辉光层：与主图同框的模糊副本（参考实现的 blur 占位层）——
    清晰图盖住内部，模糊溢出边缘形成柔和辉光轮廓；src 随主图同步切换。
    与主图同占一个网格单元（DOM 顺序在前，绘制在下层）；盒比主图略大
    （+0.5em）+ 较强模糊与饱和，辉光轮廓清晰可见 */
