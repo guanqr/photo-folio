@@ -71,14 +71,15 @@ defaultContentLanguage = "zh-cn"
         category = false
 
     # 灯箱信息区块：自行选择开启哪些区块（true 开启 / false 关闭）
-    # 直方图/色卡/影调都关闭时跳过探测下载（不发请求）
+    # 色卡/影调/飽和度/色相都关闭时跳过探测下载（不发请求）
     [params.lightbox]
         meta = true          # 地點/日期简行
         exif = true          # EXIF 分行（焦距/光圈/快門/感光度）
-        histogram = true     # 直方图
         palette = true       # 色卡
         story = true         # 背後的故事
-        tonal = true         # 影调分析（高/中/低 × 长/中/短 命名 + 亮度分布图）
+        tonal = true        # 影調（高/中/低調 × 長/中/短調 + 合并直方圖/區域系統/三区占比）
+        saturation = true    # 飽和度分布
+        hue = true           # 色相分布
 
 [params.author]
     name = "Guanqr"

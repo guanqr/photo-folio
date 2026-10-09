@@ -9,7 +9,8 @@
     /* .container 的窄屏横向留白已在 _base 统一为 1em，此处无需再声明 */
 
     .masonry-container {
-        padding: 1em;
+        /* 顶部对齐宽屏（2em）：筛选栏与上方横线间距宽窄屏一致；底部保持窄屏紧凑 */
+        padding: 2em 1em 1em;
     }
 
     .footer-inner {

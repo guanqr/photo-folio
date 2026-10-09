@@ -51,7 +51,7 @@
                 </div>
                 <aside class="lightbox-panel" id="lightbox-panel">
                     {{/* 灯箱信息区块开关（hugo.toml [params.lightbox]，缺省全开） */}}
-                    {{ $lbCfg := merge (dict "meta" true "exif" true "histogram" true "palette" true "story" true "tonal" true) (default dict site.Params.lightbox) }}
+                    {{ $lbCfg := merge (dict "meta" true "exif" true "histogram" true "palette" true "story" true "tonal" true "saturation" true "hue" true) (default dict site.Params.lightbox) }}
                     <div class="lightbox-caption" id="lightbox-caption"></div>
                     {{/* 标题下方：分类/系列胶囊行（JS 填充，点击跳转对应页面） */}}
                     <div class="lightbox-tags" id="lightbox-tags"></div>
@@ -104,59 +104,73 @@
                             </li>
                         </ul>
                         {{ end }}
-                        {{ $chartsTwo := and $lbCfg.histogram $lbCfg.tonal }}
-                        {{ if $chartsTwo }}
+                        {{ $chartsAny := or $lbCfg.tonal $lbCfg.saturation $lbCfg.hue $lbCfg.palette }}
+                        {{ if $chartsAny }}
                         <div class="lightbox-charts">
-                        {{ end }}
-                        {{ if $lbCfg.histogram }}
-                        <div class="lightbox-histogram-wrap" id="lightbox-histogram-wrap">
-                            <h4 class="lightbox-section-title">{{ i18n "lightbox_histogram" }}</h4>
-                            <svg class="lightbox-histogram" id="lightbox-histogram" viewBox="0 0 256 96" preserveAspectRatio="none" role="img"></svg>
-                        </div>
                         {{ end }}
                         {{ if $lbCfg.tonal }}
                         <div class="lightbox-tonal-wrap" id="lightbox-tonal-wrap"
                             data-key-names="{{ i18n "tonal_key_low" }}|{{ i18n "tonal_key_mid" }}|{{ i18n "tonal_key_high" }}"
                             data-range-names="{{ i18n "tonal_range_short" }}|{{ i18n "tonal_range_mid" }}|{{ i18n "tonal_range_long" }}"
-                            data-full-long="{{ i18n "tonal_full_long" }}"
-                            data-near="{{ i18n "tonal_hint_near" }}"
-                            data-span-apparent="{{ i18n "tonal_hint_span" }}"
-                            data-na="{{ i18n "tonal_na" }}"
-                            data-cold="{{ i18n "tonal_cold" }}"
-                            data-warm="{{ i18n "tonal_warm" }}"
-                            data-neutral="{{ i18n "tonal_neutral" }}">
+                            data-zone-names="{{ i18n "tonal_zone_shadow" }}|{{ i18n "tonal_zone_mid" }}|{{ i18n "tonal_zone_high" }}"
+                            data-clip-shadow="{{ i18n "tonal_clip_shadow" }}"
+                            data-clip-high="{{ i18n "tonal_clip_high" }}"
+                            data-dr-unit="{{ i18n "tonal_dr_unit" }}"
+                            data-hist-legend="{{ i18n "hist_legend" }}">
                             <h4 class="lightbox-section-title">
                                 <span>{{ i18n "lightbox_tonal" }}</span>
                                 <span class="lightbox-tonal-name" id="lightbox-tonal-name"></span>
-                                <span class="lightbox-tonal-hint" id="lightbox-tonal-hint"></span>
                             </h4>
+                            <p class="lightbox-chart-caption">{{ i18n "lightbox_histogram" }}</p>
+                            <svg class="lightbox-histogram" id="lightbox-histogram" viewBox="0 0 256 96" preserveAspectRatio="none" role="img"></svg>
+                            <div class="lightbox-hist-legend" id="lightbox-hist-legend"></div>
+                            <p class="lightbox-chart-caption">{{ i18n "tonal_zone_system" }}</p>
+                            <div class="lightbox-zone-strip" id="lightbox-zone-strip" role="img">
+                                <span class="lightbox-zone-bracket" id="lightbox-zone-bracket"></span>
+                            </div>
+                            <div class="lightbox-tone-ratio" id="lightbox-tone-ratio">
+                                <span class="lightbox-tone-ratio-seg" id="lightbox-tone-ratio-shadow"></span><span class="lightbox-tone-ratio-seg" id="lightbox-tone-ratio-mid"></span><span class="lightbox-tone-ratio-seg" id="lightbox-tone-ratio-high"></span>
+                            </div>
                             <div class="lightbox-tonal-stats">
-                                <span class="lightbox-tonal-stat"><span class="lightbox-tonal-stat-label">{{ i18n "tonal_luma_mean" }}</span><span class="lightbox-tonal-stat-value" id="lightbox-tonal-mean"></span></span>
-                                <span class="lightbox-tonal-stat"><span class="lightbox-tonal-stat-label">{{ i18n "tonal_luma" }}</span><span class="lightbox-tonal-stat-value" id="lightbox-tonal-sigma"></span></span>
-                                <span class="lightbox-tonal-stat"><span class="lightbox-tonal-stat-label">{{ i18n "tonal_luma_width" }}</span><span class="lightbox-tonal-stat-value" id="lightbox-tonal-span"></span></span>
+                                <span id="lightbox-tone-frac-text"></span>
+                                <span class="lightbox-tonal-stat"><span class="lightbox-tonal-stat-label">{{ i18n "tonal_dr" }}</span><span class="lightbox-tonal-stat-value" id="lightbox-tonal-dr"></span></span>
+                                <span class="lightbox-tonal-stat"><span class="lightbox-tonal-stat-label">{{ i18n "tonal_median" }}</span><span class="lightbox-tonal-stat-value" id="lightbox-tonal-p50"></span></span>
                             </div>
-                            <div class="lightbox-tonal-temp" id="lightbox-tonal-temp">
-                                <div class="lightbox-tonal-tendency">
-                                    <span class="lightbox-tonal-tendency-label">{{ i18n "tonal_tendency" }}</span>
-                                    <span class="lightbox-tonal-tendency-result" id="lightbox-tonal-tendency-result"></span>
-                                </div>
-                                <div class="lightbox-tonal-temp-bar">
-                                    <span class="lightbox-tonal-temp-marker" id="lightbox-tonal-temp-marker"></span>
-                                </div>
-                                <div class="lightbox-tonal-temp-value">
-                                    <span class="lightbox-tonal-temp-label">{{ i18n "tonal_temp" }}</span>
-                                    <span class="lightbox-tonal-temp-num" id="lightbox-tonal-temp-num"></span>
-                                </div>
-                            </div>
-                        </div>
-                        {{ end }}
-                        {{ if $chartsTwo }}
                         </div>
                         {{ end }}
                         {{ if $lbCfg.palette }}
                         <div class="lightbox-palette-wrap" id="lightbox-palette-wrap">
                             <h4 class="lightbox-section-title">{{ i18n "lightbox_palette" }}</h4>
                             <div class="lightbox-palette" id="lightbox-palette"></div>
+                        </div>
+                        {{ end }}
+                        {{ if $lbCfg.saturation }}
+                        <div class="lightbox-sat-wrap" id="lightbox-sat-wrap"
+                            data-sat-names="{{ i18n "sat_low" }}|{{ i18n "sat_mid" }}|{{ i18n "sat_high" }}">
+                            <h4 class="lightbox-section-title">
+                                <span>{{ i18n "lightbox_saturation" }}</span>
+                                <span class="lightbox-sat-name" id="lightbox-sat-name"></span>
+                            </h4>
+                            <svg class="lightbox-sat-hist" id="lightbox-sat-hist" viewBox="0 0 100 48" preserveAspectRatio="none" role="img"></svg>
+                            <div class="lightbox-sat-axis">
+                                <span>{{ i18n "sat_low" }}</span>
+                                <span>{{ i18n "sat_high" }}</span>
+                            </div>
+                        </div>
+                        {{ end }}
+                        {{ if $lbCfg.hue }}
+                        <div class="lightbox-hue-wrap" id="lightbox-hue-wrap"
+                            data-hue-names="{{ i18n "hue_names" }}"
+                            data-hue-gray="{{ i18n "hue_gray" }}">
+                            <h4 class="lightbox-section-title">
+                                <span>{{ i18n "lightbox_hue" }}</span>
+                                <span class="lightbox-hue-name" id="lightbox-hue-name"></span>
+                            </h4>
+                            <svg class="lightbox-hue-hist" id="lightbox-hue-hist" viewBox="0 0 360 48" preserveAspectRatio="none" role="img"></svg>
+                            <div class="lightbox-hue-axis" id="lightbox-hue-axis"></div>
+                        </div>
+                        {{ end }}
+                        {{ if $chartsAny }}
                         </div>
                         {{ end }}
                         {{ if $lbCfg.story }}

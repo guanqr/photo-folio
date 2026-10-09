@@ -80,11 +80,16 @@ body {
 
     --color-border: rgb(var(--rgb-border));
 
-    /* 影调分析色温渐变端点（冷蓝 → 暖橙） */
-    --rgb-temp-cold: 74, 144, 217; /* #4a90d9 */
-    --rgb-temp-warm: 232, 146, 60; /* #e8923c */
-    --color-temp-cold: rgb(var(--rgb-temp-cold));
-    --color-temp-warm: rgb(var(--rgb-temp-warm));
+    /* 影调分析图表配色：明度直方图三分区底色 / 占比条三段（陰影·中間調·高光）、
+       明度曲线、饱和度曲线、剪裁标记 */
+    --color-zone-shadow-bg: rgba(var(--rgb-white), 0.05);
+    --color-zone-mid-bg: rgba(var(--rgb-white), 0.1);
+    --color-zone-high-bg: rgba(var(--rgb-white), 0.05);
+    --color-zone-shadow-fg: rgb(var(--rgb-text-muted));
+    --color-zone-mid-fg: rgb(var(--rgb-text-secondary));
+    --color-zone-high-fg: rgb(var(--rgb-white));
+    --color-sat-curve: rgb(var(--rgb-text));
+    --color-clip: rgb(var(--rgb-accent));
 
     --color-header-bg: rgba(var(--rgb-bg), 0.85);
     --color-nav-bg: rgb(var(--rgb-bg)); /* 完全不透明 */
@@ -152,11 +157,15 @@ body {
 
     --color-border: rgb(var(--rgb-border));
 
-    /* 影调分析色温渐变端点（冷蓝 → 暖橙） */
-    --rgb-temp-cold: 74, 144, 217; /* #4a90d9 */
-    --rgb-temp-warm: 232, 146, 60; /* #e8923c */
-    --color-temp-cold: rgb(var(--rgb-temp-cold));
-    --color-temp-warm: rgb(var(--rgb-temp-warm));
+    /* 影调分析图表配色（亮色主题：黑基阴影、白基高光） */
+    --color-zone-shadow-bg: rgba(var(--rgb-black), 0.12);
+    --color-zone-mid-bg: rgba(var(--rgb-black), 0.05);
+    --color-zone-high-bg: rgba(var(--rgb-black), 0.12);
+    --color-zone-shadow-fg: rgb(var(--rgb-text-secondary));
+    --color-zone-mid-fg: rgb(var(--rgb-text-muted));
+    --color-zone-high-fg: rgb(var(--rgb-text));
+    --color-sat-curve: rgb(var(--rgb-text));
+    --color-clip: rgb(var(--rgb-accent));
 
     --color-header-bg: rgba(var(--rgb-bg), 0.85);
     --color-nav-bg: rgb(var(--rgb-bg)); /* 完全不透明 */

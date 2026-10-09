@@ -46,7 +46,10 @@ other = "地點"
 other = "日期"
 
 [lightbox_histogram]
-other = "RGB 直方圖"
+other = "直方圖（虚線為亮度中位數）"
+
+[hist_legend]
+other = "R|G|B|明度"
 
 [lightbox_palette]
 other = "色卡"
@@ -62,6 +65,12 @@ other = "背後的故事"
 
 [lightbox_tonal]
 other = "影調"
+
+[lightbox_saturation]
+other = "飽和度"
+
+[lightbox_hue]
+other = "色相"
 
 [tonal_key_low]
 other = "低調"
@@ -81,41 +90,47 @@ other = "中調"
 [tonal_range_long]
 other = "長調"
 
-[tonal_full_long]
-other = "全長調"
+[tonal_zone_shadow]
+other = "陰影"
 
-[tonal_hint_near]
-other = "邊界·接近"
+[tonal_zone_mid]
+other = "中間調"
 
-[tonal_hint_span]
-other = "跨度為表觀值"
+[tonal_zone_high]
+other = "高光"
 
-[tonal_luma_mean]
-other = "明度均值"
+[tonal_clip_shadow]
+other = "陰影剪裁"
 
-[tonal_luma]
-other = "明度"
+[tonal_clip_high]
+other = "高光剪裁"
 
-[tonal_luma_width]
-other = "明度寬度"
+[tonal_dr]
+other = "動態範圍"
 
-[tonal_temp]
-other = "平均色溫"
+[tonal_dr_unit]
+other = "檔"
 
-[tonal_na]
-other = "不適用"
+[tonal_median]
+other = "亮度中位數"
 
-[tonal_tendency]
-other = "冷暖傾向"
+[tonal_zone_system]
+other = "曝光灰階（0 純黑 → X 純白）"
 
-[tonal_cold]
-other = "偏冷"
+[sat_low]
+other = "低飽和"
 
-[tonal_warm]
-other = "偏暖"
+[sat_mid]
+other = "適中"
 
-[tonal_neutral]
-other = "中性"
+[sat_high]
+other = "高飽和"
+
+[hue_names]
+other = "紅|橙|黃|綠|青|藍|紫|品紅"
+
+[hue_gray]
+other = "黑白"
 
 [hero_view_gallery]
 other = "查看全部作品"

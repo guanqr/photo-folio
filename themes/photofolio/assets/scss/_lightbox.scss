@@ -153,8 +153,9 @@
     grid-template: 100% / 100%;
     place-items: center;
     overflow: hidden; /* 水平滑动切换时图片裁剪在图片区内 */
-    /* 底部 1.5em：窄屏抽屉升到最高时，辉光溢出（约 1.25em）不被面板顶部干扰/裁切 */
-    padding: 1em 1em 1.5em;
+    /* 底部 2.5em：窄屏抽屉升到最高时，辉光的 blur 向外溢出（约 1.5~2em）
+       在到达裁剪边缘前自然衰减——间距过小会露出辉光被硬切的分界线 */
+    padding: 1em 1em 2.5em;
     user-select: none; /* 长按拖动抽屉时避免选中/拖图 */
     transition: padding 0.4s ease; /* 断点切换时左侧留白平滑过渡 */
     position: relative; /* 转圈指示的定位包含块 */
@@ -181,13 +182,14 @@
     }
 }
 
-/* 图片辉光层：与主图同框的模糊副本（参考实现的 blur 占位层）——
-   清晰图盖住内部，模糊溢出边缘形成柔和辉光轮廓；src 随主图同步切换。
-   与主图同占一个网格单元（DOM 顺序在前，绘制在下层）；盒比主图略大
-   （+0.5em）+ 较强模糊与饱和，辉光轮廓清晰可见 */
+/* 图片辉光层：主图的同框模糊副本（与参考站同尺寸）——与主图永远同中心
+   绑定、尺寸完全一致，不做放大；边缘的柔和过渡由 blur 滤镜像外溢出
+   提供。盒恒为整个网格单元（width/height 100%，避免缩略图固有尺寸
+   钳制），内容经 object-fit: contain 与主图渲染矩形完全重合——辉光
+   大小只随主图渲染大小变化，与窗口尺寸无关；src 随主图同步切换 */
 .lightbox-img-glow {
-    max-width: calc(100% + 0.5em);
-    max-height: calc(100% + 0.5em);
+    width: 100%;
+    height: 100%;
     object-fit: contain;
     border-radius: 0.25em;
     filter: blur(1em) saturate(1.1);
@@ -283,7 +285,7 @@
 .lightbox-meta-group {
     display: flex;
     align-items: center;
-    gap: 0.4em;
+    gap: 0.5em; /* 与 EXIF 行一致：所有宽度下标签左缘对齐 */
     white-space: nowrap; /* 组内不换行 */
     color: var(--color-text);
     font-family: var(--font-meta);
@@ -302,11 +304,12 @@
     .icon {
         color: var(--color-accent);
         display: flex;
-        flex-shrink: 0;
+        flex: none;
+        width: 0.95em; /* 与 EXIF 图标盒宽一致：地点/日期标签与设备等标签对齐 */
 
         svg {
-            width: 0.9em;
-            height: 0.9em;
+            width: 0.95em;
+            height: 0.95em;
         }
     }
 }
@@ -451,35 +454,141 @@
     background: var(--color-lightbox-ctrl-bg);
 }
 
-/* 影调分析：区块标题与结论同处一行（同字号、仅颜色区分）、分析过程数值、
-   冷暖色谱与平均色温——全部文字采用霞鹜（--font-meta）、字号统一 0.9em */
-.lightbox-tonal-wrap {
+/* 影调与色彩分析：区块标题与结论同处一行（同字号、仅颜色区分）；
+   明度直方图（三分区底色 + P50 标记 + 剪裁标记）、區域系統 11 级灰阶、
+   三区占比条、饱和度/色相直方图——全部文字采用霞鹜（--font-meta）、字号 0.9em */
+.lightbox-tonal-wrap,
+.lightbox-sat-wrap,
+.lightbox-hue-wrap {
     margin-top: 1.1em;
     transition: opacity var(--transition-opacity); /* 随图片同步淡入 */
 }
 
-.lightbox-tonal-name {
+.lightbox-tonal-name,
+.lightbox-sat-name,
+.lightbox-hue-name {
     margin-left: 0.6em;
     font-family: var(--font-meta);
     color: var(--color-accent);
 }
 
-.lightbox-tonal-hint {
-    margin-left: 0.6em; /* 与标题同行，紧接结论之后 */
-    font-family: var(--font-meta);
-    font-size: 0.9em;
-    color: var(--color-text-secondary); /* 与色卡灰色一致（muted 在灯箱里偏暗） */
+/* 饱和度 / 色相直方图：与合并直方图同款底色圆角容器 */
+.lightbox-sat-hist,
+.lightbox-hue-hist {
+    display: block;
+    width: 100%;
+    height: 6em;
+    border-radius: 0.25em;
+    background: var(--color-lightbox-ctrl-bg);
+    margin-top: 0.5em;
+}
 
-    &:empty {
-        display: none;
+/* 图表说明文字：位于图表上方的小号灰色标注（如「直方圖」「區域系統 0–X」） */
+.lightbox-chart-caption {
+    margin: 0.55em 0 0.3em;
+    font-family: var(--font-meta);
+    font-size: 0.8em;
+    color: var(--color-text-secondary);
+}
+
+/* 直方图图例：通道色圆点 + 名称（R/G/B/明度） */
+.lightbox-hist-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3em 1em;
+    margin-top: 0.3em;
+    font-family: var(--font-meta);
+    font-size: 0.8em;
+    color: var(--color-text-secondary);
+
+    > span {
+        display: flex;
+        align-items: center;
+        gap: 0.35em;
+    }
+
+    i {
+        width: 0.7em;
+        height: 0.7em;
+        border-radius: 50%;
+        flex: none;
     }
 }
 
+/* 饱和度轴端点标注（低飽和 ←→ 高飽和） */
+.lightbox-sat-axis {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.25em;
+    font-family: var(--font-meta);
+    font-size: 0.8em;
+    color: var(--color-text-secondary);
+}
+
+/* 色相轴标注：8 个标准色名沿横向均布（红→品红，对应彩虹渐变） */
+.lightbox-hue-axis {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.25em;
+    font-family: var(--font-meta);
+    font-size: 0.8em;
+    color: var(--color-text-secondary);
+}
+
+/* 區域系統标尺：11 级灰阶（0 纯黑 → X 纯白，感知均匀，JS 生成色阶），
+   括号标记照片占據區域 */
+.lightbox-zone-strip {
+    display: flex;
+    gap: 0.125em;
+    margin-top: 0.4em;
+    position: relative;
+
+    > span:not(.lightbox-zone-bracket) {
+        flex: 1;
+        height: 0.9em;
+        border-radius: 0.125em;
+    }
+
+    .lightbox-zone-bracket {
+        position: absolute;
+        top: -0.25em;
+        bottom: -0.25em;
+        left: 0;
+        width: 0;
+        border: 0.0625em solid var(--color-accent);
+        border-radius: 0.25em;
+        transition: left 0.4s ease, width 0.4s ease;
+        pointer-events: none;
+    }
+}
+
+/* 三区占比条：陰影/中間調/高光三段堆叠 */
+.lightbox-tone-ratio {
+    display: flex;
+    height: 0.55em;
+    border-radius: 9999px;
+    overflow: hidden;
+    margin-top: 0.5em;
+    background: var(--color-lightbox-ctrl-bg);
+}
+
+.lightbox-tone-ratio-seg {
+    display: block;
+    height: 100%;
+    width: 0;
+    transition: width 0.4s ease;
+
+    &:nth-child(1) { background: var(--color-zone-shadow-fg); }
+    &:nth-child(2) { background: var(--color-zone-mid-fg); }
+    &:nth-child(3) { background: var(--color-zone-high-fg); }
+}
+
+/* 占比文字与过程数据行 */
 .lightbox-tonal-stats {
     display: flex;
     flex-wrap: wrap;
     gap: 0.3em 1em;
-    margin-top: 0.5em;
+    margin-top: 0.45em;
     font-family: var(--font-meta);
     font-size: 0.9em;
     color: var(--color-text-secondary); /* 与色卡灰色一致 */
@@ -492,64 +601,6 @@
 }
 
 .lightbox-tonal-stat-value {
-    color: var(--color-text);
-}
-
-/* 冷暖倾向标题行：标题与结论（偏冷/中性/偏暖）同一行 */
-.lightbox-tonal-tendency {
-    display: flex;
-    align-items: baseline;
-    gap: 0.6em;
-    margin-bottom: 0.4em;
-    font-family: var(--font-meta);
-    font-size: 0.9em;
-}
-
-.lightbox-tonal-tendency-label {
-    color: var(--color-text-secondary);
-}
-
-.lightbox-tonal-tendency-result {
-    color: var(--color-text);
-}
-
-/* 冷暖色谱：左冷蓝 → 右暖橙，标记按平均色温定位（倒数温标，与渐变视觉线性对应） */
-.lightbox-tonal-temp {
-    margin-top: 0.6em;
-}
-
-.lightbox-tonal-temp-bar {
-    position: relative;
-    height: 0.55em;
-    border-radius: 9999px;
-    background: linear-gradient(to right, var(--color-temp-cold), var(--color-temp-warm));
-}
-
-.lightbox-tonal-temp-marker {
-    position: absolute;
-    top: 50%;
-    left: 0; /* JS 按平均色温设置百分比 */
-    width: 0.8em;
-    height: 0.8em;
-    border-radius: 50%;
-    background: var(--color-text);
-    border: 0.125em solid var(--color-bg-card);
-    transform: translate(-50%, -50%);
-    transition: left 0.4s ease;
-}
-
-.lightbox-tonal-temp-value {
-    margin-top: 0.35em;
-    font-family: var(--font-meta);
-    font-size: 0.9em;
-    color: var(--color-text-secondary); /* 与色卡灰色一致 */
-}
-
-.lightbox-tonal-temp-label {
-    margin-right: 0.5em;
-}
-
-.lightbox-tonal-temp-num {
     color: var(--color-text);
 }
 
@@ -681,19 +732,20 @@
     transition: color var(--transition-color);
 }
 
-/* 中屏档位（769–1000px，抽屉模式）：屏幕仍较宽，地点/日期简行、EXIF 分行列表与色卡
-   改为两列网格（相邻两项同行：地点/日期、设备/镜头、焦距/光圈、快门/感光度、色卡 3×2），
+/* 中屏档位（769–1000px，抽屉模式）：屏幕仍较宽，地点/日期简行与 EXIF 分行列表
+   改为两列网格（相邻两项同行：地点/日期、设备/镜头、焦距/光圈、快门/感光度），
    避免单条一行过于稀疏；列间竖分隔线防视觉粘连。
-   【间距单位】容器级间距/线宽用 rem：EXIF 自带 0.9em、meta/色卡继承 1em，em 会随
+   色卡不在此处双列——已并入图表区双列网格作为第四格（保持单列，双栏里不再套双栏）。
+   【间距单位】容器级间距/线宽用 rem：EXIF 自带 0.9em、meta 继承 1em，em 会随
    各容器字号解析出 72px/80px 两种结果（第一行比其余行宽 8px、逐行错位的根源）；
-   rem 恒按根字号解析，三块恒等（4.5rem = 72px，与 EXIF 行内 5em@0.9em 的设计值一致）；
+   rem 恒按根字号解析，两块恒等（4.5rem = 72px，与 EXIF 行内 5em@0.9em 的设计值一致）；
    行内图标/标签/行距的 em 均在各自 0.9em 上下文中，保持一致；
    网格项统一 min-width: 0——关闭自动最小尺寸，任何内容都不会撑宽轨道，列宽恒等；
    ≤768px 超窄/窄屏与 >1000px 宽屏保持单列 */
 @media (min-width: 769px) and (max-width: 1000px) {
+    /* 色卡不在此处双列——已并入图表区双列网格作为第四格（双栏里的双栏不可取） */
     .lightbox-meta,
-    .lightbox-exif,
-    .lightbox-palette {
+    .lightbox-exif {
         display: grid;
         grid-template-columns: 1fr 1fr;
         column-gap: 4.5rem;
@@ -715,46 +767,50 @@
 
     .lightbox-meta { row-gap: 0.25em; }
     .lightbox-exif { row-gap: 0.45em; }
-    .lightbox-palette { row-gap: 0.6em; }
 
-    /* 竖线按区域分段：简行 / EXIF / 双图表各一段，互不衔接（三个不同区域） */
+    /* 简行与 EXIF 之间的竖线衔接成连续一段：EXIF 的线向上延伸 0.45em
+       补上自身的外边距缺口，与简行线相接 */
+    .lightbox-exif::before {
+        top: -0.45em;
+    }
 
-    /* 直方图与影调双图表并排（各占一列）——直方图单占整行过于拉长，
-       并排后抽屉内容高度显著缩短；两列等高、底部齐平且整体高度不增：
-       直方图基础高度缩小为 4.5em（以影调块的天然高度为准），影调更高时
-       曲线弹性补足；影调内容纵向均布贴底；列间竖分隔线与信息区同款居中，
-       顶端起于区块内容（1.1em 处）、与上方 EXIF 段分开——三段竖线各属其区域 */
+    /* 图表区双列网格（影調 / 色卡 / 飽和度 / 色相）——单列时每个图表整行过于
+       拉长，双列并排后抽屉内容高度显著缩短；配对按高度相近编排：影調与色卡
+       同行（色卡更高时影調的直方图弹性补足、不留空缺），飽和度与色相同行
+       （两张单图等高）。
+       列间竖分隔线挂在第二列各块的左侧（每块一段）——块与块之间的边距
+       自然形成中断：EXIF 与图表区之间、影調/色卡行与飽和度/色相行之间
+       均有中断，简行与 EXIF 之间无中断 */
     .lightbox-charts {
         display: grid;
         grid-template-columns: 1fr 1fr;
         column-gap: 4.5rem;
         position: relative;
-
-        &::before {
-            content: '';
-            position: absolute;
-            top: 1.1em; /* 跳过区块上方间距，与 EXIF 段分开（不同区域） */
-            bottom: 0;
-            left: 50%;
-            width: 0.0625rem;
-            transform: translateX(-50%);
-            background: var(--color-border);
-        }
     }
 
-    .lightbox-histogram-wrap,
-    .lightbox-tonal-wrap {
+    .lightbox-charts > :nth-child(even)::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        /* 列间距（4.5rem）的一半再左移半个线宽：竖线恰居两列正中 */
+        left: calc(-2.25rem - 0.03125rem);
+        width: 0.0625rem;
+        background: var(--color-border);
+    }
+
+    .lightbox-tonal-wrap,
+    .lightbox-sat-wrap,
+    .lightbox-hue-wrap,
+    .lightbox-palette-wrap {
         display: flex;
         flex-direction: column;
+        position: relative; /* 竖分隔线（第二列各块的 ::before）的定位包含块 */
     }
 
     .lightbox-histogram {
         flex: 1 1 auto;
         height: 4.5em;
-    }
-
-    .lightbox-tonal-wrap {
-        justify-content: space-between; /* 末行（平均色溫）贴底，不留空档 */
     }
 
     /* 网格项关闭自动最小尺寸（最长的地名/镜头型号也不足单元格一半，无溢出风险） */
@@ -764,22 +820,8 @@
         min-width: 0;
     }
 
-    /* 竖线按区域分段（简行 / EXIF / 双图表各一段，互不衔接——这是三个不同区域） */
-
-    /* 简行与 EXIF 图标/文字严格对齐：图标盒宽（0.95em）与图标-标签间距（0.5em）
-       统一为 EXIF 行的数值 */
-    .lightbox-meta-group {
-        gap: 0.5em;
-
-        .icon {
-            width: 0.95em;
-
-            svg {
-                width: 0.95em;
-                height: 0.95em;
-            }
-        }
-    }
+    /* 竖线按区域分段（简行 / EXIF / 双图表各一段，互不衔接——这是三个不同区域）。
+       简行与 EXIF 的图标盒宽/间距对齐已提升到基础样式（所有宽度生效） */
 }
 
 /* 宽屏端（>1000px，与瀑布流宽屏档位一致）：图片左、面板右（面板常显、详情区内部滚动），

@@ -1,11 +1,16 @@
 /**
- * 灯箱图片分析（直方图 + 色卡）
+ * 灯箱图片分析（直方图 + 色卡 + 影调与色彩）
  *
  * 管线：探测加载 w_1024 缩略图（crossOrigin=anonymous，OSS 未开 CORS 时失败优雅降级；
  * 离屏 canvas 采样 → 统计三通道 256 桶直方图（窗口 5 平滑、对数纵轴）与
  * 6 个主色色卡（16 级量化 + 贪心种子 + k-means 细化，占比之和 ≈ 100%）。
  * 结果按 src 缓存——切换/回看作品时无需重新探测下载。
  * 直方图渲染为 SVG（矢量：高 DPI / 缩放 / 窄屏下始终清晰，不随像素密度发糊）。
+ *
+ * 影调与色彩分析采用摄影界标准口径（无外部算法）：
+ * 明度 = Rec.709 加权亮度；影调定性 = 亮度中位数 P50 相对中间灰（18% 灰 ≈ sRGB 118）；
+ * 對比度 = 動態範圍（P5–P95 换算为档）；剪裁 = ≥2% 像素落在两端（高光/陰影剪裁）；
+ * 區域系統 = 安塞尔·亚当斯 11 级灰阶；飽和度/色相 = HSV 分布（色相按饱和度加权）。
  */
 
 /* RGB → HSL 文本（如 H210 S12 L70） */
@@ -102,8 +107,31 @@ function computePalette(pixels) {
         }
     }
 
-    return centers
-        .filter((c) => c.count > 0)
+    // 主色不足 6 个时拆分补足：把占比最大的颜色拆成「原色 + 明度变体」，
+    // 变体的混合比例按轮次递进（40% 白 → 40% 黑 → 65% 白 → 65% 黑 → 20% 白）——
+    // 固定比例会反复拆出同一个变体（重复色），递进轮次保证各变体互不相同；
+    // 两者各占一半，色卡恒为 6 行、占比之和保持 ≈100%
+    const PALETTE_TARGET = 6;
+    const SPLIT_MIXES = [0.4, -0.4, 0.65, -0.65, 0.2]; // 正值 = 向白混合比例，负值 = 向黑
+    const result = centers.filter((c) => c.count > 0).sort((a, b) => b.count - a.count);
+    let splitRound = 0;
+    while (result.length < PALETTE_TARGET && splitRound < SPLIT_MIXES.length) {
+        let splitIdx = 0;
+        result.forEach((c, i) => { if (c.count > result[splitIdx].count) splitIdx = i; });
+        const src = result[splitIdx];
+        const t = SPLIT_MIXES[splitRound++];
+        const mix = t >= 0 ? 255 : 0;
+        const k = Math.abs(t);
+        result.splice(splitIdx, 1,
+            { ...src, count: src.count / 2 },
+            {
+                r: src.r + (mix - src.r) * k,
+                g: src.g + (mix - src.g) * k,
+                b: src.b + (mix - src.b) * k,
+                count: src.count / 2,
+            });
+    }
+    return result
         .sort((a, b) => b.count - a.count)
         .map((c) => ({
             hex: '#' + [c.r, c.g, c.b]
@@ -155,228 +183,137 @@ function renderPalette(colors, paletteWrap, paletteEl) {
     });
 }
 
-/* 把统计结果渲染为 SVG（Camera Raw 风格：256 亮度桶、对数纵轴、窗口 5 平滑曲线）：
-   viewBox 0 0 256 96——每桶恰为一个单位宽，随容器拉伸缩放仍保持矢量清晰。
-   加法混合不用 mix-blend-mode（手机浏览器/webview 对 SVG 元素支持参差，忽略后重叠区
-   会被最后绘制的通道盖成其本色）——按列把三通道高度排序分成三段（单通道/双通道叠加/
-   三通道叠加），每段直接填「底色 + 0.55×通道色之和」的不透明色，与 canvas lighter 完全等价 */
+/* 合并直方图（纯曲线 + 影调注释，连续形变过渡）：
+   R/G/B 三通道曲线 + 金色明度曲线——全部为无填充曲线（每通道 256 点
+   固定结构，天然平滑、无锯齿无竖条纹，且可形变）+ 陰影/中間調/高光
+   三分区底色 + P50 虚线标记（带 x 过渡）+ 两端剪裁三角。
+   数据变化时旧曲线与新曲线之间线性插值（0.4s），像曝光灰階括号一样
+   连续变形而非跳变 */
 const HIST_H = 96;
-const CHANNEL_ALPHA = 0.55; // 与 canvas 版 rgba 透明度一致
+const HIST_SAMPLES = 256; // 每通道曲线采样点数：d 形变要求点数恒定
+const LUM_CURVE_COLOR = 'rgb(245, 197, 66)'; // 明度曲线：金色——与通道曲线区分
 
-function paintHistogram(buckets, logMax, histogramSvg) {
-    if (!histogramSvg) return;
-    const BINS = buckets[0].length;
-    const channelColors = [[224, 90, 90], [110, 200, 140], [110, 150, 230]];
-    // 底色（加法混合基准）从元素计算样式读取，主题变量变化时自动跟随
-    const bgCss = getComputedStyle(histogramSvg).backgroundColor;
-    const bgMatch = bgCss && bgCss.match(/rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)/);
-    const bg = bgMatch ? [parseFloat(bgMatch[1]), parseFloat(bgMatch[2]), parseFloat(bgMatch[3])] : [24, 26, 32];
-    // 某段区域（活跃通道集合）的填色 = 底色 + 0.55×通道色之和（钳制）
-    const fillFor = (indices) => {
-        const sum = [bg[0], bg[1], bg[2]];
-        indices.forEach((idx) => {
-            for (let k = 0; k < 3; k++) sum[k] += channelColors[idx][k] * CHANNEL_ALPHA;
-        });
-        return `rgb(${Math.min(255, Math.round(sum[0]))},${Math.min(255, Math.round(sum[1]))},${Math.min(255, Math.round(sum[2]))})`;
-    };
-    // 桶间线性细分（每桶 4 段）——列式填色的阶梯边缘缩到肉眼不可辨，曲线平滑；
-    // 按每个采样点三通道高度排序（最小 y = 最高），拆成三段，按填色归组输出 path
-    const SAMPLE = 4;
-    const SEG_COUNT = (BINS - 1) * SAMPLE;
-    const byFill = new Map();
-    const ys = [[], [], []];
-    for (let c = 0; c < 3; c++) {
-        const src = buckets[c];
-        for (let i = 0; i <= SEG_COUNT; i++) {
-            const x = i / SAMPLE;
-            const lo = Math.floor(x);
-            const hi = Math.min(lo + 1, BINS - 1);
-            const t = x - lo;
-            const v = (1 - t) * Math.log1p(src[lo]) + t * Math.log1p(src[hi]);
-            ys[c].push(HIST_H - (v / logMax) * (HIST_H - 1));
+/* 通道曲线目标 y 数组（对数纵轴、同 logMax；通道桶已平滑） */
+function channelCurveYs(buckets, logMax) {
+    return buckets.map((arr) => Array.from({ length: HIST_SAMPLES }, (_, x) => {
+        const lo = Math.floor((x / (HIST_SAMPLES - 1)) * 255);
+        return HIST_H - (Math.log1p(arr[Math.min(255, lo)]) / logMax) * (HIST_H - 1);
+    }));
+}
+
+/* 明度曲线目标 y 数组（窗口 5 平滑 + 对数纵轴、同 logMax） */
+function lumCurveYs(lumHist, logMax) {
+    const smooth = lumHist.slice();
+    for (let i = 0; i < 256; i++) {
+        let sum = 0;
+        let n = 0;
+        for (let k = i - 2; k <= i + 2; k++) {
+            if (k >= 0 && k < 256) { sum += lumHist[k]; n++; }
         }
+        smooth[i] = sum / n;
     }
-    for (let i = 0; i < SEG_COUNT; i++) {
-        const order = [0, 1, 2].sort((a, b) => ys[a][i] - ys[b][i]);
-        const a = ys[order[0]][i];
-        const b = ys[order[1]][i];
-        const c = ys[order[2]][i];
-        const x0 = i / SAMPLE;
-        const x1 = (i + 1) / SAMPLE;
-        const segments = [];
-        if (b - a > 0.5) segments.push([a, b, [order[0]]]);
-        if (c - b > 0.5) segments.push([b, c, [order[0], order[1]]]);
-        if (HIST_H - c > 0.5) segments.push([c, HIST_H, [0, 1, 2]]);
-        segments.forEach(([top, bot, indices]) => {
-            const fill = fillFor(indices);
-            const seg = `M${x0.toFixed(2)},${top.toFixed(2)} L${x0.toFixed(2)},${bot.toFixed(2)} L${x1.toFixed(2)},${bot.toFixed(2)} L${x1.toFixed(2)},${top.toFixed(2)} Z`;
-            byFill.set(fill, (byFill.get(fill) || '') + seg);
-        });
-    }
-    histogramSvg.innerHTML = Array.from(byFill.entries())
-        .map(([fill, d]) => `<path d="${d}" fill="${fill}"></path>`)
-        .join('');
+    return Array.from({ length: HIST_SAMPLES }, (_, i) => {
+        const x = (i / (HIST_SAMPLES - 1)) * 255;
+        const lo = Math.floor(x);
+        const hi = Math.min(lo + 1, 255);
+        const t = x - lo;
+        const v = (1 - t) * Math.log1p(smooth[lo]) + t * Math.log1p(smooth[hi]);
+        return HIST_H - (v / logMax) * (HIST_H - 1);
+    });
 }
 
-/* ===== 影调分析（高/中/低 × 长/中/短 九格 + 全长调） =====
-   亮度 = Rec.709 权重（通道顺序与参考网站实测对齐，见采样循环注释）。
-   均值定高/中/低：≤85 低调 ｜ 85–170 中间调 ｜ ≥170 高调（±4 视为边界，提示置信有限）；
-   跨度（P0.5–P99.5）定长/中/短：<85 短调 ｜ 85–190 中调 ｜ >190 长调（阈值与参考网站
-   18 张实测对齐）。
-   σ 只作展示不参与判定——高 ISO 纹理不会把跨度不长的照片误判成「长调」。
-   全长调（第 10 格）：深暗（≤40）与明亮（≥215）各 ≥15%、中间带（90–165）≤30% 的
-   双峰分布（剪影/暗调风光），九格装不下时单独命名。
-   剪切（亮度 <1 或 >254 的像素 ≥0.5%）：跨度为表观值。 */
-const TONAL_KEY_LOW = 85;
-const TONAL_KEY_HIGH = 170;
-const TONAL_BOUNDARY = 4;
-const TONAL_SPAN_SHORT = 85;
-const TONAL_SPAN_LONG = 190; // 与参考网站实测对齐：P0.5–P99.5 口径下 190 为最优分界（18 张失配最少）
-const TONAL_DARK_LUM = 40;
-const TONAL_BRIGHT_LUM = 215;
-const TONAL_MID_LO = 90;
-const TONAL_MID_HI = 165;
-const TONAL_BIMODAL_MIN = 0.15;
-const TONAL_VALLEY_MAX = 0.3;
-const TONAL_MASS_MIN = 0.4;
-const TONAL_CLIP_FRAC = 0.005;
-
-/* 亮度统计：均值/σ/跨度（P0.5–P99.5，与参考网站实测同口径）/剪切占比/双峰与分区占比 */
-function analyzeLuminance(lumHist, lumSum, lumSq, clipped, total) {
-    const mean = lumSum / total;
-    const sigma = Math.sqrt(Math.max(0, lumSq / total - mean * mean));
-    let cum = 0;
-    let p1 = null;
-    let p99 = null;
-    let dark = 0, bright = 0, valley = 0, low = 0, mid = 0, high = 0;
-    for (let b = 0; b < 256; b++) {
-        const n = lumHist[b];
-        cum += n;
-        if (p1 === null && cum >= total * 0.005) p1 = b;
-        if (p99 === null && cum >= total * 0.995) p99 = b;
-        if (b <= TONAL_DARK_LUM) dark += n;
-        if (b >= TONAL_BRIGHT_LUM) bright += n;
-        if (b >= TONAL_MID_LO && b <= TONAL_MID_HI) valley += n;
-        if (b <= TONAL_KEY_LOW) low += n;
-        else if (b < TONAL_KEY_HIGH) mid += n;
-        else high += n;
+/* 曲线路径（固定点数不闭合） */
+function histLineD(ys) {
+    let d = '';
+    for (let i = 0; i < HIST_SAMPLES; i++) {
+        d += (i === 0 ? 'M' : 'L') + (i / (HIST_SAMPLES - 1) * 255).toFixed(2) + ',' + ys[i].toFixed(2);
     }
-    if (p1 === null) p1 = 0;
-    if (p99 === null) p99 = 255;
-    return {
-        mean,
-        sigma,
-        p1,
-        p99,
-        span: p99 - p1,
-        darkFrac: dark / total,
-        brightFrac: bright / total,
-        valleyFrac: valley / total,
-        lowFrac: low / total,
-        midFrac: mid / total,
-        highFrac: high / total,
-        clippedFrac: clipped / total,
-    };
+    return d;
 }
 
-/* 判定：全长调（双峰）优先 → 均值档 × 跨度档 → 边界/重心/剪切提示 */
-function judgeTonal(s, labels) {
-    const bimodal = s.darkFrac >= TONAL_BIMODAL_MIN
-        && s.brightFrac >= TONAL_BIMODAL_MIN
-        && s.valleyFrac <= TONAL_VALLEY_MAX
-        && s.span >= TONAL_SPAN_LONG;
-    if (bimodal) {
-        return {
-            name: labels.fullLong,
-            hint: s.clippedFrac >= TONAL_CLIP_FRAC ? labels.spanApparent : '',
-            mean: Math.round(s.mean),
-            sigma: Math.round(s.sigma),
-            span: s.span,
-        };
+function paintHistogram(buckets, logMax, histogramSvg, tone, lumHist) {
+    if (!histogramSvg) return;
+    const channelColors = [[224, 90, 90], [110, 200, 140], [110, 150, 230]];
+    // 骨架（一次性构建）：R/G/B 通道曲线 + 明度曲线 + 影调注释层
+    if (!histogramSvg._built) {
+        histogramSvg.innerHTML = channelColors.map(([r, g, b], i) =>
+            `<path class="hist-ch ch${i}" fill="none" stroke="rgb(${r},${g},${b})" stroke-width="1.5" vector-effect="non-scaling-stroke"></path>`).join('')
+            + `<path class="hist-lum" fill="none" stroke="${LUM_CURVE_COLOR}" stroke-width="1.5" vector-effect="non-scaling-stroke"></path>`;
+        if (tone) {
+            const zones = [
+                [0, TONAL_ZONE_SHADOW, 'var(--color-zone-shadow-bg)'],
+                [TONAL_ZONE_SHADOW + 1, TONAL_ZONE_HIGH, 'var(--color-zone-mid-bg)'],
+                [TONAL_ZONE_HIGH + 1, 255, 'var(--color-zone-high-bg)'],
+            ];
+            histogramSvg.insertAdjacentHTML('afterbegin', zones.map(([x0, x1, fill]) =>
+                `<rect x="${x0}" y="0" width="${x1 - x0 + 1}" height="${HIST_H}" fill="${fill}"></rect>`).join(''));
+            histogramSvg.insertAdjacentHTML('beforeend',
+                `<line class="hist-p50" y1="4" y2="${HIST_H - 4}" stroke="var(--color-accent)" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"></line>`
+                + `<path class="hist-mark-shadow" fill="var(--color-clip)"></path>`
+                + `<path class="hist-mark-high" fill="var(--color-clip)"></path>`);
+        }
+        histogramSvg._built = true;
     }
-    const key = s.mean <= TONAL_KEY_LOW ? 0 : (s.mean < TONAL_KEY_HIGH ? 1 : 2);
-    const range = s.span < TONAL_SPAN_SHORT ? 0 : (s.span <= TONAL_SPAN_LONG ? 1 : 2);
-    const keyName = labels.key[key];
-    const rangeName = labels.range[range];
-    const hints = [];
-    // 均值贴近 85/170（±4）：边界提示
-    if (Math.abs(s.mean - TONAL_KEY_LOW) <= TONAL_BOUNDARY) {
-        hints.push(labels.near + labels.key[key === 0 ? 1 : 0]);
-    } else if (Math.abs(s.mean - TONAL_KEY_HIGH) <= TONAL_BOUNDARY) {
-        hints.push(labels.near + labels.key[key === 2 ? 1 : 2]);
-    }
-    // 分区亮度重心打架：像素占比最大的档与均值档不一致且 ≥40% → 置信有限
-    const zoneFracs = [s.lowFrac, s.midFrac, s.highFrac];
-    let mass = 0;
-    for (let i = 1; i < 3; i++) if (zoneFracs[i] > zoneFracs[mass]) mass = i;
-    const massHint = labels.near + labels.key[mass];
-    if (mass !== key && zoneFracs[mass] >= TONAL_MASS_MIN && !hints.includes(massHint)) {
-        hints.push(massHint);
-    }
-    // 剪切：跨度仅为表观值
-    if (s.clippedFrac >= TONAL_CLIP_FRAC) {
-        hints.push(labels.spanApparent);
-    }
-    return {
-        // 组合名：低调 + 中调 → 低中调（共用「調」后缀）
-        name: keyName.slice(0, -1) + rangeName,
-        hint: hints.join(' · '),
-        mean: Math.round(s.mean),
-        sigma: Math.round(s.sigma),
-        span: s.span,
+    const target = channelCurveYs(buckets, logMax);
+    const lumYs = lumHist ? lumCurveYs(lumHist, logMax) : null;
+    const p50 = tone ? tone.p50 : 0;
+    const apply = (arrs) => {
+        histogramSvg.querySelectorAll('.hist-ch').forEach((p, i) => p.setAttribute('d', histLineD(arrs[i])));
+        const lum = histogramSvg.querySelector('.hist-lum');
+        if (lum) lum.setAttribute('d', histLineD(arrs[3]));
+        const p50Line = histogramSvg.querySelector('.hist-p50');
+        if (p50Line) {
+            p50Line.setAttribute('x1', arrs[4][0]);
+            p50Line.setAttribute('x2', arrs[4][0]);
+        }
     };
-}
-
-/* 平均色温（McCamy 近似）：sRGB → XYZ(D65) → xy 色度 → CCT。
-   色度出界（结果超 1500–40000K）即不展示；
-   色谱标记位置用倒数温标（mired）：与冷暖渐变的视觉距离线性对应 */
-const TONAL_CCT_MIN = 1500;
-const TONAL_CCT_MAX = 40000;
-/* 标记定位：倒数温标（mired）分段映射——10000K（冷端）=0、5500K（摄影日光中性）=0.5、
-   2500K（暖端）=1。单一线性 mired 会把中性 6500K 挤到条带左 1/5（中性照显得偏冷），
-   分段锚定日光中性点后冷暖各占半条，位置与色温直觉对应 */
-const TONAL_MIRED_COLD = 100; // 10000K → 0
-const TONAL_MIRED_NEUTRAL = 181.8; // 5500K → 0.5
-const TONAL_MIRED_WARM = 400; // 2500K → 1
-
-function avgColorTemp(rSum, gSum, bSum, total) {
-    const srgb = (v) => {
-        const c = v / total / 255;
-        return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-    };
-    const r = srgb(rSum);
-    const g = srgb(gSum);
-    const b = srgb(bSum);
-    const X = 0.4124 * r + 0.3576 * g + 0.1805 * b;
-    const Y = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    const Z = 0.0193 * r + 0.1192 * g + 0.9505 * b;
-    const s = X + Y + Z;
-    // 退化/色度出界：返回与正常路径同构的对象（cct=null 显示「不適用」），
-    // 绝不返回裸 null——renderTonal 无条件解引用 temp.pos
-    if (s <= 0) return { cct: null, pos: 0.5 };
-    const cy = Y / s;
-    // 色度出界（强绿色场等远离黑体轨迹的均值）——色温无意义，不展示
-    if (cy > 0.5) return { cct: null, pos: 0.5 };
-    const d = cy - 0.1858;
-    if (Math.abs(d) < 1e-6) return { cct: null, pos: 0.5 };
-    const n = (X / s - 0.332) / d;
-    const cct = -449 * n * n * n + 3525 * n * n - 6823.3 * n + 5520.33;
-    // 数值超界时 cct 置 null（显示「不適用」），标记位置仍按钳制后的 CCT 定位——
-    // 冷暖倾向色谱每张都显示
-    const valid = cct >= TONAL_CCT_MIN && cct <= TONAL_CCT_MAX;
-    const clamped = Math.max(TONAL_CCT_MIN, Math.min(TONAL_CCT_MAX, cct));
-    const mired = 1e6 / clamped;
-    let pos;
-    if (mired <= TONAL_MIRED_NEUTRAL) {
-        pos = 0.5 * (mired - TONAL_MIRED_COLD) / (TONAL_MIRED_NEUTRAL - TONAL_MIRED_COLD);
+    const toArrs = target.concat([lumYs || target[0], [p50]]);
+    if (histogramSvg._prevYs) {
+        tweenMulti(histogramSvg, histogramSvg._prevYs, toArrs, apply);
     } else {
-        pos = 0.5 + 0.5 * (mired - TONAL_MIRED_NEUTRAL) / (TONAL_MIRED_WARM - TONAL_MIRED_NEUTRAL);
+        apply(toArrs);
     }
-    pos = Math.max(0, Math.min(1, pos));
-    return { cct: valid ? Math.round(cct) : null, pos };
+    histogramSvg._prevYs = toArrs;
+    // 剪裁标记按警告开关（固定位置，即时切换）
+    if (tone) {
+        histogramSvg.querySelector('.hist-mark-shadow').setAttribute('d',
+            tone.warnings.includes('shadow') ? `M${TONAL_CLIP_DARK},1 l4,0 l-2,6 z` : '');
+        histogramSvg.querySelector('.hist-mark-high').setAttribute('d',
+            tone.warnings.includes('high') ? `M${TONAL_CLIP_BRIGHT},1 l-4,0 l2,6 z` : '');
+    }
 }
 
-/* 直方图百分位：累计分布达到 p 时的 bin 值（白平衡白点提取用，需原始未平滑直方图） */
+/* ===== 影调与色彩分析（摄影界标准口径） =====
+   明度 = Rec.709 加权亮度（0.2126·R + 0.7152·G + 0.0722·B）。
+   影调定性（高調/中間調/低調）：亮度中位数 P50 相对中间灰（18% 灰 ≈ sRGB 118）
+   的位置——中位数不受高光反光/深阴影等极端像素拉动。
+   對比度（高對比/中對比/低對比）：動態範圍 = P5–P95 的亮度跨度换算为「档」
+   （档是摄影界衡量动态范围的标准单位；P5/P95 去掉两端各 5% 的极端像素，
+   避免个别死白/死黑把跨度吹大）。
+   剪裁：≥2% 像素落在 0–5 → 陰影剪裁；≥2% 落在 250–255 → 高光剪裁
+   （与修图软件的高光/陰影剪裁警告同口径）。
+   區域系統：安塞尔·亚当斯 11 级灰阶（0–X），照片的 P1–P99 映射为占據區域。
+   飽和度：HSV 饱和度 0–100% 分布，均值定性低飽和/適中/高飽和。
+   色相：HSV 色相 0–360° 分布，按饱和度加权（灰色无相，不参与判定），
+   主色相取 8 个标准色名（紅/橙/黃/綠/青/藍/紫/品紅）。 */
+
+const TONAL_ZONE_SHADOW = 83; // 18% 灰（118）向下 1 档曝光：118/√2 ≈ 83
+const TONAL_ZONE_HIGH = 167; // 18% 灰向上 1 档曝光：118×√2 ≈ 167
+const TONAL_KEY_LOW = 95; // P50 低于中间灰约 1/5 → 低調
+const TONAL_KEY_HIGH = 150; // P50 高于中间灰约 1/4 → 高調
+const TONAL_DR_LOW = 3.5; // 動態範圍（档）：<3.5 低對比
+const TONAL_DR_HIGH = 6.5; // >6.5 高對比
+const TONAL_CLIP_FRAC = 0.02; // 剪裁判定：≥2% 像素
+const TONAL_CLIP_DARK = 5; // 陰影剪裁上界
+const TONAL_CLIP_BRIGHT = 250; // 高光剪裁下界
+const TONAL_SAT_LOW = 0.18; // 饱和度均值定性
+const TONAL_SAT_HIGH = 0.45;
+
+const ZONE_COUNT = 11; // 區域系統 0–X
+const HUE_SEG_COUNT = 36; // 色相直方图 36 段（每段 10°）
+const HUE_NAMES = ['紅', '橙', '黃', '綠', '青', '藍', '紫', '品紅']; // 8 个标准色相名（每段 45°）
+
+/* 直方图百分位：累计分布达到 p 时的 bin 值 */
 function percentileOf(hist, total, p) {
     const target = total * p;
     let cum = 0;
@@ -387,84 +324,284 @@ function percentileOf(hist, total, p) {
     return 255;
 }
 
-/* 平均色温（白平衡反推口径）：取各通道 90 分位作「白点」，灰世界反推光源色 =
-   (G/B, 1, G/R)，再求其 CCT。高位分位避开暗部噪声与局部色块，比算术平均更贴近
-   人眼对画面冷暖的整体感知（与参考网站分析工具 18 张实测对齐，平均偏差 ≈800K；
-   注意光源色取倒数为本站显示约定，与常见灰世界写法 (G/R, 1, G/B) 相反——
-   实测方向与参考网站一致，勿按常规「修正」）；
-   黑白（白点三通道近似无彩度）返回 cct=null（显示「不適用」、标记居中），
-   色度出界（极端偏色）时 cct=null 但标记按钳制后的 CCT 定位——色谱每张都显示 */
-function estimateTemp(p90R, p90G, p90B) {
-    if (Math.max(p90R, p90G, p90B) - Math.min(p90R, p90G, p90B) < 3) {
-        return { cct: null, pos: 0.5 };
-    }
-    // 光源色 = (G/B, 1, G/R)：bb 用 R、rr 用 B（勿与注释对调，方向经 18 张实测标定）
-    const rr = p90B > 0 ? p90G / p90B : 1;
-    const bb = p90R > 0 ? p90G / p90R : 1;
-    return avgColorTemp(rr * 255, 255, bb * 255, 1);
+/* 區域系統：亮度值 → 0–X 级 */
+function zoneOf(v) {
+    return Math.min(ZONE_COUNT - 1, Math.max(0, Math.round((v / 255) * (ZONE_COUNT - 1))));
 }
 
-/* 渲染影调结论：结论名 + 提示 + 分析过程（明度均值/明度/明度宽度）+
-   冷暖色谱与平均色温——色谱每张都显示（标记按钳制后 CCT 定位），
-   色温数值无效时显示「不適用」 */
-function renderTonal(result, temp, els, labels) {
+/* 影调统计与定性 */
+function analyzeTone(lumHist, total) {
+    const p1 = percentileOf(lumHist, total, 0.01);
+    const p5 = percentileOf(lumHist, total, 0.05);
+    const p50 = percentileOf(lumHist, total, 0.5);
+    const p95 = percentileOf(lumHist, total, 0.95);
+    const p99 = percentileOf(lumHist, total, 0.99);
+    let shadow = 0;
+    let mid = 0;
+    let high = 0;
+    let clipShadow = 0;
+    let clipHigh = 0;
+    for (let b = 0; b < 256; b++) {
+        const n = lumHist[b];
+        if (b <= TONAL_ZONE_SHADOW) shadow += n;
+        else if (b <= TONAL_ZONE_HIGH) mid += n;
+        else high += n;
+        if (b <= TONAL_CLIP_DARK) clipShadow += n;
+        if (b >= TONAL_CLIP_BRIGHT) clipHigh += n;
+    }
+    const key = p50 < TONAL_KEY_LOW ? 0 : (p50 <= TONAL_KEY_HIGH ? 1 : 2);
+    const drStops = p5 > 0 ? Math.log2((p95 + 1) / (p5 + 1)) : 0;
+    const range = drStops < TONAL_DR_LOW ? 0 : (drStops <= TONAL_DR_HIGH ? 1 : 2);
+    const warnings = [];
+    if (clipShadow / total >= TONAL_CLIP_FRAC) warnings.push('shadow');
+    if (clipHigh / total >= TONAL_CLIP_FRAC) warnings.push('high');
+    return {
+        key,
+        range,
+        p50,
+        drStops: Math.round(drStops * 10) / 10,
+        warnings,
+        zoneFrom: zoneOf(p1),
+        zoneTo: zoneOf(p99),
+        fracs: [Math.round((shadow / total) * 100), Math.round((mid / total) * 100), Math.round((high / total) * 100)],
+    };
+}
+
+/* 饱和度/色相统计：饱和度直方图（100 段）+ 均值；色相直方图（36 段，按饱和度加权）。
+   黑白照判定：平均饱和度 < 5%（接近无彩色）→ 无色相结论（显示「黑白」）、
+   色相图以灰色柱呈现——否则全零直方图会把主色相默认落在第一段（红） */
+function analyzeSatHue(satHist, satSum, hueHist, total) {
+    const satMean = satSum / total;
+    const achromatic = satMean < 0.05;
+    let hueMax = 0;
+    let hueMaxSeg = 0;
+    hueHist.forEach((w, i) => {
+        if (w > hueMax) {
+            hueMax = w;
+            hueMaxSeg = i;
+        }
+    });
+    const sat = satMean < TONAL_SAT_LOW ? 0 : (satMean < TONAL_SAT_HIGH ? 1 : 2);
+    return {
+        sat,
+        satMean: Math.round(satMean * 100),
+        achromatic,
+        hueName: achromatic
+            ? null
+            : HUE_NAMES[Math.round(hueMaxSeg / (HUE_SEG_COUNT / HUE_NAMES.length)) % HUE_NAMES.length],
+        hueSeg: hueMaxSeg,
+    };
+}
+
+/* ===== 图表渲染 ===== */
+
+/* 图表连续过渡：旧数据与新数据之间线性插值（rAF 驱动 0.4s easeOutCubic），
+   与曝光灰階括号/占比条同款节奏——曲线连续形变而非跳变；新过渡到来时
+   中断上一次未完成的过渡继续变形 */
+function tweenMulti(el, fromArrs, toArrs, apply) {
+    if (el._raf) cancelAnimationFrame(el._raf);
+    const t0 = performance.now();
+    const step = (now) => {
+        const t = Math.min(1, (now - t0) / 400);
+        const k = 1 - Math.pow(1 - t, 3);
+        const mid = fromArrs.map((arr, a) => arr.map((v, i) => v + (toArrs[a][i] - v) * k));
+        apply(t < 1 ? mid : toArrs);
+        el._raf = t < 1 ? requestAnimationFrame(step) : null;
+    };
+    el._raf = requestAnimationFrame(step);
+}
+
+/* 直方图图例：R/G/B 通道色与明度曲线色（一次性构建） */
+function renderHistLegend(legendEl, labels) {
+    if (!legendEl || legendEl._built) return;
+    const colors = ['rgb(224, 90, 90)', 'rgb(110, 200, 140)', 'rgb(110, 150, 230)', LUM_CURVE_COLOR];
+    const names = (labels || 'R|G|B|明度').split('|');
+    legendEl.textContent = '';
+    names.forEach((name, i) => {
+        const item = document.createElement('span');
+        const dot = document.createElement('i');
+        dot.style.background = colors[i];
+        const text = document.createElement('span');
+        text.textContent = name;
+        item.append(dot, text);
+        legendEl.appendChild(item);
+    });
+    legendEl._built = true;
+}
+
+/* 區域系統标尺：11 级灰阶（0 纯黑 → X 纯白，感知均匀），括号标出照片占據區域 */
+function renderZoneStrip(tone, stripEl, bracketEl) {
+    if (!stripEl) return;
+    if (!stripEl._built) {
+        stripEl.innerHTML = Array.from({ length: ZONE_COUNT }, (_, n) => {
+            const v = Math.round(255 * Math.pow(n / 10, 2.2));
+            return `<span style="background:rgb(${v},${v},${v})"></span>`;
+        }).join('');
+        // innerHTML 重建会销毁原有的括号子元素：重新挂回再更新位置
+        if (bracketEl) stripEl.appendChild(bracketEl);
+        stripEl._built = true;
+    }
+    if (bracketEl) {
+        bracketEl.style.left = (tone.zoneFrom / (ZONE_COUNT - 1)) * 100 + '%';
+        bracketEl.style.width = ((tone.zoneTo - tone.zoneFrom) / (ZONE_COUNT - 1)) * 100 + '%';
+    }
+}
+
+/* 饱和度直方图：0–100% 分布曲线（100 点固定结构，连续形变过渡）+ 均值标记（带 x 过渡） */
+function paintSatHistogram(satHist, sat, svg) {
+    if (!svg) return;
+    const W = 100;
+    const H = 48;
+    let max = 1;
+    satHist.forEach((v) => { if (v > max) max = v; });
+    const toYs = satHist.map((v) => H - (v / max) * (H - 2) - 1);
+    if (!svg._built) {
+        svg.innerHTML = `<path class="sat-curve" fill="none" stroke="var(--color-sat-curve)" stroke-width="1.5" vector-effect="non-scaling-stroke"></path>`
+            + `<line class="sat-mean" y1="2" y2="${H - 2}" stroke="var(--color-accent)" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"></line>`;
+        svg._built = true;
+    }
+    const apply = (arrs) => {
+        const ys = arrs[0];
+        let d = '';
+        for (let x = 0; x < W; x++) d += (x === 0 ? 'M' : 'L') + x + ',' + ys[x].toFixed(2);
+        svg.querySelector('.sat-curve').setAttribute('d', d);
+        const mean = svg.querySelector('.sat-mean');
+        mean.setAttribute('x1', arrs[1][0]);
+        mean.setAttribute('x2', arrs[1][0]);
+    };
+    const toArrs = [toYs, [sat.satMean]];
+    if (svg._prevYs) tweenMulti(svg, svg._prevYs, toArrs, apply);
+    else apply(toArrs);
+    svg._prevYs = toArrs;
+}
+
+/* 色相直方图：36 段（每段 10°），每段填其色相本色，主色相段高亮描边；
+   黑白照以灰色柱呈现（无色相）；柱高连续形变过渡 */
+function paintHueHistogram(hueHist, hue, svg) {
+    if (!svg) return;
+    const H = 48;
+    let max = 1;
+    hueHist.forEach((v) => { if (v > max) max = v; });
+    const toYs = hueHist.map((v) => H - (v / max) * (H - 2) - 1);
+    if (!svg._built) {
+        svg.innerHTML = Array.from({ length: HUE_SEG_COUNT }, () => '<rect></rect>').join('');
+        svg._built = true;
+    }
+    const apply = (ys) => {
+        Array.from(svg.children).forEach((rect, i) => {
+            const y = ys[i];
+            const fill = hue.achromatic ? 'hsl(0, 0%, 60%)' : `hsl(${i * 10 + 5}, 70%, 55%)`;
+            const dominant = !hue.achromatic && i === hue.hueSeg;
+            rect.setAttribute('x', i * 10 + 1);
+            rect.setAttribute('width', 8);
+            rect.setAttribute('y', y.toFixed(2));
+            rect.setAttribute('height', (H - 1 - y).toFixed(2));
+            rect.setAttribute('fill', fill);
+            rect.setAttribute('opacity', dominant ? '1' : '0.55');
+            rect.setAttribute('stroke', dominant ? 'var(--color-text)' : 'none');
+            rect.setAttribute('stroke-width', '0.5');
+        });
+    };
+    if (svg._prevYs) tweenMulti(svg, [svg._prevYs], [toYs], (arrs) => apply(arrs[0]));
+    else apply(toYs);
+    svg._prevYs = toYs;
+}
+
+/* 渲染影调结论与图表：结论（九调标准命名：高/中/低調 × 長/中/短調，如「低長調」，
+   中调键取「中」前缀）+ 剪裁警告、合并直方图（RGB 通道 + 明度曲线 + 三分区/P50/剪裁注释）、
+   區域系統、三区占比条、数据行（動態範圍/亮度中位數） */
+function renderTone(tone, buckets, logMax, lumHist, labels, els) {
     if (!els.wrap) return;
     els.wrap.style.display = '';
-    els.name.textContent = result.name;
-    els.hint.textContent = result.hint;
-    els.hint.style.display = result.hint ? '' : 'none';
-    els.mean.textContent = result.mean;
-    els.sigma.textContent = result.sigma;
-    els.span.textContent = result.span;
-    if (els.temp) {
-        els.temp.style.display = '';
-        els.tempMarker.style.left = (temp.pos * 100).toFixed(1) + '%';
-        els.tempNum.textContent = temp.cct !== null ? temp.cct + 'K' : labels.na;
-        // 冷暖结论：标记只要不在正中即给方向——<0.5 偏冷 ｜ =0.5 中性 ｜ >0.5 偏暖
-        els.tendency.textContent = temp.pos < 0.5 ? labels.cold : (temp.pos > 0.5 ? labels.warm : labels.neutral);
-    }
+    // 经典九调组合名：低调 + 长调 → 低長調（共用「調」后缀；中调键前缀取「中」）
+    const keyPrefix = tone.key === 1 ? '中' : labels.key[tone.key].slice(0, -1);
+    const parts = [keyPrefix + labels.range[tone.range]];
+    tone.warnings.forEach((w) => {
+        parts.push(w === 'shadow' ? labels.clipShadow : labels.clipHigh);
+    });
+    els.name.textContent = parts.join(' · ');
+    els.dr.textContent = tone.drStops + ' ' + labels.drUnit;
+    els.p50.textContent = tone.p50;
+    els.fracs[0].style.width = tone.fracs[0] + '%';
+    els.fracs[1].style.width = tone.fracs[1] + '%';
+    els.fracs[2].style.width = tone.fracs[2] + '%';
+    els.fracText.textContent =
+        `${labels.zoneNames[0]} ${tone.fracs[0]}% · ${labels.zoneNames[1]} ${tone.fracs[1]}% · ${labels.zoneNames[2]} ${tone.fracs[2]}%`;
+    paintHistogram(buckets, logMax, els.histEl, tone, lumHist);
+    renderHistLegend(els.legendEl, labels.histLegend);
+    renderZoneStrip(tone, els.zoneStripEl, els.zoneBracketEl);
 }
 
-export function initPhotoAnalysis({ histogramWrap, histogramEl, paletteWrap, paletteEl, tonal }) {
-    const tonalEls = tonal || {};
-    const tonalLabels = tonalEls.wrap ? {
-        key: (tonalEls.wrap.dataset.keyNames || '').split('|'),
-        range: (tonalEls.wrap.dataset.rangeNames || '').split('|'),
-        fullLong: tonalEls.wrap.dataset.fullLong || '',
-        near: tonalEls.wrap.dataset.near || '',
-        spanApparent: tonalEls.wrap.dataset.spanApparent || '',
-        na: tonalEls.wrap.dataset.na || '不適用',
-        cold: tonalEls.wrap.dataset.cold || '偏冷',
-        warm: tonalEls.wrap.dataset.warm || '偏暖',
-        neutral: tonalEls.wrap.dataset.neutral || '中性',
+function renderSat(sat, satHist, labels, els) {
+    if (!els.wrap) return;
+    els.wrap.style.display = '';
+    els.name.textContent = labels.sat[sat.sat];
+    paintSatHistogram(satHist, sat, els.histEl);
+}
+
+function renderHue(hue, hueHist, labels, els) {
+    if (!els.wrap) return;
+    els.wrap.style.display = '';
+    els.name.textContent = hue.achromatic ? (labels.gray || '黑白') : hue.hueName;
+    // 色相轴标注：8 个标准色名沿横向均布（一次性构建；黑白照时以灰点提示无色相）
+    if (els.axisEl && !els.axisEl._built) {
+        els.axisEl.textContent = '';
+        labels.hue.forEach((name) => {
+            const span = document.createElement('span');
+            span.textContent = name;
+            els.axisEl.appendChild(span);
+        });
+        els.axisEl._built = true;
+    }
+    paintHueHistogram(hueHist, hue, els.histEl);
+}
+
+export function initPhotoAnalysis({ paletteWrap, paletteEl, tone, sat, hue }) {
+    const toneEls = tone || {};
+    const satEls = sat || {};
+    const hueEls = hue || {};
+    const toneLabels = toneEls.wrap ? {
+        key: (toneEls.wrap.dataset.keyNames || '').split('|'),
+        range: (toneEls.wrap.dataset.rangeNames || '').split('|'),
+        zoneNames: (toneEls.wrap.dataset.zoneNames || '').split('|'),
+        clipShadow: toneEls.wrap.dataset.clipShadow || '',
+        clipHigh: toneEls.wrap.dataset.clipHigh || '',
+        drUnit: toneEls.wrap.dataset.drUnit || '檔',
+        histLegend: toneEls.wrap.dataset.histLegend || 'R|G|B|明度',
+    } : null;
+    const satLabels = satEls.wrap ? {
+        sat: (satEls.wrap.dataset.satNames || '').split('|'),
+    } : null;
+    const hueLabels = hueEls.wrap ? {
+        hue: (hueEls.wrap.dataset.hueNames || '').split('|'),
+        gray: hueEls.wrap.dataset.hueGray || '黑白',
     } : null;
 
-    const cache = new Map(); // src → { buckets, logMax, palette, tonal, temp }
+    const cache = new Map(); // src → { buckets, logMax, palette, tone, sat, hue, satHist, hueHist }
 
     function hideAll() {
-        if (histogramWrap) histogramWrap.style.display = 'none';
         if (paletteWrap) paletteWrap.style.display = 'none';
-        if (tonalEls.wrap) tonalEls.wrap.style.display = 'none';
+        if (toneEls.wrap) toneEls.wrap.style.display = 'none';
+        if (satEls.wrap) satEls.wrap.style.display = 'none';
+        if (hueEls.wrap) hueEls.wrap.style.display = 'none';
     }
 
     /* 分析指定作品：缓存命中直接重绘；否则探测加载 w_1024 缩略图统计。
-       直方图/色卡/影调区块都被配置关闭时跳过探测（不发请求）。
+       所有分析区块都被配置关闭时跳过探测（不发请求）。
        请求代次（analyzeSeq）：快速切图时慢探测乱序完成，代次不符不渲染过期结果 */
     let analyzeSeq = 0;
     function analyze(src) {
-        if (!histogramEl && !paletteEl && !tonalEls.wrap) return;
+        if (!paletteEl && !toneEls.wrap && !satEls.wrap && !hueEls.wrap) return;
         const mySeq = ++analyzeSeq;
         const cached = cache.get(src);
         if (cached) {
-            if (histogramEl) {
-                paintHistogram(cached.buckets, cached.logMax, histogramEl);
-                histogramWrap.style.display = '';
-            }
             if (paletteEl) renderPalette(cached.palette, paletteWrap, paletteEl);
-            if (tonalEls.wrap) renderTonal(cached.tonal, cached.temp, tonalEls, tonalLabels);
+            if (toneEls.wrap) renderTone(cached.tone, cached.buckets, cached.logMax, cached.lumHist, toneLabels, toneEls);
+            if (satEls.wrap) renderSat(cached.sat, cached.satHist, satLabels, satEls);
+            if (hueEls.wrap) renderHue(cached.hue, cached.hueHist, hueLabels, hueEls);
             return;
         }
-        const probeSrc = src.replace(/w_\d+/, 'w_1024'); // 与参考网站的 ≤1024px 采样同级，跨度/色温口径对齐
+        const probeSrc = src.replace(/w_\d+/, 'w_1024'); // 采样探测：≤1024px 缩略图
         const probe = new Image();
         probe.crossOrigin = 'anonymous';
         probe.onload = () => {
@@ -475,66 +612,67 @@ export function initPhotoAnalysis({ histogramWrap, histogramEl, paletteWrap, pal
                 const ctx = off.getContext('2d', { willReadFrequently: true });
                 ctx.drawImage(probe, 0, 0);
                 const data = ctx.getImageData(0, 0, off.width, off.height).data;
+                const total = data.length / 4;
 
                 const BINS = 256;
                 const buckets = [new Array(BINS).fill(0), new Array(BINS).fill(0), new Array(BINS).fill(0)];
                 const lumHist = new Array(BINS).fill(0); // 影调统计用（未平滑）
-                let lumSum = 0;
-                let lumSq = 0;
-                let clipped = 0;
+                const satHist = new Array(100).fill(0);
+                const hueHist = new Array(HUE_SEG_COUNT).fill(0);
+                let satSum = 0;
                 for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
                     // bin 下标 = 像素值本身（0-255，BINS=256）
-                    buckets[0][data[i]]++;
-                    buckets[1][data[i + 1]]++;
-                    buckets[2][data[i + 2]]++;
-                    // 亮度 = Rec.709 权重（影调判定与 σ 均基于此）。通道顺序与参考网站
-                    // 实测对齐（其「明度均值」同为 0.2126·B + 0.7152·G + 0.0722·R，
-                    // 对照 18 张均值吻合；按标准 R/B 顺序反而与其差 3–4 分——勿按常规修正）
-                    const lum = 0.2126 * data[i + 2] + 0.7152 * data[i + 1] + 0.0722 * data[i];
+                    buckets[0][r]++;
+                    buckets[1][g]++;
+                    buckets[2][b]++;
+                    // 明度 = Rec.709 加权（摄影界通用明度口径）
+                    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
                     lumHist[Math.min(255, lum | 0)]++;
-                    lumSum += lum;
-                    lumSq += lum * lum;
-                    if (lum < 1 || lum > 254) clipped++;
-                }
-                // 白平衡白点：各通道 90 分位（须在显示用平滑之前提取——百分位需要原始分布）
-                let p90R = 255, p90G = 255, p90B = 255;
-                if (tonalEls.wrap) {
-                    const p90Total = data.length / 4;
-                    p90R = percentileOf(buckets[0], p90Total, 0.9); // buckets[0] = R
-                    p90G = percentileOf(buckets[1], p90Total, 0.9);
-                    p90B = percentileOf(buckets[2], p90Total, 0.9); // buckets[2] = B
+                    // HSV 饱和度与色相：灰色无相（饱和度极低时色相无意义，不参与）
+                    const mx = Math.max(r, g, b);
+                    const mn = Math.min(r, g, b);
+                    const satv = mx > 0 ? (mx - mn) / mx : 0;
+                    satHist[Math.min(99, satv * 100 | 0)]++;
+                    satSum += satv;
+                    if (satv > 0.02) {
+                        const d = mx - mn;
+                        let h;
+                        if (d === 0) h = 0;
+                        else if (mx === r) h = ((g - b) / d) % 6;
+                        else if (mx === g) h = (b - r) / d + 2;
+                        else h = (r - g) / d + 4;
+                        if (h < 0) h += 6;
+                        hueHist[(h * 60 / 10) | 0] += satv; // 按饱和度加权
+                    }
                 }
                 // 轻量滑动平均（窗口 5），曲线更接近 Camera Raw 的平滑形态
-                buckets.forEach((b) => {
-                    const srcBuf = b.slice();
+                buckets.forEach((arr) => {
+                    const srcBuf = arr.slice();
                     for (let i = 0; i < BINS; i++) {
                         let sum = 0;
                         let n = 0;
                         for (let k = i - 2; k <= i + 2; k++) {
                             if (k >= 0 && k < BINS) { sum += srcBuf[k]; n++; }
                         }
-                        b[i] = sum / n;
+                        arr[i] = sum / n;
                     }
                 });
                 let max = 1;
-                buckets.forEach(b => b.forEach(v => { if (v > max) max = v; }));
+                buckets.forEach((arr) => arr.forEach((v) => { if (v > max) max = v; }));
                 const logMax = Math.log1p(max);
                 const palette = computePalette(data);
-                let tonal = null;
-                let temp = null;
-                if (tonalEls.wrap) {
-                    const total = data.length / 4;
-                    tonal = judgeTonal(analyzeLuminance(lumHist, lumSum, lumSq, clipped, total), tonalLabels);
-                    temp = estimateTemp(p90R, p90G, p90B);
-                }
-                cache.set(src, { buckets, logMax, palette, tonal, temp });
+                const tone = toneEls.wrap ? analyzeTone(lumHist, total) : null;
+                const sat = satEls.wrap ? analyzeSatHue(satHist, satSum, hueHist, total) : null;
+                const hue = hueEls.wrap ? analyzeSatHue(satHist, satSum, hueHist, total) : null;
+                cache.set(src, { buckets, logMax, palette, tone, sat, hue, lumHist, satHist, hueHist });
                 if (mySeq !== analyzeSeq) return; // 已切到别的作品：结果入缓存但不渲染过期内容
-                if (histogramEl) {
-                    paintHistogram(buckets, logMax, histogramEl);
-                    histogramWrap.style.display = '';
-                }
                 if (paletteEl) renderPalette(palette, paletteWrap, paletteEl);
-                if (tonalEls.wrap) renderTonal(tonal, temp, tonalEls, tonalLabels);
+                if (toneEls.wrap) renderTone(tone, buckets, logMax, lumHist, toneLabels, toneEls);
+                if (satEls.wrap) renderSat(sat, satHist, satLabels, satEls);
+                if (hueEls.wrap) renderHue(hue, hueHist, hueLabels, hueEls);
             } catch (err) {
                 console.warn('[lightbox] 直方图绘制失败:', err);
                 hideAll();
