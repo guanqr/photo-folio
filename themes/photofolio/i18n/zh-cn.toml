@@ -81,6 +81,9 @@ other = "中間調"
 [tonal_key_high]
 other = "高調"
 
+[tonal_mid_prefix]
+other = "中"
+
 [tonal_range_short]
 other = "短調"
 

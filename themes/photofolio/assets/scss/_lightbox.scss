@@ -439,13 +439,8 @@
     }
 }
 
-/* 色彩直方图：JS 计算绘制（Camera Raw 风格——对数纵轴平滑曲线、RGB 加法混合）；
-   CORS 未开启时整块隐藏（优雅降级） */
-.lightbox-histogram-wrap {
-    margin-top: 1.1em;
-    transition: opacity var(--transition-opacity); /* 随图片同步淡入 */
-}
-
+/* 合并直方图（已并入影调区块）：JS 计算绘制（对数纵轴平滑曲线），
+   CORS 未开启时整个影调区块隐藏（优雅降级） */
 .lightbox-histogram {
     display: block;
     width: 100%;
@@ -459,7 +454,9 @@
    三区占比条、饱和度/色相直方图——全部文字采用霞鹜（--font-meta）、字号 0.9em */
 .lightbox-tonal-wrap,
 .lightbox-sat-wrap,
-.lightbox-hue-wrap {
+.lightbox-hue-wrap,
+.lightbox-palette-wrap,
+.lightbox-story-wrap {
     margin-top: 1.1em;
     transition: opacity var(--transition-opacity); /* 随图片同步淡入 */
 }
@@ -483,23 +480,26 @@
     margin-top: 0.5em;
 }
 
-/* 图表说明文字：位于图表上方的小号灰色标注（如「直方圖」「區域系統 0–X」） */
-.lightbox-chart-caption {
-    margin: 0.55em 0 0.3em;
+/* 图表标注共用样式：霞鹜 0.8em 灰字（说明文字/图例/轴标注） */
+%chart-note {
     font-family: var(--font-meta);
     font-size: 0.8em;
     color: var(--color-text-secondary);
 }
 
+/* 图表说明文字：位于图表上方的小号灰色标注（如「直方圖」「區域系統 0–X」） */
+.lightbox-chart-caption {
+    @extend %chart-note;
+    margin: 0.55em 0 0.3em;
+}
+
 /* 直方图图例：通道色圆点 + 名称（R/G/B/明度） */
 .lightbox-hist-legend {
+    @extend %chart-note;
     display: flex;
     flex-wrap: wrap;
     gap: 0.3em 1em;
     margin-top: 0.3em;
-    font-family: var(--font-meta);
-    font-size: 0.8em;
-    color: var(--color-text-secondary);
 
     > span {
         display: flex;
@@ -515,24 +515,13 @@
     }
 }
 
-/* 饱和度轴端点标注（低飽和 ←→ 高飽和） */
-.lightbox-sat-axis {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 0.25em;
-    font-family: var(--font-meta);
-    font-size: 0.8em;
-    color: var(--color-text-secondary);
-}
-
-/* 色相轴标注：8 个标准色名沿横向均布（红→品红，对应彩虹渐变） */
+/* 饱和度/色相轴标注（低飽和 ←→ 高飽和；色名沿横向均布，对应彩虹渐变） */
+.lightbox-sat-axis,
 .lightbox-hue-axis {
+    @extend %chart-note;
     display: flex;
     justify-content: space-between;
     margin-top: 0.25em;
-    font-family: var(--font-meta);
-    font-size: 0.8em;
-    color: var(--color-text-secondary);
 }
 
 /* 區域系統标尺：11 级灰阶（0 纯黑 → X 纯白，感知均匀，JS 生成色阶），
@@ -557,7 +546,7 @@
         width: 0;
         border: 0.0625em solid var(--color-accent);
         border-radius: 0.25em;
-        transition: left 0.4s ease, width 0.4s ease;
+        transition: left var(--transition-chart), width var(--transition-chart);
         pointer-events: none;
     }
 }
@@ -576,7 +565,7 @@
     display: block;
     height: 100%;
     width: 0;
-    transition: width 0.4s ease;
+    transition: width var(--transition-chart);
 
     &:nth-child(1) { background: var(--color-zone-shadow-fg); }
     &:nth-child(2) { background: var(--color-zone-mid-fg); }
@@ -654,12 +643,7 @@
     }
 }
 
-/* 色卡：JS 提取的 7 个主色（与直方图共用采样管线）——每行：色块 + hex + 占比 */
-.lightbox-palette-wrap {
-    margin-top: 1.1em;
-    transition: opacity var(--transition-opacity); /* 随图片同步淡入 */
-}
-
+/* 色卡：JS 提取的主色（与直方图共用采样管线）——每行：色块 + hex + 占比 */
 .lightbox-palette {
     display: flex;
     flex-direction: column;
@@ -710,11 +694,6 @@
 }
 
 /* 作品背后的故事 / 直方图 等区块标题（与 EXIF 标签同款：白色、同字号） */
-.lightbox-story-wrap {
-    margin-top: 1.1em;
-    transition: opacity var(--transition-opacity); /* 随图片同步淡入 */
-}
-
 .lightbox-section-title {
     font-family: var(--font-meta);
     font-size: 0.9em;

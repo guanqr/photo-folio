@@ -3,7 +3,7 @@
  * 窄屏指示器为小圆点（当前项绿色放大），桌面端为横条进度条；自动播放始终由 JS 定时器驱动
  */
 
-import { prefersReducedMotion } from './utils.js';
+import { prefersReducedMotion, easeOutCubic } from './utils.js';
 
 const SLIDE_TRANSITION_MS = 1200;
 
@@ -17,11 +17,6 @@ function smoothScrollTo(targetY, duration = 700) {
     const startY = window.scrollY;
     const diff = targetY - startY;
     const startTime = performance.now();
-
-    // ease-out cubic：起始较快，接近目标时减速
-    function easeOutCubic(t) {
-        return 1 - Math.pow(1 - t, 3);
-    }
 
     function step(currentTime) {
         const elapsed = currentTime - startTime;

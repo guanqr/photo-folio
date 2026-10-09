@@ -13,7 +13,7 @@
  *   拖拽变宽/变窄时布局稳定，不会来回跳跃
  */
 
-import { prefersReducedMotion, FLIP_TRANSITION } from './utils.js';
+import { prefersReducedMotion, FLIP_TRANSITION, isImageReady } from './utils.js';
 
 const DEFAULT_RATIO = 1.5; // 图片宽高比读取失败时的兜底值（3:2）
 const REVEAL_STAGGER = 60; // 逐张揭示间隔 ms
@@ -149,7 +149,7 @@ function measureRatios(grid, items) {
             }
             // 无属性（新作品未回填）时沿用加载测量 + 超时兜底路径
             timer = setTimeout(() => settle(DEFAULT_RATIO), MEASURE_TIMEOUT);
-            if (img.complete && img.naturalWidth > 0) {
+            if (isImageReady(img)) {
                 settle(img.naturalWidth / img.naturalHeight);
                 return;
             }

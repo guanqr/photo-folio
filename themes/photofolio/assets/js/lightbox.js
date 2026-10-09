@@ -1,5 +1,6 @@
 import { initPanelDrawer } from './lightbox-drawer.js';
 import { initPhotoAnalysis } from './lightbox-analysis.js';
+import { prefersReducedMotion, isImageReady } from './utils.js';
 
 let inited = false;
 
@@ -87,7 +88,7 @@ export function initLightbox() {
     // 毛玻璃背景层（机制对齐参考站灯箱）：每张作品一层 <img>，
     // 切换时旧层**立即**淡出（0.7s，不等新层就绪——加载慢时背景短暂为纯黑底，
     // 与参考站一致）、新层就绪后淡入（0.7s）；新层淡入后约 750ms 移除所有旧层
-    let backdropLayers = []; // { el, on, off, pruned }
+    let backdropLayers = []; // 裸元素数组：最新层 = 末位；状态仅元素上的 _shown 标志
     let backdropPruneTimer = null;
 
     // 滑动动画同时作用于主图与辉光层：辉光随主图一起移动与淡入淡出
@@ -131,12 +132,29 @@ export function initLightbox() {
             pendingGlowLoad = null;
         }
     };
+
+    // 在途滑出结束监听：快速同向连切时（0.25s 滑出动画内再次切换），第二次
+    // slideStyle 写入相同 transform 不会重启过渡、旧监听照常触发——旧闭包会用
+    // 上一张作品重放 src/面板；新切换开始时先摘除旧监听，仅最新一次切换生效
+    let pendingSlideOut = null;
+    const clearPendingSlideOut = () => {
+        if (pendingSlideOut) {
+            lightboxImg.removeEventListener('transitionend', pendingSlideOut);
+            pendingSlideOut = null;
+        }
+    };
+
     let glowDecoded = false; // 辉光内容是否已就绪（解码完成或加载失败）
     let mainSlideStarted = false; // 主图是否已开始滑入（辉光不得先于主图淡入）
+    // 减弱动态偏好：滑出/滑入/辉光/背景的内联过渡全部直切（内联样式优先级高于
+    // CSS 媒体查询，无法靠样式表关闭——与全站各动画模块的 reduced-motion 约定一致）
+    const reducedMotion = prefersReducedMotion();
+    const slideTransition = reducedMotion ? 'none' : 'transform 0.25s ease, opacity 0.25s ease';
+    const glowTransition = reducedMotion ? 'none' : 'opacity 0.25s ease';
     const fadeGlowIn = () => {
         // 辉光只做透明度淡入，不做自己的滑入移动：位置已在 startSlideIn 立即
         // 归位——若从侧边自行滑入，解码晚于主图时会明显晚于主图到达中间（不同步）
-        lightboxImgGlow.style.transition = 'opacity 0.25s ease';
+        lightboxImgGlow.style.transition = glowTransition;
         lightboxImgGlow.style.opacity = '1';
     };
 
@@ -192,7 +210,11 @@ export function initLightbox() {
     // 预加载左右邻居（保留 Image 引用：切图时用于同步探测缓存状态，避免重复请求）
     const preloadCache = new Map();
     function preload(url) {
-        if (!url || preloadCache.has(url)) return;
+        if (!url) return;
+        // 已就绪的条目直接复用；失败过的条目（complete 但 naturalWidth=0）
+        // 换新 Image 重试——否则一次瞬时失败会让该照片整个会话缓存探针恒为 false
+        const existing = preloadCache.get(url);
+        if (isImageReady(existing)) return;
         const img = new Image();
         img.src = url;
         preloadCache.set(url, img);
@@ -221,27 +243,32 @@ export function initLightbox() {
     // EXIF 分行列表：行结构（图标/标签）由模板渲染，这里只填值
     // （普通项空值隐藏；设备（相机）缺失时显示删除线占位「—」，
     //   镜头缺失时以英文 N/A 表示——删除线在长型号旁视觉不佳）
+    // EXIF 行结构（图标/标签）由模板渲染，这里只填值——行配置与 li 列表
+    // 恒定，初始化时一次建好，切图时不再重建
+    const exifRows = [
+        { key: 'camera', value: '', prefix: '', suffix: '', showMissing: true },
+        { key: 'lens', value: '', prefix: '', suffix: '', showMissing: true, missingText: 'N/A' },
+        { key: 'focus', value: '', prefix: '', suffix: 'mm' },
+        { key: 'aperture', value: '', prefix: 'f/', suffix: '' },
+        { key: 'shutter', value: '', prefix: '', suffix: 's' },
+        { key: 'iso', value: '', prefix: 'ISO', suffix: '' }
+    ];
+    const exifLis = exifList ? Array.from(exifList.querySelectorAll('li')) : [];
+
     function renderExif(p) {
         if (!exifList) return;
-        const rows = [
-            { key: 'camera', value: p.camera, prefix: '', suffix: '', showMissing: true },
-            { key: 'lens', value: p.lens, prefix: '', suffix: '', showMissing: true, missingText: 'N/A' },
-            { key: 'focus', value: p.focus, prefix: '', suffix: 'mm' },
-            { key: 'aperture', value: p.aperture, prefix: 'f/', suffix: '' },
-            { key: 'shutter', value: p.shutter, prefix: '', suffix: 's' },
-            { key: 'iso', value: p.iso, prefix: 'ISO', suffix: '' }
-        ];
-        exifList.querySelectorAll('li').forEach((li) => {
-            const row = rows.find(r => r.key === li.dataset.exifKey);
+        exifLis.forEach((li) => {
+            const row = exifRows.find(r => r.key === li.dataset.exifKey);
             const valueEl = li.querySelector('.exif-value');
             if (!row) {
                 li.style.display = 'none';
                 return;
             }
+            const value = p[row.key] || '';
             valueEl.classList.remove('is-missing');
-            if (row.value) {
+            if (value) {
                 li.style.display = '';
-                valueEl.textContent = row.prefix + row.value + row.suffix;
+                valueEl.textContent = row.prefix + value + row.suffix;
             } else if (row.showMissing) {
                 li.style.display = '';
                 valueEl.textContent = row.missingText || '—';
@@ -270,8 +297,13 @@ export function initLightbox() {
     }
 
     // 新建背景层：thumb 源 + blur 压暗（样式见 _lightbox.scss）；切图淡入淡出
-    // 一律 0.7s cubic-bezier(0.4, 0, 0.2, 1)（参考站 duration-700 同款）
-    const backdropTransition = 'opacity 0.7s cubic-bezier(0.4, 0, 0.2, 1)';
+    // 一律 0.7s cubic-bezier(0.4, 0, 0.2, 1)（参考站 duration-700 同款）。
+    // 剪枝定时由时长推导（时长 + 50ms 余量）：两处魔数单源，改时长不脱节
+    const BACKDROP_MS = reducedMotion ? 0 : 700;
+    const backdropTransition = reducedMotion
+        ? 'opacity 0s'
+        : `opacity ${BACKDROP_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+    const backdropPruneDelay = BACKDROP_MS + 50;
     const createBackdropEl = () => {
         const el = document.createElement('img');
         el.className = 'lightbox-backdrop';
@@ -287,76 +319,79 @@ export function initLightbox() {
     // 只保留最新一层：旧层此时已完全淡出（0.7s < 750ms），移除不可见
     const pruneBackdrops = () => {
         while (backdropLayers.length > 1) {
-            const old = backdropLayers.shift();
-            old.pruned = true;
-            old.el.remove();
+            backdropLayers.shift().remove();
         }
     };
 
-    // 首开：清空上一轮残留，新建一层淡入当前作品（随灯箱容器 0.3s 一同淡入）
+    // 首开：清空上一轮残留，新建一层淡入当前作品（随灯箱容器 0.3s 一同淡入）。
+    // 首开无上一层可回退：缩略图失败时该层保持透明（背景纯黑），属可接受降级
     function openBackdrop(src) {
         if (backdropPruneTimer) {
             clearTimeout(backdropPruneTimer);
             backdropPruneTimer = null;
         }
-        backdropLayers.forEach((layer) => { layer.pruned = true; layer.el.remove(); });
+        backdropLayers.forEach((el) => el.remove());
         backdropLayers = [];
         const el = createBackdropEl();
         appendBackdropEl(el);
         el.src = src;
         el.offsetHeight; // 强制 reflow：让 opacity 走 CSS 过渡淡入
         el.style.opacity = '1';
-        backdropLayers.push({ el, on: true, off: false, pruned: false });
+        el._shown = true;
+        backdropLayers.push(el);
     }
 
     // 切图（对齐参考站灯箱机制）：旧层**立即**淡出 0.7s（不等新层就绪，
     // 加载慢时背景短暂为纯黑底）、新层就绪后淡入 0.7s——淡出与图片切换同刻开始，
-    // 背景变化贯穿整个切换过程；新层加载失败时丢弃该层并让上一层淡回显示；
-    // 回调只操作本层元素，无跨层状态可翻转
+    // 背景变化贯穿整个切换过程；新层加载失败时丢弃该层并让上一层淡回显示。
+    // 层模型为裸元素数组（最新层即数组末位），唯一状态标志是元素的 _shown
+    // （是否已完成过淡入）——show 守卫 = 「仍是最新层且未显示过」，被更新的
+    // 切换取代或已被剪枝的层自然失效；回调只操作本层元素，无跨层状态可翻转
     function switchBackdrop(src) {
         if (backdropPruneTimer) {
             clearTimeout(backdropPruneTimer);
             backdropPruneTimer = null;
         }
-        backdropLayers.forEach((layer) => {
-            layer.off = true;
-            layer.el.style.transition = backdropTransition;
-            layer.el.style.opacity = '0';
+        backdropLayers.forEach((layerEl) => {
+            layerEl.style.transition = backdropTransition;
+            layerEl.style.opacity = '0';
         });
         const el = createBackdropEl();
         el.style.transition = backdropTransition;
         el.style.opacity = '0';
         el.src = src;
         appendBackdropEl(el);
-        const layer = { el, on: false, off: false, pruned: false };
-        backdropLayers.push(layer);
+        backdropLayers.push(el);
         const show = () => {
-            if (layer.pruned || layer.on || layer.off) return;
-            layer.on = true;
+            // 守卫：已被更新的切换取代（不再是末位）或已显示过（首开/同步
+            // complete 路径）则不再执行——被剪枝的层同样不在数组中
+            if (el._shown || backdropLayers[backdropLayers.length - 1] !== el) return;
+            el._shown = true;
             // 强制 reflow 让 opacity 0 先生效：缓存图 complete 同步为真时（同一帧内
             // 0→1 变化不触发过渡）同样走 0.7s 淡入
             el.offsetHeight;
             el.style.opacity = '1';
-            backdropPruneTimer = setTimeout(pruneBackdrops, 750);
+            backdropPruneTimer = setTimeout(pruneBackdrops, backdropPruneDelay);
         };
-        if (el.complete && el.naturalWidth > 0) {
+        if (isImageReady(el)) {
             show();
         } else {
             el.addEventListener('load', show, { once: true });
             el.addEventListener('error', () => {
-                const idx = backdropLayers.indexOf(layer);
+                const idx = backdropLayers.indexOf(el);
                 if (idx < 0) return;
                 backdropLayers.splice(idx, 1);
-                layer.pruned = true;
                 el.remove();
                 if (idx === backdropLayers.length) {
-                    // 失败的是最新层：上一层淡回显示
+                    // 失败的是最新层：上一层淡回显示。若上一层已显示过直接淡回并
+                    // 补设剪枝定时；若其仍在加载（_shown 未置），它的 show 监听
+                    // 仍挂在元素上——此时它已成为最新层、守卫放行，解码完成后
+                    // 自然走 show 的淡入与剪枝，无需在这里重复触发
                     const prev = backdropLayers[backdropLayers.length - 1];
-                    if (prev) {
-                        prev.off = false;
-                        prev.on = true;
-                        prev.el.style.transition = backdropTransition;
-                        prev.el.style.opacity = '1';
+                    if (prev && prev._shown) {
+                        prev.style.transition = backdropTransition;
+                        prev.style.opacity = '1';
+                        backdropPruneTimer = setTimeout(pruneBackdrops, backdropPruneDelay);
                     }
                 }
             }, { once: true });
@@ -369,7 +404,7 @@ export function initLightbox() {
             clearTimeout(backdropPruneTimer);
             backdropPruneTimer = null;
         }
-        backdropLayers.forEach((layer) => { layer.pruned = true; layer.el.remove(); });
+        backdropLayers.forEach((el) => el.remove());
         backdropLayers = [];
     }
 
@@ -380,7 +415,7 @@ export function initLightbox() {
         hideImgLoading();
         mainSlideStarted = true;
         // 主图滑入归位并淡入
-        lightboxImg.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
+        lightboxImg.style.transition = slideTransition;
         lightboxImg.style.transform = 'translateX(0)';
         lightboxImg.style.opacity = '1';
         // 辉光位置立即归位（不参与滑入移动——自己滑入会晚于主图到达中间），
@@ -390,7 +425,7 @@ export function initLightbox() {
         if (lightboxImgGlow) {
             lightboxImgGlow.style.transition = 'none';
             lightboxImgGlow.style.transform = 'translateX(0)';
-            if (glowDecoded || (lightboxImgGlow.complete && lightboxImgGlow.naturalWidth > 0)) {
+            if (glowDecoded || isImageReady(lightboxImgGlow)) {
                 glowDecoded = true;
                 fadeGlowIn();
             } else {
@@ -456,17 +491,21 @@ export function initLightbox() {
             // 新图未缓存时浏览器在 src 加载期间仍显示旧图——隐藏图片并转圈，
             // 加载完成后再滑入（与瀑布流加载指示器同款）
             const cachedImg = preloadCache.get(p.src);
-            const cached = !!(cachedImg && cachedImg.complete && cachedImg.naturalWidth > 0);
+            const cached = isImageReady(cachedImg);
 
-            slideStyle(`translateX(${-dir * 12}%)`, '0', 'transform 0.25s ease, opacity 0.25s ease');
+            slideStyle(`translateX(${-dir * 12}%)`, '0', slideTransition);
+
+            // 摘除上一次切换的在途滑出监听（快速同向连切时不重放旧作品）
+            clearPendingSlideOut();
 
             // 背景毛玻璃随滑出开始切换（对齐参考站）：旧层立即淡出 0.7s、新层
             // 就绪后淡入 0.7s——旧层不保持等待，背景变化与图片切换同刻开始、
             // 贯穿整个切换过程
             switchBackdrop(p.thumb || p.src);
 
-            lightboxImg.addEventListener('transitionend', function slideOutDone() {
+            lightboxImg.addEventListener('transitionend', pendingSlideOut = function slideOutDone() {
                 lightboxImg.removeEventListener('transitionend', slideOutDone);
+                pendingSlideOut = null;
                 switching = true; // 滑入期间 onLoad 不强制透明度
 
                 // 换内容：新图在进入侧待命
@@ -478,7 +517,7 @@ export function initLightbox() {
                     clearPendingGlow();
                     glowDecoded = false;
                     mainSlideStarted = false;
-                    if (lightboxImgGlow.complete && lightboxImgGlow.naturalWidth > 0) {
+                    if (isImageReady(lightboxImgGlow)) {
                         glowDecoded = true;
                     } else {
                         // 辉光未解码：保持隐藏，解码完成后随主图一起淡入（主图仍在
@@ -498,7 +537,7 @@ export function initLightbox() {
                 // 主图元素自身已解码才直接滑入；HTTP 已缓存但解码未完成时同样
                 // 等 load（不转圈）——按预载引用判定会先滑入空框、内容到达时
                 // 在淡入中途突现（移动端解码慢时尤为明显）
-                if (lightboxImg.complete && lightboxImg.naturalWidth > 0) {
+                if (isImageReady(lightboxImg)) {
                     startSlideIn(p);
                 } else {
                     // 未就绪：隐藏图片（仍在显示旧图）并转圈，加载完成后再滑入。
@@ -531,18 +570,41 @@ export function initLightbox() {
 
             lightboxImg.src = p.src;
             lightboxImg.alt = p.alt;
-            if (lightboxImgGlow) lightboxImgGlow.src = p.thumb || p.src; // 辉光层随主图同步切换
+            if (lightboxImgGlow) {
+                lightboxImgGlow.src = p.thumb || p.src; // 辉光层随主图同步切换
+                // 与切图路径同款门控：辉光未解码时保持隐藏，解码完成后淡入——
+                // 首开同样存在「淡入空框、内容突现」的暗角断点，不可绕过
+                clearPendingGlow();
+                glowDecoded = isImageReady(lightboxImgGlow);
+                if (!glowDecoded) {
+                    lightboxImgGlow.style.transition = 'none';
+                    lightboxImgGlow.style.opacity = '0';
+                    pendingGlowLoad = () => {
+                        clearPendingGlow();
+                        glowDecoded = true;
+                        fadeGlowIn();
+                    };
+                    lightboxImgGlow.addEventListener('load', pendingGlowLoad);
+                    lightboxImgGlow.addEventListener('error', pendingGlowLoad);
+                }
+            }
             openBackdrop(p.thumb || p.src);
             lightbox.classList.add('active');
             document.body.style.overflow = 'hidden';
 
             // 首开未缓存：转圈等待（缓存命中时 complete 立即为真，无需转圈）
-            if (!(lightboxImg.complete && lightboxImg.naturalWidth > 0)) {
+            if (!isImageReady(lightboxImg)) {
                 showImgLoading();
             }
             if (lightboxImg.complete) {
                 lightboxImg.style.opacity = '1';
                 hideImgLoading();
+                // 辉光未就绪时保持隐藏（hideImgLoading 清掉内联 opacity 会使其
+                // 按 CSS 默认值 1 提前淡入空框）——解码完成后由 pendingGlowLoad 淡入
+                if (lightboxImgGlow && !glowDecoded) {
+                    lightboxImgGlow.style.transition = 'none';
+                    lightboxImgGlow.style.opacity = '0';
+                }
                 revealOverlayText();
             } else {
                 lightboxImg.addEventListener('load', function onLoad() {
@@ -551,6 +613,10 @@ export function initLightbox() {
                     // 否则慢图恰在滑出期间加载完成时会闪一下满透明覆盖过渡
                     if (!switching) lightboxImg.style.opacity = '1';
                     hideImgLoading();
+                    if (lightboxImgGlow && !glowDecoded) {
+                        lightboxImgGlow.style.transition = 'none';
+                        lightboxImgGlow.style.opacity = '0';
+                    }
                     revealOverlayText();
                 });
             }
@@ -564,6 +630,7 @@ export function initLightbox() {
         switching = false; // 转圈期关闭：残留的 switching 会阻塞下次首开的透明度恢复
         clearPendingSwitch(); // 摘除在途切图监听，防陈旧闭包在下一次打开时重放
         clearPendingGlow(); // 在途辉光淡入一并作废（关闭重开不残留隐藏态）
+        clearPendingSlideOut(); // 在途滑出结束监听一并作废（关闭重开不残留陈旧重放）
         closeBackdrop(); // 移除所有背景层（下次首开重建，不残留旧作品背景）
         lightboxImg.style.opacity = '0';
         if (lightboxImgGlow) lightboxImgGlow.style.opacity = '0';
@@ -573,14 +640,14 @@ export function initLightbox() {
     function prev() {
         // 无条件重建：SPA 换页后旧列表已指向销毁的网格，必须先收集再取模
         collectPhotos();
-        if (currentPhotos.length === 0) return;
+        if (currentPhotos.length <= 1) return; // 单张作品：切换无意义（避免空闪动画）
         const idx = (currentIndex - 1 + currentPhotos.length) % currentPhotos.length;
         open(idx);
     }
 
     function next() {
         collectPhotos();
-        if (currentPhotos.length === 0) return;
+        if (currentPhotos.length <= 1) return;
         const idx = (currentIndex + 1) % currentPhotos.length;
         open(idx);
     }

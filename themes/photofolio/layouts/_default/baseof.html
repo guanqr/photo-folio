@@ -51,7 +51,7 @@
                 </div>
                 <aside class="lightbox-panel" id="lightbox-panel">
                     {{/* 灯箱信息区块开关（hugo.toml [params.lightbox]，缺省全开） */}}
-                    {{ $lbCfg := merge (dict "meta" true "exif" true "histogram" true "palette" true "story" true "tonal" true "saturation" true "hue" true) (default dict site.Params.lightbox) }}
+                    {{ $lbCfg := merge (dict "meta" true "exif" true "palette" true "story" true "tonal" true "saturation" true "hue" true) (default dict site.Params.lightbox) }}
                     <div class="lightbox-caption" id="lightbox-caption"></div>
                     {{/* 标题下方：分类/系列胶囊行（JS 填充，点击跳转对应页面） */}}
                     <div class="lightbox-tags" id="lightbox-tags"></div>
@@ -111,6 +111,7 @@
                         {{ if $lbCfg.tonal }}
                         <div class="lightbox-tonal-wrap" id="lightbox-tonal-wrap"
                             data-key-names="{{ i18n "tonal_key_low" }}|{{ i18n "tonal_key_mid" }}|{{ i18n "tonal_key_high" }}"
+                            data-mid-prefix="{{ i18n "tonal_mid_prefix" }}"
                             data-range-names="{{ i18n "tonal_range_short" }}|{{ i18n "tonal_range_mid" }}|{{ i18n "tonal_range_long" }}"
                             data-zone-names="{{ i18n "tonal_zone_shadow" }}|{{ i18n "tonal_zone_mid" }}|{{ i18n "tonal_zone_high" }}"
                             data-clip-shadow="{{ i18n "tonal_clip_shadow" }}"

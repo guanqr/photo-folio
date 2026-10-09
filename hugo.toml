@@ -115,8 +115,8 @@ defaultContentLanguage = "zh-cn"
     # 【重要】字体名称不要加引号，不要加逗号，只写核心字体名
     headingFont = "Glyph Correction, Noto Serif TC"
     bodyFont = "Glyph Correction, I.MingCP"
-    footerFont = "LXGW WenKai TC"
-    metaFont = "LXGW WenKai TC"
+    footerFont = "Glyph Correction, LXGW WenKai TC"
+    metaFont = "Glyph Correction, LXGW WenKai TC"
 
     # 基础字号 (这些是纯数字+单位，不会触发 ZgotmplZ)
     baseFontSize = "16px"

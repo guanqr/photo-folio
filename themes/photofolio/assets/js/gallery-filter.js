@@ -10,7 +10,7 @@
 
 import { restartMasonryGrid } from './masonry.js';
 import { initInfiniteScroll } from './infinite-scroll.js';
-import { prefersReducedMotion } from './utils.js';
+import { prefersReducedMotion, easeOutCubic } from './utils.js';
 
 export const PARAM_KEYS = { scope: 's', year: 'y', location: 'l', category: 'c' };
 
@@ -24,7 +24,7 @@ function animateCount(el, target) {
     const DURATION = 450;
     const step = (now) => {
         const p = Math.min(1, (now - start) / DURATION);
-        const eased = 1 - Math.pow(1 - p, 3);
+        const eased = easeOutCubic(p);
         el.textContent = String(Math.round(from + (target - from) * eased));
         if (p < 1) requestAnimationFrame(step);
     };

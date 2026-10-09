@@ -44,7 +44,7 @@ export function initFootprintMap() {
         try {
             previewData = JSON.parse(previewDataEl.textContent);
         } catch (err) {
-            console.warn('[footprint-map] 预览数据解析失败', err);
+            console.warn('[footprint-map] preview data parse failed', err);
         }
     }
     const previewPanel = document.getElementById('footprint-preview');
@@ -58,7 +58,7 @@ export function initFootprintMap() {
     try {
         points = JSON.parse(dataEl.textContent);
     } catch (err) {
-        console.warn('[footprint-map] 数据解析失败', err);
+        console.warn('[footprint-map] data parse failed', err);
         return;
     }
     if (!Array.isArray(points) || points.length === 0) return;
@@ -71,7 +71,7 @@ export function initFootprintMap() {
             state.observer.disconnect();
             state.observer = null;
             build(root, points, previewData, previewPanel).catch((err) => {
-                console.warn('[footprint-map] 构建失败', err);
+                console.warn('[footprint-map] build failed', err);
             });
         }, { rootMargin: '600px 0px' });
         state.observer.observe(root);
@@ -281,7 +281,7 @@ async function build(root, points, previewData, previewPanel) {
         state.resizeObserver = null;
     }
 
-    const countFormat = root.dataset.countFormat || '%COUNT% 張作品';
+    const countFormat = root.dataset.countFormat;
     const yearFormat = root.dataset.yearRangeFormat || '%MIN% — %MAX%';
 
     // 始终设置内联纵横比：窄屏时决定框高；桌面高度由 CSS height:100% 决定（此值被忽略），
@@ -332,7 +332,7 @@ async function build(root, points, previewData, previewPanel) {
         svg.insertBefore(land, grid);
     } catch (err) {
         landPromise = null;
-        console.warn('[footprint-map] 陆地几何加载失败，仅显示网格与光点', err);
+        console.warn('[footprint-map] land geometry load failed, showing grid and dots only', err);
         if (seq !== buildSeq || !root.isConnected) return; // 与成功路径同款守卫：被取代的构建不得动 DOM
     }
 
@@ -380,7 +380,7 @@ async function build(root, points, previewData, previewPanel) {
                     // 先让地图完成投影/尺寸切换，再量测做 FLIP——动画目标（Last）
                     // 必须包含地图的最终尺寸，否则动画结束后地图会再跳一次
                     build(root, points, previewData, previewPanel).catch((err) => {
-                        console.warn('[footprint-map] 断点重建失败', err);
+                        console.warn('[footprint-map] breakpoint rebuild failed', err);
                     });
                     flipLayout();
                     return;
@@ -395,7 +395,7 @@ async function build(root, points, previewData, previewPanel) {
                 const cur = w / h;
                 if (state.aspect && Math.abs(cur - state.aspect) / state.aspect > 0.01) {
                     build(root, points, previewData, previewPanel).catch((err) => {
-                        console.warn('[footprint-map] 重建失败', err);
+                        console.warn('[footprint-map] rebuild failed', err);
                     });
                 }
             });
@@ -430,11 +430,8 @@ async function build(root, points, previewData, previewPanel) {
         e.stopPropagation();
         highlightDot(link.dataset.slug);
         renderPreview(previewData, link.dataset.slug);
-        // 窄屏（面板在地图下方）：滚动到面板，让更新内容可见
-        if (!previewPanel) return;
-        if (MQ_NARROW.matches) {
-            previewPanel.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'nearest' });
-        }
+        // 不做自动滚动：点击光点后页面保持在原位（光点高亮即反馈），
+        // 自动滚入面板会把地图顶出视口、页面跳位
     };
     root.addEventListener('click', onDotClick);
 
@@ -448,6 +445,11 @@ async function build(root, points, previewData, previewPanel) {
         if (state.revealIO) {
             state.revealIO.disconnect();
             state.revealIO = null;
+        }
+        // 在途预览切换计时一并作废：SPA 换页后不得用旧页面的 slug 渲染新页面的面板
+        if (renderPreview.timer) {
+            clearTimeout(renderPreview.timer);
+            renderPreview.timer = null;
         }
     };
 }
@@ -487,7 +489,7 @@ function renderPreview(data, slug) {
 
         const more = document.createElement('span');
         more.className = 'preview-more';
-        more.textContent = (panel.dataset.moreFormat || '查看全部 %COUNT% 張作品').replace('%COUNT%', entry.count);
+        more.textContent = panel.dataset.moreFormat.replace('%COUNT%', entry.count);
 
         // 分类卡片同款结构：图片在上、信息块（地名 + 查看全部）在下
         const info = document.createElement('div');

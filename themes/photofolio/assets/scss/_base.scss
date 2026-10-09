@@ -109,6 +109,9 @@ body {
 
     --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-35: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    /* 图表过渡（曝光灰階括号/占比条/JS 曲线形变共用）：时长与缓动单源——
+       JS 端 tweenMulti 初始化时解析此变量，与 CSS 过渡同源同节奏 */
+    --transition-chart: 0.4s cubic-bezier(0.215, 0.61, 0.355, 1); /* easeOutCubic */
     --transition-spring: 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
     /* 主题切换过渡（全站统一时长与缓动，改主题动画只动这里）——
        注意：值只含「时长+缓动」，使用时写成 `background-color var(--transition-bg)` 等 */

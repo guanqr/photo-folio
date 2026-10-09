@@ -12,6 +12,7 @@
  * 對比度 = 動態範圍（P5–P95 换算为档）；剪裁 = ≥2% 像素落在两端（高光/陰影剪裁）；
  * 區域系統 = 安塞尔·亚当斯 11 级灰阶；飽和度/色相 = HSV 分布（色相按饱和度加权）。
  */
+import { prefersReducedMotion, easeOutCubic } from './utils.js';
 
 /* RGB → HSL 文本（如 H210 S12 L70） */
 function rgbToHsl(r, g, b) {
@@ -203,15 +204,7 @@ function channelCurveYs(buckets, logMax) {
 
 /* 明度曲线目标 y 数组（窗口 5 平滑 + 对数纵轴、同 logMax） */
 function lumCurveYs(lumHist, logMax) {
-    const smooth = lumHist.slice();
-    for (let i = 0; i < 256; i++) {
-        let sum = 0;
-        let n = 0;
-        for (let k = i - 2; k <= i + 2; k++) {
-            if (k >= 0 && k < 256) { sum += lumHist[k]; n++; }
-        }
-        smooth[i] = sum / n;
-    }
+    const smooth = smooth5(lumHist);
     return Array.from({ length: HIST_SAMPLES }, (_, i) => {
         const x = (i / (HIST_SAMPLES - 1)) * 255;
         const lo = Math.floor(x);
@@ -222,52 +215,64 @@ function lumCurveYs(lumHist, logMax) {
     });
 }
 
-/* 曲线路径（固定点数不闭合） */
+/* 曲线路径（固定点数不闭合）；x 坐标前缀跨帧不变，预计算一次 */
+const HIST_X = Array.from({ length: HIST_SAMPLES }, (_, i) => ((i / (HIST_SAMPLES - 1)) * 255).toFixed(2));
 function histLineD(ys) {
     let d = '';
     for (let i = 0; i < HIST_SAMPLES; i++) {
-        d += (i === 0 ? 'M' : 'L') + (i / (HIST_SAMPLES - 1) * 255).toFixed(2) + ',' + ys[i].toFixed(2);
+        d += (i === 0 ? 'M' : 'L') + HIST_X[i] + ',' + ys[i].toFixed(2);
     }
     return d;
 }
 
-function paintHistogram(buckets, logMax, histogramSvg, tone, lumHist) {
+/* 饱和度/色相柱的目标 y 数组（按峰缩放，探测时一次算好入缓存） */
+function satYArray(satHist) {
+    const H = 48;
+    let max = 1;
+    satHist.forEach((v) => { if (v > max) max = v; });
+    return satHist.map((v) => H - (v / max) * (H - 2) - 1);
+}
+function hueYArray(hueHist) {
+    return satYArray(hueHist);
+}
+
+function paintHistogram(histYs, lumYs, histogramSvg, tone) {
     if (!histogramSvg) return;
     const channelColors = [[224, 90, 90], [110, 200, 140], [110, 150, 230]];
-    // 骨架（一次性构建）：R/G/B 通道曲线 + 明度曲线 + 影调注释层
+    // 骨架（一次性构建）：R/G/B 通道曲线 + 明度曲线 + 影调注释层，元素引用
+    // 一并缓存——过渡期间每帧直接用引用，不做 DOM 查询
     if (!histogramSvg._built) {
         histogramSvg.innerHTML = channelColors.map(([r, g, b], i) =>
             `<path class="hist-ch ch${i}" fill="none" stroke="rgb(${r},${g},${b})" stroke-width="1.5" vector-effect="non-scaling-stroke"></path>`).join('')
             + `<path class="hist-lum" fill="none" stroke="${LUM_CURVE_COLOR}" stroke-width="1.5" vector-effect="non-scaling-stroke"></path>`;
-        if (tone) {
-            const zones = [
-                [0, TONAL_ZONE_SHADOW, 'var(--color-zone-shadow-bg)'],
-                [TONAL_ZONE_SHADOW + 1, TONAL_ZONE_HIGH, 'var(--color-zone-mid-bg)'],
-                [TONAL_ZONE_HIGH + 1, 255, 'var(--color-zone-high-bg)'],
-            ];
-            histogramSvg.insertAdjacentHTML('afterbegin', zones.map(([x0, x1, fill]) =>
-                `<rect x="${x0}" y="0" width="${x1 - x0 + 1}" height="${HIST_H}" fill="${fill}"></rect>`).join(''));
-            histogramSvg.insertAdjacentHTML('beforeend',
-                `<line class="hist-p50" y1="4" y2="${HIST_H - 4}" stroke="var(--color-accent)" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"></line>`
-                + `<path class="hist-mark-shadow" fill="var(--color-clip)"></path>`
-                + `<path class="hist-mark-high" fill="var(--color-clip)"></path>`);
-        }
+        const zones = [
+            [0, TONAL_ZONE_SHADOW, 'var(--color-zone-shadow-bg)'],
+            [TONAL_ZONE_SHADOW + 1, TONAL_ZONE_HIGH, 'var(--color-zone-mid-bg)'],
+            [TONAL_ZONE_HIGH + 1, 255, 'var(--color-zone-high-bg)'],
+        ];
+        histogramSvg.insertAdjacentHTML('afterbegin', zones.map(([x0, x1, fill]) =>
+            `<rect x="${x0}" y="0" width="${x1 - x0 + 1}" height="${HIST_H}" fill="${fill}"></rect>`).join(''));
+        histogramSvg.insertAdjacentHTML('beforeend',
+            `<line class="hist-p50" y1="4" y2="${HIST_H - 4}" stroke="var(--color-accent)" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"></line>`
+            + `<path class="hist-mark-shadow" fill="var(--color-clip)"></path>`
+            + `<path class="hist-mark-high" fill="var(--color-clip)"></path>`);
+        histogramSvg._els = {
+            chs: Array.from(histogramSvg.querySelectorAll('.hist-ch')),
+            lum: histogramSvg.querySelector('.hist-lum'),
+            p50: histogramSvg.querySelector('.hist-p50'),
+            markShadow: histogramSvg.querySelector('.hist-mark-shadow'),
+            markHigh: histogramSvg.querySelector('.hist-mark-high'),
+        };
         histogramSvg._built = true;
     }
-    const target = channelCurveYs(buckets, logMax);
-    const lumYs = lumHist ? lumCurveYs(lumHist, logMax) : null;
     const p50 = tone ? tone.p50 : 0;
     const apply = (arrs) => {
-        histogramSvg.querySelectorAll('.hist-ch').forEach((p, i) => p.setAttribute('d', histLineD(arrs[i])));
-        const lum = histogramSvg.querySelector('.hist-lum');
-        if (lum) lum.setAttribute('d', histLineD(arrs[3]));
-        const p50Line = histogramSvg.querySelector('.hist-p50');
-        if (p50Line) {
-            p50Line.setAttribute('x1', arrs[4][0]);
-            p50Line.setAttribute('x2', arrs[4][0]);
-        }
+        histogramSvg._els.chs.forEach((p, i) => p.setAttribute('d', histLineD(arrs[i])));
+        histogramSvg._els.lum.setAttribute('d', histLineD(arrs[3]));
+        histogramSvg._els.p50.setAttribute('x1', arrs[4][0]);
+        histogramSvg._els.p50.setAttribute('x2', arrs[4][0]);
     };
-    const toArrs = target.concat([lumYs || target[0], [p50]]);
+    const toArrs = histYs.concat([lumYs || histYs[0], [p50]]);
     if (histogramSvg._prevYs) {
         tweenMulti(histogramSvg, histogramSvg._prevYs, toArrs, apply);
     } else {
@@ -276,9 +281,9 @@ function paintHistogram(buckets, logMax, histogramSvg, tone, lumHist) {
     histogramSvg._prevYs = toArrs;
     // 剪裁标记按警告开关（固定位置，即时切换）
     if (tone) {
-        histogramSvg.querySelector('.hist-mark-shadow').setAttribute('d',
+        histogramSvg._els.markShadow.setAttribute('d',
             tone.warnings.includes('shadow') ? `M${TONAL_CLIP_DARK},1 l4,0 l-2,6 z` : '');
-        histogramSvg.querySelector('.hist-mark-high').setAttribute('d',
+        histogramSvg._els.markHigh.setAttribute('d',
             tone.warnings.includes('high') ? `M${TONAL_CLIP_BRIGHT},1 l-4,0 l2,6 z` : '');
     }
 }
@@ -308,10 +313,11 @@ const TONAL_CLIP_DARK = 5; // 陰影剪裁上界
 const TONAL_CLIP_BRIGHT = 250; // 高光剪裁下界
 const TONAL_SAT_LOW = 0.18; // 饱和度均值定性
 const TONAL_SAT_HIGH = 0.45;
+const TONAL_ACHROMATIC = 0.05; // 黑白照判定：平均饱和度低于此视为无彩色
+const HUE_WEIGHT_MIN = 0.02; // 色相加权下限：饱和度低于此的灰色像素不参与色相统计
 
 const ZONE_COUNT = 11; // 區域系統 0–X
 const HUE_SEG_COUNT = 36; // 色相直方图 36 段（每段 10°）
-const HUE_NAMES = ['紅', '橙', '黃', '綠', '青', '藍', '紫', '品紅']; // 8 个标准色相名（每段 45°）
 
 /* 直方图百分位：累计分布达到 p 时的 bin 值 */
 function percentileOf(hist, total, p) {
@@ -327,6 +333,20 @@ function percentileOf(hist, total, p) {
 /* 區域系統：亮度值 → 0–X 级 */
 function zoneOf(v) {
     return Math.min(ZONE_COUNT - 1, Math.max(0, Math.round((v / 255) * (ZONE_COUNT - 1))));
+}
+
+/* 窗口 5 滑动平均（桶平滑与明度曲线平滑共用） */
+function smooth5(arr) {
+    const out = arr.slice();
+    for (let i = 0; i < arr.length; i++) {
+        let sum = 0;
+        let n = 0;
+        for (let k = i - 2; k <= i + 2; k++) {
+            if (k >= 0 && k < arr.length) { sum += arr[k]; n++; }
+        }
+        out[i] = sum / n;
+    }
+    return out;
 }
 
 /* 影调统计与定性 */
@@ -350,7 +370,9 @@ function analyzeTone(lumHist, total) {
         if (b >= TONAL_CLIP_BRIGHT) clipHigh += n;
     }
     const key = p50 < TONAL_KEY_LOW ? 0 : (p50 <= TONAL_KEY_HIGH ? 1 : 2);
-    const drStops = p5 > 0 ? Math.log2((p95 + 1) / (p5 + 1)) : 0;
+    // +1 偏移已防 log(0)：纯黑像素占比 ≥5% 时 p5=0 也照常计算（大片死黑的夜景
+    // 同样是高动态范围），不再被守卫强制成 0 檔
+    const drStops = Math.log2((p95 + 1) / (p5 + 1));
     const range = drStops < TONAL_DR_LOW ? 0 : (drStops <= TONAL_DR_HIGH ? 1 : 2);
     const warnings = [];
     if (clipShadow / total >= TONAL_CLIP_FRAC) warnings.push('shadow');
@@ -372,7 +394,7 @@ function analyzeTone(lumHist, total) {
    色相图以灰色柱呈现——否则全零直方图会把主色相默认落在第一段（红） */
 function analyzeSatHue(satHist, satSum, hueHist, total) {
     const satMean = satSum / total;
-    const achromatic = satMean < 0.05;
+    const achromatic = satMean < TONAL_ACHROMATIC;
     let hueMax = 0;
     let hueMaxSeg = 0;
     hueHist.forEach((w, i) => {
@@ -386,36 +408,58 @@ function analyzeSatHue(satHist, satSum, hueHist, total) {
         sat,
         satMean: Math.round(satMean * 100),
         achromatic,
-        hueName: achromatic
-            ? null
-            : HUE_NAMES[Math.round(hueMaxSeg / (HUE_SEG_COUNT / HUE_NAMES.length)) % HUE_NAMES.length],
         hueSeg: hueMaxSeg,
     };
 }
 
 /* ===== 图表渲染 ===== */
 
-/* 图表连续过渡：旧数据与新数据之间线性插值（rAF 驱动 0.4s easeOutCubic），
-   与曝光灰階括号/占比条同款节奏——曲线连续形变而非跳变；新过渡到来时
-   中断上一次未完成的过渡继续变形 */
+/* 图表连续过渡：旧数据与新数据之间线性插值（rAF 驱动，时长与缓动取自
+   CSS 变量 --transition-chart——与曝光灰階括号/占比条的 CSS 过渡同源同节奏）；
+   曲线连续形变而非跳变；新过渡到来时中断上一次未完成的过渡，从**当前已
+   显示的中间帧**继续变形（而不是从上一次的目标值回跳）；
+   prefers-reduced-motion 时跳过过渡直接呈现 */
+const TWEEN_MS = (() => {
+    const v = getComputedStyle(document.documentElement).getPropertyValue('--transition-chart');
+    const m = v.match(/([\d.]+)s/);
+    return m ? Math.round(parseFloat(m[1]) * 1000) : 400;
+})();
+
 function tweenMulti(el, fromArrs, toArrs, apply) {
-    if (el._raf) cancelAnimationFrame(el._raf);
+    if (el._raf) {
+        cancelAnimationFrame(el._raf);
+        el._raf = null;
+        // 中断：以上一帧已应用的中途状态为新起点（若中途状态不存在——如
+        // 上一过渡已完成——则退回调用方提供的 fromArrs）
+        if (el._lastMid) fromArrs = el._lastMid;
+    }
+    if (prefersReducedMotion()) {
+        el._lastMid = null;
+        apply(toArrs);
+        return;
+    }
     const t0 = performance.now();
     const step = (now) => {
-        const t = Math.min(1, (now - t0) / 400);
-        const k = 1 - Math.pow(1 - t, 3);
+        const t = Math.min(1, (now - t0) / TWEEN_MS);
+        const k = easeOutCubic(t);
         const mid = fromArrs.map((arr, a) => arr.map((v, i) => v + (toArrs[a][i] - v) * k));
         apply(t < 1 ? mid : toArrs);
-        el._raf = t < 1 ? requestAnimationFrame(step) : null;
+        if (t < 1) {
+            el._lastMid = mid;
+            el._raf = requestAnimationFrame(step);
+        } else {
+            el._lastMid = null;
+            el._raf = null;
+        }
     };
     el._raf = requestAnimationFrame(step);
 }
 
-/* 直方图图例：R/G/B 通道色与明度曲线色（一次性构建） */
+/* 直方图图例：R/G/B 通道色与明度曲线色（一次性构建，名称来自模板的 i18n 数据属性） */
 function renderHistLegend(legendEl, labels) {
     if (!legendEl || legendEl._built) return;
     const colors = ['rgb(224, 90, 90)', 'rgb(110, 200, 140)', 'rgb(110, 150, 230)', LUM_CURVE_COLOR];
-    const names = (labels || 'R|G|B|明度').split('|');
+    const names = labels.split('|');
     legendEl.textContent = '';
     names.forEach((name, i) => {
         const item = document.createElement('span');
@@ -434,7 +478,7 @@ function renderZoneStrip(tone, stripEl, bracketEl) {
     if (!stripEl) return;
     if (!stripEl._built) {
         stripEl.innerHTML = Array.from({ length: ZONE_COUNT }, (_, n) => {
-            const v = Math.round(255 * Math.pow(n / 10, 2.2));
+            const v = Math.round(255 * Math.pow(n / (ZONE_COUNT - 1), 2.2));
             return `<span style="background:rgb(${v},${v},${v})"></span>`;
         }).join('');
         // innerHTML 重建会销毁原有的括号子元素：重新挂回再更新位置
@@ -447,74 +491,73 @@ function renderZoneStrip(tone, stripEl, bracketEl) {
     }
 }
 
-/* 饱和度直方图：0–100% 分布曲线（100 点固定结构，连续形变过渡）+ 均值标记（带 x 过渡） */
-function paintSatHistogram(satHist, sat, svg) {
+/* 饱和度直方图：0–100% 分布曲线（100 点固定结构，连续形变过渡）+ 均值标记。
+   目标 y 数组在探测时一次算好入缓存，此处只做骨架与过渡 */
+function paintSatHistogram(sat, satYs, svg) {
     if (!svg) return;
     const W = 100;
     const H = 48;
-    let max = 1;
-    satHist.forEach((v) => { if (v > max) max = v; });
-    const toYs = satHist.map((v) => H - (v / max) * (H - 2) - 1);
     if (!svg._built) {
         svg.innerHTML = `<path class="sat-curve" fill="none" stroke="var(--color-sat-curve)" stroke-width="1.5" vector-effect="non-scaling-stroke"></path>`
             + `<line class="sat-mean" y1="2" y2="${H - 2}" stroke="var(--color-accent)" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"></line>`;
+        svg._els = { curve: svg.querySelector('.sat-curve'), mean: svg.querySelector('.sat-mean') };
         svg._built = true;
     }
     const apply = (arrs) => {
         const ys = arrs[0];
         let d = '';
         for (let x = 0; x < W; x++) d += (x === 0 ? 'M' : 'L') + x + ',' + ys[x].toFixed(2);
-        svg.querySelector('.sat-curve').setAttribute('d', d);
-        const mean = svg.querySelector('.sat-mean');
-        mean.setAttribute('x1', arrs[1][0]);
-        mean.setAttribute('x2', arrs[1][0]);
+        svg._els.curve.setAttribute('d', d);
+        svg._els.mean.setAttribute('x1', arrs[1][0]);
+        svg._els.mean.setAttribute('x2', arrs[1][0]);
     };
-    const toArrs = [toYs, [sat.satMean]];
+    const toArrs = [satYs, [sat.satMean]];
     if (svg._prevYs) tweenMulti(svg, svg._prevYs, toArrs, apply);
     else apply(toArrs);
     svg._prevYs = toArrs;
 }
 
 /* 色相直方图：36 段（每段 10°），每段填其色相本色，主色相段高亮描边；
-   黑白照以灰色柱呈现（无色相）；柱高连续形变过渡 */
-function paintHueHistogram(hueHist, hue, svg) {
+   黑白照以灰色柱呈现（无色相）；柱高连续形变过渡（过渡期间每帧只写
+   y/height，静态属性与颜色在骨架/渲染时各写一次） */
+function paintHueHistogram(hue, hueYs, svg) {
     if (!svg) return;
     const H = 48;
-    let max = 1;
-    hueHist.forEach((v) => { if (v > max) max = v; });
-    const toYs = hueHist.map((v) => H - (v / max) * (H - 2) - 1);
     if (!svg._built) {
-        svg.innerHTML = Array.from({ length: HUE_SEG_COUNT }, () => '<rect></rect>').join('');
+        svg.innerHTML = Array.from({ length: HUE_SEG_COUNT }, (_, i) =>
+            `<rect x="${i * 10 + 1}" width="8"></rect>`).join('');
+        svg._rects = Array.from(svg.children);
         svg._built = true;
     }
+    // 静态属性与颜色（不随过渡变化）：每次渲染写一次
+    svg._rects.forEach((rect, i) => {
+        const fill = hue.achromatic ? 'hsl(0, 0%, 60%)' : `hsl(${i * 10 + 5}, 70%, 55%)`;
+        const dominant = !hue.achromatic && i === hue.hueSeg;
+        rect.setAttribute('fill', fill);
+        rect.setAttribute('opacity', dominant ? '1' : '0.55');
+        rect.setAttribute('stroke', dominant ? 'var(--color-text)' : 'none');
+        rect.setAttribute('stroke-width', '0.5');
+    });
     const apply = (ys) => {
-        Array.from(svg.children).forEach((rect, i) => {
+        svg._rects.forEach((rect, i) => {
             const y = ys[i];
-            const fill = hue.achromatic ? 'hsl(0, 0%, 60%)' : `hsl(${i * 10 + 5}, 70%, 55%)`;
-            const dominant = !hue.achromatic && i === hue.hueSeg;
-            rect.setAttribute('x', i * 10 + 1);
-            rect.setAttribute('width', 8);
             rect.setAttribute('y', y.toFixed(2));
             rect.setAttribute('height', (H - 1 - y).toFixed(2));
-            rect.setAttribute('fill', fill);
-            rect.setAttribute('opacity', dominant ? '1' : '0.55');
-            rect.setAttribute('stroke', dominant ? 'var(--color-text)' : 'none');
-            rect.setAttribute('stroke-width', '0.5');
         });
     };
-    if (svg._prevYs) tweenMulti(svg, [svg._prevYs], [toYs], (arrs) => apply(arrs[0]));
-    else apply(toYs);
-    svg._prevYs = toYs;
+    if (svg._prevYs) tweenMulti(svg, [svg._prevYs], [hueYs], (arrs) => apply(arrs[0]));
+    else apply(hueYs);
+    svg._prevYs = hueYs;
 }
 
 /* 渲染影调结论与图表：结论（九调标准命名：高/中/低調 × 長/中/短調，如「低長調」，
    中调键取「中」前缀）+ 剪裁警告、合并直方图（RGB 通道 + 明度曲线 + 三分区/P50/剪裁注释）、
    區域系統、三区占比条、数据行（動態範圍/亮度中位數） */
-function renderTone(tone, buckets, logMax, lumHist, labels, els) {
+function renderTone(tone, histYs, lumYs, labels, els) {
     if (!els.wrap) return;
     els.wrap.style.display = '';
-    // 经典九调组合名：低调 + 长调 → 低長調（共用「調」后缀；中调键前缀取「中」）
-    const keyPrefix = tone.key === 1 ? '中' : labels.key[tone.key].slice(0, -1);
+    // 经典九调组合名：低调 + 长调 → 低長調（共用「調」后缀；中调键前缀来自 i18n）
+    const keyPrefix = tone.key === 1 ? labels.midPrefix : labels.key[tone.key].slice(0, -1);
     const parts = [keyPrefix + labels.range[tone.range]];
     tone.warnings.forEach((w) => {
         parts.push(w === 'shadow' ? labels.clipShadow : labels.clipHigh);
@@ -527,23 +570,26 @@ function renderTone(tone, buckets, logMax, lumHist, labels, els) {
     els.fracs[2].style.width = tone.fracs[2] + '%';
     els.fracText.textContent =
         `${labels.zoneNames[0]} ${tone.fracs[0]}% · ${labels.zoneNames[1]} ${tone.fracs[1]}% · ${labels.zoneNames[2]} ${tone.fracs[2]}%`;
-    paintHistogram(buckets, logMax, els.histEl, tone, lumHist);
+    paintHistogram(histYs, lumYs, els.histEl, tone);
     renderHistLegend(els.legendEl, labels.histLegend);
     renderZoneStrip(tone, els.zoneStripEl, els.zoneBracketEl);
 }
 
-function renderSat(sat, satHist, labels, els) {
+function renderSat(sat, satYs, labels, els) {
     if (!els.wrap) return;
     els.wrap.style.display = '';
     els.name.textContent = labels.sat[sat.sat];
-    paintSatHistogram(satHist, sat, els.histEl);
+    paintSatHistogram(sat, satYs, els.histEl);
 }
 
-function renderHue(hue, hueHist, labels, els) {
+function renderHue(hue, hueYs, labels, els) {
     if (!els.wrap) return;
     els.wrap.style.display = '';
-    els.name.textContent = hue.achromatic ? (labels.gray || '黑白') : hue.hueName;
-    // 色相轴标注：8 个标准色名沿横向均布（一次性构建；黑白照时以灰点提示无色相）
+    // 主色相名：8 个标准色名（来自模板 i18n 数据属性）按 45° 段映射，
+    // 用段中心（+0.5）计算——用段索引会在 4 条边界带错位约 5–7.5°
+    const hueIdx = Math.round((hue.hueSeg + 0.5) / (HUE_SEG_COUNT / labels.hue.length)) % labels.hue.length;
+    els.name.textContent = hue.achromatic ? labels.gray : labels.hue[hueIdx];
+    // 色相轴标注：8 个标准色名沿横向均布（一次性构建）
     if (els.axisEl && !els.axisEl._built) {
         els.axisEl.textContent = '';
         labels.hue.forEach((name) => {
@@ -553,7 +599,7 @@ function renderHue(hue, hueHist, labels, els) {
         });
         els.axisEl._built = true;
     }
-    paintHueHistogram(hueHist, hue, els.histEl);
+    paintHueHistogram(hue, hueYs, els.histEl);
 }
 
 export function initPhotoAnalysis({ paletteWrap, paletteEl, tone, sat, hue }) {
@@ -564,17 +610,18 @@ export function initPhotoAnalysis({ paletteWrap, paletteEl, tone, sat, hue }) {
         key: (toneEls.wrap.dataset.keyNames || '').split('|'),
         range: (toneEls.wrap.dataset.rangeNames || '').split('|'),
         zoneNames: (toneEls.wrap.dataset.zoneNames || '').split('|'),
-        clipShadow: toneEls.wrap.dataset.clipShadow || '',
-        clipHigh: toneEls.wrap.dataset.clipHigh || '',
-        drUnit: toneEls.wrap.dataset.drUnit || '檔',
-        histLegend: toneEls.wrap.dataset.histLegend || 'R|G|B|明度',
+        clipShadow: toneEls.wrap.dataset.clipShadow,
+        clipHigh: toneEls.wrap.dataset.clipHigh,
+        midPrefix: toneEls.wrap.dataset.midPrefix,
+        drUnit: toneEls.wrap.dataset.drUnit,
+        histLegend: toneEls.wrap.dataset.histLegend,
     } : null;
     const satLabels = satEls.wrap ? {
         sat: (satEls.wrap.dataset.satNames || '').split('|'),
     } : null;
     const hueLabels = hueEls.wrap ? {
         hue: (hueEls.wrap.dataset.hueNames || '').split('|'),
-        gray: hueEls.wrap.dataset.hueGray || '黑白',
+        gray: hueEls.wrap.dataset.hueGray,
     } : null;
 
     const cache = new Map(); // src → { buckets, logMax, palette, tone, sat, hue, satHist, hueHist }
@@ -596,9 +643,9 @@ export function initPhotoAnalysis({ paletteWrap, paletteEl, tone, sat, hue }) {
         const cached = cache.get(src);
         if (cached) {
             if (paletteEl) renderPalette(cached.palette, paletteWrap, paletteEl);
-            if (toneEls.wrap) renderTone(cached.tone, cached.buckets, cached.logMax, cached.lumHist, toneLabels, toneEls);
-            if (satEls.wrap) renderSat(cached.sat, cached.satHist, satLabels, satEls);
-            if (hueEls.wrap) renderHue(cached.hue, cached.hueHist, hueLabels, hueEls);
+            if (toneEls.wrap) renderTone(cached.tone, cached.histYs, cached.lumYs, toneLabels, toneEls);
+            if (satEls.wrap) renderSat(cached.sat, cached.satYs, satLabels, satEls);
+            if (hueEls.wrap) renderHue(cached.hue, cached.hueYs, hueLabels, hueEls);
             return;
         }
         const probeSrc = src.replace(/w_\d+/, 'w_1024'); // 采样探测：≤1024px 缩略图
@@ -637,7 +684,7 @@ export function initPhotoAnalysis({ paletteWrap, paletteEl, tone, sat, hue }) {
                     const satv = mx > 0 ? (mx - mn) / mx : 0;
                     satHist[Math.min(99, satv * 100 | 0)]++;
                     satSum += satv;
-                    if (satv > 0.02) {
+                    if (satv > HUE_WEIGHT_MIN) {
                         const d = mx - mn;
                         let h;
                         if (d === 0) h = 0;
@@ -649,38 +696,40 @@ export function initPhotoAnalysis({ paletteWrap, paletteEl, tone, sat, hue }) {
                     }
                 }
                 // 轻量滑动平均（窗口 5），曲线更接近 Camera Raw 的平滑形态
-                buckets.forEach((arr) => {
-                    const srcBuf = arr.slice();
-                    for (let i = 0; i < BINS; i++) {
-                        let sum = 0;
-                        let n = 0;
-                        for (let k = i - 2; k <= i + 2; k++) {
-                            if (k >= 0 && k < BINS) { sum += srcBuf[k]; n++; }
-                        }
-                        arr[i] = sum / n;
-                    }
-                });
+                buckets.forEach((arr, c) => { buckets[c] = smooth5(arr); });
                 let max = 1;
                 buckets.forEach((arr) => arr.forEach((v) => { if (v > max) max = v; }));
                 const logMax = Math.log1p(max);
                 const palette = computePalette(data);
                 const tone = toneEls.wrap ? analyzeTone(lumHist, total) : null;
-                const sat = satEls.wrap ? analyzeSatHue(satHist, satSum, hueHist, total) : null;
-                const hue = hueEls.wrap ? analyzeSatHue(satHist, satSum, hueHist, total) : null;
-                cache.set(src, { buckets, logMax, palette, tone, sat, hue, lumHist, satHist, hueHist });
+                // 饱和度与色相同一次统计（纯函数，避免重复计算）
+                const satHue = (satEls.wrap || hueEls.wrap)
+                    ? analyzeSatHue(satHist, satSum, hueHist, total)
+                    : null;
+                // 各图表的目标 y 数组在探测时一次算好入缓存：缓存命中路径零重算
+                const histYs = toneEls.wrap ? channelCurveYs(buckets, logMax) : null;
+                const lumYs = toneEls.wrap ? lumCurveYs(lumHist, logMax) : null;
+                const satYs = satEls.wrap ? satYArray(satHist) : null;
+                const hueYs = hueEls.wrap ? hueYArray(hueHist) : null;
+                cache.set(src, {
+                    histYs, lumYs, satYs, hueYs, palette, tone,
+                    sat: satEls.wrap ? satHue : null,
+                    hue: hueEls.wrap ? satHue : null,
+                });
                 if (mySeq !== analyzeSeq) return; // 已切到别的作品：结果入缓存但不渲染过期内容
                 if (paletteEl) renderPalette(palette, paletteWrap, paletteEl);
-                if (toneEls.wrap) renderTone(tone, buckets, logMax, lumHist, toneLabels, toneEls);
-                if (satEls.wrap) renderSat(sat, satHist, satLabels, satEls);
-                if (hueEls.wrap) renderHue(hue, hueHist, hueLabels, hueEls);
+                if (toneEls.wrap) renderTone(tone, histYs, lumYs, toneLabels, toneEls);
+                if (satEls.wrap) renderSat(satHue, satYs, satLabels, satEls);
+                if (hueEls.wrap) renderHue(satHue, hueYs, hueLabels, hueEls);
             } catch (err) {
-                console.warn('[lightbox] 直方图绘制失败:', err);
-                hideAll();
+                console.warn('[lightbox] histogram paint failed:', err);
+                // 代次守卫与成功路径对称：迟到的过期失败不得隐藏当前已渲染的照片
+                if (mySeq === analyzeSeq) hideAll();
             }
         };
         probe.onerror = () => {
-            console.warn('[lightbox] 直方图探测加载失败（OSS CORS 未生效）:', probeSrc);
-            hideAll();
+            console.warn('[lightbox] histogram probe load failed (OSS CORS not enabled):', probeSrc);
+            if (mySeq === analyzeSeq) hideAll();
         };
         probe.src = probeSrc;
     }
