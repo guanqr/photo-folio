@@ -219,10 +219,15 @@
     }
 
     .back-to-top {
-        bottom: 1.5em;
         right: 1.5em;
         width: 2.75em;
         height: 2.75em;
+    }
+
+    /* 可见位置只挂 active：挂在基础规则上会压过隐藏态的 bottom:-4em、
+       入场动画退化为原地浮出 */
+    .back-to-top.active {
+        bottom: 1.5em;
     }
 
     .header-actions {

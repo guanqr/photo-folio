@@ -26,3 +26,36 @@ export function easeOutCubic(t) {
 export function isImageReady(img) {
     return !!(img && img.complete && img.naturalWidth > 0);
 }
+
+// 桌面断点单源（nav-dropdown 与 mobile-nav 共用）：与样式表 max-width: 768px
+// 严格互补——平板竖屏恰为 768px，JS 若用 min-width: 768 会与窄屏样式同时命中
+// （汉堡菜单已显示而点击被视为桌面端）。CSS 侧对应值见 _responsive.scss 的
+// @media (max-width: 768px)，两处改动必须同步
+export const BP_DESKTOP_MIN = 769;
+
+// 裸元素层栈（灯箱背景层与辉光层共用）：最新层 = 末位；剪枝只留末层
+// （延时由调用方传入，均取「淡入时长 + 50ms 余量」）；关闭时全清。
+// 层元素自身的状态标志（背景 _shown / 辉光 _ready）由调用方维护。
+// clear 原地清空数组（外部持有 layers 引用时仍指向同一数组，不会失效）
+export function createLayerStack(pruneDelay) {
+    const stack = { layers: [], pruneTimer: null };
+    stack.schedulePrune = () => {
+        if (stack.pruneTimer) clearTimeout(stack.pruneTimer);
+        stack.pruneTimer = setTimeout(() => {
+            stack.pruneTimer = null;
+            while (stack.layers.length > 1) stack.layers.shift().remove();
+        }, pruneDelay);
+    };
+    stack.cancelPrune = () => {
+        if (stack.pruneTimer !== null) {
+            clearTimeout(stack.pruneTimer);
+            stack.pruneTimer = null;
+        }
+    };
+    stack.clear = () => {
+        stack.cancelPrune();
+        stack.layers.forEach((el) => el.remove());
+        stack.layers.length = 0;
+    };
+    return stack;
+}

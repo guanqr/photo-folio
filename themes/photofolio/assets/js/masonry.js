@@ -233,26 +233,27 @@ function appendRowEl(grid, rowEl) {
     }
 }
 
-/* 行基准档位判定（阈值数据驱动）：
+/* 行基准档位判定：
    0=超窄屏 ≤500px（每行 1–2 张：3:2 横构图独占或与竖构图同行）、
    1=窄屏 501-768px（每行 2 张 3:2 基准）、2=中屏 769-1000px（每行 3 张 3:2 基准）、
    3=宽屏 >1000px（每行 4 张 3:2 基准）
    滞回：升档需越过 TIER_EXIT（520/788/1020），降档按原始阈值（500/768/1000），
-   防止断点附近来回切换导致布局跳跃；返回档位是否变化 */
+   防止断点附近来回切换导致布局跳跃；返回档位是否变化。
+   宽度信号：档位基础值读 CSS 变量 --layout-tier（样式表媒体查询写入——旋转后
+   CSS 评估恒可信）；升档滞回用 TIER_EXIT 的 matchMedia 查询补充（媒体查询
+   随旋转正常重估，与 CSS 变量同为可信信号） */
 const TIER_ENTER = [500, 768, 1000];
 const TIER_EXIT = [520, 788, 1020];
 
 function updateTier(grid) {
-    const sw = window.innerWidth;
-    const compute = () => {
-        let t = 0;
-        while (t < TIER_ENTER.length && sw > TIER_ENTER[t]) t++;
-        return t;
-    };
-    let tier = compute();
-    // 滞回：升档未越过出口值时保持原档位（首次判定无原档位，直接采用）
-    if (grid._tier != null && tier > grid._tier && sw < TIER_EXIT[grid._tier]) {
-        tier = grid._tier;
+    const raw = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--layout-tier'), 10);
+    let tier = Number.isFinite(raw) ? Math.max(0, Math.min(3, raw)) : 0;
+    if (grid._tier != null && tier > grid._tier) {
+        // 升档滞回：未越过当前档位的出口值时保持原档位（降档随 CSS 变量立即生效）
+        const exit = TIER_EXIT[grid._tier];
+        if (!window.matchMedia(`(min-width: ${exit + 1}px)`).matches) {
+            tier = grid._tier;
+        }
     }
     const changed = tier !== grid._tier;
     grid._tier = tier;
@@ -447,10 +448,38 @@ function flipRebuild(grid, firstRects) {
 export function initMasonryResize() {
     if (resizeBound) return;
     resizeBound = true;
+    const getGrid = () => document.getElementById('masonry-grid');
+    // 延迟重判定时器（debounce：新 resize 到来时重置——连续缩放/地址栏伸缩
+    // 不再堆积数十个定时器；每个只触发一次幂等的重排）
+    let delayTimers = [];
     window.addEventListener('resize', () => {
-        const grid = document.getElementById('masonry-grid');
+        const grid = getGrid();
         if (!grid || !grid._shownItems || grid._shownItems.length === 0) return;
         scheduleRelayout(grid);
+        // 旋转完成后 iPad Safari 不再派发 resize/change 事件——延迟重判补上
+        // 查询稳定后的最终档位（幂等：无变化时只做一次廉价的档位比较）
+        delayTimers.forEach(clearTimeout);
+        delayTimers = [300, 800].map((ms) => setTimeout(() => {
+            const g = getGrid();
+            if (g && g._shownItems && g._shownItems.length > 0) scheduleRelayout(g);
+        }, ms));
+    });
+    // 边界媒体查询 change 驱动档位重判：旋转过渡期间的中间态 resize 会落错档
+    // （如 4→3 而不到 2、刷新才恢复）——查询最终稳定后的 change 事件补上
+    // 最终判定（iPad Safari 旋转后 resize 不再触发、媒体查询照常重估；
+    // change 监听器幂等，与 resize 路径的重排互不冲突）
+    const boundaries = [];
+    TIER_ENTER.forEach((v) => boundaries.push(v + 1));
+    TIER_EXIT.forEach((v) => boundaries.push(v + 1));
+    boundaries.forEach((minPx) => {
+        const mq = window.matchMedia(`(min-width: ${minPx}px)`);
+        if (mq.addEventListener) {
+            mq.addEventListener('change', () => {
+                const grid = getGrid();
+                if (!grid || !grid._shownItems || grid._shownItems.length === 0) return;
+                scheduleRelayout(grid);
+            });
+        }
     });
 }
 
@@ -474,6 +503,10 @@ function relayoutShown(grid) {
     const gap = getRowGap(grid);
     const border2 = getCardBorder(grid);
     const modeChanged = updateTier(grid);
+    // 宽度与档位均未变（延迟重判/边界监听触发的大量幂等重排）：跳过全量
+    // 样式写回——只在真正变化时重算
+    if (!modeChanged && grid._lastW === W) return;
+    grid._lastW = W;
     const H = getTargetRowHeight(W, gap, border2, grid._tier);
 
     if (modeChanged) {
