@@ -11,7 +11,10 @@ export function initNavDropdown() {
     const nav = document.getElementById('site-nav');
     if (!nav) return;
 
-    const mqDesktop = window.matchMedia('(min-width: 768px)');
+    // 与 CSS 断点对齐（样式表为 max-width: 768px）：平板竖屏恰为 768px 时，
+    // 若用 min-width: 768px 会与窄屏样式同时命中——汉堡菜单已显示但点击
+    // 处理器视为桌面端直接返回，手风琴无法展开（iPad 竖屏典型现象）
+    const mqDesktop = window.matchMedia('(min-width: 769px)');
 
     // 窄屏手风琴：点击父项展开/收起子导航
     nav.querySelectorAll('.nav-parent').forEach((el) => {

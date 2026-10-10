@@ -16,7 +16,7 @@ export function initLightbox() {
 
     const lightbox = document.getElementById('lightbox');
     const lightboxImg = document.getElementById('lightbox-img');
-    const lightboxImgGlow = document.getElementById('lightbox-img-glow');
+    const lightboxImgArea = lightbox.querySelector('.lightbox-img-area'); // 辉光层插入点（主图之前）
     const lightboxImgLoading = document.getElementById('lightbox-img-loading');
     const lightboxCaption = document.getElementById('lightbox-caption');
     const tagsEl = document.getElementById('lightbox-tags');
@@ -216,15 +216,17 @@ export function initLightbox() {
     let backdropLayers = []; // 裸元素数组：最新层 = 末位；状态仅元素上的 _shown 标志
     let backdropPruneTimer = null;
 
-    // 滑动动画同时作用于主图与辉光层：辉光随主图一起移动与淡入淡出
-    const slideStyle = (transform, opacity, transition) => {
+    // 滑动动画同时作用于主图与当前辉光层：辉光随主图一起移动与淡入淡出；
+    // 辉光为半分辨率盒（50% 宽），位移百分比按 2× 补偿保持与主图严格同步
+    const slideStyle = (pct, opacity, transition) => {
+        const transform = `translateX(${pct}%)`;
         lightboxImg.style.transform = transform;
         lightboxImg.style.opacity = opacity;
         if (transition !== undefined) lightboxImg.style.transition = transition;
-        if (lightboxImgGlow) {
-            lightboxImgGlow.style.transform = transform;
-            lightboxImgGlow.style.opacity = opacity;
-            if (transition !== undefined) lightboxImgGlow.style.transition = transition;
+        if (activeGlow) {
+            activeGlow.style.transform = `translateX(${pct * 2}%)`;
+            activeGlow.style.opacity = opacity;
+            if (transition !== undefined) activeGlow.style.transition = transition;
         }
     };
 
@@ -242,22 +244,6 @@ export function initLightbox() {
         }
     };
 
-    // 在途辉光监听（load/error 共用同一回调）：辉光内容未解码时保持隐藏，
-    // 解码完成后随主图一起淡入——移动端解码慢时若随滑入先淡入空框、内容
-    // 到达时突现，边缘暗角变化会出现明显断点；主图仍在加载时辉光同样保持
-    // 隐藏（独自淡入会呈现悬浮的模糊残影）；error 视为就绪（内容缺失时
-    // 边缘保持暗，不残留隐藏态）
-    let pendingGlowLoad = null;
-    const clearPendingGlow = () => {
-        if (pendingGlowLoad) {
-            if (lightboxImgGlow) {
-                lightboxImgGlow.removeEventListener('load', pendingGlowLoad);
-                lightboxImgGlow.removeEventListener('error', pendingGlowLoad);
-            }
-            pendingGlowLoad = null;
-        }
-    };
-
     // 在途滑出结束监听：快速同向连切时（0.25s 滑出动画内再次切换），第二次
     // slideStyle 写入相同 transform 不会重启过渡、旧监听照常触发——旧闭包会用
     // 上一张作品重放 src/面板；新切换开始时先摘除旧监听，仅最新一次切换生效
@@ -269,34 +255,82 @@ export function initLightbox() {
         }
     };
 
-    let glowDecoded = false; // 辉光内容是否已就绪（解码完成或加载失败）
-    let mainSlideStarted = false; // 主图是否已开始滑入（辉光不得先于主图淡入）
+    let mainSlideStarted = false; // 主图是否已开始滑入/揭示（辉光不得先于主图淡入）
     // 减弱动态偏好：滑出/滑入/辉光/背景的内联过渡全部直切（内联样式优先级高于
     // CSS 媒体查询，无法靠样式表关闭——与全站各动画模块的 reduced-motion 约定一致）
     const reducedMotion = prefersReducedMotion();
     const slideTransition = reducedMotion ? 'none' : 'transform 0.25s ease, opacity 0.25s ease';
     const glowTransition = reducedMotion ? 'none' : 'opacity 0.25s ease';
-    const fadeGlowIn = () => {
+
+    // 辉光层模型（与背景层同法）：每张作品一层 <img>，切换时新层解码后淡入、
+    // 旧层随后剪枝——消除就地换 src（iOS 过滤图换源闪烁的根因，强制重排等
+    // 方案均无法根治）。activeGlow = 当前可见层（滑出时随主图移动淡出）
+    let glowLayers = []; // 裸元素数组：最新层 = 末位
+    let activeGlow = null;
+    let glowPruneTimer = null;
+    const glowPruneDelay = (reducedMotion ? 0 : 250) + 50; // 0.25s 淡入 + 50ms 余量
+    const createGlowEl = () => {
+        const el = document.createElement('img');
+        el.className = 'lightbox-img-glow';
+        el.alt = '';
+        el.setAttribute('aria-hidden', 'true');
+        el.setAttribute('draggable', 'false');
+        el.style.opacity = '0';
+        return el;
+    };
+    const fadeGlowIn = (el) => {
         // 辉光只做透明度淡入，不做自己的滑入移动：位置已在 startSlideIn 立即
         // 归位——若从侧边自行滑入，解码晚于主图时会明显晚于主图到达中间（不同步）
-        lightboxImgGlow.style.transition = glowTransition;
-        lightboxImgGlow.style.opacity = '1';
+        el.style.transition = glowTransition;
+        el.style.opacity = '1';
+    };
+    // 辉光就绪监听（load/error 均视为就绪）：解码完成后仅当仍是最新可见层且
+    // 主图已开始滑入/揭示才淡入——不先于主图、不被快速连切取代（陈旧层自然失效）
+    const attachGlowReady = (el) => {
+        if (isImageReady(el)) {
+            el._ready = true;
+            return;
+        }
+        const onReady = () => {
+            el._ready = true;
+            if (el === activeGlow && mainSlideStarted) {
+                fadeGlowIn(el);
+                scheduleGlowPrune();
+            }
+        };
+        el.addEventListener('load', onReady, { once: true });
+        el.addEventListener('error', onReady, { once: true });
+    };
+    // 只保留最新一层：旧层已随滑出淡出，新层淡入后移除不可见
+    const scheduleGlowPrune = () => {
+        if (glowPruneTimer) clearTimeout(glowPruneTimer);
+        glowPruneTimer = setTimeout(() => {
+            glowPruneTimer = null;
+            while (glowLayers.length > 1) glowLayers.shift().remove();
+        }, glowPruneDelay);
+    };
+    const closeGlow = () => {
+        if (glowPruneTimer) {
+            clearTimeout(glowPruneTimer);
+            glowPruneTimer = null;
+        }
+        glowLayers.forEach((el) => el.remove());
+        glowLayers = [];
+        activeGlow = null;
     };
 
-    // 图片加载转圈：新图未就绪时隐藏图片与辉光并显示（与瀑布流加载指示器同款），就绪后滑入消失
+    // 图片加载转圈：新图未就绪时隐藏图片并显示（与瀑布流加载指示器同款），就绪后滑入消失
     const showImgLoading = () => {
         if (lightboxImgLoading) lightboxImgLoading.classList.add('is-active');
-        if (lightboxImgGlow) lightboxImgGlow.style.opacity = '0'; // 加载期间辉光同藏，不残留旧图轮廓
     };
     const hideImgLoading = () => {
         if (lightboxImgLoading) lightboxImgLoading.classList.remove('is-active');
-        if (lightboxImgGlow) lightboxImgGlow.style.opacity = '';
     };
 
     // 图片加载失败（404/CDN 异常）：仍显示全部元信息，避免灯箱整片空白
     lightboxImg.addEventListener('error', () => {
         hideImgLoading();
-        revealOverlayText();
+        revealMain();
     });
 
     // 收集当前页面所有可预览的作品
@@ -544,17 +578,17 @@ export function initLightbox() {
         lightboxImg.style.transform = 'translateX(0)';
         lightboxImg.style.opacity = '1';
         // 辉光位置立即归位（不参与滑入移动——自己滑入会晚于主图到达中间），
-        // 仅在内容就绪时淡入；未就绪时保持隐藏（解码完成后由 pendingGlowLoad
-        // 淡入）——防止空框先淡入、内容到达时突现的暗角断点，也不得先于主图
-        // 独自淡入（悬浮模糊残影）
-        if (lightboxImgGlow) {
-            lightboxImgGlow.style.transition = 'none';
-            lightboxImgGlow.style.transform = 'translateX(0)';
-            if (glowDecoded || isImageReady(lightboxImgGlow)) {
-                glowDecoded = true;
-                fadeGlowIn();
+        // 仅在内容就绪时淡入；未就绪时保持隐藏（解码完成后由 attachGlowReady
+        // 的监听淡入）——防止空框先淡入、内容到达时突现的暗角断点，也不得先于
+        // 主图独自淡入（悬浮模糊残影）
+        if (activeGlow) {
+            activeGlow.style.transition = 'none';
+            activeGlow.style.transform = 'translateX(0)';
+            if (activeGlow._ready) {
+                fadeGlowIn(activeGlow);
+                scheduleGlowPrune();
             } else {
-                lightboxImgGlow.style.opacity = '0';
+                activeGlow.style.opacity = '0';
             }
         }
         lightboxImg.addEventListener('transitionend', function slideInDone() {
@@ -622,7 +656,7 @@ export function initLightbox() {
             const cachedImg = preloadCache.get(p.src);
             const cached = isImageReady(cachedImg);
 
-            slideStyle(`translateX(${-dir * 12}%)`, '0', slideTransition);
+            slideStyle(-dir * 12, '0', slideTransition);
 
             // 摘除上一次切换的在途滑出监听（快速同向连切时不重放旧作品）
             clearPendingSlideOut();
@@ -632,35 +666,27 @@ export function initLightbox() {
             // 贯穿整个切换过程
             switchBackdrop(p.thumb || p.src);
 
+            // 新建辉光层（在滑出开始即创建：0 态在 0.25s 滑出期间提交、解码
+            // 提前开始；旧辉光层已随滑出淡出，新层就绪后随主图淡入、旧层剪枝）
+            if (lightboxImgArea) {
+                const newGlow = createGlowEl();
+                lightboxImgArea.insertBefore(newGlow, lightboxImg);
+                glowLayers.push(newGlow);
+                activeGlow = newGlow;
+                newGlow.src = p.thumb || p.src;
+                attachGlowReady(newGlow);
+            }
+
             lightboxImg.addEventListener('transitionend', pendingSlideOut = function slideOutDone() {
                 lightboxImg.removeEventListener('transitionend', slideOutDone);
                 pendingSlideOut = null;
                 switching = true; // 滑入期间 onLoad 不强制透明度
 
-                // 换内容：新图在进入侧待命
-                slideStyle(`translateX(${dir * 12}%)`, '0', 'none');
+                // 换内容：新图在进入侧待命（辉光层经 slideStyle 同步就位入口侧）
+                slideStyle(dir * 12, '0', 'none');
                 lightboxImg.src = p.src;
                 lightboxImg.alt = p.alt;
-                if (lightboxImgGlow) {
-                    lightboxImgGlow.src = p.thumb || p.src; // 辉光层随主图同步切换
-                    void lightboxImgGlow.offsetHeight; // 强制重排：iOS Safari 过滤图换源需重绘提交，否则模糊闪帧/消失
-                    clearPendingGlow();
-                    glowDecoded = false;
-                    mainSlideStarted = false;
-                    if (isImageReady(lightboxImgGlow)) {
-                        glowDecoded = true;
-                    } else {
-                        // 辉光未解码：保持隐藏，解码完成后随主图一起淡入（主图仍在
-                        // 加载时不得独自淡入，避免悬浮模糊残影）
-                        pendingGlowLoad = () => {
-                            clearPendingGlow();
-                            glowDecoded = true;
-                            if (mainSlideStarted) fadeGlowIn();
-                        };
-                        lightboxImgGlow.addEventListener('load', pendingGlowLoad);
-                        lightboxImgGlow.addEventListener('error', pendingGlowLoad);
-                    }
-                }
+                mainSlideStarted = false; // 主图尚未开始滑入：辉光不得先于主图淡入
                 renderPanel(p);
                 lightboxImg.offsetHeight; // 强制 reflow
 
@@ -691,7 +717,16 @@ export function initLightbox() {
             });
         } else {
             lightboxImg.style.opacity = '0';
-            if (lightboxImgGlow) lightboxImgGlow.style.opacity = '0';
+            closeGlow(); // 清空残留辉光层（关闭灯箱时通常已清空，兜底）
+            // 新建当前辉光层（隐藏）：主图就绪后随其淡入（见 revealMain）
+            if (lightboxImgArea) {
+                const glowEl = createGlowEl();
+                lightboxImgArea.insertBefore(glowEl, lightboxImg);
+                glowLayers.push(glowEl);
+                activeGlow = glowEl;
+                glowEl.src = p.thumb || p.src;
+                attachGlowReady(glowEl);
+            }
             renderPanel(p);
             // 在灯箱激活前重置抽屉为收起态：避免旧展开状态先显示一帧导致图片大小反弹
             drawer.reset();
@@ -700,25 +735,6 @@ export function initLightbox() {
 
             lightboxImg.src = p.src;
             lightboxImg.alt = p.alt;
-            if (lightboxImgGlow) {
-                lightboxImgGlow.src = p.thumb || p.src; // 辉光层随主图同步切换
-                void lightboxImgGlow.offsetHeight; // 强制重排：iOS Safari 过滤图换源需重绘提交，否则模糊闪帧/消失
-                // 与切图路径同款门控：辉光未解码时保持隐藏，解码完成后淡入——
-                // 首开同样存在「淡入空框、内容突现」的暗角断点，不可绕过
-                clearPendingGlow();
-                glowDecoded = isImageReady(lightboxImgGlow);
-                if (!glowDecoded) {
-                    lightboxImgGlow.style.transition = 'none';
-                    lightboxImgGlow.style.opacity = '0';
-                    pendingGlowLoad = () => {
-                        clearPendingGlow();
-                        glowDecoded = true;
-                        fadeGlowIn();
-                    };
-                    lightboxImgGlow.addEventListener('load', pendingGlowLoad);
-                    lightboxImgGlow.addEventListener('error', pendingGlowLoad);
-                }
-            }
             openBackdrop(p.thumb || p.src);
             lightbox.classList.add('active');
             drawer.refreshFit(); // 激活后强制重判「放得下」：关灯箱重置期间的 is-fit 状态可能过期
@@ -731,13 +747,7 @@ export function initLightbox() {
             if (lightboxImg.complete) {
                 lightboxImg.style.opacity = '1';
                 hideImgLoading();
-                // 辉光未就绪时保持隐藏（hideImgLoading 清掉内联 opacity 会使其
-                // 按 CSS 默认值 1 提前淡入空框）——解码完成后由 pendingGlowLoad 淡入
-                if (lightboxImgGlow && !glowDecoded) {
-                    lightboxImgGlow.style.transition = 'none';
-                    lightboxImgGlow.style.opacity = '0';
-                }
-                revealOverlayText();
+                revealMain();
             } else {
                 lightboxImg.addEventListener('load', function onLoad() {
                     lightboxImg.removeEventListener('load', onLoad);
@@ -745,11 +755,7 @@ export function initLightbox() {
                     // 否则慢图恰在滑出期间加载完成时会闪一下满透明覆盖过渡
                     if (!switching) lightboxImg.style.opacity = '1';
                     hideImgLoading();
-                    if (lightboxImgGlow && !glowDecoded) {
-                        lightboxImgGlow.style.transition = 'none';
-                        lightboxImgGlow.style.opacity = '0';
-                    }
-                    revealOverlayText();
+                    revealMain();
                 });
             }
         }
@@ -776,12 +782,11 @@ export function initLightbox() {
         hideImgLoading();
         switching = false; // 转圈期关闭：残留的 switching 会阻塞下次首开的透明度恢复
         clearPendingSwitch(); // 摘除在途切图监听，防陈旧闭包在下一次打开时重放
-        clearPendingGlow(); // 在途辉光淡入一并作废（关闭重开不残留隐藏态）
         clearPendingSlideOut(); // 在途滑出结束监听一并作废（关闭重开不残留陈旧重放）
         cancelCenterComp(); // 关闭打断收起补偿：摘除 transform，不残留到下次打开
         closeBackdrop(); // 移除所有背景层（下次首开重建，不残留旧作品背景）
+        closeGlow(); // 移除所有辉光层（下次首开重建，不残留旧作品辉光）
         lightboxImg.style.opacity = '0';
-        if (lightboxImgGlow) lightboxImgGlow.style.opacity = '0';
         document.body.style.overflow = '';
     }
 
@@ -810,6 +815,22 @@ export function initLightbox() {
     // 标题与简行的透明度恢复（图片就绪路径共用）
     function revealOverlayText() {
         revealSynced.forEach((el) => { el.style.opacity = '1'; });
+    }
+
+    // 主图揭示（首开就绪/失败路径共用）：辉光随主图一起淡入——已就绪立即淡入，
+    // 未就绪保持隐藏、就绪后由 attachGlowReady 的监听淡入（不先于主图）
+    function revealMain() {
+        mainSlideStarted = true;
+        if (activeGlow) {
+            if (activeGlow._ready) {
+                fadeGlowIn(activeGlow);
+                scheduleGlowPrune();
+            } else {
+                activeGlow.style.transition = 'none';
+                activeGlow.style.opacity = '0';
+            }
+        }
+        revealOverlayText();
     }
 
     // 点击作品打开

@@ -74,7 +74,9 @@ export function initMobileNav() {
     //    旋转导致的断点跨越不播放：该动画为「absolute + transform + 时长>0」，
     //    恰是 WebKit 旋转后 clientWidth 永久取旧值（Bug 287042）的触发模式——
     //    旋转时跳过动画、样式直接切换（桌面窗口缩放跨越断点仍保留动画）
-    const mqDesktop = window.matchMedia('(min-width: 768px)');
+    // 与 CSS 断点对齐（样式表为 max-width: 768px）：平板竖屏恰为 768px 时
+    // 两者同时命中——汉堡已显示但 JS 视为桌面端，断点跨越/菜单行为错位
+    const mqDesktop = window.matchMedia('(min-width: 769px)');
 
     // 加载时的屏幕朝向类型（iOS 16.4+ 提供 screen.orientation；不可用时为 null，
     // 维持原有动画行为）

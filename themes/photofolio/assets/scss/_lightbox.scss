@@ -188,21 +188,22 @@
     }
 }
 
-/* 图片辉光层：主图的同框模糊副本（与参考站同尺寸）——与主图永远同中心
-   绑定、尺寸完全一致，不做放大；边缘的柔和过渡由 blur 滤镜像外溢出
-   提供。盒恒为整个网格单元（width/height 100%，避免缩略图固有尺寸
-   钳制），内容经 object-fit: contain 与主图渲染矩形完全重合——辉光
-   大小只随主图渲染大小变化，与窗口尺寸无关；src 随主图同步切换 */
+/* 图片辉光层：主图的同框模糊副本——与主图永远同中心绑定、尺寸完全一致，
+   边缘的柔和过渡由 blur 滤镜像外溢出提供。内容经 object-fit: contain 与
+   主图渲染矩形完全重合——辉光大小只随主图渲染大小变化，与窗口尺寸无关。
+   半分辨率栅格化：0.5em 半径经 2× 放大视觉等同原 1em（与背景层同法，
+   淡入阶段光栅化尖峰约降至 1/16）；scale 用独立属性——JS 内联 transform
+   位移（滑出滑入）不会覆盖它，主图/辉光同步移动不受影响；
+   盒 50%×50% 由网格 place-items:center 自动居中。
+   层为动态创建（见 lightbox.js 辉光层模型）：每张作品一层、新层解码后
+   淡入旧层剪枝——消除就地换 src（iOS 过滤图换源闪烁根因） */
 .lightbox-img-glow {
-    width: 100%;
-    height: 100%;
+    width: 50%;
+    height: 50%;
     object-fit: contain;
     border-radius: 0.25em;
-    filter: blur(1em) saturate(1.1);
-    /* iOS Safari 对带 filter 的 img 换 src 有合成缺陷（模糊闪帧/消失）：
-       换源后由 JS 强制重排提交重绘（见 lightbox.js）。
-       不设 will-change: filter——独立合成层的缓存栅格动画与主图不同路径，
-       滑出/滑入时会出现相位差异（辉光与主图不同步移动） */
+    filter: blur(0.5em) saturate(1.1);
+    scale: 2;
     transition: opacity 0.25s ease;
     pointer-events: none;
 }

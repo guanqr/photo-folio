@@ -152,7 +152,10 @@
 
     /* 下拉菜单：悬停/键盘聚焦展开（面板是 li 的子元素，指针移入面板不丢失悬停）；
        面板向下离开导航文字 0.5em、向左偏移 2.3em——左侧「1em 边距 + 0.8 图标 + 0.5 间距」
-       由图标与文字按 flex 行内排列，子导航文字左缘与总导航文字左缘精确对齐 */
+       由图标与文字按 flex 行内排列，子导航文字左缘与总导航文字左缘精确对齐。
+       入场只用透明度淡入、不用 transform——「absolute + transform + 过渡时长>0」
+       是 WebKit 旋转后视口宽度永久取旧值（Bug 287042）的触发模式，该面板常驻
+       页面，旋转时即触发（横竖屏样式不切换的根因），故彻底移除 transform */
     .nav-dropdown {
         position: absolute;
         top: 100%;
@@ -166,8 +169,7 @@
         box-shadow: 0 0.75em 2em rgba(var(--rgb-black), 0.15);
         opacity: 0;
         visibility: hidden;
-        transform: translateY(-0.5em);
-        transition: opacity var(--transition), transform var(--transition), visibility 0.3s,
+        transition: opacity var(--transition), visibility 0.3s,
                     border-color var(--transition-border), background-color var(--transition-bg);
 
         a {
@@ -206,7 +208,6 @@
         &.hover-ready:focus-within .nav-dropdown {
             opacity: 1;
             visibility: visible;
-            transform: translateY(0);
         }
     }
 }
