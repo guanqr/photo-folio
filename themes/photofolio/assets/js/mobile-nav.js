@@ -5,7 +5,7 @@
  * - 子导航手风琴与桌面悬停门控见 nav-dropdown.js
  */
 import { resetSubMenus } from './nav-dropdown.js';
-import { prefersReducedMotion } from './utils.js';
+import { prefersReducedMotion, BP_DESKTOP_MIN } from './utils.js';
 
 export function initMobileNav() {
     const btn = document.getElementById('nav-toggle');
@@ -74,9 +74,9 @@ export function initMobileNav() {
     //    旋转导致的断点跨越不播放：该动画为「absolute + transform + 时长>0」，
     //    恰是 WebKit 旋转后 clientWidth 永久取旧值（Bug 287042）的触发模式——
     //    旋转时跳过动画、样式直接切换（桌面窗口缩放跨越断点仍保留动画）
-    // 与 CSS 断点对齐（样式表为 max-width: 768px）：平板竖屏恰为 768px 时
-    // 两者同时命中——汉堡已显示但 JS 视为桌面端，断点跨越/菜单行为错位
-    const mqDesktop = window.matchMedia('(min-width: 769px)');
+    // 桌面断点单源（见 utils.js BP_DESKTOP_MIN，与样式表 max-width: 768px
+    // 严格互补——平板竖屏恰为 768px，两态重叠会致断点行为错位）
+    const mqDesktop = window.matchMedia(`(min-width: ${BP_DESKTOP_MIN}px)`);
 
     // 加载时的屏幕朝向类型（iOS 16.4+ 提供 screen.orientation；不可用时为 null，
     // 维持原有动画行为）
@@ -102,13 +102,15 @@ export function initMobileNav() {
 
     if (mqDesktop.addEventListener) {
         mqDesktop.addEventListener('change', (e) => {
+            // 清除菜单开合残留的内联 transition（fixed + transform + 过渡时长>0
+            // 同属 WebKit 旋转视口 bug 的触发模式——旋转跳过动画时清理也照常执行）。
+            // 必须先清理再收菜单：toggleMenu 会给 nav 写入 0.35s 关闭过渡，
+            // 后清理会把刚写入的过渡清掉、菜单瞬移消失
+            nav.style.transition = '';
             // 进入宽屏时自动收起菜单——子导航展开态与悬停门控由 nav-dropdown.js 处理
             if (e.matches && nav.classList.contains('active')) {
                 toggleMenu();
             }
-            // 清除菜单开合残留的内联 transition（fixed + transform + 过渡时长>0
-            // 同属 WebKit 旋转视口 bug 的触发模式——旋转跳过动画时清理也照常执行）
-            nav.style.transition = '';
             // 屏幕朝向类型变化（横屏↔竖屏）视为旋转：跳过滑出/滑入动画
             const rotated = lastOrientationType !== null
                 && screen.orientation && screen.orientation.type !== lastOrientationType;

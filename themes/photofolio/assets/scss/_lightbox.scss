@@ -213,6 +213,13 @@
     pointer-events: none;
 }
 
+/* 抽屉展开态：照片贴顶时辉光顶部溢出被图片区边缘硬裁——顶部内边距 1em
+   不足以容纳 1.5~2em 的 blur 溢出（底部特意留了 2.5em、顶部此前未留），
+   展开时顶部内边距补到与底部一致（随既有 padding 过渡平滑变化） */
+.lightbox-main:has(.lightbox-panel.is-open) .lightbox-img-area {
+    padding-top: 2.5em;
+}
+
 /* 图片加载转圈：与瀑布流加载指示器同款（新图未就绪时显示，加载完成后随图片滑入消失） */
 .lightbox-img-loading {
     display: none;
@@ -508,11 +515,15 @@
     overflow: hidden;
     max-height: 0;
     opacity: 0;
-    transition: max-height 0.4s ease, opacity 0.3s ease;
+    /* 收起态不可见（visibility 离散过渡至时长末才翻转，内容淡出不被瞬间切断）；
+       同时把容器内的收起按钮移出 Tab 序——aria-hidden 不阻止聚焦，可见性才阻止 */
+    visibility: hidden;
+    transition: max-height 0.4s ease, opacity 0.3s ease, visibility 0.4s;
 
     &.is-open {
         max-height: 80em;
         opacity: 1;
+        visibility: visible;
     }
 }
 
@@ -695,6 +706,12 @@
     font-family: var(--font-meta);
     font-size: 0.9em;
     color: var(--color-text-secondary); /* 与色卡灰色一致 */
+
+    /* 窄屏（移动优先基础态）：三区占比文字独占一行，動態範圍/亮度中位數
+       另起一行——与占比文字同排时断行错落、可读性差 */
+    > span:first-child {
+        flex-basis: 100%;
+    }
 }
 
 .lightbox-tonal-stat {
@@ -994,6 +1011,11 @@
 
     .lightbox-panel-toggle {
         display: none;
+    }
+
+    /* 宽屏恢复：占比文字与两项数据同行（窄屏独占一行的规则见基础态） */
+    .lightbox-tonal-stats > span:first-child {
+        flex-basis: auto;
     }
 
     /* 箭头边距与顶栏一致（向右箭头与叉号右缘对齐） */

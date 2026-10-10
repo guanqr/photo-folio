@@ -45,7 +45,15 @@ defaultContentLanguage = "zh-cn"
     # 留空或注释掉则使用本地图片。末尾无需加斜杠。
     imageCDN = "https://guanqr.oss-cn-hangzhou.aliyuncs.com"
 
+    # 启用 Service Worker (仅在 hugo 构建生产环境时生效)
+    enableServiceWorker = true
+
+    # 是否开启 instant.page 链接预加载加速 (true 为开启，false 为关闭)
+    enableInstantPage = true
+
     # 图片尺寸与质量配置（用于 OSS 图片处理参数）
+    # 注意：本节开始后到下一节标题前的键都属于 [params.imageSizes]——
+    # 新增 [params] 级开关请写在上面两行之前，否则会被归入本节而失效
     [params.imageSizes]
         gallery = 800          # 瀑布流缩略图
         carousel = 1920        # 首页轮播图
@@ -56,12 +64,6 @@ defaultContentLanguage = "zh-cn"
         quality = 80           # 默认质量
         lightboxQuality = 90   # 灯箱质量
         ogQuality = 85         # 社交媒体封面质量
-
-    # 启用 Service Worker (仅在 hugo 构建生产环境时生效)
-    enableServiceWorker = true
-
-    # 是否开启 instant.page 链接预加载加速 (true 为开启，false 为关闭)
-    enableInstantPage = true
 
     # 全部作品页筛选栏：自行选择开启哪些筛选维度（true 开启 / false 关闭）
     [params.galleryFilters]

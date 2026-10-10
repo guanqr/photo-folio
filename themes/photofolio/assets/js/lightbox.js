@@ -1,6 +1,6 @@
 import { initPanelDrawer } from './lightbox-drawer.js';
 import { initPhotoAnalysis } from './lightbox-analysis.js';
-import { prefersReducedMotion, isImageReady } from './utils.js';
+import { prefersReducedMotion, isImageReady, createLayerStack } from './utils.js';
 
 let inited = false;
 
@@ -16,7 +16,7 @@ export function initLightbox() {
 
     const lightbox = document.getElementById('lightbox');
     const lightboxImg = document.getElementById('lightbox-img');
-    const lightboxImgArea = lightbox.querySelector('.lightbox-img-area'); // 辉光层插入点（主图之前）
+    const lightboxImgArea = lightbox ? lightbox.querySelector('.lightbox-img-area') : null; // 辉光层插入点（主图之前；lightbox 缺失时保持 null——下方守卫兜底）
     const lightboxImgLoading = document.getElementById('lightbox-img-loading');
     const lightboxCaption = document.getElementById('lightbox-caption');
     const tagsEl = document.getElementById('lightbox-tags');
@@ -62,7 +62,9 @@ export function initLightbox() {
     const analysisTrigger = document.getElementById('lightbox-analysis-trigger');
     const analysisWrap = document.getElementById('lightbox-analysis');
     const analysisCollapse = document.getElementById('lightbox-analysis-collapse');
-    const chartsWrap = document.getElementById('lightbox-charts');
+    // 窄屏灯箱主图降档判定（≤1000px 用 w_1280）：与抽屉断点一致——
+    // 初始化时创建一次，不在每次 open() 重建 MQL
+    const narrowLightbox = window.matchMedia('(max-width: 1000px)');
 
     // 随图片同步淡入的元信息元素：打开时全部隐藏，图片加载完成后统一揭示——
     // 标题 / 分类与系列胶囊 / 地点日期简行 / EXIF / 分析触发行 / 直方图与色卡 / 影调与色彩 / 故事
@@ -100,9 +102,9 @@ export function initLightbox() {
     let currentPhotos = [];
     let currentIndex = -1;
 
-    // 分析区开合状态：默认收起（打开/切图不发探测请求）；展开态跨切图/
-    // 关开保持——用户已选择查看分析，后续打开延续该选择
-    let analysisOpen = false;
+    // 分析区开合状态以 analysisWrap 的 is-open 类为唯一事实源（默认收起、
+    // 展开态跨切图/关开保持——用户已选择查看分析，后续打开延续该选择）；
+    // 不再维护独立的 analysisOpen 布尔（与类必然同步的冗余状态）
 
     // 收起位置补偿：is-fit 翻转会把内容从「顶对齐」瞬时重排为「居中裁切」，
     // 标题/标签在 t=0 出现向上跳变——点击前测出标题实际位置，transform 整体
@@ -144,13 +146,11 @@ export function initLightbox() {
                 compEls.forEach((el) => { el.style.transform = ''; });
             }
         };
-        step(); // 第一帧同步落位（点击当帧即连续，不闪跳变），后续 rAF 跟随
-        centerCompRaf = requestAnimationFrame(step);
+        step(); // 第一帧同步落位（点击当帧即连续，不闪跳变）；同步 step 内已排后续 rAF，不得再排一条——双链会让 cancelCenterComp 无法全取消
     }
 
     function setAnalysisOpen(open) {
         if (!analysisTrigger || !analysisWrap) return;
-        analysisOpen = open;
         // 收起前标题位置：触发行即将复现（展开时触发行是平滑收拢，不收布局
         // 跳变；收起时 is-open 移除令其回归布局、居中块位移约半行）——须在
         // 触发行 class 切换前实测（切换后旧位置即丢失），供收起补偿回原位
@@ -159,6 +159,9 @@ export function initLightbox() {
             : null;
         analysisTrigger.setAttribute('aria-expanded', open ? 'true' : 'false');
         analysisTrigger.classList.toggle('is-open', open);
+        // 清除 revealSynced 写入的内联 opacity（内联压过 .is-open 的类级 opacity，
+        // 不清理则触发行收起只有裁剪没有淡出）
+        analysisTrigger.style.opacity = '';
         analysisWrap.setAttribute('aria-hidden', open ? 'false' : 'true');
         if (open) {
             // 展开：清除收起留下的内联 max-height，走 class 兜底大值过渡；
@@ -190,9 +193,11 @@ export function initLightbox() {
                 analysisWrap.style.maxHeight = '0px';
                 analysisWrap.classList.remove('is-open'); // opacity 随同淡出
                 // 「放得下」立即判定：按收起后的最终总高（扣除正在收缩的分析区
-                // 当前高度）重判 is-fit——放得下则从第一帧起居中收缩、标题从点击前
-                // 位置平滑滑向居中位（位置补偿消除翻转瞬间的向上跳变）
-                const willFit = drawer.setFitAdjuster(() => analysisWrap.clientHeight);
+                // 当前高度与正在复现的触发行高度——两者同步动画、合计恒等于
+                // 最终总高的变化量）重判 is-fit——放得下则从第一帧起居中收缩、
+                // 标题从点击前位置平滑滑向居中位（位置补偿消除翻转瞬间的向上跳变）
+                const willFit = drawer.setFitAdjuster(() =>
+                    analysisWrap.clientHeight + analysisTrigger.offsetHeight);
                 if (willFit && preClickTop !== null) startCenterComp(preClickTop);
                 analysisWrap.addEventListener('transitionend', function collapseEnd(e) {
                     if (e.propertyName !== 'max-height') return; // opacity 结束不处理
@@ -200,6 +205,7 @@ export function initLightbox() {
                     analysisWrap.style.maxHeight = ''; // 清除内联、恢复 class 的 0 基线
                     drawer.setFitAdjuster(null); // 收起完成：恢复常规判定
                     cancelCenterComp(); // 滑动至最终居中位：摘除 transform（布局已居中）
+                    drawer.refresh(); // 内容高度已变：窄屏抽屉箭头状态补判（t=0 时高度未变、判的是旧态）
                 });
             }
             // 内容同步回滚到顶部：与收起过渡同曲线同时长锁步（cssEaseY =
@@ -212,9 +218,8 @@ export function initLightbox() {
     let switching = false; // 切换动画进行中（滑出/滑入期间 onLoad 不强制图片透明度，避免覆盖过渡）
     // 毛玻璃背景层（机制对齐参考站灯箱）：每张作品一层 <img>，
     // 切换时旧层**立即**淡出（0.7s，不等新层就绪——加载慢时背景短暂为纯黑底，
-    // 与参考站一致）、新层就绪后淡入（0.7s）；新层淡入后约 750ms 移除所有旧层
-    let backdropLayers = []; // 裸元素数组：最新层 = 末位；状态仅元素上的 _shown 标志
-    let backdropPruneTimer = null;
+    // 与参考站一致）、新层就绪后淡入（0.7s）；新层淡入后约 750ms 移除所有旧层。
+    // 层栈与常量定义见下方背景层区块（BACKDROP_MS 与 createLayerStack）
 
     // 滑动动画同时作用于主图与当前辉光层：辉光随主图一起移动与淡入淡出。
     // 主图位移百分比按**自身盒宽**解析（object-fit: contain 的照片盒，竖构图时
@@ -267,13 +272,19 @@ export function initLightbox() {
     const slideTransition = reducedMotion ? 'none' : 'transform 0.25s ease, opacity 0.25s ease';
     const glowTransition = reducedMotion ? 'none' : 'opacity 0.25s ease';
 
-    // 辉光层模型（与背景层同法）：每张作品一层 <img>，切换时新层解码后淡入、
-    // 旧层随后剪枝——消除就地换 src（iOS 过滤图换源闪烁的根因，强制重排等
-    // 方案均无法根治）。activeGlow = 当前可见层（滑出时随主图移动淡出）
-    let glowLayers = []; // 裸元素数组：最新层 = 末位
+    // iOS 上跳过辉光层（对齐参考站做法）：iOS Safari 对带 filter 的 img 换源/
+    // 合成有一系列缺陷（闪帧、错位），逐案修补成本高且不稳定——照片无光晕
+    // 直接显示，其余平台保持四边辉光。检测覆盖 iPadOS 的桌面 UA 伪装
+    // （MacIntel + 触屏）
+    const iOSGlowDisabled = /iP(hone|ad|od)/.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    // 辉光层模型（与背景层共用层栈工具，见 utils.js createLayerStack）：
+    // 每张作品一层 <img>，切换时新层解码后淡入、旧层随后剪枝——消除就地
+    // 换 src（iOS 过滤图换源闪烁的根因，强制重排等方案均无法根治）。
+    // activeGlow = 当前可见层（滑出时随主图移动淡出）
+    const glowStack = createLayerStack((reducedMotion ? 0 : 250) + 50); // 0.25s 淡入 + 50ms 余量
     let activeGlow = null;
-    let glowPruneTimer = null;
-    const glowPruneDelay = (reducedMotion ? 0 : 250) + 50; // 0.25s 淡入 + 50ms 余量
     const createGlowEl = () => {
         const el = document.createElement('img');
         el.className = 'lightbox-img-glow';
@@ -301,27 +312,14 @@ export function initLightbox() {
             el._ready = true;
             if (el === activeGlow && mainSlideStarted && !switching) {
                 fadeGlowIn(el);
-                scheduleGlowPrune();
+                glowStack.schedulePrune();
             }
         };
         el.addEventListener('load', onReady, { once: true });
         el.addEventListener('error', onReady, { once: true });
     };
-    // 只保留最新一层：旧层已随滑出淡出，新层淡入后移除不可见
-    const scheduleGlowPrune = () => {
-        if (glowPruneTimer) clearTimeout(glowPruneTimer);
-        glowPruneTimer = setTimeout(() => {
-            glowPruneTimer = null;
-            while (glowLayers.length > 1) glowLayers.shift().remove();
-        }, glowPruneDelay);
-    };
     const closeGlow = () => {
-        if (glowPruneTimer) {
-            clearTimeout(glowPruneTimer);
-            glowPruneTimer = null;
-        }
-        glowLayers.forEach((el) => el.remove());
-        glowLayers = [];
+        glowStack.clear();
         activeGlow = null;
     };
 
@@ -464,12 +462,14 @@ export function initLightbox() {
 
     // 新建背景层：thumb 源 + blur 压暗（样式见 _lightbox.scss）；切图淡入淡出
     // 一律 0.7s cubic-bezier(0.4, 0, 0.2, 1)（参考站 duration-700 同款）。
-    // 剪枝定时由时长推导（时长 + 50ms 余量）：两处魔数单源，改时长不脱节
+    // 层栈（数组/剪枝定时/全清）与辉光层共用 createLayerStack 工具；
+    // 剪枝定时由时长推导（时长 + 50ms 余量）
     const BACKDROP_MS = reducedMotion ? 0 : 700;
     const backdropTransition = reducedMotion
         ? 'opacity 0s'
         : `opacity ${BACKDROP_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`;
-    const backdropPruneDelay = BACKDROP_MS + 50;
+    const backdropStack = createLayerStack(BACKDROP_MS + 50);
+    const backdropLayers = backdropStack.layers;
     const createBackdropEl = () => {
         const el = document.createElement('img');
         el.className = 'lightbox-backdrop';
@@ -482,22 +482,10 @@ export function initLightbox() {
         lightbox.insertBefore(el, backdropInsertBefore || null);
     };
 
-    // 只保留最新一层：旧层此时已完全淡出（0.7s < 750ms），移除不可见
-    const pruneBackdrops = () => {
-        while (backdropLayers.length > 1) {
-            backdropLayers.shift().remove();
-        }
-    };
-
     // 首开：清空上一轮残留，新建一层淡入当前作品（随灯箱容器 0.3s 一同淡入）。
     // 首开无上一层可回退：缩略图失败时该层保持透明（背景纯黑），属可接受降级
     function openBackdrop(src) {
-        if (backdropPruneTimer) {
-            clearTimeout(backdropPruneTimer);
-            backdropPruneTimer = null;
-        }
-        backdropLayers.forEach((el) => el.remove());
-        backdropLayers = [];
+        backdropStack.clear();
         const el = createBackdropEl();
         appendBackdropEl(el);
         el.src = src;
@@ -514,10 +502,7 @@ export function initLightbox() {
     // （是否已完成过淡入）——show 守卫 = 「仍是最新层且未显示过」，被更新的
     // 切换取代或已被剪枝的层自然失效；回调只操作本层元素，无跨层状态可翻转
     function switchBackdrop(src) {
-        if (backdropPruneTimer) {
-            clearTimeout(backdropPruneTimer);
-            backdropPruneTimer = null;
-        }
+        backdropStack.cancelPrune();
         backdropLayers.forEach((layerEl) => {
             layerEl.style.transition = backdropTransition;
             layerEl.style.opacity = '0';
@@ -537,7 +522,7 @@ export function initLightbox() {
             // 0→1 变化不触发过渡）同样走 0.7s 淡入
             el.offsetHeight;
             el.style.opacity = '1';
-            backdropPruneTimer = setTimeout(pruneBackdrops, backdropPruneDelay);
+            backdropStack.schedulePrune();
         };
         if (isImageReady(el)) {
             show();
@@ -557,7 +542,7 @@ export function initLightbox() {
                     if (prev && prev._shown) {
                         prev.style.transition = backdropTransition;
                         prev.style.opacity = '1';
-                        backdropPruneTimer = setTimeout(pruneBackdrops, backdropPruneDelay);
+                        backdropStack.schedulePrune();
                     }
                 }
             }, { once: true });
@@ -566,12 +551,7 @@ export function initLightbox() {
 
     // 关闭：移除所有背景层（下次首开重建，不残留旧作品背景）
     function closeBackdrop() {
-        if (backdropPruneTimer) {
-            clearTimeout(backdropPruneTimer);
-            backdropPruneTimer = null;
-        }
-        backdropLayers.forEach((el) => el.remove());
-        backdropLayers = [];
+        backdropStack.clear();
     }
 
     // 新图滑入归位并淡入（切换路径共用）；毛玻璃背景已在滑出开始同步切换
@@ -593,7 +573,7 @@ export function initLightbox() {
             activeGlow.style.transform = 'scale(2)'; // 归位（scale 并入 transform，见 slideStyle）
             if (reducedMotion && activeGlow._ready) {
                 fadeGlowIn(activeGlow);
-                scheduleGlowPrune();
+                glowStack.schedulePrune();
             } else {
                 activeGlow.style.opacity = '0';
             }
@@ -604,7 +584,7 @@ export function initLightbox() {
             // 主图滑入完成：辉光就绪则淡入（就绪晚到的由 attachGlowReady 补淡）
             if (activeGlow && activeGlow._ready) {
                 fadeGlowIn(activeGlow);
-                scheduleGlowPrune();
+                glowStack.schedulePrune();
             }
             // 只收尾主图（保留内联 opacity=1，CSS 基础值为 0）：辉光的透明度
             // 由就绪门控独立管理，此处不触碰——避免覆盖未就绪的隐藏态
@@ -624,7 +604,7 @@ export function initLightbox() {
         if (storyEl) storyEl.textContent = p.description || '';
         // 分析按需加载：仅在展开态触发（收起态不发探测请求、不占主线程）；
         // 展开切图时旧图表保持显示，新数据就绪后按既有形变过渡替换
-        if (analysisOpen) {
+        if (analysisWrap && analysisWrap.classList.contains('is-open')) {
             analysis.analyze(p.src);
         }
         // 切图保持信息栏滚动位置（不回到顶部）：内容高度变化时浏览器自动把
@@ -647,8 +627,7 @@ export function initLightbox() {
         // 窄屏（≤1000px，与抽屉断点一致）灯箱主图改用 w_1280：手机屏约 1080px
         // 宽、观感无差；w_1920 的首次光栅化与背景淡入同窗争抢合成器是旧版
         // Chromium 暗角恢复卡顿的剩余尖峰——桌面保持 w_1920
-        const narrowLightbox = window.matchMedia('(max-width: 1000px)').matches;
-        const displaySrc = (photo) => (narrowLightbox && photo.srcNarrow) || photo.src;
+        const displaySrc = (photo) => (narrowLightbox.matches && photo.srcNarrow) || photo.src;
         const src = displaySrc(p);
 
         if (currentPhotos.length > 1) {
@@ -679,6 +658,9 @@ export function initLightbox() {
             // 滑出结束才置位、mainSlideStarted 残留上一次的 true，门控会被穿过），
             // 尾部叠出双影
             mainSlideStarted = false;
+            // 收起补偿若在途（收起 0.4s 窗口内切图），立即摘除——其锚点是旧照片
+            // 的 preClickTop/wrapH0，继续运行会把新照片的标题/面板拉到旧位移
+            cancelCenterComp();
 
             slideStyle(-dir * 12, '0', slideTransition);
 
@@ -691,11 +673,12 @@ export function initLightbox() {
             switchBackdrop(p.thumb || p.src);
 
             // 新建辉光层（在滑出开始即创建：0 态在 0.25s 滑出期间提交、解码
-            // 提前开始；旧辉光层已随滑出淡出，新层就绪后随主图淡入、旧层剪枝）
-            if (lightboxImgArea) {
+            // 提前开始；旧辉光层已随滑出淡出，新层就绪后随主图淡入、旧层剪枝；
+            // iOS 跳过辉光——见 iOSGlowDisabled）
+            if (lightboxImgArea && !iOSGlowDisabled) {
                 const newGlow = createGlowEl();
                 lightboxImgArea.insertBefore(newGlow, lightboxImg);
-                glowLayers.push(newGlow);
+                glowStack.layers.push(newGlow);
                 activeGlow = newGlow;
                 newGlow.src = p.thumb || p.src;
                 attachGlowReady(newGlow);
@@ -743,11 +726,12 @@ export function initLightbox() {
             lightboxImg.style.opacity = '0';
             closeGlow(); // 清空残留辉光层（关闭灯箱时通常已清空，兜底）
             mainSlideStarted = false; // 首开复位：辉光不得先于主图揭示淡入
-            // 新建当前辉光层（隐藏）：主图就绪后随其淡入（见 revealMain）
-            if (lightboxImgArea) {
+            // 新建当前辉光层（隐藏）：主图就绪后随其淡入（见 revealMain）；
+            // iOS 跳过辉光——见 iOSGlowDisabled
+            if (lightboxImgArea && !iOSGlowDisabled) {
                 const glowEl = createGlowEl();
                 lightboxImgArea.insertBefore(glowEl, lightboxImg);
-                glowLayers.push(glowEl);
+                glowStack.layers.push(glowEl);
                 activeGlow = glowEl;
                 glowEl.src = p.thumb || p.src;
                 attachGlowReady(glowEl);
@@ -791,7 +775,6 @@ export function initLightbox() {
     // 延续「默认收起、点击才加载」的按需约定；同会话切图仍保持展开态
     function resetAnalysisState() {
         if (!analysisTrigger || !analysisWrap) return;
-        analysisOpen = false;
         analysisTrigger.setAttribute('aria-expanded', 'false');
         analysisTrigger.classList.remove('is-open');
         analysisWrap.setAttribute('aria-hidden', 'true');
@@ -849,7 +832,7 @@ export function initLightbox() {
         if (activeGlow) {
             if (activeGlow._ready) {
                 fadeGlowIn(activeGlow);
-                scheduleGlowPrune();
+                glowStack.schedulePrune();
             } else {
                 activeGlow.style.transition = 'none';
                 activeGlow.style.opacity = '0';

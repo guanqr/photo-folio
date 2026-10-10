@@ -198,16 +198,32 @@
 
     .has-dropdown {
         /* 悬停展开需 hover-ready（JS 控制）：防止触屏粘性 :hover 从窄屏带到宽屏后
-           下拉菜单误展开——进入宽屏时清除、首次真实鼠标移动/键盘聚焦后恢复 */
-        &.hover-ready:hover .nav-caret,
-        &.hover-ready:focus-within .nav-caret {
+           下拉菜单误展开——进入宽屏时清除、首次真实鼠标移动/键盘聚焦后恢复。
+           整个悬停块再以 @media (hover: hover) 门控：触屏设备（iPad 等）的粘性
+           :hover 会在此处匹配并架空 sub-open 的点击关闭——触屏下只走 sub-open
+           点击路径（见 nav-dropdown.js touchOnly） */
+        &.sub-open .nav-caret {
             transform: rotate(180deg);
         }
 
-        &.hover-ready:hover .nav-dropdown,
-        &.hover-ready:focus-within .nav-dropdown {
+        &.sub-open .nav-dropdown {
             opacity: 1;
             visibility: visible;
+        }
+    }
+
+    @media (hover: hover) {
+        .has-dropdown {
+            &.hover-ready:hover .nav-caret,
+            &.hover-ready:focus-within .nav-caret {
+                transform: rotate(180deg);
+            }
+
+            &.hover-ready:hover .nav-dropdown,
+            &.hover-ready:focus-within .nav-dropdown {
+                opacity: 1;
+                visibility: visible;
+            }
         }
     }
 }

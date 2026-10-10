@@ -230,7 +230,7 @@
 
     <!-- PWA Service Worker 注册 (必须独立，不参与 js.Build) -->
     {{ if and .Site.Params.enableServiceWorker (eq hugo.Environment "production") }}
-        {{- $sw := resources.Get "js/sw.js" -}}
+        {{- $sw := resources.Get "js/sw.js" | resources.ExecuteAsTemplate "sw.js" (dict "version" (now.Format "20060102150405")) -}}
         {{- $dummy := "" | resources.FromString "dummy.js" -}}
         {{- $url := (slice $sw $dummy | resources.Concat "sw.js").RelPermalink -}}
 

@@ -246,3 +246,14 @@ ul { list-style: none; }
     color: var(--color-text);
     transition: color var(--transition-color);
 }
+
+/* 布局档位信号（--layout-tier，JS 只读）：iPad Safari 旋转后 JS 侧 matchMedia/
+   clientWidth 评估永久陈旧、CSS 媒体查询照常重估（诊断页探针实测）——档位判定
+   改由 CSS 媒体查询写入、getComputedStyle 读取（见 masonry.js updateTier）；
+   阈值与瀑布流档位一致（0: ≤500 / 1: 501-768 / 2: 769-1000 / 3: >1000） */
+:root {
+    --layout-tier: 0;
+}
+@media (min-width: 501px) { :root { --layout-tier: 1; } }
+@media (min-width: 769px) { :root { --layout-tier: 2; } }
+@media (min-width: 1001px) { :root { --layout-tier: 3; } }
