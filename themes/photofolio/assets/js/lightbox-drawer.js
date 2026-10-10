@@ -210,10 +210,16 @@ export function initPanelDrawer({ lightbox, panel, panelDetails, panelToggle, me
 
     // 桌面端「放得下整体居中、放不下标题固定数据滚动」：
     // 全部内容天然高度 ≤ 面板高度 → is-fit（面板居中整组含标题胶囊，详情区不滚动）；
-    // 否则标题/胶囊固定在顶部，仅数据区滚动
-    function updateFit() {
-        if (narrowMedia.matches || !lightbox.classList.contains('active')) return;
-        const totalH = panel.scrollHeight - panelDetails.clientHeight + panelDetails.scrollHeight;
+    // 否则标题/胶囊固定在顶部，仅数据区滚动。
+    // fitAdjuster：分析区收起期间从其当前高度扣除——总高与正在收缩的分析区
+    // 同步缩小，扣除后恒等于收起后的最终总高：「放得下」在点击瞬间即可判定、
+    // 过渡全程保持稳定（否则阈值在过渡末段才越过，居中总晚于回顶一步）。
+    // force：跳过 active 守卫强制重判（灯箱刚激活/关闭重置时调用）
+    let fitAdjuster = null;
+    function updateFit(force) {
+        if (narrowMedia.matches || (!force && !lightbox.classList.contains('active'))) return;
+        const totalH = panel.scrollHeight - panelDetails.clientHeight + panelDetails.scrollHeight
+            - (fitAdjuster ? fitAdjuster() : 0);
         panel.classList.toggle('is-fit', totalH <= panel.clientHeight);
     }
 
@@ -233,8 +239,10 @@ export function initPanelDrawer({ lightbox, panel, panelDetails, panelToggle, me
     // 全开后滚轮手动滚动内容（光标位置无关，与拖动一致）；内容到底后无操作（图片区域保持半页不回弹）；
     // 上滚时内容回滚，到顶后渐进收起（至少保留地点/日期简行）
     lightbox.addEventListener('wheel', (e) => {
+        // 新输入接管：中断回滚并完成到目标（桌面端分析区收起同样会启动回滚动画，
+        // 用户中途滚轮时必须先摘除，否则动画逐帧覆盖滚动输入）
+        cancelScrollAnim();
         if (!narrowMedia.matches || !lightbox.classList.contains('active')) return;
-        cancelScrollAnim(); // 新输入接管：中断回滚并完成到目标，保持虚拟位置不变量
         // 容差 1px：浏览器缩放等场景 scrollTop 可能残留小数
         const atTop = panelDetails.scrollTop <= 1;
         const open = level > 0;
@@ -318,5 +326,19 @@ export function initPanelDrawer({ lightbox, panel, panelDetails, panelToggle, me
     lightbox.addEventListener('pointerup', endDrag);
     lightbox.addEventListener('pointercancel', endDrag);
 
-    return { reset, refresh: updateArrowState };
+    return {
+        reset,
+        refresh: updateArrowState,
+        // 内容回滚到顶部（供分析区收起时同步回顶）：与收起过渡同曲线同时长锁步——
+        // 曲线/时长与抽屉收起动画共用，中断行为同样由滚轮/拖动接管（cancelScrollAnim）
+        scrollToTop: (duration) => animateScrollTop(0, duration),
+        // 设置/清除内容高度扣除函数并立即重判（分析区收起期间传入其当前高度：
+        // 最终总高在整个过渡期间恒定，「放得下」点击瞬间即判定且不翻覆）；
+        // 返回重判后的「放得下」状态（窄屏恒 false——is-fit 仅桌面生效）
+        setFitAdjuster: (fn) => { fitAdjuster = fn; updateFit(); return panel.classList.contains('is-fit'); },
+        // 强制重判「放得下」（跳过 active 守卫）：灯箱刚激活时调用——展开态
+        // 关灯箱残留的 is-fit=false 若不再重判，再打开时详情区 auto 边距会把
+        // 内容挤到中部、标题与 EXIF 之间出现大空隙
+        refreshFit: () => updateFit(true)
+    };
 }

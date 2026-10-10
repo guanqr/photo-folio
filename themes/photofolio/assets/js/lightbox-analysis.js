@@ -602,7 +602,7 @@ function renderHue(hue, hueYs, labels, els) {
     paintHueHistogram(hue, hueYs, els.histEl);
 }
 
-export function initPhotoAnalysis({ paletteWrap, paletteEl, tone, sat, hue }) {
+export function initPhotoAnalysis({ paletteWrap, paletteEl, tone, sat, hue, onDone }) {
     const toneEls = tone || {};
     const satEls = sat || {};
     const hueEls = hue || {};
@@ -635,7 +635,9 @@ export function initPhotoAnalysis({ paletteWrap, paletteEl, tone, sat, hue }) {
 
     /* 分析指定作品：缓存命中直接重绘；否则探测加载 w_1024 缩略图统计。
        所有分析区块都被配置关闭时跳过探测（不发请求）。
-       请求代次（analyzeSeq）：快速切图时慢探测乱序完成，代次不符不渲染过期结果 */
+       请求代次（analyzeSeq）：快速切图时慢探测乱序完成，代次不符不渲染过期结果。
+       onDone 完成回调（图表内容高度变化后由调用方刷新抽屉箭头状态）：仅当前
+       代次结束时触发——代次不符的过期探测已被新一次 analyze 取代 */
     let analyzeSeq = 0;
     function analyze(src) {
         if (!paletteEl && !toneEls.wrap && !satEls.wrap && !hueEls.wrap) return;
@@ -646,6 +648,7 @@ export function initPhotoAnalysis({ paletteWrap, paletteEl, tone, sat, hue }) {
             if (toneEls.wrap) renderTone(cached.tone, cached.histYs, cached.lumYs, toneLabels, toneEls);
             if (satEls.wrap) renderSat(cached.sat, cached.satYs, satLabels, satEls);
             if (hueEls.wrap) renderHue(cached.hue, cached.hueYs, hueLabels, hueEls);
+            if (onDone) onDone(true);
             return;
         }
         const probeSrc = src.replace(/w_\d+/, 'w_1024'); // 采样探测：≤1024px 缩略图
@@ -721,15 +724,22 @@ export function initPhotoAnalysis({ paletteWrap, paletteEl, tone, sat, hue }) {
                 if (toneEls.wrap) renderTone(tone, histYs, lumYs, toneLabels, toneEls);
                 if (satEls.wrap) renderSat(satHue, satYs, satLabels, satEls);
                 if (hueEls.wrap) renderHue(satHue, hueYs, hueLabels, hueEls);
+                if (onDone) onDone(true);
             } catch (err) {
                 console.warn('[lightbox] histogram paint failed:', err);
                 // 代次守卫与成功路径对称：迟到的过期失败不得隐藏当前已渲染的照片
-                if (mySeq === analyzeSeq) hideAll();
+                if (mySeq === analyzeSeq) {
+                    hideAll();
+                    if (onDone) onDone(false);
+                }
             }
         };
         probe.onerror = () => {
             console.warn('[lightbox] histogram probe load failed (OSS CORS not enabled):', probeSrc);
-            if (mySeq === analyzeSeq) hideAll();
+            if (mySeq === analyzeSeq) {
+                hideAll();
+                if (onDone) onDone(false);
+            }
         };
         probe.src = probeSrc;
     }

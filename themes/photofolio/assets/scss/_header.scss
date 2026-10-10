@@ -98,6 +98,9 @@
         padding: 0.25em 0;
         display: flex;
         align-items: center;
+        /* 父项为 span（非链接/按钮）：iOS Safari 只向「可交互」元素派发 click
+           （原生交互元素或声明 cursor:pointer 者），无此声明窄屏手风琴点不动 */
+        cursor: pointer;
 
         &:hover, &.active {
             color: var(--color-text);

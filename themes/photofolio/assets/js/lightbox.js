@@ -54,11 +54,21 @@ export function initLightbox() {
     const hueName = document.getElementById('lightbox-hue-name');
     const hueHist = document.getElementById('lightbox-hue-hist');
     const hueAxis = document.getElementById('lightbox-hue-axis');
+    // 图像分析按需加载：默认收起——打开/切图不再探测下载 w_1024 采样图，
+    // 只有点击触发行才展开加载；收起不取消在途探测（结果入缓存，再展开直接命中）。
+    // 展开/收起过渡：wrapper max-height + opacity——展开走 class 兜底大值
+    // （内容高度未知、加载后增长），收起先按当前 clientHeight 内联定值再移除
+    // is-open（从固定大值收起会在动画前段无可见变化、有停顿感）
+    const analysisTrigger = document.getElementById('lightbox-analysis-trigger');
+    const analysisWrap = document.getElementById('lightbox-analysis');
+    const analysisCollapse = document.getElementById('lightbox-analysis-collapse');
+    const chartsWrap = document.getElementById('lightbox-charts');
 
     // 随图片同步淡入的元信息元素：打开时全部隐藏，图片加载完成后统一揭示——
-    // 标题 / 分类与系列胶囊 / 地点日期简行 / EXIF / 直方图与色卡 / 影调与色彩 / 故事
+    // 标题 / 分类与系列胶囊 / 地点日期简行 / EXIF / 分析触发行 / 直方图与色卡 / 影调与色彩 / 故事
     const revealSynced = [
-        lightboxCaption, tagsEl, lightboxMeta, exifList, paletteWrap, tonalWrap, satWrap, hueWrap, storyWrap,
+        lightboxCaption, tagsEl, lightboxMeta, exifList, analysisTrigger,
+        paletteWrap, tonalWrap, satWrap, hueWrap, storyWrap,
     ].filter(Boolean);
 
     if (!lightbox || !lightboxImg) return;
@@ -79,11 +89,126 @@ export function initLightbox() {
             dr: tonalDr, p50: tonalP50
         },
         sat: { wrap: satWrap, name: satName, histEl: satHist },
-        hue: { wrap: hueWrap, name: hueName, histEl: hueHist, axisEl: hueAxis }
+        hue: { wrap: hueWrap, name: hueName, histEl: hueHist, axisEl: hueAxis },
+        onDone: () => {
+            // 分析完成（缓存命中/探测成功/失败）：图表内容高度变化后刷新抽屉
+            // 箭头状态（桌面 is-fit 由 ResizeObserver 重判）
+            drawer.refresh();
+        }
     });
 
     let currentPhotos = [];
     let currentIndex = -1;
+
+    // 分析区开合状态：默认收起（打开/切图不发探测请求）；展开态跨切图/
+    // 关开保持——用户已选择查看分析，后续打开延续该选择
+    let analysisOpen = false;
+
+    // 收起位置补偿：is-fit 翻转会把内容从「顶对齐」瞬时重排为「居中裁切」，
+    // 标题/标签在 t=0 出现向上跳变——点击前测出标题实际位置，transform 整体
+    // 补偿到该位置消除跳变；补偿量随收起进度锁步归零，标题从点击前位置平滑
+    // 滑向最终居中位、与图表收缩同段动画。进度从 wrapper 高度恢复（max-height
+    // 的 ease 曲线进度 = 1 − 当前高/初始高，与过渡天然锁步，无需另算缓动）。
+    // 补偿量为纯实测驱动（此前按 offsetHeight 整数舍入推导、残留约 8px 上跳）：
+    // rect（小数精确）减去当前 dy 反推真实布局位；最终居中位由布局位逐帧实测
+    // 估计（内容仅随分析区收缩：L_end = L + (1−p)·w0/2 为几何恒等式）——起点
+    // 精确连续（p=0 时 dy = T0 − rect）、终点补偿恰好归零（p=1 时 dy = 0）
+    let centerCompRaf = null;
+    let centerCompDy = 0;
+    function cancelCenterComp() {
+        if (centerCompRaf !== null) {
+            cancelAnimationFrame(centerCompRaf);
+            centerCompRaf = null;
+        }
+        centerCompDy = 0;
+        [lightboxCaption, tagsEl, panelDetails].forEach((el) => { if (el) el.style.transform = ''; });
+    }
+    function startCenterComp(preClickTop) {
+        cancelCenterComp();
+        if (!lightboxCaption) return;
+        const compEls = [lightboxCaption, tagsEl, panelDetails].filter(Boolean);
+        const wrapH0 = analysisWrap.clientHeight; // 收起前分析区高度（过渡起点）
+        if (wrapH0 <= 0 || compEls.length === 0) return;
+        const step = () => {
+            const wrapH = analysisWrap.clientHeight;
+            const progress = 1 - wrapH / wrapH0;
+            const rect = lightboxCaption.getBoundingClientRect().top;
+            const dy = (1 - progress) * (preClickTop - rect + centerCompDy + progress * wrapH0 / 2);
+            centerCompDy = dy;
+            compEls.forEach((el) => { el.style.transform = `translateY(${dy}px)`; });
+            if (wrapH > 0.5) {
+                centerCompRaf = requestAnimationFrame(step);
+            } else {
+                centerCompRaf = null;
+                centerCompDy = 0;
+                compEls.forEach((el) => { el.style.transform = ''; });
+            }
+        };
+        step(); // 第一帧同步落位（点击当帧即连续，不闪跳变），后续 rAF 跟随
+        centerCompRaf = requestAnimationFrame(step);
+    }
+
+    function setAnalysisOpen(open) {
+        if (!analysisTrigger || !analysisWrap) return;
+        analysisOpen = open;
+        // 收起前标题位置：触发行即将复现（展开时触发行是平滑收拢，不收布局
+        // 跳变；收起时 is-open 移除令其回归布局、居中块位移约半行）——须在
+        // 触发行 class 切换前实测（切换后旧位置即丢失），供收起补偿回原位
+        const preClickTop = !open && lightboxCaption && !reducedMotion
+            ? lightboxCaption.getBoundingClientRect().top
+            : null;
+        analysisTrigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+        analysisTrigger.classList.toggle('is-open', open);
+        analysisWrap.setAttribute('aria-hidden', open ? 'false' : 'true');
+        if (open) {
+            // 展开：清除收起留下的内联 max-height，走 class 兜底大值过渡；
+            // 图表区照常展示（空图表框即占位，不额外显示加载指示），数据就绪后填充；
+            // 触发行随开合平滑收拢（纯 CSS），展开方向无 t=0 布局跳变、无需补偿
+            drawer.setFitAdjuster(null); // 清除收起期间的高度扣除，按实际高度逐帧重判
+            cancelCenterComp(); // 收起中途再展开：停止收起补偿、摘除 transform
+            analysisWrap.style.maxHeight = '';
+            analysisWrap.classList.add('is-open');
+            if (currentIndex >= 0 && currentPhotos[currentIndex]) {
+                analysis.analyze(currentPhotos[currentIndex].src);
+            }
+        } else {
+            // 收起：纯对称收缩（展开的逆向）——is-fit 提前挂上后 unsafe center +
+            // 面板裁切让整块内容（含顶部 EXIF）从第一帧起以中心为轴同速向中心
+            // 收拢，恰为展开动作的镜像。过渡起点用双内联值（实测高度 px → 0px）：
+            // 与 class 移除同帧提交时过渡会从 class 的 80em 旧值起算、前段高度
+            // 纹丝不动（启动延迟），内联起点值经强制 reflow 提交后不再受干扰；
+            // 过渡结束清除内联值、恢复 class 的 0 基线（内联恒压过 class，
+            // 不清除会残留占位高度）；reduced-motion 下直切、无需内联定值
+            if (reducedMotion) {
+                analysisWrap.style.maxHeight = '';
+                analysisWrap.classList.remove('is-open');
+            } else {
+                // 标题滚动出画面时 preClickTop 为负值，补偿自动保持其不可见、
+                // 视口表现为返回顶部
+                analysisWrap.style.maxHeight = analysisWrap.clientHeight + 'px';
+                void analysisWrap.offsetHeight; // 强制 reflow：内联起点值先提交
+                analysisWrap.style.maxHeight = '0px';
+                analysisWrap.classList.remove('is-open'); // opacity 随同淡出
+                // 「放得下」立即判定：按收起后的最终总高（扣除正在收缩的分析区
+                // 当前高度）重判 is-fit——放得下则从第一帧起居中收缩、标题从点击前
+                // 位置平滑滑向居中位（位置补偿消除翻转瞬间的向上跳变）
+                const willFit = drawer.setFitAdjuster(() => analysisWrap.clientHeight);
+                if (willFit && preClickTop !== null) startCenterComp(preClickTop);
+                analysisWrap.addEventListener('transitionend', function collapseEnd(e) {
+                    if (e.propertyName !== 'max-height') return; // opacity 结束不处理
+                    analysisWrap.removeEventListener('transitionend', collapseEnd);
+                    analysisWrap.style.maxHeight = ''; // 清除内联、恢复 class 的 0 基线
+                    drawer.setFitAdjuster(null); // 收起完成：恢复常规判定
+                    cancelCenterComp(); // 滑动至最终居中位：摘除 transform（布局已居中）
+                });
+            }
+            // 内容同步回滚到顶部：与收起过渡同曲线同时长锁步（cssEaseY =
+            // CSS ease），收起过程中视口跟随内容收缩上移，不残留空白等待区
+            drawer.scrollToTop(reducedMotion ? 0 : 400);
+        }
+        drawer.refresh(); // 内容高度变化：刷新箭头状态（桌面 is-fit 由 ResizeObserver 重判）
+    }
+
     let switching = false; // 切换动画进行中（滑出/滑入期间 onLoad 不强制图片透明度，避免覆盖过渡）
     // 毛玻璃背景层（机制对齐参考站灯箱）：每张作品一层 <img>，
     // 切换时旧层**立即**淡出（0.7s，不等新层就绪——加载慢时背景短暂为纯黑底，
@@ -187,7 +312,7 @@ export function initLightbox() {
             const card = wrapper.closest('[data-title]');
             currentPhotos.push({
                 src: img.dataset.fullSrc || img.src,
-                thumb: img.src, // 网格缩略图（w_800）：背景毛玻璃与辉光层用——解码快、模糊后观感一致
+                thumb: img.src, // 网格缩略图（w_800）：背景毛玻璃与辉光层共用——与网格同 URL 保证灯箱打开即缓存命中，背景不会因新请求等待而黑屏
                 alt: img.alt,
                 title: card ? (card.dataset.title || '') : '',
                 place: card ? (card.dataset.place || '') : '',
@@ -451,7 +576,11 @@ export function initLightbox() {
         renderExif(p);
         if (storyWrap) storyWrap.style.display = p.description ? '' : 'none';
         if (storyEl) storyEl.textContent = p.description || '';
-        analysis.analyze(p.src);
+        // 分析按需加载：仅在展开态触发（收起态不发探测请求、不占主线程）；
+        // 展开切图时旧图表保持显示，新数据就绪后按既有形变过渡替换
+        if (analysisOpen) {
+            analysis.analyze(p.src);
+        }
         // 切图保持信息栏滚动位置（不回到顶部）：内容高度变化时浏览器自动把
         // scrollTop 钳制到新范围，抽屉的虚拟位置模型（展开程度 × 行程 + scrollTop）
         // 随之停在原位；箭头状态按当前 scrollTop 显式刷新（内容变化后可能
@@ -514,6 +643,7 @@ export function initLightbox() {
                 lightboxImg.alt = p.alt;
                 if (lightboxImgGlow) {
                     lightboxImgGlow.src = p.thumb || p.src; // 辉光层随主图同步切换
+                    void lightboxImgGlow.offsetHeight; // 强制重排：iOS Safari 过滤图换源需重绘提交，否则模糊闪帧/消失
                     clearPendingGlow();
                     glowDecoded = false;
                     mainSlideStarted = false;
@@ -572,6 +702,7 @@ export function initLightbox() {
             lightboxImg.alt = p.alt;
             if (lightboxImgGlow) {
                 lightboxImgGlow.src = p.thumb || p.src; // 辉光层随主图同步切换
+                void lightboxImgGlow.offsetHeight; // 强制重排：iOS Safari 过滤图换源需重绘提交，否则模糊闪帧/消失
                 // 与切图路径同款门控：辉光未解码时保持隐藏，解码完成后淡入——
                 // 首开同样存在「淡入空框、内容突现」的暗角断点，不可绕过
                 clearPendingGlow();
@@ -590,6 +721,7 @@ export function initLightbox() {
             }
             openBackdrop(p.thumb || p.src);
             lightbox.classList.add('active');
+            drawer.refreshFit(); // 激活后强制重判「放得下」：关灯箱重置期间的 is-fit 状态可能过期
             document.body.style.overflow = 'hidden';
 
             // 首开未缓存：转圈等待（缓存命中时 complete 立即为真，无需转圈）
@@ -624,13 +756,29 @@ export function initLightbox() {
         updateArrows();
     }
 
+    // 关闭灯箱时静默重置分析区为收起态（不带动画、不发请求）：下次打开
+    // 延续「默认收起、点击才加载」的按需约定；同会话切图仍保持展开态
+    function resetAnalysisState() {
+        if (!analysisTrigger || !analysisWrap) return;
+        analysisOpen = false;
+        analysisTrigger.setAttribute('aria-expanded', 'false');
+        analysisTrigger.classList.remove('is-open');
+        analysisWrap.setAttribute('aria-hidden', 'true');
+        analysisWrap.classList.remove('is-open');
+        analysisWrap.style.maxHeight = ''; // 清除开合残留内联
+        drawer.setFitAdjuster(null);
+        cancelCenterComp();
+    }
+
     function close() {
         lightbox.classList.remove('active');
+        resetAnalysisState(); // 展开的分析区随灯箱关闭收起：下次打开默认收起
         hideImgLoading();
         switching = false; // 转圈期关闭：残留的 switching 会阻塞下次首开的透明度恢复
         clearPendingSwitch(); // 摘除在途切图监听，防陈旧闭包在下一次打开时重放
         clearPendingGlow(); // 在途辉光淡入一并作废（关闭重开不残留隐藏态）
         clearPendingSlideOut(); // 在途滑出结束监听一并作废（关闭重开不残留陈旧重放）
+        cancelCenterComp(); // 关闭打断收起补偿：摘除 transform，不残留到下次打开
         closeBackdrop(); // 移除所有背景层（下次首开重建，不残留旧作品背景）
         lightboxImg.style.opacity = '0';
         if (lightboxImgGlow) lightboxImgGlow.style.opacity = '0';
@@ -678,6 +826,15 @@ export function initLightbox() {
 
     // 关闭
     if (lightboxClose) lightboxClose.addEventListener('click', close);
+
+    // 图像分析按需加载：触发行展开、区域底部收起按钮收起
+    // （初始收起态由模板类/aria 属性就位，无需 JS 初始化）
+    if (analysisTrigger) {
+        analysisTrigger.addEventListener('click', () => setAnalysisOpen(true));
+    }
+    if (analysisCollapse) {
+        analysisCollapse.addEventListener('click', () => setAnalysisOpen(false));
+    }
 
     // 分类/系列胶囊：点击关闭灯箱（跳转由 SPA 常规拦截处理）
     if (tagsEl) {

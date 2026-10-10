@@ -70,11 +70,23 @@ export function initMobileNav() {
     });
 
     // 3. 跨断点导航切换动画：宽→窄时菜单文字向右滑出（转换为汉堡），
-    //    窄→宽时汉堡消失、文字从右侧滑回原位；仅在断点跨越时播放，页面加载不触发
+    //    窄→宽时汉堡消失、文字从右侧滑回原位；仅在断点跨越时播放，页面加载不触发。
+    //    旋转导致的断点跨越不播放：该动画为「absolute + transform + 时长>0」，
+    //    恰是 WebKit 旋转后 clientWidth 永久取旧值（Bug 287042）的触发模式——
+    //    旋转时跳过动画、样式直接切换（桌面窗口缩放跨越断点仍保留动画）
     const mqDesktop = window.matchMedia('(min-width: 768px)');
+
+    // 加载时的屏幕朝向类型（iOS 16.4+ 提供 screen.orientation；不可用时为 null，
+    // 维持原有动画行为）
+    let lastOrientationType = (typeof screen !== 'undefined' && screen.orientation)
+        ? screen.orientation.type
+        : null;
 
     function animateNavCrossing(enteringDesktop) {
         if (prefersReducedMotion()) return;
+        // 清除菜单开合残留的内联 transition（同为触发模式：transform + 过渡
+        // 时长>0，transitionend 丢失时可能残留——断点跨越前先清干净）
+        nav.style.transition = '';
         const cls = enteringDesktop ? 'nav-slide-in' : 'nav-slide-out';
         nav.classList.remove('nav-slide-in', 'nav-slide-out');
         // 强制重排，保证快速往返切换时动画重新播放
@@ -95,7 +107,15 @@ export function initMobileNav() {
             if (e.matches && nav.classList.contains('active')) {
                 toggleMenu();
             }
-            animateNavCrossing(e.matches);
+            // 屏幕朝向类型变化（横屏↔竖屏）视为旋转：跳过滑出/滑入动画
+            const rotated = lastOrientationType !== null
+                && screen.orientation && screen.orientation.type !== lastOrientationType;
+            lastOrientationType = screen.orientation
+                ? screen.orientation.type
+                : lastOrientationType;
+            if (!rotated) {
+                animateNavCrossing(e.matches);
+            }
         });
     }
 }

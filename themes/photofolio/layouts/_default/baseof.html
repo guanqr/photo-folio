@@ -106,7 +106,15 @@
                         {{ end }}
                         {{ $chartsAny := or $lbCfg.tonal $lbCfg.saturation $lbCfg.hue $lbCfg.palette }}
                         {{ if $chartsAny }}
-                        <div class="lightbox-charts">
+                        {{/* 图像分析按需加载：EXIF 下方一行安静的文字触发，点击展开下方
+                            分析区（加载期只显示转圈、不显示文字），收起按钮位于区域底部 */}}
+                        <button class="lightbox-analysis-trigger" id="lightbox-analysis-trigger" type="button"
+                            aria-expanded="false" aria-controls="lightbox-analysis">
+                            <span>{{ i18n "lightbox_analysis" }}</span>
+                            {{ hugo.Data.svg.arrow_down | safeHTML }}
+                        </button>
+                        <div class="lightbox-analysis" id="lightbox-analysis" aria-hidden="true">
+                            <div class="lightbox-charts" id="lightbox-charts">
                         {{ end }}
                         {{ if $lbCfg.tonal }}
                         <div class="lightbox-tonal-wrap" id="lightbox-tonal-wrap"
@@ -172,6 +180,11 @@
                         </div>
                         {{ end }}
                         {{ if $chartsAny }}
+                            </div>
+                            <button class="lightbox-analysis-collapse" id="lightbox-analysis-collapse" type="button">
+                                <span>{{ i18n "lightbox_analysis_collapse" }}</span>
+                                {{ hugo.Data.svg.arrow_up | safeHTML }}
+                            </button>
                         </div>
                         {{ end }}
                         {{ if $lbCfg.story }}

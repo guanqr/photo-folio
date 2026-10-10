@@ -72,6 +72,12 @@ other = "飽和度"
 [lightbox_hue]
 other = "色相"
 
+[lightbox_analysis]
+other = "圖像分析"
+
+[lightbox_analysis_collapse]
+other = "收起圖像分析"
+
 [tonal_key_low]
 other = "低調"
 
