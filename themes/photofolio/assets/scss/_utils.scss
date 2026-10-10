@@ -40,7 +40,10 @@
 /* ===== Back to Top Button ===== */
 .back-to-top {
     position: fixed;
-    bottom: 2em;
+    /* 隐藏/显示用 bottom 位移（不用 transform——fixed + transform + 过渡时长>0
+       是 WebKit 旋转后视口宽度永久取旧值的常驻触发模式，iPad Safari 横竖屏
+       样式不切换的根因之一，故彻底移除 transform） */
+    bottom: -4em;
     right: 2em;
     width: 3em;
     height: 3em;
@@ -58,21 +61,19 @@
     /* 初始隐藏状态 */
     opacity: 0;
     visibility: hidden;
-    transform: translateY(1.5em);
-    transition: opacity var(--transition-opacity), visibility 0.3s ease, transform var(--transition-spring), background-color var(--transition-bg), color var(--transition-color);
+    transition: opacity var(--transition-opacity), visibility 0.3s ease, bottom var(--transition-spring), background-color var(--transition-bg), color var(--transition-color);
 
     &:hover {
         background-color: var(--color-accent);
         color: rgba(var(--rgb-white), 1);
         border-color: var(--color-accent);
-        transform: translateY(-0.2em);
     }
 
     /* 激活状态（滚动后显示） */
     &.active {
         opacity: 1;
         visibility: visible;
-        transform: translateY(0);
+        bottom: 2em;
     }
 
     svg {

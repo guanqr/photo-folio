@@ -216,15 +216,20 @@ export function initLightbox() {
     let backdropLayers = []; // 裸元素数组：最新层 = 末位；状态仅元素上的 _shown 标志
     let backdropPruneTimer = null;
 
-    // 滑动动画同时作用于主图与当前辉光层：辉光随主图一起移动与淡入淡出；
-    // 辉光为半分辨率盒（50% 宽），位移百分比按 2× 补偿保持与主图严格同步
+    // 滑动动画同时作用于主图与当前辉光层：辉光随主图一起移动与淡入淡出。
+    // 主图位移百分比按**自身盒宽**解析（object-fit: contain 的照片盒，竖构图时
+    // 窄于网格单元）——辉光按像素对齐主图实际位移（百分比补偿只对单元宽度
+    // 有效，竖构图下辉光会先于主图移出）
     const slideStyle = (pct, opacity, transition) => {
         const transform = `translateX(${pct}%)`;
         lightboxImg.style.transform = transform;
         lightboxImg.style.opacity = opacity;
         if (transition !== undefined) lightboxImg.style.transition = transition;
         if (activeGlow) {
-            activeGlow.style.transform = `translateX(${pct * 2}%)`;
+            const mainW = lightboxImg.offsetWidth; // 主图盒宽（照片渲染盒）
+            // scale(2) 必须并入 transform 内联（独立 scale 属性会把 transform
+            // 的位移也放大 2 倍——辉光滑出速度翻倍、与主图拖尾错位）
+            activeGlow.style.transform = `translateX(${(pct / 100) * mainW}px) scale(2)`;
             activeGlow.style.opacity = opacity;
             if (transition !== undefined) activeGlow.style.transition = transition;
         }
@@ -284,8 +289,9 @@ export function initLightbox() {
         el.style.transition = glowTransition;
         el.style.opacity = '1';
     };
-    // 辉光就绪监听（load/error 均视为就绪）：解码完成后仅当仍是最新可见层且
-    // 主图已开始滑入/揭示才淡入——不先于主图、不被快速连切取代（陈旧层自然失效）
+    // 辉光就绪监听（load/error 均视为就绪）：解码完成后仅当仍是最新可见层、
+    // 主图已开始滑入/揭示且**滑入已完成**（switching 结束）才淡入——滑入途中
+    // 淡入会在落点先于主图显现（残影拖尾），就绪晚到的由 slideInDone 补淡
     const attachGlowReady = (el) => {
         if (isImageReady(el)) {
             el._ready = true;
@@ -293,7 +299,7 @@ export function initLightbox() {
         }
         const onReady = () => {
             el._ready = true;
-            if (el === activeGlow && mainSlideStarted) {
+            if (el === activeGlow && mainSlideStarted && !switching) {
                 fadeGlowIn(el);
                 scheduleGlowPrune();
             }
@@ -346,6 +352,7 @@ export function initLightbox() {
             const card = wrapper.closest('[data-title]');
             currentPhotos.push({
                 src: img.dataset.fullSrc || img.src,
+                srcNarrow: (img.dataset.fullSrc || img.src).replace(/w_\d+/, 'w_1280'), // 窄屏灯箱主图（≤1000px 用）：首次光栅化成本约降 2.3×
                 thumb: img.src, // 网格缩略图（w_800）：背景毛玻璃与辉光层共用——与网格同 URL 保证灯箱打开即缓存命中，背景不会因新请求等待而黑屏
                 alt: img.alt,
                 title: card ? (card.dataset.title || '') : '',
@@ -578,13 +585,13 @@ export function initLightbox() {
         lightboxImg.style.transform = 'translateX(0)';
         lightboxImg.style.opacity = '1';
         // 辉光位置立即归位（不参与滑入移动——自己滑入会晚于主图到达中间），
-        // 仅在内容就绪时淡入；未就绪时保持隐藏（解码完成后由 attachGlowReady
-        // 的监听淡入）——防止空框先淡入、内容到达时突现的暗角断点，也不得先于
-        // 主图独自淡入（悬浮模糊残影）
+        // 滑入期间保持隐藏、滑入完成后才淡入（见 slideInDone）——防止辉光在
+        // 落点先于主图显现的残影拖尾，也不得先于主图独自淡入（悬浮模糊残影）；
+        // reduced-motion 无滑入过渡（transitionend 不触发），就绪即淡入
         if (activeGlow) {
             activeGlow.style.transition = 'none';
-            activeGlow.style.transform = 'translateX(0)';
-            if (activeGlow._ready) {
+            activeGlow.style.transform = 'scale(2)'; // 归位（scale 并入 transform，见 slideStyle）
+            if (reducedMotion && activeGlow._ready) {
                 fadeGlowIn(activeGlow);
                 scheduleGlowPrune();
             } else {
@@ -594,6 +601,11 @@ export function initLightbox() {
         lightboxImg.addEventListener('transitionend', function slideInDone() {
             lightboxImg.removeEventListener('transitionend', slideInDone);
             switching = false;
+            // 主图滑入完成：辉光就绪则淡入（就绪晚到的由 attachGlowReady 补淡）
+            if (activeGlow && activeGlow._ready) {
+                fadeGlowIn(activeGlow);
+                scheduleGlowPrune();
+            }
             // 只收尾主图（保留内联 opacity=1，CSS 基础值为 0）：辉光的透明度
             // 由就绪门控独立管理，此处不触碰——避免覆盖未就绪的隐藏态
             lightboxImg.style.transform = '';
@@ -632,13 +644,19 @@ export function initLightbox() {
             : 1;
         currentIndex = index;
         const p = currentPhotos[index];
+        // 窄屏（≤1000px，与抽屉断点一致）灯箱主图改用 w_1280：手机屏约 1080px
+        // 宽、观感无差；w_1920 的首次光栅化与背景淡入同窗争抢合成器是旧版
+        // Chromium 暗角恢复卡顿的剩余尖峰——桌面保持 w_1920
+        const narrowLightbox = window.matchMedia('(max-width: 1000px)').matches;
+        const displaySrc = (photo) => (narrowLightbox && photo.srcNarrow) || photo.src;
+        const src = displaySrc(p);
 
         if (currentPhotos.length > 1) {
-            const nextSrc = currentPhotos[(currentIndex + 1) % currentPhotos.length].src;
-            const prevSrc = currentPhotos[(currentIndex - 1 + currentPhotos.length) % currentPhotos.length].src;
+            const nextSrc = displaySrc(currentPhotos[(currentIndex + 1) % currentPhotos.length]);
+            const prevSrc = displaySrc(currentPhotos[(currentIndex - 1 + currentPhotos.length) % currentPhotos.length]);
             // 只保留当前图与左右邻居的预载引用：防止长时间翻看累积解码位图（每张 w_1920 约 10MB）
             preloadCache.forEach((_, url) => {
-                if (url !== p.src && url !== nextSrc && url !== prevSrc) {
+                if (url !== src && url !== nextSrc && url !== prevSrc) {
                     preloadCache.delete(url);
                 }
             });
@@ -653,8 +671,14 @@ export function initLightbox() {
             // 新层就绪后淡入），背景变化贯穿整个切换过程。
             // 新图未缓存时浏览器在 src 加载期间仍显示旧图——隐藏图片并转圈，
             // 加载完成后再滑入（与瀑布流加载指示器同款）
-            const cachedImg = preloadCache.get(p.src);
+            const cachedImg = preloadCache.get(src);
             const cached = isImageReady(cachedImg);
+
+            // 切换开始即复位主图揭示标志：滑出期间辉光就绪只登记、不得淡入——
+            // 否则缓存命中的新辉光会在旧图滑出途中就地显现（switching 要等
+            // 滑出结束才置位、mainSlideStarted 残留上一次的 true，门控会被穿过），
+            // 尾部叠出双影
+            mainSlideStarted = false;
 
             slideStyle(-dir * 12, '0', slideTransition);
 
@@ -682,11 +706,11 @@ export function initLightbox() {
                 pendingSlideOut = null;
                 switching = true; // 滑入期间 onLoad 不强制透明度
 
-                // 换内容：新图在进入侧待命（辉光层经 slideStyle 同步就位入口侧）
+                // 换内容：新图在进入侧待命（辉光层经 slideStyle 同步就位入口侧；
+                // mainSlideStarted 已在切换开始复位，辉光淡入由 startSlideIn 门控）
                 slideStyle(dir * 12, '0', 'none');
-                lightboxImg.src = p.src;
+                lightboxImg.src = src;
                 lightboxImg.alt = p.alt;
-                mainSlideStarted = false; // 主图尚未开始滑入：辉光不得先于主图淡入
                 renderPanel(p);
                 lightboxImg.offsetHeight; // 强制 reflow
 
@@ -718,6 +742,7 @@ export function initLightbox() {
         } else {
             lightboxImg.style.opacity = '0';
             closeGlow(); // 清空残留辉光层（关闭灯箱时通常已清空，兜底）
+            mainSlideStarted = false; // 首开复位：辉光不得先于主图揭示淡入
             // 新建当前辉光层（隐藏）：主图就绪后随其淡入（见 revealMain）
             if (lightboxImgArea) {
                 const glowEl = createGlowEl();
@@ -733,7 +758,7 @@ export function initLightbox() {
             // 元信息与图片同步：先全部隐藏，图片加载完成后随照片一起淡入
             revealSynced.forEach((el) => { el.style.opacity = '0'; });
 
-            lightboxImg.src = p.src;
+            lightboxImg.src = src;
             lightboxImg.alt = p.alt;
             openBackdrop(p.thumb || p.src);
             lightbox.classList.add('active');

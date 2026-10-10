@@ -86,9 +86,6 @@ export function initMobileNav() {
 
     function animateNavCrossing(enteringDesktop) {
         if (prefersReducedMotion()) return;
-        // 清除菜单开合残留的内联 transition（同为触发模式：transform + 过渡
-        // 时长>0，transitionend 丢失时可能残留——断点跨越前先清干净）
-        nav.style.transition = '';
         const cls = enteringDesktop ? 'nav-slide-in' : 'nav-slide-out';
         nav.classList.remove('nav-slide-in', 'nav-slide-out');
         // 强制重排，保证快速往返切换时动画重新播放
@@ -109,6 +106,9 @@ export function initMobileNav() {
             if (e.matches && nav.classList.contains('active')) {
                 toggleMenu();
             }
+            // 清除菜单开合残留的内联 transition（fixed + transform + 过渡时长>0
+            // 同属 WebKit 旋转视口 bug 的触发模式——旋转跳过动画时清理也照常执行）
+            nav.style.transition = '';
             // 屏幕朝向类型变化（横屏↔竖屏）视为旋转：跳过滑出/滑入动画
             const rotated = lastOrientationType !== null
                 && screen.orientation && screen.orientation.type !== lastOrientationType;

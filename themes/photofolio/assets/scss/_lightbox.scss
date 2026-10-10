@@ -192,9 +192,10 @@
    边缘的柔和过渡由 blur 滤镜像外溢出提供。内容经 object-fit: contain 与
    主图渲染矩形完全重合——辉光大小只随主图渲染大小变化，与窗口尺寸无关。
    半分辨率栅格化：0.5em 半径经 2× 放大视觉等同原 1em（与背景层同法，
-   淡入阶段光栅化尖峰约降至 1/16）；scale 用独立属性——JS 内联 transform
-   位移（滑出滑入）不会覆盖它，主图/辉光同步移动不受影响；
-   盒 50%×50% 由网格 place-items:center 自动居中。
+   淡入阶段光栅化尖峰约降至 1/16）；盒 50%×50% 由网格 place-items:center
+   自动居中。scale 并入 transform 属性（JS 内联 transform 同步带上 scale(2)）——
+   独立 scale 属性与 transform 的合成顺序会把 transform 的位移也放大 2 倍
+   （辉光滑出速度翻倍、与主图拖尾错位，harness 实测位移 192px vs 主图 96px）。
    层为动态创建（见 lightbox.js 辉光层模型）：每张作品一层、新层解码后
    淡入旧层剪枝——消除就地换 src（iOS 过滤图换源闪烁根因） */
 .lightbox-img-glow {
@@ -203,7 +204,7 @@
     object-fit: contain;
     border-radius: 0.25em;
     filter: blur(0.5em) saturate(1.1);
-    scale: 2;
+    transform: scale(2);
     transition: opacity 0.25s ease;
     pointer-events: none;
 }

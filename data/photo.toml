@@ -533,7 +533,7 @@ location = "江西"
 width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
-lens = ""
+lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
 featured = true
 
 [[photo]]
@@ -1102,6 +1102,22 @@ height = "1279"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
 series = "廣東的端午"
+
+[[photo]]
+src = "/images/photos/孤树牧归人.jpg"
+alt = "孤樹牧歸人"
+category = "scenery"
+focus = "66"
+iso = "1600"
+aperture = "6"
+shutter = "1/1000"
+time = "2026-09-24"
+place = "赤峰克什克騰旗烏蘭布統"
+location = "內蒙古"
+width = "1920"
+height = "1154"
+camera = "NIKON Z 8"
+lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
 
 [[photo]]
 src = "/images/photos/坝上秋驰.jpg"
