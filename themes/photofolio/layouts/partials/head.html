@@ -140,9 +140,8 @@
 <link rel="icon" type="image/svg+xml" href="{{ $svgFavicon | relURL }}" />
 <link rel="icon" type="image/png" href="{{ $pngFavicon | relURL }}" sizes="96x96" />
 <link rel="apple-touch-icon" href="{{ $appleTouchIcon | relURL }}" sizes="180x180" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-title" content="{{ .Site.Title }}" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black" />
-<meta name="mobile-web-app-capable" content="yes" />
+{{/* 不声明 Apple web-app meta（apple-mobile-web-app-capable 等）：会让 Safari
+   在浏览器模式下也按 Web App 候选处理、旋转后视口簿记不更新（iPad 横屏转竖屏
+   样式不切换的可疑根因，参考站无此声明、旋转正常）；独立模式由 manifest 接管 */}}
 <meta name="application-name" content="{{ .Site.Title }}" />
 <link rel="manifest" href="{{ $manifest | relURL }}" />

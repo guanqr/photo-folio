@@ -40,6 +40,10 @@
     object-fit: cover;
     filter: blur(1.25em) brightness(0.55);
     transform: scale(2.2); /* 2× 半分辨率补偿 + 原 1.1 放大防白边（1.1×2） */
+    /* 钉住合成层：旧版 Chromium 在 GPU 内存压力下会降级图层，降级期间 opacity
+       过渡每帧重跑滤镜链（荣耀暗角卡顿）；will-change 提示浏览器保持图层提升，
+       模糊只光栅化一次、融替纯纹理合成（参考站同样卡顿、未做此提示） */
+    will-change: opacity;
     pointer-events: none;
     opacity: 0;
     transition: opacity var(--transition-opacity); /* 首开淡入；切图淡入淡出由 JS 内联 0.7s 驱动（对齐参考站 duration-700） */

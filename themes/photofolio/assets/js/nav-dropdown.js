@@ -38,7 +38,14 @@ export function initNavDropdown() {
 
     if (mqDesktop.addEventListener) {
         mqDesktop.addEventListener('change', (e) => {
-            if (!e.matches) return;
+            if (!e.matches) {
+                // 进入窄屏：拆除 hover-ready（此前只在进入宽屏时武装、回到窄屏
+                // 不拆——残留的 hover-ready 配合触屏粘性 :hover 会让更高特异性的
+                // transform:none 规则恒压过 sub-open 的箭头旋转，子导航展开后
+                // 箭头不翻转、点击导航栏外才恢复）
+                disarmHover();
+                return;
+            }
             resetSubMenus(nav);
             disarmHover();
             if (armListener) {
