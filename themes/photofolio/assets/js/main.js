@@ -12,6 +12,7 @@ import { initCardsFlip } from './cards-flip.js';
 import { initSeriesAmbient } from './series-ambient.js';
 import { initPageTransition } from './page-transition.js';
 import { initCarousel } from './carousel.js';
+import { initViewportFix } from './viewport-fix.js';
 
 // 首页分类卡片：滚动进入视口时交错渐入
 function revealCategoryCards() {
@@ -58,6 +59,7 @@ function initGlobalModules() {
     initHeaderScroll();
     initMobileNav();
     initNavDropdown();
+    initViewportFix(); // iPad Safari 旋转视口兜底（见 viewport-fix.js）
 }
 
 // 首次加载
