@@ -7,50 +7,15 @@
 {{ $realPhotos := where $sortedPhotos "location" $locationName }}
 {{ $totalRealCount := len $realPhotos }}
 
-{{/* 地点小地图：该地点存在带 lat/lng 坐标的照片才渲染；同坐标照片聚合为一个光点 */}}
-{{ $mapAgg := dict }}
-{{ range $realPhotos }}
-    {{ if and .lat .lng }}
-        {{ $lat := .lat | float }}
-        {{ $lng := .lng | float }}
-        {{ $key := printf "%.4f,%.4f" $lat $lng }}
-        {{ $cur := index $mapAgg $key | default (dict "place" .place "lat" $lat "lng" $lng "count" 0) }}
-        {{ $cur = merge $cur (dict "count" (add $cur.count 1)) }}
-        {{ $mapAgg = merge $mapAgg (dict $key $cur) }}
-    {{ end }}
-{{ end }}
-{{ $mapPoints := slice }}
-{{ range $mapAgg }}{{ $mapPoints = $mapPoints | append . }}{{ end }}
-
-{{/* 有地图时：地图顶到页面最顶端（透明导航之后），高度与无背景图页面的头部区域一致 */}}
-<section class="gallery-page{{ if $mapPoints }} with-location-map{{ end }}">
-    <div class="gallery-header{{ if $mapPoints }} with-map{{ end }}">
-        {{ if $mapPoints }}
-        <div class="location-map-holder">
-            <div class="footprint-map location-map" id="location-map"></div>
-            <div class="container location-map-info-layer">
-                <div class="location-header-info">
-                    <h1 class="page-title">{{ .Title }}</h1>
-                    {{ with .Params.description }}
-                        <p class="page-description">{{ . }}</p>
-                    {{ end }}
-                    <p class="photo-count">{{ i18n "total_photos" (dict "Count" $totalRealCount) }}</p>
-                </div>
-            </div>
-        </div>
-        {{/* 数据脚本放在地图框之外：构建时 replaceChildren 会清空框内子元素 */}}
-        <script type="application/json" id="location-map-data">{{ dict "name" $locationName "points" $mapPoints | jsonify | safeJS }}</script>
-        {{ else }}
+<section class="gallery-page">
+    <div class="gallery-header">
         <div class="container">
-            <div class="location-header-info">
-                <h1 class="page-title">{{ .Title }}</h1>
-                {{ with .Params.description }}
-                    <p class="page-description">{{ . }}</p>
-                {{ end }}
-                <p class="photo-count">{{ i18n "total_photos" (dict "Count" $totalRealCount) }}</p>
-            </div>
+            <h1 class="page-title">{{ .Title }}</h1>
+            {{ with .Params.description }}
+                <p class="page-description">{{ . }}</p>
+            {{ end }}
+            <p class="photo-count">{{ i18n "total_photos" (dict "Count" $totalRealCount) }}</p>
         </div>
-        {{ end }}
     </div>
 
     <div class="masonry-container">

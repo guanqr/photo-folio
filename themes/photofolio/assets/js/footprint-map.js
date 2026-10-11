@@ -32,8 +32,8 @@ const MQ_NARROW = window.matchMedia('(max-width: 768px)');
 let landPromise = null;      // 陆地几何 fetch 记忆化（跨 SPA 页面切换复用）
 let provincesPromise = null; // 省级边界线 fetch 记忆化（同款）
 
-// 详情页小地图（footprint-location-map.js）共享同一份记忆化数据，避免重复下载
-export function loadLandData() {
+// 陆地/省界数据模块级记忆化（跨 SPA 页面切换复用）
+function loadLandData() {
     if (!landPromise) {
         landPromise = fetch(new URL('/maps/land-10m.json', document.baseURI)).then((res) => {
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -43,7 +43,7 @@ export function loadLandData() {
     return landPromise;
 }
 
-export function loadProvincesData() {
+function loadProvincesData() {
     if (!provincesPromise) {
         provincesPromise = fetch(new URL('/maps/provinces.json', document.baseURI)).then((res) => {
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -116,7 +116,7 @@ function destroyState() {
    视图范围 = 全部拍摄地点坐标的包围盒（+ 15% 边距 + 最小跨度守卫）。
    targetH 传入时（桌面分栏：地图框高度由等高卡片决定）按框的宽高比重算视图高，
    地图内容始终填满等高框（多出的区域表现为更多的网格/海洋，而非 letterbox） */
-export function fitProjection(points, targetH, minSpanX = MIN_SPAN_X, minSpanY = MIN_SPAN_Y, minH = MIN_H, maxH = MAX_H) {
+function fitProjection(points, targetH) {
     let lngMin = Infinity, lngMax = -Infinity;
     let latMin = Infinity, latMax = -Infinity;
     for (const p of points) {
@@ -130,14 +130,12 @@ export function fitProjection(points, targetH, minSpanX = MIN_SPAN_X, minSpanY =
 
     let dx = (lngMax - lngMin) * cos1;
     let dy = latMax - latMin;
-    // 最小跨度守卫可参数化：主地图默认 12°×9°（世界视野防单点退化），
-    // 详情页小地图传自身守卫（其点集已预先做过防退化展开）
-    dx = Math.max(dx, minSpanX);
-    dy = Math.max(dy, minSpanY);
+    // 最小跨度守卫：世界视野防单点退化
+    dx = Math.max(dx, MIN_SPAN_X);
+    dy = Math.max(dy, MIN_SPAN_Y);
 
-    // 视图高随数据纵横比锁定，限制在 minH~maxH 之间（主地图默认 500~1000；
-    // 详情页小地图传自身范围）；桌面分栏时由等高框决定（同样钳制）
-    const H = Math.min(maxH, Math.max(minH, targetH || Math.round((VIEW_W * dy) / dx)));
+    // 视图高随数据纵横比锁定，限制在 2:1 ~ 1:1 之间；桌面分栏时由等高框决定（同样钳制）
+    const H = Math.min(MAX_H, Math.max(MIN_H, targetH || Math.round((VIEW_W * dy) / dx)));
     const s = Math.min(VIEW_W / (dx * (1 + 2 * PAD)), H / (dy * (1 + 2 * PAD)));
 
     return {
@@ -150,7 +148,7 @@ export function fitProjection(points, targetH, minSpanX = MIN_SPAN_X, minSpanY =
     };
 }
 
-export function project(pr, lng, lat) {
+function project(pr, lng, lat) {
     return [pr.ox + pr.s * pr.cos1 * lng, pr.oy - pr.s * lat];
 }
 
@@ -158,7 +156,7 @@ export function project(pr, lng, lat) {
 let buildSeq = 0; // 构建序号：断点重建与 RO 重建可能并发，只允许最新一次构建生效
 
 // 仿射映射：等距圆柱投影变化（s/ox/oy/cos1）→ 旧坐标系到新坐标系的 matrix（x' = a·x + b，y' = c·y + d）
-export function matrixFrom(prFrom, prTo) {
+function matrixFrom(prFrom, prTo) {
     const a = (prTo.s * prTo.cos1) / (prFrom.s * prFrom.cos1);
     const b = prTo.ox - a * prFrom.ox;
     const c = prTo.s / prFrom.s;
@@ -367,8 +365,8 @@ async function build(root, points, previewData, previewPanel) {
         if (!root.isConnected || seq !== buildSeq) return;
         const prov = document.createElementNS(SVG_NS, 'g');
         prov.setAttribute('class', 'fm-provinces');
-        // 数据为 {quant, data: {省名: 多边形数组}}（详情页小地图按省取轮廓），
-        // 主地图取全部省的多边形 flat 合并绘制，量化口径按文件头还原
+        // 数据为 {quant, data: {省名: 多边形数组}}，主地图取全部省的多边形
+        // flat 合并绘制，量化口径按文件头还原
         buildLand(prov, Object.values(provData.data).flat(), pr, provData.quant); // 路径填充由 CSS 置 none
         prov.setAttribute('transform', matrixFrom(pr, state.view.pr));
         state.view.prov = prov;
@@ -573,7 +571,7 @@ function buildGrid(g, pr) {
 }
 
 /* 陆地 path：逐点等距圆柱映射；换日线断段守卫 */
-export function buildLand(g, polys, pr, quant = 20) {
+function buildLand(g, polys, pr, quant = 20) {
     for (const poly of polys) {
         const d = poly.map((ring) => buildRingPath(ring, pr, quant)).join(' ');
         const path = document.createElementNS(SVG_NS, 'path');
@@ -585,8 +583,8 @@ export function buildLand(g, polys, pr, quant = 20) {
 function buildRingPath(ring, pr, quant = 20) {
     let d = '';
     let prev = null;
-    // 数据为量化整数对（陆地/省界 20 单位/度 = 0.05°；城市边界 200 单位/度 = 0.005°，
-    // 见 scripts/generate-maps.mjs），投影前按口径还原为度
+    // 数据为量化整数对（陆地 20 单位/度 = 0.05°；省界 200 单位/度 = 0.005°，
+    // 见 tools/map-data/generate-maps.py），投影前按口径还原为度
     ring.forEach(([xq, yq], i) => {
         const [x, y] = project(pr, xq / quant, yq / quant);
         if (i === 0) {

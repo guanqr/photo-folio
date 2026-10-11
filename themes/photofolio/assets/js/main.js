@@ -8,7 +8,6 @@ import { initMasonry, initMasonryResize } from './masonry.js';
 import { initInfiniteScroll } from './infinite-scroll.js';
 import { initGalleryFilter, PARAM_KEYS } from './gallery-filter.js';
 import { initFootprintMap } from './footprint-map.js';
-import { initFootprintLocationMap } from './footprint-location-map.js';
 import { initCardsFlip } from './cards-flip.js';
 import { initSeriesAmbient } from './series-ambient.js';
 import { initPageTransition } from './page-transition.js';
@@ -45,7 +44,6 @@ function initPageModules() {
     initInfiniteScroll();
     initGalleryFilter();
     initFootprintMap();
-    initFootprintLocationMap();
     initSeriesAmbient();
     initBackToTop();
     initCarousel();
