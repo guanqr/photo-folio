@@ -22,5 +22,6 @@ __pycache__/
 
 # 内部设计计划文档，禁止发布
 DESIGN-PLANS.md
-# 代码审查记录（工作文档，不随代码库发布）
+# 代码审查记录（工作文档，不随代码库发布；两种大小写都要列——gitignore 匹配区分大小写）
 REVIEW.md
+review.MD
