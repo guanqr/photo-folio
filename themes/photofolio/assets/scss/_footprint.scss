@@ -209,6 +209,15 @@ a.footprint-preview {
         transition: fill 0.3s ease, stroke 0.3s ease;
     }
 
+    /* 省级边界线：纯描边、比海岸线更淡一档的内部分界，不喧宾夺主 */
+    .fm-provinces path {
+        fill: none;
+        stroke: var(--color-border);
+        stroke-width: 0.4;
+        opacity: 0.65;
+        transition: stroke 0.3s ease;
+    }
+
     .fm-grid line {
         stroke: var(--color-border);
         stroke-width: 0.5;
@@ -354,6 +363,99 @@ a.footprint-preview {
             color: var(--color-accent);
         }
     }
+}
+
+/* ===== 地点详情页小地图（/footprint/<slug>/） ===== */
+/* 地图满宽铺开（背景层不受容器宽度限制，扁平宽幅），
+   标题/描述/张数按容器宽度叠在地图左下角 */
+.gallery-header.with-map {
+    padding: 0; /* 地图顶到页面最顶端（透明导航之后） */
+}
+
+/* 有地图的详情页：去除页面顶部 4.5em 留白（地图顶到 0，同首页轮播） */
+.gallery-page.with-location-map {
+    margin-top: 0;
+}
+
+.location-map-holder {
+    position: relative;
+}
+
+.location-map {
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    /* 高度全宽固定 18.5em（≈ 导航 4.5em + 无背景图页面的头部区域高度，与作品分类页对齐）；
+       宽度随视口，视图纵横比由 JS 按渲染框动态适配（无裁切、所有光点可见） */
+    height: 18.5em;
+    aspect-ratio: auto;
+}
+
+/* 标题叠层：绝对定位在持有层底部，内部按 .container 宽度约束 */
+.location-map-info-layer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 1em;
+    z-index: 2; /* 压在地图 SVG 之上 */
+    pointer-events: none; /* 不挡地图交互（光点纯展示，标题无需点按） */
+}
+
+.location-header-info {
+    --info-max-w: min(36em, 80%); /* min() 放自定义属性值：libsass 不解析、原样透传 */
+    max-width: var(--info-max-w);
+    pointer-events: none;
+
+    .page-title {
+        margin-bottom: 0.25em;
+    }
+}
+
+/* 地区轮廓与海岸线：填充与主地图陆地一致（超出视野部分由 viewBox 裁剪） */
+.footprint-map .lm-region path,
+.footprint-map .lm-coast path {
+    fill: var(--color-overlay-subtle);
+    stroke: var(--color-border);
+    stroke-width: 0.5;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    transition: fill 0.3s ease, stroke 0.3s ease;
+}
+
+/* 城市边界线：清晰可见的参考线（明显粗于省界） */
+.footprint-map .lm-cities path {
+    fill: none;
+    stroke: var(--color-border);
+    stroke-width: 1.2;
+    opacity: 0.7;
+    transition: stroke 0.3s ease;
+}
+
+/* 城市名称标注：素净小字、无描边轮廓；字号由 JS 按渲染比例反算（CSS 不设） */
+.footprint-map .lm-labels text {
+    font-family: var(--font-meta);
+    fill: var(--color-text-muted);
+    opacity: 0.9;
+    pointer-events: none;
+    transition: fill var(--transition-color);
+}
+
+/* 经纬网格：与主地图同款，更淡 */
+.footprint-map .lm-grid line {
+    stroke: var(--color-border);
+    stroke-width: 0.3;
+    opacity: 0.45;
+    transition: stroke 0.3s ease;
+}
+
+/* 光点：金点（同主地图配色）、大小随照片数量增长（JS 计算半径），
+   无弹入动画、纯展示（原生 title 桌面悬停） */
+.footprint-map .lm-dot {
+    .lm-halo { fill: var(--color-accent-15); }
+    .lm-core { fill: var(--color-accent); }
+
+    .lm-halo,
+    .lm-core { transition: fill 0.3s ease; }
 }
 
 /* ===== 地图弹入动画（始终播放：手机等设备即使开启系统减弱动态效果也照常） ===== */

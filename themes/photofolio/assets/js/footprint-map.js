@@ -1,8 +1,9 @@
 /**
  * 足迹世界地图（/footprint/ 顶部）
  *
- * - 自绘 SVG 等距圆柱投影（零外部库），世界陆地几何为一次性生成的简化静态 JSON
- *   （同源 fetch、模块级 Promise 记忆化，sw 自动缓存；失败仅降级为网格 + 光点）
+ * - 自绘 SVG 等距圆柱投影（零外部库），世界陆地（Natural Earth 10m）与中国省级边界
+ *   均为一次性生成的简化静态 JSON（同源 fetch、模块级 Promise 记忆化，sw 自动缓存；
+ *   失败仅降级为网格 + 光点/陆地）
  * - 按省份/国家聚合光点：三层圆（光晕/中层/核心），半径随作品数增长；
  *   交错弹入动画，作品数最多的首点带呼吸脉冲环
  * - 弹层（地名 / 张数 / 年份跨度）：桌面悬停/键盘聚焦显示，触屏点按显示并常驻至外部点按/滚动；
@@ -28,7 +29,29 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 // 窄屏断点（与 CSS 分栏 min-width: 769px 对应）：模块级单例，避免每次点击/构建重建 MediaQueryList
 const MQ_NARROW = window.matchMedia('(max-width: 768px)');
 
-let landPromise = null;    // 陆地几何 fetch 记忆化（跨 SPA 页面切换复用）
+let landPromise = null;      // 陆地几何 fetch 记忆化（跨 SPA 页面切换复用）
+let provincesPromise = null; // 省级边界线 fetch 记忆化（同款）
+
+// 详情页小地图（footprint-location-map.js）共享同一份记忆化数据，避免重复下载
+export function loadLandData() {
+    if (!landPromise) {
+        landPromise = fetch(new URL('/maps/land-10m.json', document.baseURI)).then((res) => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+        });
+    }
+    return landPromise;
+}
+
+export function loadProvincesData() {
+    if (!provincesPromise) {
+        provincesPromise = fetch(new URL('/maps/provinces.json', document.baseURI)).then((res) => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+        });
+    }
+    return provincesPromise;
+}
 let state = null;          // { root, observer, resizeObserver, cleanup, tooltipCleanup,
                            //   revealIO, view, aspect, isNarrow, layoutRects, layoutAnimating }
 
@@ -93,7 +116,7 @@ function destroyState() {
    视图范围 = 全部拍摄地点坐标的包围盒（+ 15% 边距 + 最小跨度守卫）。
    targetH 传入时（桌面分栏：地图框高度由等高卡片决定）按框的宽高比重算视图高，
    地图内容始终填满等高框（多出的区域表现为更多的网格/海洋，而非 letterbox） */
-function fitProjection(points, targetH) {
+export function fitProjection(points, targetH, minSpanX = MIN_SPAN_X, minSpanY = MIN_SPAN_Y, minH = MIN_H, maxH = MAX_H) {
     let lngMin = Infinity, lngMax = -Infinity;
     let latMin = Infinity, latMax = -Infinity;
     for (const p of points) {
@@ -107,11 +130,14 @@ function fitProjection(points, targetH) {
 
     let dx = (lngMax - lngMin) * cos1;
     let dy = latMax - latMin;
-    dx = Math.max(dx, MIN_SPAN_X);
-    dy = Math.max(dy, MIN_SPAN_Y);
+    // 最小跨度守卫可参数化：主地图默认 12°×9°（世界视野防单点退化），
+    // 详情页小地图传自身守卫（其点集已预先做过防退化展开）
+    dx = Math.max(dx, minSpanX);
+    dy = Math.max(dy, minSpanY);
 
-    // 视图高随数据纵横比锁定，限制在 2:1 ~ 1:1 之间；桌面分栏时由等高框决定（同样钳制）
-    const H = Math.min(MAX_H, Math.max(MIN_H, targetH || Math.round((VIEW_W * dy) / dx)));
+    // 视图高随数据纵横比锁定，限制在 minH~maxH 之间（主地图默认 500~1000；
+    // 详情页小地图传自身范围）；桌面分栏时由等高框决定（同样钳制）
+    const H = Math.min(maxH, Math.max(minH, targetH || Math.round((VIEW_W * dy) / dx)));
     const s = Math.min(VIEW_W / (dx * (1 + 2 * PAD)), H / (dy * (1 + 2 * PAD)));
 
     return {
@@ -124,7 +150,7 @@ function fitProjection(points, targetH) {
     };
 }
 
-function project(pr, lng, lat) {
+export function project(pr, lng, lat) {
     return [pr.ox + pr.s * pr.cos1 * lng, pr.oy - pr.s * lat];
 }
 
@@ -132,7 +158,7 @@ function project(pr, lng, lat) {
 let buildSeq = 0; // 构建序号：断点重建与 RO 重建可能并发，只允许最新一次构建生效
 
 // 仿射映射：等距圆柱投影变化（s/ox/oy/cos1）→ 旧坐标系到新坐标系的 matrix（x' = a·x + b，y' = c·y + d）
-function matrixFrom(prFrom, prTo) {
+export function matrixFrom(prFrom, prTo) {
     const a = (prTo.s * prTo.cos1) / (prFrom.s * prFrom.cos1);
     const b = prTo.ox - a * prFrom.ox;
     const c = prTo.s / prFrom.s;
@@ -149,6 +175,7 @@ function updateProjection(root, prNew) {
     view.svg.setAttribute('viewBox', `0 0 ${prNew.W} ${prNew.H}`);
     view.grid.setAttribute('transform', matrixFrom(view.gridPr, prNew));
     if (view.land) view.land.setAttribute('transform', matrixFrom(view.landPr, prNew));
+    if (view.prov) view.prov.setAttribute('transform', matrixFrom(view.provPr, prNew));
     view.dotsData.forEach((d) => {
         const [x, y] = project(prNew, d.lng, d.lat);
         d.inner.setAttribute('transform', `translate(${x},${y})`);
@@ -311,17 +338,13 @@ async function build(root, points, previewData, previewPanel) {
     root.replaceChildren(svg, tooltip);
 
     // 视图状态：增量重投影依赖（重建路径只更新这些，不重建 DOM）
-    state.view = { svg, grid, gridPr: pr, land: null, landPr: null, dotsData, pr };
+    state.view = { svg, grid, gridPr: pr, land: null, landPr: null, prov: null, provPr: null, dotsData, pr };
 
     // 陆地几何：同源 fetch（记忆化的是解析后的 JSON——Response 只能消费一次，
     // SPA 返回重进本页时必须复用已解析数据；绝对路径避免解析到 /footprint/maps/…）
     // 失败仅 warn（且不记忆化，下次进入重试），网格 + 光点照常可用
     try {
-        landPromise = landPromise || fetch(new URL('/maps/land-110m.json', document.baseURI)).then((res) => {
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            return res.json();
-        });
-        const polys = await landPromise;
+        const polys = await loadLandData();
         if (!root.isConnected || seq !== buildSeq) return; // 构建中途 SPA 已跳走或被更新的构建取代
         const land = document.createElementNS(SVG_NS, 'g');
         land.setAttribute('class', 'fm-land');
@@ -335,6 +358,26 @@ async function build(root, points, previewData, previewPanel) {
         landPromise = null;
         console.warn('[footprint-map] land geometry load failed, showing grid and dots only', err);
         if (seq !== buildSeq || !root.isConnected) return; // 与成功路径同款守卫：被取代的构建不得动 DOM
+    }
+
+    // 省级边界线：与陆地同款加载管线（记忆化的是解析后的 JSON）；
+    // 失败仅 warn——陆地 + 网格 + 光点照常可用；图层插在陆地与网格之间（insertBefore(grid) 依次置于陆地之上）
+    try {
+        const provData = await loadProvincesData();
+        if (!root.isConnected || seq !== buildSeq) return;
+        const prov = document.createElementNS(SVG_NS, 'g');
+        prov.setAttribute('class', 'fm-provinces');
+        // 数据为 {quant, data: {省名: 多边形数组}}（详情页小地图按省取轮廓），
+        // 主地图取全部省的多边形 flat 合并绘制，量化口径按文件头还原
+        buildLand(prov, Object.values(provData.data).flat(), pr, provData.quant); // 路径填充由 CSS 置 none
+        prov.setAttribute('transform', matrixFrom(pr, state.view.pr));
+        state.view.prov = prov;
+        state.view.provPr = pr;
+        svg.insertBefore(prov, grid);
+    } catch (err) {
+        provincesPromise = null;
+        console.warn('[footprint-map] province boundaries load failed, showing map without province lines', err);
+        if (seq !== buildSeq || !root.isConnected) return;
     }
 
     if (seq !== buildSeq) return; // 成功路径在 await 后已守卫，此处兜底（如未缓存 fetch 快速完成）
@@ -530,20 +573,22 @@ function buildGrid(g, pr) {
 }
 
 /* 陆地 path：逐点等距圆柱映射；换日线断段守卫 */
-function buildLand(g, polys, pr) {
+export function buildLand(g, polys, pr, quant = 20) {
     for (const poly of polys) {
-        const d = poly.map((ring) => buildRingPath(ring, pr)).join(' ');
+        const d = poly.map((ring) => buildRingPath(ring, pr, quant)).join(' ');
         const path = document.createElementNS(SVG_NS, 'path');
         path.setAttribute('d', d);
         g.appendChild(path);
     }
 }
 
-function buildRingPath(ring, pr) {
+function buildRingPath(ring, pr, quant = 20) {
     let d = '';
     let prev = null;
-    ring.forEach(([x10, y10], i) => {
-        const [x, y] = project(pr, x10 / 10, y10 / 10);
+    // 数据为量化整数对（陆地/省界 20 单位/度 = 0.05°；城市边界 200 单位/度 = 0.005°，
+    // 见 scripts/generate-maps.mjs），投影前按口径还原为度
+    ring.forEach(([xq, yq], i) => {
+        const [x, y] = project(pr, xq / quant, yq / quant);
         if (i === 0) {
             d += `M${round1(x)},${round1(y)}`;
         } else if (prev !== null && Math.abs(x - prev) > pr.W / 2) {

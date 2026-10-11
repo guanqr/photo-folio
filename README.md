@@ -17,7 +17,7 @@
 - **无限滚动加载** — 照片超过 12 张时自动分批加载，位置稳定，列间均匀分布
 - **响应式动画过渡** — 列数切换、足迹时间线、移动端导航均带 FLIP/淡入动画
 - **照片卡片悬浮效果** — 鼠标悬停时整卡轻微上移（带回弹弹簧曲线）；卡片不显示元信息，标题、地点、日期与 EXIF 仅在灯箱放大后展示
-- **足迹时间线** — 按地区整理拍摄足迹（展示该地区全部作品，含系列内页）
+- **足迹时间线** — 按地区整理拍摄足迹（展示该地区全部作品，含系列内页）；地区详情页带**单独小地图**：该省/国轮廓 + 每张照片坐标分布（光点按地点聚合、悬停显示地点名与张数，中国省份取省界单独轮廓、海外地点用海岸线裁剪）
 - **PWA 支持** — Service Worker 离线缓存（版本化壳缓存随发布自动清理；哈希产物/字体走缓存即用后台更新；离线打开未访问过的链接回退到首页壳）
 - **Instant.page** — 链接预加载，提升浏览体验
 - **中文排版优化** — 使用 Glyph Correction、Noto Serif TC、I.MingCP、LXGW WenKai TC 等中文字体，支持本地字体注入
@@ -103,7 +103,7 @@ photo-folio/
 │   ├── photo.toml       # ★ 照片数据（集中管理）
 │   └── locations.toml   # 足迹地图坐标（按 location 名键控）
 ├── scripts/
-│   └── generate-land.mjs # 足迹地图陆地几何生成管线（一次性，零依赖）
+│   └── generate-maps.mjs # 足迹地图几何生成管线（陆地 10m + 中国省级边界，一次性，零依赖）
 ├── static/              # 静态文件（CNAME、manifest 等）
 ├── themes/
 │   └── photofolio/      # 自定义主题
@@ -136,6 +136,9 @@ location = "雲南"
 width = "1920"            # 原始像素宽高（由预处理脚本生成，横/竖构图据此推导）
 height = "1280"
 camera = "NIKON Z 5"      # 机身（灯箱「機身」行展示，缺失时以删除线占位）
+address = "浙江省杭州市西湖区曲院风荷"  # 详细地址（选填；相机无 GPS，由 geocode-photos.mjs 转经纬度）
+lat = "30.2534"           # 纬度（选填，脚本从 address 生成；地点详情页小地图光点）
+lng = "120.1320"          # 经度（同上）
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"  # 镜头（灯箱「鏡頭」行展示，缺失时以删除线占位）
 description = "照片描述（可选，用于 Lightbox 展示）"
 series = ""               # 系列名称（可选，同一系列的多张照片填写相同名称）
@@ -155,7 +158,8 @@ lng = 100.23
 ```
 
 - 没有坐标的地点不出现在地图上（时间线不受影响）；新增地点后地图视图会自动适配到全部拍摄点
-- 地图陆地几何为一次性生成的数据（`themes/photofolio/static/maps/land-110m.json`），如无特殊需要不必重新生成（管线：`node scripts/generate-land.mjs`）
+- 地图陆地与省界几何为一次性生成的数据（`themes/photofolio/static/maps/land-10m.json` 世界陆地、`provinces.json` 中国省级边界线按省索引，含港澳台），如无特殊需要不必重新生成（管线：`node scripts/generate-maps.mjs`）
+- **地点详情页小地图**：为照片填 `address`（详细地址）后运行 `node scripts/geocode-photos.mjs` 生成 `lat`/`lng`（需先申请高德开放平台「Web 服务」key，写在项目根目录 `.env`（`AMAP_KEY=你的key`，已 gitignore 不入库）或环境变量；脚本按 350ms 间隔串行请求、可重复运行）；有坐标的地点页自动渲染该省/国轮廓 + 光点分布
 
 ### 系列作品
 
