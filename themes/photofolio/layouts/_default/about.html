@@ -15,20 +15,7 @@
             </div>
         </div>
 
-        {{ if $author.equipment }}
-        <div class="about-equipment">
-            {{ range $author.equipment }}
-            <div class="equipment-group">
-                <h3 class="equipment-category">{{ .category }}</h3>
-                <ul class="equipment-list">
-                    {{ range .items }}
-                    <li>{{ . }}</li>
-                    {{ end }}
-                </ul>
-            </div>
-            {{ end }}
-        </div>
-        {{ end }}
+        {{ partial "about-stats.html" . }}
 
         <div class="about-copyright">
             <p>{{ i18n "copyright_notice" | safeHTML }}</p>

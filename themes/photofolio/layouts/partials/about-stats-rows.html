@@ -1,0 +1,16 @@
+{{/* 統計行列表：rows = [{name, count}]、max = 面板最大計數（條形基準）、
+     offset = 交錯延遲起始行號（折疊段續接用）、extraClass = 追加類名（折疊列表） */}}
+{{ $max := .max }}
+{{ $offset := default 0 .offset }}
+{{ $extraClass := .extraClass }}
+<ul class="stats-list {{ $extraClass }}">
+    {{ range $i, $row := .rows }}
+    {{ $w := 0 }}
+    {{ if and (gt $row.count 0) (gt $max 0) }}{{ $w = math.Round (mul (div (float $row.count) (float $max)) 100) }}{{ end }}
+    <li class="stats-row" style="--w: {{ $w }}%; --d: {{ mul (add $i $offset) 70 }}ms">
+        <span class="stats-label" title="{{ $row.name }}">{{ $row.name }}</span>
+        <span class="stats-bar-wrap"><span class="stats-bar"></span></span>
+        <span class="stats-num">{{ $row.count }}</span>
+    </li>
+    {{ end }}
+</ul>

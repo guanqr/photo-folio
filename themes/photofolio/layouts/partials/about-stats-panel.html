@@ -1,0 +1,24 @@
+{{/* 統計面板：title = 面板標題、icon = svg.toml 圖標鍵名、rows = [{name, count}]、
+     max = 面板最大計數（條形基準）、foldId = 折疊 checkbox 唯一 id。
+     超過 8 行時前 8 常顯 + 折疊其餘（隱藏 checkbox + label 純 CSS 切換，零 JS），
+     展開後收起按鈕位於列表底部（與燈箱「圖像分析」同款交互；details 的 summary 槽位
+     在 iOS/桌面均固定渲染於頂部、iOS 又不支援 details 上的 flex/order，故不用 details） */}}
+{{ $max := .max }}
+{{ $visible := first 8 .rows }}
+{{ $rest := after 8 .rows }}
+<div class="stats-panel">
+    <h3 class="stats-panel-title"><span class="stats-panel-icon">{{ index hugo.Data.svg .icon | safeHTML }}</span>{{ .title }}</h3>
+    {{ partial "about-stats-rows.html" (dict "rows" $visible "max" $max) }}
+    {{ if $rest }}
+    <div class="stats-fold">
+        <input type="checkbox" id="stats-fold-{{ .foldId }}" class="stats-fold-toggle">
+        {{ partial "about-stats-rows.html" (dict "rows" $rest "max" $max "offset" 8 "extraClass" "stats-fold-list") }}
+        <label class="stats-fold-btn" for="stats-fold-{{ .foldId }}">
+            <span class="stats-expand">{{ i18n "stats_expand" (dict "Count" (len $rest)) }}</span>
+            <span class="stats-collapse">{{ i18n "stats_collapse" }}</span>
+            <span class="stats-icon">{{ hugo.Data.svg.arrow_down | safeHTML }}</span>
+            <span class="stats-icon-up">{{ hugo.Data.svg.arrow_up | safeHTML }}</span>
+        </label>
+    </div>
+    {{ end }}
+</div>

@@ -22,7 +22,7 @@ other = "載入中..."
 other = "已加载全部作品"
 
 [exif_device]
-other = "設備"
+other = "機身"
 
 [exif_lens]
 other = "鏡頭"
@@ -251,3 +251,108 @@ other = "其他系列"
 
 [other_categories]
 other = "其他分類"
+
+[about_stats_title]
+other = "拍攝檔案"
+
+[stats_camera]
+other = "機身"
+
+[stats_focus]
+other = "焦距分佈"
+
+[stats_aperture]
+other = "光圈分佈"
+
+[stats_shutter]
+other = "快門分佈"
+
+[stats_iso]
+other = "感光度分佈"
+
+[stats_year]
+other = "年度拍攝走勢"
+
+[stats_year_before]
+other = "~{{ .Year }}"
+
+[stats_other_device]
+other = "其他設備"
+
+[stats_expand]
+other = "展開全部 {{ .Count }} 項"
+
+[stats_collapse]
+other = "收起"
+
+[stats_focus_uw]
+other = "超廣角 ≤16mm"
+
+[stats_focus_wide]
+other = "廣角 17–28mm"
+
+[stats_focus_std]
+other = "標準 29–50mm"
+
+[stats_focus_mid]
+other = "中長焦 51–85mm"
+
+[stats_focus_tele]
+other = "長焦 86–199mm"
+
+[stats_focus_ut]
+other = "超長焦 ≥200mm"
+
+[stats_aper_1]
+other = "≤f/4"
+
+[stats_aper_2]
+other = "f/4–5.6"
+
+[stats_aper_3]
+other = "f/5.6–8"
+
+[stats_aper_4]
+other = "f/8–11"
+
+[stats_aper_5]
+other = "≥f/11"
+
+[stats_shutter_1]
+other = "≤1/1000s"
+
+[stats_shutter_2]
+other = "1/500s"
+
+[stats_shutter_3]
+other = "1/250s"
+
+[stats_shutter_4]
+other = "1/125s"
+
+[stats_shutter_5]
+other = "1/60s"
+
+[stats_shutter_6]
+other = "1/30s–1s"
+
+[stats_shutter_7]
+other = "長曝 ≥1s"
+
+[stats_iso_1]
+other = "≤100"
+
+[stats_iso_2]
+other = "100–200"
+
+[stats_iso_3]
+other = "200–400"
+
+[stats_iso_4]
+other = "400–800"
+
+[stats_iso_5]
+other = "800–1600"
+
+[stats_iso_6]
+other = "≥1600"

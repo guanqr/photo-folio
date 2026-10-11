@@ -2,7 +2,7 @@
 .about-page { margin-top: 4.5em; }
 
 .about-container {
-    max-width: 40em;
+    max-width: var(--container-width); /* 与全站其他页面同宽（不再限 40em 窄栏） */
     margin: 0 auto;
     padding: 4em 1em 6em; /* 横向最小边距与窄屏一致（1em） */
 }
@@ -54,52 +54,201 @@
     transition: color var(--transition-color);
 }
 
-/* equipment */
-.about-equipment {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5em;
+/* ===== 拍攝檔案統計（條形圖，構建期數據、零 JS） ===== */
+/* 兩列卡片、同行等高（grid 行内 stretch）；窄屏（≤768px，與全站斷點一致）切單列 */
+.about-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 1em;
+    row-gap: 1em; /* 上下卡片间距与列间距一致 */
     margin-bottom: 2.5em;
+
+    @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+    }
 }
 
-.equipment-group {
+.about-stats-title {
+    grid-column: 1 / -1;
+    font-family: var(--font-heading);
+    font-size: var(--size-h3);
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 0;
+    transition: color var(--transition-color);
+}
+
+/* 面板错峰入场（沿用原设备区交错入场风格）；卡片样式与全站分类卡片一致 */
+.stats-panel {
+    background: var(--color-bg-card);
+    border: 0.0625em solid var(--color-border);
+    border-radius: 0.75em;
+    padding: 1.5em;
+    transition: border-color var(--transition-border), background-color var(--transition-bg);
     animation: fadeIn 0.5s ease both;
 
-    &:nth-child(1) { animation-delay: 0.2s; }
-    &:nth-child(2) { animation-delay: 0.3s; }
-    &:nth-child(3) { animation-delay: 0.4s; }
+    &:nth-child(2) { animation-delay: 0.1s; }
+    &:nth-child(3) { animation-delay: 0.2s; }
+    &:nth-child(4) { animation-delay: 0.3s; }
+    &:nth-child(5) { animation-delay: 0.4s; }
+    &:nth-child(6) { animation-delay: 0.5s; }
+    &:nth-child(7) { animation-delay: 0.6s; }
+    &:nth-child(8) { animation-delay: 0.7s; }
+}
 
-    h3 {
-        font-family: var(--font-meta);
-        font-size: var(--size-small);
-        color: var(--color-accent);
-        font-weight: 600;
-        margin-bottom: 0.4em;
-        transition: color var(--transition-color);
+.stats-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 0.45em;
+    font-family: var(--font-meta);
+    font-size: var(--size-small);
+    color: var(--color-accent);
+    font-weight: 600;
+    margin-bottom: 0.75em;
+    transition: color var(--transition-color);
+}
+
+.stats-panel-icon {
+    display: inline-flex;
+
+    svg {
+        width: 1.1em;
+        height: 1.1em;
     }
 }
 
-.equipment-list {
+.stats-list {
     list-style: none;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5em;
+    display: grid;
+    grid-template-columns: 7.5em 1fr 2.5em; /* 标签列与数字列均全站定宽：常显/折叠及各面板间条形轨道完全一致（auto 数字列会按各自最宽数字错位） */
+    column-gap: 0.875em; /* 标签与条形间隔一个文字大小 */
+    row-gap: 0.5em;
+    align-items: center;
+}
 
-    li {
-        background: var(--color-bg-card);
-        border: 0.0625em solid var(--color-border);
-        border-radius: 0.375em;
-        padding: 0.35em 0.85em;
-        font-size: var(--size-small);
-        color: var(--color-text-secondary);
-        transition: border-color var(--transition), color var(--transition), background var(--transition);
+.stats-row {
+    /* 行内三元素直接参与列表网格（display: contents）：标签/条形/数字按统一列对齐 */
+    display: contents;
+}
 
-        &:hover {
-            border-color: var(--color-accent);
-            color: var(--color-accent);
-            background: var(--color-accent-15);
-        }
+.stats-label {
+    font-family: var(--font-meta);
+    font-size: var(--size-small);
+    color: var(--color-text-secondary); /* muted 灰太暗，升一档可读性 */
+    text-align: right; /* 右对齐紧贴条形：短标签不留死空档，条形起点仍全站对齐 */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* 长镜头型号截断，完整名称经 title 悬停查看 */
+    transition: color var(--transition-color);
+}
+
+.stats-bar-wrap {
+    height: 0.45em;
+    border-radius: 0.25em;
+    background: var(--color-overlay-subtle);
+    overflow: hidden;
+    transition: background-color var(--transition-bg);
+}
+
+/* 条形宽度由模板内联 --w（数量/最大值百分比）决定，scaleX 生长避开 libsass min/max 陷阱 */
+.stats-bar {
+    display: block;
+    height: 100%;
+    width: var(--w, 0%);
+    border-radius: inherit;
+    background: var(--color-accent);
+    transform-origin: left center;
+    animation: statsGrow 0.8s ease-out both;
+    animation-delay: var(--d, 0ms);
+    transition: background-color var(--transition-bg);
+}
+
+@keyframes statsGrow {
+    from { transform: scaleX(0); }
+}
+
+.stats-num {
+    font-family: var(--font-meta);
+    font-size: var(--size-small);
+    color: var(--color-accent);
+    font-variant-numeric: tabular-nums;
+    text-align: left; /* 左对齐紧贴条形：数字与条形的间隔恒等于列间距（与左侧标签间隔一致）；
+                         右对齐时个位数字左侧留大片空档、视觉间隔远大于左侧 */
+    transition: color var(--transition-color);
+}
+
+/* 面板行数超 8 时的「展开全部」折叠：隐藏 checkbox + label 纯 CSS 切换（零 JS）——
+   details 的 summary 槽位在 iOS/桌面均固定渲染在顶部、iOS 又不支持 details 上的
+   flex/order，故改用普通元素 DOM 顺序（列表在前、按钮在后）：闭合时列表 display:none、
+   按钮自然在上，展开后按钮位于列表底部；箭头为真实 SVG 图标、与文字成对切换 */
+.stats-fold {
+    margin-top: 0.5em;
+}
+
+.stats-fold-toggle {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.stats-fold-list {
+    display: none;
+    margin-top: 0.5em;
+}
+
+.stats-fold-toggle:checked ~ .stats-fold-list {
+    display: grid; /* 折叠行直接呈现：不加淡入，数据即刻可见 */
+}
+
+/* 条形生长动画只属于常显行——隐藏区展开时数据条直接以完整宽度出现 */
+.stats-fold-list .stats-bar {
+    animation: none;
+}
+
+.stats-fold-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
+    margin-top: 0;
+    font-family: var(--font-meta);
+    font-size: var(--size-small);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: color var(--transition-color);
+
+    &:hover { color: var(--color-accent); }
+}
+
+.stats-fold-toggle:checked ~ .stats-fold-btn { margin-top: 0.75em; }
+
+.stats-fold-toggle:focus-visible ~ .stats-fold-btn { color: var(--color-accent); }
+
+.stats-icon,
+.stats-icon-up {
+    display: inline-flex;
+
+    svg {
+        width: 0.9em;
+        height: 0.9em;
     }
+}
+
+.stats-collapse,
+.stats-icon-up { display: none; }
+
+.stats-fold-toggle:checked ~ .stats-fold-btn {
+    .stats-expand,
+    .stats-icon { display: none; }
+
+    .stats-collapse,
+    .stats-icon-up { display: inline-flex; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stats-panel,
+    .stats-bar { animation: none; }
 }
 
 /* 版权声明 */

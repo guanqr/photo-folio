@@ -1,0 +1,166 @@
+{{/* ===== 關於頁「拍攝檔案」統計（構建期聚合，零 JS）=====
+     照片取數與全站一致：photo-sorted.html 返回 photo.toml 全部記錄（含組照內頁）。
+     機身排行：按具體值聚合、數量 desc（同數按名稱 asc 保證構建穩定）；
+     檔位面板（焦距/光圈/快門/感光度）：固定檔位順序、空檔隱藏；年度走勢升序、僅列有照片的年份。
+     條形寬度 = 數量 / 面板最大值（百分比），行級交錯延遲由 about-stats-rows.html 生成。 */}}
+
+{{ $photos := partial "photo-sorted.html" . }}
+
+{{/* 測試數據：data/photo-test.toml 存在時併入統計聚合——僅關於頁統計，
+    不影響全站任何頁面；測試完成刪除該文件即恢復真實統計。
+    文件名帶連字符、不能點號鏈式訪問，須用 index 形式 */}}
+{{ with index hugo.Data "photo-test" }}
+    {{ with .photo }}
+        {{ $photos = $photos | append . }}
+    {{ end }}
+{{ end }}
+
+{{/* —— 機身排行（數量 < 5 的設備歸併「其他設備」，列於排行尾部） —— */}}
+{{ $minKeep := 5 }}
+{{ $camCount := dict }}
+{{ range $photos }}
+    {{ with .camera }}
+        {{ $camCount = merge $camCount (dict . (add (default 0 (index $camCount .)) 1)) }}
+    {{ end }}
+{{ end }}
+{{ $camList := slice }}
+{{ range $k, $v := $camCount }}{{ $camList = $camList | append (dict "name" $k "count" $v) }}{{ end }}
+{{ $camList = sort $camList "count" "desc" "name" "asc" }}
+{{ $camKept := slice }}
+{{ $camOther := 0 }}
+{{ range $camList }}
+    {{ if ge .count $minKeep }}{{ $camKept = $camKept | append . }}
+    {{ else }}{{ $camOther = add $camOther .count }}{{ end }}
+{{ end }}
+{{ if gt $camOther 0 }}{{ $camKept = $camKept | append (dict "name" (i18n "stats_other_device") "count" $camOther) }}{{ end }}
+{{ $camList = $camKept }}
+{{ $camMax := 0 }}{{ range $camList }}{{ if gt .count $camMax }}{{ $camMax = .count }}{{ end }}{{ end }}
+
+{{/* —— 焦距分佈（六檔，空檔隱藏） —— */}}
+{{ $focusLabels := slice (i18n "stats_focus_uw") (i18n "stats_focus_wide") (i18n "stats_focus_std") (i18n "stats_focus_mid") (i18n "stats_focus_tele") (i18n "stats_focus_ut") }}
+{{ $focusCount := dict }}
+{{ range $photos }}
+    {{ with .focus }}
+        {{ $f := int . }}
+        {{ $label := "" }}
+        {{ if le $f 16 }}{{ $label = i18n "stats_focus_uw" }}
+        {{ else if le $f 28 }}{{ $label = i18n "stats_focus_wide" }}
+        {{ else if le $f 50 }}{{ $label = i18n "stats_focus_std" }}
+        {{ else if le $f 85 }}{{ $label = i18n "stats_focus_mid" }}
+        {{ else if lt $f 200 }}{{ $label = i18n "stats_focus_tele" }}
+        {{ else }}{{ $label = i18n "stats_focus_ut" }}{{ end }}
+        {{ $focusCount = merge $focusCount (dict $label (add (default 0 (index $focusCount $label)) 1)) }}
+    {{ end }}
+{{ end }}
+{{ $focusRows := slice }}
+{{ range $focusLabels }}{{ $c := default 0 (index $focusCount .) }}{{ if gt $c 0 }}{{ $focusRows = $focusRows | append (dict "name" . "count" $c) }}{{ end }}{{ end }}
+{{ $focusMax := 0 }}{{ range $focusRows }}{{ if gt .count $focusMax }}{{ $focusMax = .count }}{{ end }}{{ end }}
+
+{{/* —— 光圈分佈（標準光圈檔區間五檔，固定順序、空檔隱藏） —— */}}
+{{ $aperLabels := slice (i18n "stats_aper_1") (i18n "stats_aper_2") (i18n "stats_aper_3") (i18n "stats_aper_4") (i18n "stats_aper_5") }}
+{{ $aperCount := dict }}
+{{ range $photos }}
+    {{ with .aperture }}
+        {{ $v := float . }}
+        {{ $label := "" }}
+        {{ if le $v 4 }}{{ $label = i18n "stats_aper_1" }}
+        {{ else if le $v 5.6 }}{{ $label = i18n "stats_aper_2" }}
+        {{ else if le $v 8 }}{{ $label = i18n "stats_aper_3" }}
+        {{ else if le $v 11 }}{{ $label = i18n "stats_aper_4" }}
+        {{ else }}{{ $label = i18n "stats_aper_5" }}{{ end }}
+        {{ $aperCount = merge $aperCount (dict $label (add (default 0 (index $aperCount $label)) 1)) }}
+    {{ end }}
+{{ end }}
+{{ $aperRows := slice }}
+{{ range $aperLabels }}{{ $c := default 0 (index $aperCount .) }}{{ if gt $c 0 }}{{ $aperRows = $aperRows | append (dict "name" . "count" $c) }}{{ end }}{{ end }}
+{{ $aperMax := 0 }}{{ range $aperRows }}{{ if gt .count $aperMax }}{{ $aperMax = .count }}{{ end }}{{ end }}
+
+{{/* —— 快門天梯（1/N 與裸秒數統一歸檔，七檔） —— */}}
+{{ $shutterLabels := slice (i18n "stats_shutter_1") (i18n "stats_shutter_2") (i18n "stats_shutter_3") (i18n "stats_shutter_4") (i18n "stats_shutter_5") (i18n "stats_shutter_6") (i18n "stats_shutter_7") }}
+{{ $shutterCount := dict }}
+{{ range $photos }}
+    {{ with .shutter }}
+        {{ $label := "" }}
+        {{ if in . "/" }}
+            {{ $den := int (index (split . "/") 1) }}
+            {{ if ge $den 1000 }}{{ $label = i18n "stats_shutter_1" }}
+            {{ else if ge $den 500 }}{{ $label = i18n "stats_shutter_2" }}
+            {{ else if ge $den 250 }}{{ $label = i18n "stats_shutter_3" }}
+            {{ else if ge $den 125 }}{{ $label = i18n "stats_shutter_4" }}
+            {{ else if ge $den 60 }}{{ $label = i18n "stats_shutter_5" }}
+            {{ else }}{{ $label = i18n "stats_shutter_6" }}{{ end }}
+        {{ else }}
+            {{ $sec := int . }}
+            {{ if ge $sec 1 }}{{ $label = i18n "stats_shutter_7" }}
+            {{ else }}{{ warnf "photo.toml 快門值無法歸檔（已忽略）：%s" . }}{{ end }}
+        {{ end }}
+        {{ with $label }}
+            {{ $shutterCount = merge $shutterCount (dict . (add (default 0 (index $shutterCount .)) 1)) }}
+        {{ end }}
+    {{ end }}
+{{ end }}
+{{ $shutterRows := slice }}
+{{ range $shutterLabels }}{{ $c := default 0 (index $shutterCount .) }}{{ if gt $c 0 }}{{ $shutterRows = $shutterRows | append (dict "name" . "count" $c) }}{{ end }}{{ end }}
+{{ $shutterMax := 0 }}{{ range $shutterRows }}{{ if gt .count $shutterMax }}{{ $shutterMax = .count }}{{ end }}{{ end }}
+
+{{/* —— 感光度分佈（整百合併六檔：邊界全為整百，空檔隱藏） —— */}}
+{{ $isoLabels := slice (i18n "stats_iso_1") (i18n "stats_iso_2") (i18n "stats_iso_3") (i18n "stats_iso_4") (i18n "stats_iso_5") (i18n "stats_iso_6") }}
+{{ $isoCount := dict }}
+{{ range $photos }}
+    {{ with .iso }}
+        {{ $v := int . }}
+        {{ $label := "" }}
+        {{ if le $v 100 }}{{ $label = i18n "stats_iso_1" }}
+        {{ else if le $v 200 }}{{ $label = i18n "stats_iso_2" }}
+        {{ else if le $v 400 }}{{ $label = i18n "stats_iso_3" }}
+        {{ else if le $v 800 }}{{ $label = i18n "stats_iso_4" }}
+        {{ else if le $v 1600 }}{{ $label = i18n "stats_iso_5" }}
+        {{ else }}{{ $label = i18n "stats_iso_6" }}{{ end }}
+        {{ $isoCount = merge $isoCount (dict $label (add (default 0 (index $isoCount $label)) 1)) }}
+    {{ end }}
+{{ end }}
+{{ $isoRows := slice }}
+{{ range $isoLabels }}{{ $c := default 0 (index $isoCount .) }}{{ if gt $c 0 }}{{ $isoRows = $isoRows | append (dict "name" . "count" $c) }}{{ end }}{{ end }}
+{{ $isoMax := 0 }}{{ range $isoRows }}{{ if gt .count $isoMax }}{{ $isoMax = .count }}{{ end }}{{ end }}
+
+{{/* —— 年度拍攝走勢（升序，僅列出有照片的年份；yearMergeBefore 以前合併為一項，配置見 hugo.toml） —— */}}
+{{ $yearMergeBefore := .Site.Params.aboutStats.yearMergeBefore | default 2024 }}
+{{ $yearCount := dict }}
+{{ $years := slice }}
+{{ range $photos }}
+    {{ $y := .time | time.Format "2006" | int }}
+    {{ $yk := printf "%d" $y }}
+    {{ if not (in $years $yk) }}{{ $years = $years | append $yk }}{{ end }}
+    {{/* Hugo 模板 dict 一律字符串键：年份计数键用字符串形式，查表同样 */}}
+    {{ $yearCount = merge $yearCount (dict $yk (add (default 0 (index $yearCount $yk)) 1)) }}
+{{ end }}
+{{ $years = sort $years "value" "asc" }}
+{{ $yearList := slice }}
+{{ $earlySum := 0 }}
+{{ range $years }}
+    {{ if lt (int .) $yearMergeBefore }}
+        {{ $earlySum = add $earlySum (index $yearCount .) }}
+    {{ end }}
+{{ end }}
+{{ if gt $earlySum 0 }}
+    {{ $yearList = $yearList | append (dict "name" (i18n "stats_year_before" (dict "Year" (sub $yearMergeBefore 1))) "count" $earlySum) }}
+{{ end }}
+{{ range $years }}
+    {{ if ge (int .) $yearMergeBefore }}
+        {{ $yearList = $yearList | append (dict "name" . "count" (index $yearCount .)) }}
+    {{ end }}
+{{ end }}
+{{ $yearMax := 0 }}{{ range $yearList }}{{ if gt .count $yearMax }}{{ $yearMax = .count }}{{ end }}{{ end }}
+
+{{/* ===== 渲染 ===== */}}
+{{ if $photos }}
+<section class="about-stats">
+    <h2 class="about-stats-title">{{ i18n "about_stats_title" }}</h2>
+    {{ partial "about-stats-panel.html" (dict "title" (i18n "stats_camera") "icon" "camera" "rows" $camList "max" $camMax "foldId" "camera") }}
+    {{ partial "about-stats-panel.html" (dict "title" (i18n "stats_focus") "icon" "focal" "rows" $focusRows "max" $focusMax "foldId" "focus") }}
+    {{ partial "about-stats-panel.html" (dict "title" (i18n "stats_aperture") "icon" "aperture" "rows" $aperRows "max" $aperMax "foldId" "aperture") }}
+    {{ partial "about-stats-panel.html" (dict "title" (i18n "stats_shutter") "icon" "shutter" "rows" $shutterRows "max" $shutterMax "foldId" "shutter") }}
+    {{ partial "about-stats-panel.html" (dict "title" (i18n "stats_iso") "icon" "iso" "rows" $isoRows "max" $isoMax "foldId" "iso") }}
+    {{ partial "about-stats-panel.html" (dict "title" (i18n "stats_year") "icon" "trend_up" "rows" $yearList "max" $yearMax "foldId" "year") }}
+</section>
+{{ end }}
