@@ -149,6 +149,11 @@ def run():
     OUTPUT_FOLDER = config["output_dir"]
     TOML_PATH = config["toml_path"]
 
+    if not os.path.isdir(INPUT_FOLDER):
+        print(f"❌ 输入目录不存在：{INPUT_FOLDER}")
+        print("   请检查 pipeline_config.json 的 input_dir（原图目录）后重试")
+        return
+
     print("===== 开始处理 =====")
     processed_files = batch_process(INPUT_FOLDER, OUTPUT_FOLDER, toml_path=TOML_PATH)
     print("===== 全部完成 =====")
