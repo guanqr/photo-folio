@@ -7,6 +7,8 @@
 
 html {
     height: 100%;
+    /* 默认暗色主题：UA 原生件（滚动条/表单控件/取色器）同步暗色观感 */
+    color-scheme: dark;
 }
 
 body {
@@ -52,16 +54,29 @@ body {
 }
 
 :root {
+    /* ═══ 固定暗色分量（单源，不随明暗主题切换，仅 :root 定义）═══
+       :root 的 --rgb-* 暗色值即本组别名（改动同步生效）；
+       灯箱组件、亮色首页顶部强制暗色导航与首页轮播背景/进度条内
+       重新声明被亮色主题覆盖的语义变量时引用本组 */
+    --dark-rgb-bg: 14, 19, 22; /* #0e1316 */
+    --dark-rgb-bg-raised: 20, 25, 29; /* 与背景同色系，逐级略亮 */
+    --dark-rgb-card: 24, 30, 35;
+    --dark-rgb-text: 232, 232, 232;
+    --dark-rgb-text-secondary: 153, 153, 153;
+    --dark-rgb-text-muted: 102, 102, 102;
+    --dark-rgb-accent: 121, 175, 165; /* hsl(169, 25%, 58%) 转 RGB */
+    --dark-rgb-border: 36, 43, 50;
+
     /* ═══ RGB 原色（唯一颜色定义，后面全部引用这些分量）═══
-       暗色主题底色为蓝灰色调（偏蓝灰，非纯黑） */
-    --rgb-bg: 14, 19, 22; /* #0e1316 */
-    --rgb-bg-raised: 20, 25, 29; /* 与背景同色系，逐级略亮 */
-    --rgb-card: 24, 30, 35;
-    --rgb-text: 232, 232, 232;
-    --rgb-text-secondary: 153, 153, 153;
-    --rgb-text-muted: 102, 102, 102;
-    --rgb-accent: 121, 175, 165; /* hsl(169, 25%, 58%) 转 RGB */
-    --rgb-border: 36, 43, 50;
+       暗色主题底色为蓝灰色调（偏蓝灰，非纯黑）——暗色值引用上方固定暗色分量 */
+    --rgb-bg: var(--dark-rgb-bg);
+    --rgb-bg-raised: var(--dark-rgb-bg-raised);
+    --rgb-card: var(--dark-rgb-card);
+    --rgb-text: var(--dark-rgb-text);
+    --rgb-text-secondary: var(--dark-rgb-text-secondary);
+    --rgb-text-muted: var(--dark-rgb-text-muted);
+    --rgb-accent: var(--dark-rgb-accent);
+    --rgb-border: var(--dark-rgb-border);
     --rgb-white: 255, 255, 255;
     --rgb-black: 0, 0, 0;
 
@@ -107,6 +122,15 @@ body {
     /* 轮播大标题文字投影（标题/副标题/胶囊按钮共用） */
     --carousel-text-shadow: 0 0.1em 0.5em rgba(var(--rgb-black), 0.5);
 
+    /* 足迹地图区块配色（明暗主题各自定义，亮色下加深保证可读性） */
+    --color-map-fill: rgba(var(--rgb-white), 0.1);
+    --color-map-border: rgb(var(--rgb-border));
+
+    /* 首页轮播背景：固定暗色卡片色——轮播始终为暗色视觉（亮色下 bg-card
+       是暖白，图片加载/交叉淡化时会透出白底、顶部强制白字导航不可读）；
+       中转成语义变量（rgb(var()) 直接写普通属性 Sass 会当函数求值报错） */
+    --color-carousel-bg: rgb(var(--dark-rgb-card));
+
     --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-35: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     /* 图表过渡（曝光灰階括号/占比条/JS 曲线形变共用）：时长与缓动单源——
@@ -133,18 +157,23 @@ body {
     --z-skip-link: 10000;    /* 无障碍跳转链接 */
 
     --container-width: 87.5em;
+    /* 正文底部留白单源：与页脚 margin-top 2em 合计 3.5em（与首页区块间距一致） */
+    --space-footer-gap: 1.5em;
 }
 
 /* ===== Light Mode (明亮模式) ===== */
 [data-theme="light"] {
-    --rgb-bg: 248, 249, 250;
-    --rgb-bg-raised: 233, 236, 239;
-    --rgb-card: 255, 255, 255;
-    --rgb-text: 33, 37, 41;
-    --rgb-text-secondary: 73, 80, 87;
-    --rgb-text-muted: 108, 117, 125;
-    --rgb-accent: 121, 175, 165; /* hsl(169, 25%, 58%) 转 RGB */
-    --rgb-border: 222, 226, 230;
+    color-scheme: light; /* UA 原生件（滚动条/表单控件/取色器）随亮色主题 */
+
+    /* 暖纸色板：全部与 #f5f4ef 同调（色温统一为暖黄灰，明暗层级与暗色主题对应） */
+    --rgb-bg: 245, 244, 239; /* #f5f4ef——暖米白（hsl(50, 23%, 95%)） */
+    --rgb-bg-raised: 235, 232, 221; /* #ebe8dd——暖米灰，二级背景面 */
+    --rgb-card: 253, 251, 245; /* #fdfbf5——暖白，比背景亮一档 */
+    --rgb-text: 41, 38, 31; /* #29261f——近黑带轻微暖意，白底对比度 13.7 */
+    --rgb-text-secondary: 92, 86, 74; /* #5c564a——暖灰褐，对比度 6.6 */
+    --rgb-text-muted: 111, 103, 89; /* #6f6759——暖中灰，白底对比度 5.1（≥ AA 4.5） */
+    --rgb-accent: 47, 112, 104; /* #2f7068（hsl(173, 41%, 31%)）——亮色下更深的墨绿保证可读性 */
+    --rgb-border: 222, 217, 203; /* #ded9cb——暖浅灰 */
 
     --color-bg: rgb(var(--rgb-bg));
     --color-bg-secondary: rgb(var(--rgb-bg-raised));
@@ -174,11 +203,11 @@ body {
     --color-nav-bg: rgb(var(--rgb-bg)); /* 完全不透明 */
     --color-lightbox-bg: rgb(var(--rgb-black)); /* 不透光纯黑（与参考网站灯箱一致；移动端高亮屏不透视站内文字） */
 
-    /* 首页轮播顶部渐变（亮色主题：白色渐变，保证深色导航文字可读） */
-    --carousel-top-overlay: linear-gradient(to bottom, rgba(var(--rgb-white), 0.7), rgba(var(--rgb-white), 0));
-    --carousel-text-shadow: 0 0.1em 0.5em rgba(var(--rgb-black), 0.4);
-
     --color-overlay-subtle: rgba(var(--rgb-black), 0.05);
+
+    --color-map-fill: rgba(var(--rgb-black), 0.09); /* 亮色：陆地/区块填充加深一档 */
+    --rgb-map-border: 169, 162, 147;                /* #a9a293 亮色分量：省/国分界线加深一档（暖灰与纸色板同调） */
+    --color-map-border: rgb(var(--rgb-map-border));
 }
 
 img { max-width: 100%; height: auto; display: block; }

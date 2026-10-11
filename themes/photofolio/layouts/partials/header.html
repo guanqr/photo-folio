@@ -9,6 +9,11 @@
         </a>
         
         <div class="header-actions">
+            <button id="theme-toggle" class="theme-toggle" aria-label="{{ i18n "theme_toggle" }}">
+                <span class="icon-sun">{{ hugo.Data.svg.sun | safeHTML }}</span>
+                <span class="icon-moon">{{ hugo.Data.svg.moon | safeHTML }}</span>
+            </button>
+
             <nav class="site-nav" id="site-nav">
                 <ul>
                     {{ range .Site.Menus.main }}

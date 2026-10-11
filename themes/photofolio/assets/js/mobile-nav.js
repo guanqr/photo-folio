@@ -10,16 +10,20 @@ import { prefersReducedMotion, BP_DESKTOP_MIN } from './utils.js';
 export function initMobileNav() {
     const btn = document.getElementById('nav-toggle');
     const nav = document.getElementById('site-nav');
+    const themeBtn = document.getElementById('theme-toggle');
 
     if (!btn || !nav) return;
 
     const TRANSITION_STYLE =
         'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, visibility 0.3s, ' +
-        'background 0.5s ease, backdrop-filter 0.5s ease, -webkit-backdrop-filter 0.5s ease';
+        'background 0.5s ease, backdrop-filter 0.5s ease, -webkit-backdrop-filter 0.5s ease, ' +
+        'box-shadow 0.5s ease';
 
-    // 仅位移/淡入的过渡（页面已滚动时用：面板直接不透明打开，不做背景渐变）
+    // 仅位移/淡入的过渡（页面已滚动时用：面板直接不透明打开，不做背景渐变；
+    // 底部阴影仍随开合渐入渐出，与未滚动态一致）
     const TRANSITION_STYLE_NO_BG =
-        'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, visibility 0.3s';
+        'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, visibility 0.3s, ' +
+        'box-shadow 0.5s ease';
 
     function toggleMenu() {
         // 页面未滚动（导航栏透明）时，面板从透明渐变到不透明；
@@ -60,11 +64,13 @@ export function initMobileNav() {
         toggleMenu();
     });
 
-    // 2. 点击页面空白处关闭菜单
+    // 2. 点击页面空白处关闭菜单（主题切换按钮除外：菜单展开时切明暗不应收起菜单，
+    //    面板内容原地随主题变色）
     document.addEventListener('click', (e) => {
         if (nav.classList.contains('active') &&
             !nav.contains(e.target) &&
-            !btn.contains(e.target)) {
+            !btn.contains(e.target) &&
+            !(themeBtn && themeBtn.contains(e.target))) {
             toggleMenu();
         }
     });

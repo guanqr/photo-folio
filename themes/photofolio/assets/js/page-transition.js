@@ -61,6 +61,22 @@ async function loadContent(url) {
         // 替换主内容
         main.innerHTML = newMain.innerHTML;
 
+        // 同步 is-home 标志：内容替换不会重渲染 body 类，不更新则
+        // 首页跳到其他页后 is-home 残留——亮色主题首页顶部强制暗色导航规则
+        // （.is-home 限定）被错误应用到其他页面；反向跳转同样缺失。
+        // 只动这一个标志（classList.toggle 幂等），保留未来任何动态 body 类
+        const headerEl = document.querySelector('.site-header');
+        if (headerEl) {
+            // 同步期间抑制头部颜色过渡：白字↔深色的 0.3s 过渡若落在新页
+            // 淡入期间，白字压在米色底上不可读；抑制类 + 强制重排让换色瞬时完成
+            headerEl.classList.add('no-color-transition');
+            document.body.classList.toggle('is-home', doc.body.classList.contains('is-home'));
+            void headerEl.offsetWidth;
+            headerEl.classList.remove('no-color-transition');
+        } else {
+            document.body.classList.toggle('is-home', doc.body.classList.contains('is-home'));
+        }
+
         // 更新标题
         const newTitle = doc.querySelector('title');
         if (newTitle) document.title = newTitle.textContent;
@@ -72,12 +88,11 @@ async function loadContent(url) {
         // 子导航展开态一并重置——否则下次打开菜单时子导航仍是展开的
         const nav = document.getElementById('site-nav');
         const navBtn = document.getElementById('nav-toggle');
-        const header = document.querySelector('.site-header');
         if (nav && nav.classList.contains('active')) {
             nav.style.transition = 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, visibility 0.3s';
             nav.classList.remove('active');
             if (navBtn) navBtn.classList.remove('active');
-            if (header) header.classList.remove('menu-open');
+            if (headerEl) headerEl.classList.remove('menu-open');
             resetSubMenus(nav);
             nav.addEventListener('transitionend', function handler() {
                 nav.removeEventListener('transitionend', handler);

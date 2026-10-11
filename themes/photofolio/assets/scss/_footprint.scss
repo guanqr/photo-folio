@@ -18,7 +18,7 @@
             align-items: stretch; /* 两列等高：行高由右侧分类卡片（自然高度）决定 */
             max-width: var(--container-width);
             margin: 0 auto;
-            padding: 2em 1em 6em; /* 顶部 2em 与页头分隔线留空隙；横向 1em 与窄屏一致 */
+            padding: 2em 1em var(--space-footer-gap); /* 顶部 2em 与页头分隔线留空隙；底部与页脚间距统一（--space-footer-gap）；横向 1em 与窄屏一致 */
 
             .footprint-map-section {
                 grid-area: map;
@@ -55,14 +55,14 @@
 .footprint-preview-wrap {
     max-width: 68.75em;
     margin: 0 auto;
-    padding: 2em 1em 6em; /* 窄屏：顶部 2em = 横线与卡片之间的距离；横向留白与 .container 一致 */
+    padding: 2em 1em var(--space-footer-gap); /* 窄屏：顶部 2em = 横线与卡片之间的距离；底部与页脚间距统一（--space-footer-gap）；横向留白与 .container 一致 */
     border-top: 0.0625em solid var(--color-border); /* 窄屏与地图分隔 */
     transition: border-color var(--transition-border);
 
     @media (min-width: 769px) {
         max-width: none;
         margin: 0;
-        padding: 1em 1em 6em; /* 无地图（无坐标地点）时面板也要有横向留白 */
+        padding: 1em 1em var(--space-footer-gap); /* 无地图（无坐标地点）时面板也要有横向留白；底部与页脚间距统一 */
     }
 }
 
@@ -199,28 +199,33 @@ a.footprint-preview {
         border-radius: inherit; /* 贴齐圆角，避免方角溢出框架 */
     }
 
-    /* 陆地与网格：暗底白 10% / 亮底黑 5% 的微凸起陆地，与全站 overlay 语义一致 */
+    /* 陆地与网格：地图专用配色（明暗主题各自加深一档，保证地图可读性）。
+       SVG 内全部颜色不设过渡：陆地/省国路径数万坐标点、照片点迹数百个小圆，
+       主题切换时全量元素同跑 0.3s fill/stroke 过渡会逐帧重光栅化巨量路径
+       （round 线帽线接更贵），掉帧卡顿且与页面其余部分不同步——
+       大地块与点迹瞬时切换最省性能，页面级元素（地图框/图例/弹层）保留主题渐隐 */
     .fm-land path {
-        fill: var(--color-overlay-subtle);
-        stroke: var(--color-border);
+        fill: var(--color-map-fill);
+        stroke: var(--color-map-border);
         stroke-width: 0.5;
         stroke-linejoin: round;
         stroke-linecap: round;
-        transition: fill 0.3s ease, stroke 0.3s ease;
     }
 
     /* 省/国区块：填充 + 描边的可交互区块；无照片地区中性填充、不可交互 */
     .fm-regions .fm-region {
-        fill: var(--color-overlay-subtle);
-        stroke: var(--color-border);
+        fill: var(--color-map-fill);
+        stroke: var(--color-map-border);
         stroke-width: 0.5;
         stroke-linejoin: round;
         stroke-linecap: round;
         /* iOS 只向「原生可交互或声明 cursor:pointer」的元素派发 click——
            SVG <a>/path 不在其列，缺这行点按区块完全不产生 click */
         cursor: pointer;
-        transition: fill 0.3s ease, stroke 0.3s ease;
 
+        /* 交互态（悬停提亮/聚焦/选中）保持瞬时切换、不挂过渡：触屏粘性 :hover
+           与选中态会让过渡常驻，主题切换时这些数万坐标点的大路径仍会参与
+           逐帧重光栅化、明暗切换恢复卡顿（iPad 实测） */
         &:hover { fill: var(--color-accent-15); }
         &:focus-visible {
             stroke: var(--color-accent);
@@ -239,24 +244,40 @@ a.footprint-preview {
     }
 
     .fm-grid line {
-        stroke: var(--color-border);
+        stroke: var(--color-map-border);
         stroke-width: 0.5;
-        transition: stroke 0.3s ease;
     }
 
-    /* 照片点迹：光环 + 核心两层（旧光点同款结构），纯展示（整组 pointer-events none） */
+    /* 照片点迹：光环 + 核心两层（旧光点同款结构），纯展示（整组 pointer-events none）。
+       点迹错峰入场：JS 按序号注入 animation-delay（起播 80ms + 10ms 步进），
+       地图几何先于光点呈现；用 animation（而非 transition + 类切换）保证首帧必从 0 起播 */
     .fm-photo-dots {
         pointer-events: none;
+
+        g {
+            /* backwards：延迟期回填 from 关键帧（opacity 0）；基态恒为 1——
+               动画不 tick 的环境点迹默认可见，不会卡在透明 */
+            animation: dot-reveal 0.4s ease backwards;
+        }
+    }
+
+    /* 点迹入场关键帧：backwards 回填 from、结束后回落基态 opacity 1 */
+    @keyframes dot-reveal {
+        from { opacity: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .fm-photo-dots g {
+            animation: none;
+        }
     }
 
     .fm-photo-halo {
         fill: var(--color-accent-15);
-        transition: fill 0.3s ease;
     }
 
     .fm-photo-dot {
         fill: var(--color-accent);
-        transition: fill 0.3s ease;
     }
 }
 

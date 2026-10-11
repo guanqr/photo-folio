@@ -9,8 +9,8 @@
     /* .container 的窄屏横向留白已在 _base 统一为 1em，此处无需再声明 */
 
     .masonry-container {
-        /* 顶部对齐宽屏（2em）：筛选栏与上方横线间距宽窄屏一致；底部保持窄屏紧凑 */
-        padding: 2em 1em 1em;
+        /* 顶部对齐宽屏（2em）：筛选栏与上方横线间距宽窄屏一致；底部与宽屏一致（--space-footer-gap） */
+        padding: 2em 1em var(--space-footer-gap);
     }
 
     .footer-inner {
@@ -59,6 +59,8 @@
 
         &.active {
             background: var(--color-nav-bg);
+            /* 底部同款淡投影（与滚动态导航栏一致）：面板下缘与页面内容分隔 */
+            box-shadow: 0 0.15em 0.6em rgba(var(--rgb-black), 0.06);
             opacity: 1 !important;
             visibility: visible !important;
             transform: translateY(0) !important;

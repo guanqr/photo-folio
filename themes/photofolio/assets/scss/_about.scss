@@ -4,7 +4,7 @@
 .about-container {
     max-width: var(--container-width); /* 与全站其他页面同宽（不再限 40em 窄栏） */
     margin: 0 auto;
-    padding: 4em 1em 6em; /* 横向最小边距与窄屏一致（1em） */
+    padding: 4em 1em var(--space-footer-gap); /* 底部与页脚间距统一（--space-footer-gap）；横向最小边距与窄屏一致（1em） */
 }
 
 /* ===== 交错入场动画 ===== */

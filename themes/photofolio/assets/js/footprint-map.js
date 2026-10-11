@@ -462,6 +462,14 @@ async function build(root, points, previewData, statsByName, previewPanel) {
         dots.appendChild(inner);
         return { inner, lng: p.lng, lat: p.lat }; // 增量重投影时用于重定位
     });
+    // 点迹错峰入场：animation-delay 按序号注入（起播 80ms、10ms 步进）——
+    // 地图几何先于光点呈现；CSS animation 首帧必从 0 起播，不依赖类切换时序；
+    // 减弱动态偏好由 CSS 媒体查询直显（animation:none），无需 JS 分支
+    const DOT_REVEAL_BASE_MS = 80;
+    const DOT_REVEAL_STEP_MS = 10;
+    dotsData.forEach((d, i) => {
+        d.inner.style.animationDelay = `${DOT_REVEAL_BASE_MS + i * DOT_REVEAL_STEP_MS}ms`;
+    });
     svg.appendChild(dots);
 
     const tooltip = document.createElement('div');

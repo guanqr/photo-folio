@@ -4,6 +4,7 @@ import { initHeaderScroll } from './header-scroll.js';
 import { initMobileNav } from './mobile-nav.js';
 import { initNavDropdown } from './nav-dropdown.js';
 import { initBackToTop } from './back-to-top.js';
+import { initThemeToggle } from './theme-toggle.js';
 import { initMasonry, initMasonryResize } from './masonry.js';
 import { initInfiniteScroll } from './infinite-scroll.js';
 import { initGalleryFilter, PARAM_KEYS } from './gallery-filter.js';
@@ -60,6 +61,7 @@ function initGlobalModules() {
     initHeaderScroll();
     initMobileNav();
     initNavDropdown();
+    initThemeToggle();
 }
 
 // 首次加载

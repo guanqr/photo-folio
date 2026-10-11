@@ -1,0 +1,21 @@
+// 明暗主题切换：点击按钮在 dark/light 间切换并写入 localStorage；
+// 初始主题由 baseof.html 头部的内联脚本在首帧前恢复（避免闪烁），本模块只负责切换
+export function initThemeToggle() {
+    const toggleBtn = document.getElementById('theme-toggle');
+    if (!toggleBtn) return;
+
+    const applyTheme = (theme) => {
+        document.documentElement.setAttribute('data-theme', theme);
+        // 存储被禁（隐私模式/阻止 Cookie）时静默降级：视觉切换不受影响、偏好不持久化
+        try {
+            localStorage.setItem('theme', theme);
+        } catch (e) { /* noop */ }
+    };
+
+    toggleBtn.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        // 如果当前是 light，则切回 dark；否则切为 light
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        applyTheme(newTheme);
+    });
+}

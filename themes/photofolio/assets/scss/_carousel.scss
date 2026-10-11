@@ -8,8 +8,16 @@
     position: relative;
     overflow: hidden;
     height: 100vh;
-    background: var(--color-bg-card);
-    transition: background-color var(--transition-bg);
+    /* 背景固定暗色（--color-carousel-bg，见 :root）：轮播始终是暗色视觉——
+       亮色主题下 bg-card 为暖白，图片加载/交叉淡化时会透出白底、
+       顶部强制白字导航不可读 */
+    background: var(--color-carousel-bg);
+}
+
+/* 轮播区域始终为暗色视觉（暗色渐变遮罩/暗化层不随主题切换）：
+   进度条/当前圆点强调色取 :root 固定暗色分量，明暗切换保持不变 */
+[data-theme="light"] .carousel {
+    --color-accent: rgb(var(--dark-rgb-accent));
 }
 
 /* 底部渐变压暗，保证左下角标题可读 */

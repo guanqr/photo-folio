@@ -17,7 +17,7 @@
 }
 
 .masonry-container {
-    padding: 2em 1em; /* 横向最小边距与窄屏一致（1em） */
+    padding: 2em 1em var(--space-footer-gap); /* 底部与页脚间距统一（--space-footer-gap）；横向最小边距与窄屏一致（1em） */
     max-width: var(--container-width);
     margin: 0 auto;
     /* 关键：卡片图片的内联像素宽度（JS 按当前视口布局写入）会把页面最小内容
@@ -57,7 +57,8 @@
     &:hover {
         transform: translateY(-0.15em);
         border-color: var(--color-accent-30);
-        box-shadow: 0 0.75em 2em rgba(var(--rgb-black), 0.2);
+        /* 悬停阴影收紧：小偏移小模糊，紧贴卡片下方不喧宾夺主 */
+        box-shadow: 0 0.25em 0.75em rgba(var(--rgb-black), 0.15);
     }
 }
 

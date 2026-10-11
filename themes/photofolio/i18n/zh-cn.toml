@@ -12,6 +12,9 @@ other = "{{ .Title }} 下暫無作品"
 [close]
 other = "關閉"
 
+[theme_toggle]
+other = "切換主題"
+
 [back_to_top]
 other = "返回頂部"
 

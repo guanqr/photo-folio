@@ -1,4 +1,26 @@
 /* ===== Lightbox ===== */
+/* 灯箱固定暗色：图片相关区域的文字/背景/图表配色不随明暗主题切换——
+   组件内重新声明被亮色主题覆盖的变量（分量取自 :root 的 --dark-rgb-* 固定值） */
+.lightbox {
+    --color-text: rgb(var(--dark-rgb-text));
+    --color-text-secondary: rgb(var(--dark-rgb-text-secondary));
+    --color-text-muted: rgb(var(--dark-rgb-text-muted));
+    --color-border: rgb(var(--dark-rgb-border));
+    --color-bg-card: rgb(var(--dark-rgb-card));
+    --color-accent: rgb(var(--dark-rgb-accent));
+    --color-accent-15: rgba(var(--dark-rgb-accent), 0.15);
+    --color-accent-30: rgba(var(--dark-rgb-accent), 0.3);
+    --color-zone-shadow-bg: rgba(var(--rgb-white), 0.05);
+    --color-zone-mid-bg: rgba(var(--rgb-white), 0.1);
+    --color-zone-high-bg: rgba(var(--rgb-white), 0.05);
+    --color-zone-shadow-fg: rgb(var(--dark-rgb-text-muted));
+    --color-zone-mid-fg: rgb(var(--dark-rgb-text-secondary));
+    --color-zone-high-fg: rgb(var(--rgb-white));
+    --color-sat-curve: rgb(var(--dark-rgb-text));
+    --color-clip: rgb(var(--dark-rgb-accent));
+    --color-overlay-subtle: rgba(var(--rgb-white), 0.1);
+}
+
 .lightbox {
     position: fixed;
     inset: 0;

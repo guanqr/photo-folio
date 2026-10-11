@@ -3,7 +3,7 @@
    避免相邻区块的上下边距叠加出大空隙 */
 .home-section {
     margin-top: 3.5em;
-    padding-bottom: 1.5em; /* 与页脚 margin-top 2em 合计 3.5em，底部间距与区间距一致 */
+    padding-bottom: var(--space-footer-gap); /* 与页脚 margin-top 2em 合计 3.5em（--space-footer-gap），底部间距与区间距一致 */
 }
 
 /* 区块标题：H1 字号，上下留白一致（各 1.25em） */

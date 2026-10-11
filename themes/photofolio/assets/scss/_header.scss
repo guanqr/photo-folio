@@ -54,12 +54,16 @@
     &.is-scrolled {
         background: var(--color-nav-bg); /* 完全不透明，无需毛玻璃 */
         border-bottom-color: var(--color-border);
+        /* 淡淡投影：与背景/底边线同 0.5s 缓动渐入，拉开导航与滚动内容层次
+           （顶部透明阶段不加阴影——悬在轮播图上不可有） */
+        box-shadow: 0 0.15em 0.6em rgba(var(--rgb-black), 0.06);
     }
 
     /* 菜单展开时：导航栏与下拉面板合为一体（背景由面板从 top:0 统一填充），
-       隐藏底边线（含滚动态），交界处无分隔线、无颜色堆叠 */
+       隐藏底边线（含滚动态）与阴影，交界处无分隔线、无颜色堆叠 */
     &.menu-open {
         border-bottom-color: transparent;
+        box-shadow: none;
     }
 }
 
@@ -98,6 +102,9 @@
         padding: 0.25em 0;
         display: flex;
         align-items: center;
+        /* 颜色过渡：a 链接由 _base 全局规则提供，span 父项（.nav-parent）无——
+           亮色首页滚动跨越 10px 阈值 / 明暗切换时文字颜色跳变，此处统一补上 */
+        transition: color var(--transition-color);
         /* 父项为 span（非链接/按钮）：iOS Safari 只向「可交互」元素派发 click
            （原生交互元素或声明 cursor:pointer 者），无此声明窄屏手风琴点不动 */
         cursor: pointer;
@@ -121,7 +128,8 @@
             transform: scaleX(0);
             transform-origin: center;
             will-change: transform;
-            transition: transform var(--transition);
+            /* 背景色一并过渡：亮色首页滚动跨越阈值 / 明暗切换时下划线颜色随文字平滑变化 */
+            transition: transform var(--transition), background-color var(--transition-bg);
         }
     }
 
@@ -302,5 +310,101 @@
     display: flex;
     align-items: center;
     gap: 1.5em;
+}
+
+/* 亮色主题首页：顶部透明阶段（轮播暗色遮罩上）导航文字保持白色——
+   滚动出背景后（.is-scrolled）恢复默认深色；仅首页（body.is-home），
+   其他页面顶部背景为页面底色、默认深色文字可读；
+   菜单展开（.menu-open）时导航栏区域由不透明面板整体覆盖，不再强制白字；
+   子导航面板底色不透明，面板内文字变量重新声明还原、始终随主题变换 */
+[data-theme="light"] .is-home .site-header:not(.is-scrolled):not(.menu-open) {
+    /* 文字/强调色全部取 :root 固定暗色分量——与暗色主题逐值一致：
+       纯白反而比暗色主题文字更亮，切主题瞬间会有提亮跳变 */
+    --color-text: rgb(var(--dark-rgb-text));
+    --color-text-secondary: rgb(var(--dark-rgb-text-secondary));
+    /* 下划线、主题切换按钮悬停色同取固定暗色分量（亮色深墨绿在暗色轮播上不可见） */
+    --color-accent: rgb(var(--dark-rgb-accent));
+
+    .nav-dropdown {
+        --color-text: rgb(var(--rgb-text));
+        --color-text-secondary: rgb(var(--rgb-text-secondary));
+        --color-accent: rgb(var(--rgb-accent));
+    }
+}
+
+/* SPA 跳转同步 body 类期间抑制头部颜色过渡（page-transition.js 临时加/摘类）：
+   白字↔深色换色须瞬时完成——0.3s 过渡落在新页内容淡入期间会白字压米底不可读 */
+.site-header.no-color-transition,
+.site-header.no-color-transition * {
+    transition: none;
+}
+
+/* ===== Theme Toggle Button ===== */
+.theme-toggle {
+    position: relative;
+    width: 2.5em;
+    height: 2.5em;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    color: var(--color-text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color var(--transition);
+    border-radius: 50%;
+
+    &:hover {
+        color: var(--color-accent);
+    }
+
+    svg {
+        width: 1.5em;
+        height: 1.5em;
+    }
+
+    .icon-sun,
+    .icon-moon {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* ===== 图标内部元素动画 ===== */
+    .sg-core,
+    .sg-ray {
+        transition: transform var(--transition),
+                    opacity var(--transition);
+        transform-origin: center;
+        /* 不设 transform-box：默认 view-box 使缩放绕图标中心——fill-box 会让
+           每条独立光线绕自身几何中点收缩、缩放中心分散在图标四周 */
+    }
+
+    /* 暗色模式：月亮可见，太阳隐藏 */
+    .icon-sun {
+        .sg-core { opacity: 0; transform: scale(0.6); }
+        .sg-ray { opacity: 0; transform: scale(0); }
+    }
+    .icon-moon {
+        .sg-core { opacity: 1; transform: scale(1); }
+    }
+}
+
+/* 亮色模式：太阳可见，月亮隐藏 */
+[data-theme="light"] {
+    .theme-toggle {
+        .icon-sun {
+            .sg-core { opacity: 1; transform: scale(1); }
+            .sg-ray { opacity: 1; transform: scale(1); }
+        }
+        .icon-moon {
+            .sg-core { opacity: 0; transform: scale(0.6); }
+        }
+    }
 }
 
