@@ -5,7 +5,8 @@
  *   （同源 fetch、模块级 Promise 记忆化，sw 自动缓存；失败仅降级为网格 + 光点）
  * - 按省份/国家聚合光点：三层圆（光晕/中层/核心），半径随作品数增长；
  *   交错弹入动画，作品数最多的首点带呼吸脉冲环
- * - 悬停/键盘聚焦显示弹层（地名 / 张数 / 年份跨度），点击光点跳转足迹详情页（SPA 拦截）
+ * - 弹层（地名 / 张数 / 年份跨度）：桌面悬停/键盘聚焦显示，触屏点按显示并常驻至外部点按/滚动；
+ *   点击光点更新地点预览面板（面板整块链接进地点详情页）
  * - 懒加载：IntersectionObserver rootMargin 600px 进入视口才构建
  * - SPA 页面切换重跑 initFootprintMap：同一节点幂等，旧状态（observers）先销毁
  */
@@ -614,7 +615,9 @@ function bindTooltip(root, tooltip, countFormat, yearFormat) {
     const hide = () => hideTooltip(tooltip);
     const isHoverCapable = matchMedia('(hover: hover)').matches;
 
-    const show = (el) => {
+    // 弹层内容与定位渲染（先恢复显示并测量——读取 offset 强制初始态样式生效，
+    // 随后加 fm-visible 才有淡入过渡）
+    const render = (el) => {
         const { name, count, minYear, maxYear } = el.dataset;
         const years = minYear === maxYear ? String(minYear) : yearFormat.replace('%MIN%', minYear).replace('%MAX%', maxYear);
         tooltip.innerHTML = '';
@@ -625,8 +628,13 @@ function bindTooltip(root, tooltip, countFormat, yearFormat) {
         const yearEl = document.createElement('span');
         yearEl.textContent = years;
         tooltip.append(nameEl, countEl, yearEl);
+        tooltip.dataset.slug = el.dataset.slug || '';
 
-        // 先恢复显示并测量（读取 offset 强制初始态样式生效，随后加 fm-visible 才有淡入过渡）
+        // 淡出途中的重新显示：作废在途的隐藏计时，从当前透明度平滑淡回
+        if (tooltip.hideTimer) {
+            clearTimeout(tooltip.hideTimer);
+            tooltip.hideTimer = null;
+        }
         tooltip.style.display = '';
         tooltip.style.left = '0px';
         tooltip.style.top = '0px';
@@ -650,13 +658,93 @@ function bindTooltip(root, tooltip, countFormat, yearFormat) {
         tooltip.classList.add('fm-visible');
     };
 
+    // 已显示时换点：交叉淡入淡出——旧弹层克隆为幽灵元素在旧位置原地淡出，
+    // 新弹层同时在新位置从 0 淡入，两段动画并行、无「先消失再出现」的真空期；
+    // 幽灵垫在主弹层之下（后插入者在上）——两框重叠时新内容直接叠在旧内容上淡入，
+    // 交叉感可见；幽灵 pointer-events:none（与弹层同款）且 0.3s 后移除，
+    // 快速连点最多并存两三个，重建时随 root.replaceChildren 一并消失
+    const swap = (el) => {
+        const ghost = tooltip.cloneNode(true);
+        ghost.removeAttribute('role'); // 状态播报只保留主弹层
+        root.insertBefore(ghost, tooltip);
+        // 先入 DOM、强制提交带类样式（opacity 1），再摘类触发淡出——
+        // 顺序颠倒时幽灵的首次计算样式就是 0，过渡无从播放、旧弹层瞬间消失
+        void ghost.offsetWidth;
+        ghost.classList.remove('fm-visible');
+        setTimeout(() => ghost.remove(), prefersReducedMotion() ? 0 : TOOLTIP_FADE_MS);
+
+        // 主弹层同步瞬移到隐藏态：关过渡 + 内联 opacity 0，强制提交 0 基准，
+        // 再恢复样式表过渡并交还类控制——render 加回 fm-visible 后必然从已提交的
+        // 0 起淡入（不依赖 display:none 抑制过渡的行为，WebKit 下同样可靠），
+        // 全程同步执行、无在途计时，不会与外部点按/滚动收起产生复活竞态
+        tooltip.style.transition = 'none';
+        tooltip.classList.remove('fm-visible');
+        tooltip.style.opacity = '0';
+        void tooltip.offsetWidth;
+        tooltip.style.transition = '';
+        tooltip.style.opacity = '';
+        render(el);
+    };
+
+    const show = (el) => {
+        // 同一光点重复触发：无需动作（避免无意义的淡出淡入闪烁）
+        if (tooltip.classList.contains('fm-visible') && tooltip.dataset.slug === (el.dataset.slug || '')) return;
+        if (tooltip.classList.contains('fm-visible')) {
+            swap(el);
+            return;
+        }
+        render(el);
+    };
+
+    // 触屏点按显示（非悬停设备）：点按光点后弹层**常驻**（触屏没有「指针离开」可依赖），
+    // 直到点按地图外任意处 / 页面滚动 / Escape / resize / 重建才收起。
+    // 悬停设备不受影响：touchShown 只会经 onTap（悬停门禁之后）置位，hover 设备恒为 false
+    let touchShown = false;
+    let touchDismiss = null; // 常驻态的收起监听（外部点按 + 滚动），首次点按后懒挂载
+    const dismissTouch = () => {
+        touchShown = false;
+        hide();
+        if (touchDismiss) {
+            touchDismiss();
+            touchDismiss = null;
+        }
+    };
+    const ensureTouchDismiss = () => {
+        if (touchDismiss) return;
+        const onDocDown = (e) => {
+            // 点按任意光点不收起（随后的 click 会立即在新光点上重新显示）
+            if (e.target.closest && e.target.closest('.fm-dot-link')) return;
+            dismissTouch();
+        };
+        // 页面滚动：弹层随地图滚走，常驻态一并结束（capture 覆盖内部滚动容器）
+        const onScroll = () => dismissTouch();
+        document.addEventListener('pointerdown', onDocDown, true);
+        window.addEventListener('scroll', onScroll, { passive: true, capture: true });
+        touchDismiss = () => {
+            document.removeEventListener('pointerdown', onDocDown, true);
+            window.removeEventListener('scroll', onScroll, { passive: true, capture: true });
+        };
+    };
+
     const onPointerEnter = (e) => {
         if (!isHoverCapable) return;
         const link = e.target.closest('.fm-dot-link');
         if (link) show(link);
     };
     const onPointerLeave = (e) => {
+        // 触屏常驻弹层不随 pointerleave 收起（触屏点按抬起即触发 leave，会立即关掉刚显示的弹层）
+        if (touchShown) return;
         if (e.target.closest('.fm-dot-link')) hide();
+    };
+    // 触屏点按兜底：pointerenter 被悬停门禁挡掉；走 click 而非 pointerdown 触发——
+    // 手指起手滚动不产生 click，不会误显示弹层
+    const onTap = (e) => {
+        if (isHoverCapable) return;
+        const link = e.target.closest('.fm-dot-link');
+        if (!link) return;
+        show(link);
+        touchShown = true;
+        ensureTouchDismiss();
     };
     const onFocusIn = (e) => {
         const link = e.target.closest('.fm-dot-link');
@@ -668,11 +756,12 @@ function bindTooltip(root, tooltip, countFormat, yearFormat) {
         if (e.target.closest('.fm-dot-link')) hide();
     };
     const onKeydown = (e) => {
-        if (e.key === 'Escape') hide();
+        if (e.key === 'Escape') dismissTouch();
     };
 
     root.addEventListener('pointerenter', onPointerEnter, true);
     root.addEventListener('pointerleave', onPointerLeave, true);
+    root.addEventListener('click', onTap);
     root.addEventListener('focusin', onFocusIn);
     root.addEventListener('focusout', onFocusOut);
     root.addEventListener('keydown', onKeydown);
@@ -682,15 +771,32 @@ function bindTooltip(root, tooltip, countFormat, yearFormat) {
     return () => {
         root.removeEventListener('pointerenter', onPointerEnter, true);
         root.removeEventListener('pointerleave', onPointerLeave, true);
+        root.removeEventListener('click', onTap);
         root.removeEventListener('focusin', onFocusIn);
         root.removeEventListener('focusout', onFocusOut);
         root.removeEventListener('keydown', onKeydown);
+        // 常驻态的外部监听一并移除（SPA 换页/重建时不得滞留观察已脱离文档的地图）
+        if (touchDismiss) {
+            touchDismiss();
+            touchDismiss = null;
+        }
     };
 }
 
+// 淡出时长与 .fm-tooltip 的 transition（--transition = 0.3s）一致
+const TOOLTIP_FADE_MS = 300;
+
 function hideTooltip(tooltip) {
     tooltip.classList.remove('fm-visible');
-    // display:none 彻底移出布局与可滚动溢出（visibility:hidden 的绝对定位元素
-    // 在 Chrome 中仍计入 scrollable overflow，缩小窗口时残留位置会撑出横向滚动）
-    tooltip.style.display = 'none';
+    // display:none 必须等淡出过渡结束再设置——同帧设置会让过渡无从播放、瞬间消失；
+    // 但 display:none 不能省：visibility:hidden 的绝对定位元素在 Chrome 中
+    // 仍计入 scrollable overflow，缩小窗口时残留位置会撑出横向滚动
+    if (tooltip.hideTimer) clearTimeout(tooltip.hideTimer);
+    tooltip.hideTimer = setTimeout(() => {
+        tooltip.hideTimer = null;
+        // 淡出期间被重新显示（再次悬停/点按）时放弃本次隐藏
+        if (!tooltip.classList.contains('fm-visible')) {
+            tooltip.style.display = 'none';
+        }
+    }, prefersReducedMotion() ? 0 : TOOLTIP_FADE_MS);
 }

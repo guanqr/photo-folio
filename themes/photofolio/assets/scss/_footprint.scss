@@ -218,6 +218,9 @@ a.footprint-preview {
     /* 光点：位置 translate 在内层 <g>（attribute），弹入 scale 在外层 <a>（CSS），互不覆盖 */
     .fm-dot-link {
         outline: none;
+        /* iOS 只向「原生可交互或声明 cursor:pointer」的元素派发 click——SVG <a> 不在其列，
+           缺这行点按光点完全不产生 click（预览面板联动与触屏弹层显示都依赖它） */
+        cursor: pointer;
         opacity: 0;
         transform: scale(0);
         transform-box: fill-box;
