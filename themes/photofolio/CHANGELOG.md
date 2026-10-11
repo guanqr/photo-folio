@@ -1,6 +1,21 @@
-﻿# Changelog
+# Changelog
 
 PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)。
+
+## [0.16.0] — 2026-10-11
+
+### Added
+- **足迹地图精细化**：陆地几何从 110m 升级为 **Natural Earth 10m**（`land-10m.json`，277KB，海岸线轮廓大幅变细），新增**中国省级边界线图层**（`provinces.json`，304KB，34 个省级单位含港澳台、0.005° 细量化轮廓平滑，剔除十段线/插图要素）与**海外国家边界**（`countries.json`，按映射过滤如「日本」，远洋小岛按环包围盒 <0.4° 丢弃、主岛链保留）——省界为纯描边细线（`--color-border` 0.4 宽、0.65 透明度，比海岸线更淡一档），图层插于陆地与网格之间，随陆地同款增量重投影、加载失败仅降级（网格+光点/陆地照常）；数据管线为 **`tools/map-data/generate-maps.py`**（下载缓存 tools/map-data/vendor 不入库、DP 简化、量化口径写入 `{quant, data}` 文件头由渲染端还原，预算陆地 350KB/省界 500KB/国家 300KB）
+- **足迹地图交互重构**：地点级光点改为**省份/国家区块**（每个有照片的省/国为独立填充区块，悬停提亮、点击唯一选中并更新预览面板——面板卡片样式与旧光点版一致；无照片地区中性填充不可交互；**弹层锚点改为指针位置**，凹形区块（如內蒙古）不再漂移）；全部照片坐标形成**点迹**（光环 + 核心两层、纯展示、pointer-events none）；视图范围 = 照片点迹 ∪ **有照片省份的完整包围盒**（省份完整可见；海外国家不并入包围盒、随照片点自然呈现）
+- **照片坐标字段**：相机无 GPS，photo.toml 新增可选 `address`/`lat`/`lng` 字段，`tools/geocode/geocode-photos.py`（高德地理编码，key 走环境变量 `AMAP_KEY` 或 `tools/geocode/config.json`（已 gitignore），350ms 间隔串行、可重复运行，坐标写入 address 行之后；**海外地址高德不覆盖时自动经 OSM Nominatim 兜底**，兜底网络不可达时手工填写坐标）把详细地址转成经纬坐标；**坐标字段当前保留备用、不参与展示**
+- **站点工具并入仓库并统一为 Python**：照片预处理管线自外部仓库并入 **`tools/photo-pipeline/`**（照片目录经 pipeline_config.json 配置、photo.toml 直写 data/、FIELDS 白名单补 address/lat/lng）；站点脚本由 Node 迁移为 Python 并按功能分目录——**`tools/map-data/`**（地图几何生成，输出与旧版逐字节一致）、**`tools/geocode/`**（地理编码，key 走 config.json）、**`tools/backfill/`**（宽高回填）；全部零第三方依赖、复用 photo-pipeline 的 toml_utils 单一实现
+- **關於頁照片參數檔案**：「拍攝檔案」統計區塊（構建期聚合、零 JS）——機身排行（按具體值聚合、數量降序，**數量 < 5 歸併「其他設備」**列於尾部）、焦距分佈（超廣角 ≤16mm 至 **超長焦 ≥200mm** 六檔、空檔隱藏）、光圈分佈（**標準光圈檔區間五檔**：≤f/4 / f/4–5.6 / f/5.6–8 / f/8–11 / ≥f/11、固定順序、空檔隱藏）、快門分佈（≤1/1000s 至 長曝 ≥1s 七檔，`1/N` 與裸秒數統一歸檔）、感光度分佈（**整百合併六檔**：≤100/100–200/200–400/400–800/800–1600/≥1600、空檔隱藏）、年度拍攝走勢（年份升序、**僅列出有照片的年份、`params.aboutStats.yearMergeBefore` 以前合併為「~2023」一項**，hugo.toml 可配置）；**兩列卡片、同行等高（grid 行內 stretch），窄屏（≤768px）切單列、跨斷點帶 FLIP 動畫**（與分類/系列卡片同款：JS 接管列數 + 20px 滯回 + 受控 FLIP，CSS 媒體查詢保留為無 JS 降級），**行間距與列間距同為 1em**；**頂部頭像/信息橫排↔豎排切換同步帶 FLIP 動畫**（CSS 媒體查詢切換佈局、RO 後佈局回調檢測、上一幀基準位置回放——與足跡地圖 flipLayout 同款經驗，動畫期間基準暫停刷新；**文字塊只平移不縮放**——其寬度跨斷點變化大，FLIP 縮放會把字形拉伸變形，頭像等圖片照常縮放）；**統計卡片跨斷點動畫完全不用縮放**（位移回放 + 真實寬高 px 過渡——寬高過渡每幀按真實佈局重排內容，卡內文字絕不拉伸變形）；**全部面板統計條統一對齊**（行內三元素經 display:contents 直接參與面板網格，標籤列全站統一 7.5em、標籤右對齊緊貼條形，短標籤不留死空檔；**數字列也全站定寬 2.5em 左對齊**——auto 數字列會按各自列表最寬數字錯位、折疊區與常顯區條形右緣不一致；右對齊時個位數字左側留大片空檔、與條形的視覺間隔遠大於左側，左對齊後數字緊貼條形、間隔恒等於列間距）；每行「標籤 + 條形（數量/面板最大值百分比）+ 數字」，條形 scaleX 交錯生長、面板 fadeIn 錯峰入場（**折疊區數據條不加生長動畫**——該動畫只屬於常顯行，展開時直接以完整寬度出現），面板超過 8 行自動折疊；**面板標題帶圖標**（機身=相機、焦距=focal、光圈=光圈葉片——站內既有圖標不動；**快門/感光度/年度按參考站改為計時器/儀表盤/趨勢線**，svg.toml 更新 shutter/iso 兩個鍵、新增 trend_up 一個鍵，其餘圖標不動），面板為帶邊框卡片（與全站分類卡片同款）、關於頁改為與全站同寬，長機身型號截斷懸停顯示全稱，全部顏色走 root 變量、`prefers-reduced-motion` 直切；**移除關於頁原有「相機/鏡頭/後期處理」設備清單**（hugo.toml 配置與模板/SCSS 一併清理），**燈箱 EXIF「設備」行更名「機身」**
+
+### Fixed
+- **触屏设备点按足迹地图光点无弹层反馈**：弹层（地名/张数/年份）此前仅由悬停/键盘聚焦触发——pointerenter 受 `(hover: hover)` 门禁挡掉、iOS 点按不聚焦链接，触屏上永不出现；现非悬停设备**点按光点显示弹层并常驻**（触屏没有「指针离开」可依赖，常驻至点按地图外任意处 / 页面滚动 / Escape / resize / 重建收起），点按经 click 触发（手指起手滚动不产生 click，无误显示）；悬停设备行为不变
+- **iOS 点按地图光点无任何响应**：iOS 只向「原生可交互或声明 `cursor: pointer`」的元素派发 click，SVG `<a>` 不在其列（与 0.15.1「作品」子导航同一坑）——`.fm-dot-link` 补 `cursor: pointer`，点按光点恢复正常派发（预览面板联动与触屏弹层均依赖）
+- **地图光点弹层消失瞬间无动画**：hideTooltip 移除 fm-visible 的同一帧同步置 display:none，淡出过渡无从播放（display:none 不能省——Chrome 中 visibility:hidden 的绝对定位元素仍计入可滚动溢出、缩窗会撑出横向滚动）——现先移除类触发淡出、过渡结束（0.3s，与 --transition 一致；减弱动态偏好时立即）再置 display:none，淡出期间重新悬停/点按会取消隐藏并从当前透明度平滑淡回
+- **触屏点按换点时弹层交替瞬间完成**：常驻态下换点只改内容与位置，fm-visible 始终在、过渡无触发点——现换点走**交叉淡入淡出**：旧弹层克隆为幽灵元素在旧位置原地淡出，新弹层同时在新位置从 0 淡入（两段动画并行、无真空期，无头浏览器实测 150ms 处新旧透明度 0.22/0.78 同帧过渡）；幽灵垫在主弹层之下（后插入者在上，重叠时交叉感可见）、0.3s 后移除、pointer-events:none；**幽灵须先入 DOM 强制提交带类样式再摘类**（顺序颠倒时首次计算样式就是 0、淡出无从播放）；主弹层经「关过渡 + 内联 opacity 0 + 强制提交」同步复位后再渲染（不依赖 display:none 抑制过渡的 WebKit 行为）；同一光点重复点按跳过（避免无意义闪烁）
 
 ## [0.15.1] — 2026-10-11
 
@@ -91,14 +106,14 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 - **灯箱代码模块化**：抽屉交互抽出 `lightbox-drawer.js`（`initPanelDrawer`），直方图/色卡统计抽出 `lightbox-analysis.js`（`initPhotoAnalysis`，结果按 src 缓存），主文件只保留打开/切换/关闭流程
 - **组照详情页叙事式改版**：瀑布流改为**叙事长文**——所有宽度下均为单列（**文字在上、照片全宽在下**，md 正文只写文字），照片以**与全部作品页完全一致的瀑布流**排布（复用 masonry 引擎与 photo-card partial，两端对齐行、行内等高，档位按网格宽度自动推导、无每行张数限制，asIndividual 无组照徽章）；照片顺序由 md front matter 的 `photos` 列表（文件名数组）决定，未列出的照片不显示；照片点击开灯箱（`lightbox.js` 收集器通用化为 `closest('[data-title]')`）；新 `_series.scss`；无分页
 - **组照全站拆分展示**：**所有照片网格（全部作品/各分类页/足迹单页）一律展示组照全部照片**（封面 + 内页，不再只显示封面）；**组照所有照片（封面+内页）右上角均显示组照图标链接**（纯图标、取消数量显示，title 提示系列名）——点击图标跳组照详情页、点击图片本身一律开灯箱；灯箱标题统一显示照片自身名称；原「拆分模式」机制整体移除——`data-hidden-selector`、`series-split` 网格状态类、`isSeriesSplit` 导出、`data-series-inner` 标记及 gallery-filter/lightbox/page-transition/masonry 中的相关分支全部删除，筛选谓词恢复为四条件 AND；`$gridPhotos = $realPhotos` 全站统一，`$displayPhotos`（仅封面）仅保留给画廊筛选选项推导；组照合集页（series/list）保持封面墙作为系列入口
-- **orientation 字段废弃**：构图方向不再存库——一律由模板从 `width`/`height` 推导（宽 ≥ 高含相等 = landscape），photo.toml 中 86 条 orientation 行已剥离；`scripts/backfill-orientation.mjs` 改名 `backfill-dimensions.mjs`，只负责宽高兜底补全并剥离废弃字段；预处理脚本 `FIELDS` 移除 orientation
+- **orientation 字段废弃**：构图方向不再存库——一律由模板从 `width`/`height` 推导（宽 ≥ 高含相等 = landscape），photo.toml 中 86 条 orientation 行已剥离；`tools/backfill/backfill-dimensions.py` 改名 `backfill-dimensions.mjs`，只负责宽高兜底补全并剥离废弃字段；预处理脚本 `FIELDS` 移除 orientation
 - **灯箱关闭按钮与面板留白优化**：叉号改为**全宽度悬浮**、不再占独立一行（移动端原顶部 4em 关闭栏一并取消——图片区在所有宽度下于整屏高度内垂直居中）；元信息面板**上下留白对称**（桌面端顶部不再为叉号预留 4.5em——改为上下各 2em，窄屏改为上下各 0.8em）；桌面端**左右留白对齐**——图片区左侧留白与面板内容右侧留白同为 5.5em（原左侧 4.25em 比右侧少 1.25em，视觉上右边偏空）
 - **灯箱信息区块配置化**：hugo.toml 新增 `[params.lightbox]`（meta 地点日期简行 / exif 分行 / histogram 直方图 / palette 色卡 / story 背后故事，缺省全开）——关闭的区块不渲染，JS 全程空值安全，直方图与色卡都关闭时跳过探测下载（不发请求）
 
 ### Fixed
 - **足迹地图光点动画在手机上不播放**：两个原因——①地图在进入视口前（600px 预加载余量）完成构建，交错弹入提前播完，用户滚到地图时只见静止光点（手机滚动慢尤其明显）；②系统开启「减弱动态效果」时按 `prefers-reduced-motion` 降级为直接静态显示。修复：**光点改为地图真正进入视口时才点亮**（构建与播放分离），并**移除地图动画的 reduced-motion 降级**——弹入与呼吸脉冲在所有设备上始终播放
 - **窄屏灯箱拖拽范围与滚轮一致（含触摸）**：详情区（元信息面板）原被整体排除在拖拽手势外——鼠标/触摸在信息区拖拽无法收回抽屉；改为**所有指针类型在灯箱任意区域（含详情区）拖拽都走统一虚拟位置模型**（下滑把抽屉收回顶部、上滑展开并滚动内容），与滚轮行为完全一致；详情区移除 `touch-action: pan-y`（根元素 `touch-action: none` 已覆盖，内容滚动由抽屉模型接管，不依赖原生滚动）；**修复信息区拖拽在完全展开瞬间被打断**——详情区溢出改为始终 `hidden`（滚动完全由手势/滚轮模型程序化驱动，全开时滚动条不再弹出抢走指针），面板窄屏禁止文字选择（拖拽越过文字区不再触发浏览器选择接管）
-- **懒加载图片补显式尺寸（CLS 审计）**：瀑布流照片卡 `<img>` 增加真实 `width`/`height` 属性——**常规流程由预处理脚本在上传照片时生成宽高**（新照片随 EXIF 提取记录像素尺寸、历史条目从 output_photos 回填），`scripts/backfill-dimensions.mjs` 仅作兜底；构图方向由模板从宽高推导（脚本只生成 raw 宽高、不做判定）；首页分类封面与足迹时间线缩略图的 img 补 `aspect-ratio`（与容器一致）
+- **懒加载图片补显式尺寸（CLS 审计）**：瀑布流照片卡 `<img>` 增加真实 `width`/`height` 属性——**常规流程由预处理脚本在上传照片时生成宽高**（新照片随 EXIF 提取记录像素尺寸、历史条目从 output_photos 回填），`tools/backfill/backfill-dimensions.py` 仅作兜底；构图方向由模板从宽高推导（脚本只生成 raw 宽高、不做判定）；首页分类封面与足迹时间线缩略图的 img 补 `aspect-ratio`（与容器一致）
 - **竖构图照片慢网下先显示横构图方块再跳变**：`measureRatios` 优先读取 `width`/`height` 属性立即给出精确比例——不再等图片加载完成（原 800ms 超时按兜底比例 1.5 先排布、加载后再校正的路径仅保留给无属性的照片），竖构图揭示即正确形状
 
 ## [0.11.0] — 2026-10-01
@@ -107,7 +122,7 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 - **首页轮播大字下方新增两个胶囊按钮**：查看全部作品（→ `/gallery/`）、關於我（→ `/about/`），站内链接走 SPA 切换；胶囊为毛玻璃半透明样式（白描边 + 黑底模糊，hover 轮廓变白），overlay 保持 `pointer-events:none`、按钮组单独恢复点击
 - **全部作品页新增「作品範圍」筛选维度**：位于拍攝年份上方，四个互斥胶囊——全部 / 精選（featured 照片）/ 橫構圖 / 豎構圖，与其他维度 AND 组合；URL 参数 `?s=featured|landscape|portrait`（直达链接与后退自动恢复，带参直达跳过首屏闪现）；构图判定：水平长度 ≥ 竖直长度（含相等）为橫構圖
 - **范围筛选激活时组照拆分单独展示**：作品範圍筛选非「全部」时，组照内页（`data-series-inner`）参与匹配与展示——组照可能同时含横/竖构图与单独精選的照片；默认视图（范围=全部）仍只显示封面，内页由网格 `data-hidden-selector` 排除在分页队列外，按需纳入；拆分模式下封面按普通照片对待——右上角组照徽章隐藏、点击封面改开灯箱（网格 `series-split` 状态类：SPA 拦截放行该链接、灯箱接管点击）、灯箱标题显示照片自身名称而非组照名
-- **photo.toml 新增 orientation 字段与回填管线**：`scripts/backfill-orientation.mjs`（Node 零依赖，可重复运行）通过 OSS 图片信息接口（`x-oss-process=image/info`，无需下载图片本体）批量回填全部照片的 orientation——构图判定统一在此脚本完成，新照片缺失时重跑即可；预处理脚本仅将 `orientation` 纳入持久化字段清单（不做二次判定）
+- **photo.toml 新增 orientation 字段与回填管线**：`tools/backfill/backfill-dimensions.py`（Node 零依赖，可重复运行）通过 OSS 图片信息接口（`x-oss-process=image/info`，无需下载图片本体）批量回填全部照片的 orientation——构图判定统一在此脚本完成，新照片缺失时重跑即可；预处理脚本仅将 `orientation` 纳入持久化字段清单（不做二次判定）
 
 ### Changed
 - **地点页数据驱动化（不再需要地点 md 文件）**：新增拍摄地点只需在 `data/locations.toml` 加一条（name/slug/lat/lng），`content/footprint/_content.gotmpl`（Hugo content adapter）在构建期自动生成 `/footprint/<slug>/` 地点页，删除 11 个手工维护的地点 md 文件；`location-registry.html` 改为纯 toml 驱动（slug/URL/坐标单一数据源），时间线卡片、地图光点、画廊筛选的 URL 与 slug 均不变
@@ -117,7 +132,7 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 
 ### Fixed
 - **画廊筛选与灯箱健壮性修复**（代码审查）：带筛选参数但无按钮可匹配（维度已关闭/值过期/空值）时网格不再空白——恢复流程兜底执行 apply 并同步清理过期参数；灯箱箭头集合排除被筛选隐藏的照片；箭头切换先重建列表再取模（SPA 换页后不错位）；拆分模式判定收敛为 `isSeriesSplit` 单一导出（lightbox/page-transition 复用）；组照内页排除谓词复用网格 `data-hidden-selector`（与初始分页队列同源）；筛选参数字母表由 `PARAM_KEYS` 单一来源（main.js skipReveal 正则自动跟随）；infinite-scroll 拆线逻辑抽取共用
-- **数据与构建健壮性**：`_content.gotmpl` 构建期校验 slug 必填且唯一；地点注册表消费点 nil 安全（photo.toml 地点未登记时回退 urlize 而非构建报错）；photo.toml 缺 orientation 时构建期 warnf 提醒补跑回填脚本；baseof 预隐藏脚本同步感知 `data-hidden-selector`（首屏不再闪现组照内页空框）；`backfill-orientation.mjs` 增加请求超时、全失败非零退出、临时文件原子写入、缩进键兼容
+- **数据与构建健壮性**：`_content.gotmpl` 构建期校验 slug 必填且唯一；地点注册表消费点 nil 安全（photo.toml 地点未登记时回退 urlize 而非构建报错）；photo.toml 缺 orientation 时构建期 warnf 提醒补跑回填脚本；baseof 预隐藏脚本同步感知 `data-hidden-selector`（首屏不再闪现组照内页空框）；`backfill-dimensions.py` 增加请求超时、全失败非零退出、临时文件原子写入、缩进键兼容
 
 ## [0.10.3] — 2026-09-29
 
