@@ -1,0 +1,6 @@
+{
+    "access_key_id": "你的AccessKey ID",
+    "access_key_secret": "你的AccessKey Secret",
+    "endpoint": "https://oss-cn-hangzhou.aliyuncs.com",
+    "bucket_name": "my-photos"
+}

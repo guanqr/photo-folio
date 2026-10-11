@@ -8,8 +8,17 @@ Thumbs.db
 .vscode/
 .idea/
 node_modules/
-scripts/vendor/
-.env
+
+# 站点工具（tools/）——按功能分目录，统一 config.json 风格
+tools/map-data/vendor/
+tools/geocode/config.json
+
+# 照片预处理管线（tools/photo-pipeline/）
+tools/photo-pipeline/fonts/
+tools/photo-pipeline/oss_config.json
+tools/photo-pipeline/pipeline_config.json
+__pycache__/
+*.pyc
 
 # 内部设计计划文档，禁止发布
 DESIGN-PLANS.md
