@@ -209,13 +209,33 @@ a.footprint-preview {
         transition: fill 0.3s ease, stroke 0.3s ease;
     }
 
-    /* 省级边界线：纯描边、比海岸线更淡一档的内部分界，不喧宾夺主 */
-    .fm-provinces path {
-        fill: none;
+    /* 省/国区块：填充 + 描边的可交互区块；无照片地区中性填充、不可交互 */
+    .fm-regions .fm-region {
+        fill: var(--color-overlay-subtle);
         stroke: var(--color-border);
-        stroke-width: 0.4;
-        opacity: 0.65;
-        transition: stroke 0.3s ease;
+        stroke-width: 0.5;
+        stroke-linejoin: round;
+        stroke-linecap: round;
+        /* iOS 只向「原生可交互或声明 cursor:pointer」的元素派发 click——
+           SVG <a>/path 不在其列，缺这行点按区块完全不产生 click */
+        cursor: pointer;
+        transition: fill 0.3s ease, stroke 0.3s ease;
+
+        &:hover { fill: var(--color-accent-15); }
+        &:focus-visible {
+            stroke: var(--color-accent);
+            stroke-width: 1;
+        }
+
+        &.is-active {
+            fill: var(--color-accent-15);
+            stroke: var(--color-accent);
+            stroke-width: 1;
+        }
+
+        &.is-inert {
+            pointer-events: none; /* 无照片地区：中性填充、不参与交互 */
+        }
     }
 
     .fm-grid line {
@@ -224,54 +244,19 @@ a.footprint-preview {
         transition: stroke 0.3s ease;
     }
 
-    /* 光点：位置 translate 在内层 <g>（attribute），弹入 scale 在外层 <a>（CSS），互不覆盖 */
-    .fm-dot-link {
-        outline: none;
-        /* iOS 只向「原生可交互或声明 cursor:pointer」的元素派发 click——SVG <a> 不在其列，
-           缺这行点按光点完全不产生 click（预览面板联动与触屏弹层显示都依赖它） */
-        cursor: pointer;
-        opacity: 0;
-        transform: scale(0);
-        transform-box: fill-box;
-        transform-origin: center;
-        -webkit-tap-highlight-color: transparent;
-
-        .fm-halo { fill: var(--color-accent-15); }
-        .fm-mid { fill: var(--color-accent-30); }
-        .fm-core {
-            fill: var(--color-accent);
-            stroke: rgba(var(--rgb-black), 0.45);
-            stroke-width: 0.6;
-        }
-
-        .fm-halo,
-        .fm-mid,
-        .fm-core { transition: fill 0.3s ease, transform var(--transition-spring); }
-
-        &:hover .fm-core,
-        &:focus-visible .fm-core { transform: scale(1.12); }
-
-        &:focus-visible .fm-core {
-            stroke: var(--color-text);
-            stroke-width: 1.5;
-            transition: stroke 0.3s ease;
-        }
+    /* 照片点迹：光环 + 核心两层（旧光点同款结构），纯展示（整组 pointer-events none） */
+    .fm-photo-dots {
+        pointer-events: none;
     }
 
-    /* 联动高亮：滚动列表经过对应地点时光点放大点亮 */
-    .fm-dot-link.is-active {
-        .fm-core { transform: scale(1.35); }
-        .fm-halo { fill: var(--color-accent-30); }
+    .fm-photo-halo {
+        fill: var(--color-accent-15);
+        transition: fill 0.3s ease;
     }
 
-    /* 呼吸脉冲环（作品数最多的首点） */
-    .fm-pulse {
-        fill: none;
-        stroke: var(--color-accent);
-        stroke-width: 0.8;
-        opacity: 0;
-        transform-box: fill-box;
-        transform-origin: center;
+    .fm-photo-dot {
+        fill: var(--color-accent);
+        transition: fill 0.3s ease;
     }
 }
 
@@ -365,23 +350,3 @@ a.footprint-preview {
     }
 }
 
-/* ===== 地图弹入动画（始终播放：手机等设备即使开启系统减弱动态效果也照常） ===== */
-.footprint-map .fm-dot-link.fm-ready {
-    animation: fmPop 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
-    animation-delay: var(--fm-delay, 0ms);
-}
-
-.footprint-map .fm-pulse {
-    animation: fmPulse 2.6s ease-in-out infinite;
-}
-
-@keyframes fmPop {
-    0%   { opacity: 0; transform: scale(0); }
-    60%  { opacity: 1; }
-    100% { opacity: 1; transform: scale(1); }
-}
-
-@keyframes fmPulse {
-    0%   { opacity: 0.5; transform: scale(0.55); }
-    70%, 100% { opacity: 0; transform: scale(1.15); }
-}

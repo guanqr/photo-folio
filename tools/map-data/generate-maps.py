@@ -19,6 +19,12 @@ import os
 import urllib.request
 from pathlib import Path
 
+# 海外国家映射：站点地点名（locations.toml）→ Natural Earth admin-0 英文名；
+# 新增海外拍摄地时在此加一行即可
+COUNTRY_NAMES = {
+    "日本": "Japan",
+}
+
 SOURCES = {
     "land": {
         "urls": [
@@ -39,9 +45,20 @@ SOURCES = {
         "max_bytes": 500 * 1024,
         "tolerances": [0.005, 0.008, 0.01, 0.015, 0.02],
     },
+    "countries": {
+        "urls": [
+            "https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@master/geojson/ne_10m_admin_0_countries.geojson",
+            "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_0_countries.geojson",
+        ],
+        "cache": "ne_10m_admin_0_countries.geojson",
+        "out": "countries.json",
+        "quant": 20,
+        "max_bytes": 300 * 1024,
+        "tolerances": [0.01, 0.02, 0.03, 0.05, 0.08],
+    },
 }
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent  # tools/map-data/ → 仓库根
 VENDOR_DIR = Path(__file__).resolve().parent / "vendor"
 OUT_DIR = ROOT / "themes" / "photofolio" / "static" / "maps"
 MIN_RING_POINTS = 4  # 量化后点数不足的碎屑环丢弃（微小岛礁等）
@@ -114,6 +131,13 @@ def round_half_away(v):
     return math.floor(v + 0.5) if v >= 0 else math.ceil(v - 0.5)
 
 
+def ring_extent(ring, quant):
+    """环包围盒的 max(宽, 高)（度）——国家数据过滤远洋小岛用"""
+    xs = [p[0] for p in ring]
+    ys = [p[1] for p in ring]
+    return max(max(xs) - min(xs), max(ys) - min(ys)) / quant
+
+
 def encode_ring(ring, quant):
     out = []
     prev = None
@@ -176,15 +200,50 @@ def main():
                 for f in features
             ]
             print(f"province features: {'、'.join(lines)}")
+        elif name == "countries":
+            # 按 COUNTRY_NAMES 映射过滤，键名换成站点地点名（如「日本」）
+            wanted = set(COUNTRY_NAMES.values())
+            reverse = {v: k for k, v in COUNTRY_NAMES.items()}
+            features = [
+                f for f in features
+                if f.get("properties", {}).get("NAME_EN") in wanted
+                or f.get("properties", {}).get("NAME") in wanted
+            ]
+            print(f"country features: {[f['properties'].get('NAME', '?') for f in features]}")
 
         best = None
         for tol in cfg["tolerances"]:
-            out = encode_provinces(features, tol, cfg["quant"]) if name == "provinces" \
-                else encode(features, tol, cfg["quant"])
-            data = out if name != "provinces" else {"quant": cfg["quant"], "data": out}
+            if name == "provinces":
+                out = encode_provinces(features, tol, cfg["quant"])
+            elif name == "countries":
+                # 国家同样按名索引输出（键 = 站点地点名），与省界同款包络；
+                # 过滤远洋小岛（环包围盒 max(宽,高) < 0.4° 丢弃）——
+                # 南鸟岛/冲鸟礁/小笠原等会把包围盒撑出大片空海，主岛链保留
+                by_name = {}
+                for f in features:
+                    ne_name = f["properties"].get("NAME_EN") or f["properties"].get("NAME")
+                    site_name = reverse.get(ne_name)
+                    if not site_name:
+                        continue
+                    geom = f.get("geometry")
+                    if not geom or geom["type"] not in ("Polygon", "MultiPolygon"):
+                        continue
+                    poly_list = [geom["coordinates"]] if geom["type"] == "Polygon" else geom["coordinates"]
+                    rings = []
+                    for poly in poly_list:
+                        r = [encode_ring(dp_simplify(ring, tol), cfg["quant"]) for ring in poly]
+                        r = [x for x in r if len(x) >= MIN_RING_POINTS and ring_extent(x, cfg["quant"]) >= 0.4]
+                        if r:
+                            rings.append(r)
+                    if rings:
+                        by_name[site_name] = rings
+                out = by_name
+            else:
+                out = encode(features, tol, cfg["quant"])
+            data = out if name == "land" else {"quant": cfg["quant"], "data": out}
             payload = json.dumps(data, separators=(",", ":"), ensure_ascii=False)
             nbytes = len(payload.encode("utf-8"))
-            count = len(out) if name != "provinces" else len(out)
+            count = len(out)
             print(f"tol={tol}  polys={count}  bytes={nbytes}")
             best = (payload, nbytes)
             if nbytes <= cfg["max_bytes"]:

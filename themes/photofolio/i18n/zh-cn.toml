@@ -184,10 +184,10 @@ other = "{{ .Year }}年{{ .Month }}月{{ .Day }}日"
 other = "查看全部 {{ .Count }} 張作品 →"
 
 [footprint_preview_hint]
-other = "點擊地圖上的光點，查看該地點的作品與詳情"
+other = "點擊地圖上的省份區塊，查看該地點的作品與詳情"
 
 [footprint_map_sites]
-other = "{{ .Count }} 處拍攝點"
+other = "已點亮 {{ .Count }} 處區域"
 
 [footprint_map_year_range]
 other = "{{ .Min }} — {{ .Max }}"

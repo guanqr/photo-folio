@@ -23,6 +23,7 @@ python tools/map-data/generate-maps.py
 |------|------|
 | `themes/photofolio/static/maps/land-10m.json` | 世界陆地（Natural Earth 10m，精细海岸线） |
 | `themes/photofolio/static/maps/provinces.json` | 中国省级边界线（34 个省级单位含港澳台，按省索引） |
+| `themes/photofolio/static/maps/countries.json` | 海外国家边界（按 COUNTRY_NAMES 映射过滤，如「日本」；远洋小岛按环包围盒 < 0.4° 丢弃，主岛链保留） |
 
 ## 管线说明
 

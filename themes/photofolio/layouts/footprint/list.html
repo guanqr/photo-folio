@@ -28,13 +28,11 @@
 {{/* 3. 足迹地点注册表（slug/url/坐标一次构建，地图与预览面板共用） */}}
 {{ $locReg := partial "location-registry.html" . }}
 
-{{/* 4. 地图光点 + 预览面板数据：单趟遍历地点列表——
-      地图光点仅收录有坐标的地点；预览面板每地点取最新一张横构图（全竖构图回退最新一张） */}}
+{{/* 4. 预览面板数据：单趟遍历地点列表——
+      预览面板每地点取最新一张横构图（全竖构图回退最新一张） */}}
 {{ $cfg := site.Params.imageSizes | default dict }}
 {{ $coverWidth := $cfg.category | default 1000 }}
 {{ $coverQuality := $cfg.quality | default 80 }}
-{{ $mapPoints := slice }}
-{{ $totalMapPhotos := 0 }}
 {{ $previewData := slice }}
 {{ range $item := $locations }}
     {{ $loc := $item.location }}
@@ -48,24 +46,32 @@
     {{ end }}
     {{ $coverUrl := partial "img-url.html" (dict "src" $cover.src "site" site "width" $coverWidth "mode" "lfit" "format" "webp" "quality" $coverQuality) }}
     {{ $previewData = $previewData | append (dict "slug" $slug "name" $loc "url" $targetUrl "count" (int $item.realCount) "cover" (dict "src" $coverUrl "alt" $cover.alt)) }}
+{{ end }}
 
-    {{ with index $locReg $loc }}
-        {{ if .lat }}
-            {{ $mapPoints = $mapPoints | append (dict
-                "name" $loc
-                "lat" .lat
-                "lng" .lng
-                "slug" $slug
-                "count" (int $item.realCount)
-                "minYear" (int ($item.earliest | time.Format "2006"))
-                "maxYear" (int ($item.time | time.Format "2006"))
-                "url" $targetUrl
-            ) }}
-            {{ $totalMapPhotos = add $totalMapPhotos (int $item.realCount) }}
+{{/* 5. 照片坐标点迹：全部有 lat/lng 的照片按坐标去重（同坐标重叠无意义）；地图视图按点迹适配 */}}
+{{ $photoPoints := slice }}
+{{ $coordSeen := dict }}
+{{ range $p := $sortedPhotos }}
+    {{ if and $p.lat $p.lng }}
+        {{ $key := printf "%.4f,%.4f" ($p.lat | float) ($p.lng | float) }}
+        {{ if not (isset $coordSeen $key) }}
+            {{ $coordSeen = merge $coordSeen (dict $key true) }}
+            {{ $photoPoints = $photoPoints | append (dict "lat" ($p.lat | float) "lng" ($p.lng | float)) }}
         {{ end }}
     {{ end }}
 {{ end }}
-{{ $mapPoints = sort $mapPoints "count" "desc" }}
+
+{{/* 6. 地点年份跨度（悬停区块弹层用） */}}
+{{ $statsData := dict }}
+{{ range $p := $sortedPhotos }}
+    {{ with $p.location }}
+        {{ $st := index $statsData . | default (dict "yearMin" "" "yearMax" "") }}
+        {{ $y := $p.time | time.Format "2006" }}
+        {{ if or (not $st.yearMin) (lt $y $st.yearMin) }}{{ $st = merge $st (dict "yearMin" $y) }}{{ end }}
+        {{ if or (not $st.yearMax) (gt $y $st.yearMax) }}{{ $st = merge $st (dict "yearMax" $y) }}{{ end }}
+        {{ $statsData = merge $statsData (dict . $st) }}
+    {{ end }}
+{{ end }}
 
 <section class="footprint-page">
     <div class="gallery-header">
@@ -77,30 +83,31 @@
         </div>
     </div>
 
-    {{/* 桌面分栏（地图框 + 地点预览面板），窄屏上下堆叠；无坐标地点时地图整块不渲染。
-        头部说明与图例跨栏铺满；预览面板随地图光点点击联动更新 */}}
-    <div class="footprint-layout{{ if gt (len $mapPoints) 0 }} with-map{{ end }}">
-    {{ if gt (len $mapPoints) 0 }}
+    {{/* 桌面分栏（地图框 + 地点预览面板），窄屏上下堆叠；无坐标照片时地图整块不渲染。
+        头部说明与图例跨栏铺满；预览面板随省/国区块点击联动更新 */}}
+    <div class="footprint-layout{{ if gt (len $photoPoints) 0 }} with-map{{ end }}">
+    {{ if gt (len $photoPoints) 0 }}
     <section class="footprint-map-section">
         <div class="footprint-map" id="footprint-map"
              data-count-format='{{ i18n "photo_count" (dict "Count" "%COUNT%") }}'
              data-year-range-format='{{ i18n "footprint_map_year_range" (dict "Min" "%MIN%" "Max" "%MAX%") }}'>
             <noscript>
                 <ul class="footprint-map-fallback">
-                    {{ range $mapPoints }}
+                    {{ range $previewData }}
                     <li><a href="{{ .url }}">{{ .name }}</a></li>
                     {{ end }}
                 </ul>
             </noscript>
         </div>
-        <script type="application/json" id="footprint-map-data">{{ $mapPoints | jsonify | safeJS }}</script>
+        <script type="application/json" id="footprint-map-data">{{ $photoPoints | jsonify | safeJS }}</script>
     </section>
-    <p class="footprint-map-legend"><span class="legend-dot"></span>{{ i18n "footprint_map_sites" (dict "Count" (len $mapPoints)) }}</p>
+    {{/* 图例：已点亮的区域数 = 有照片的地点数（每个地点均有对应省/国区块） */}}
+    <p class="footprint-map-legend"><span class="legend-dot"></span>{{ i18n "footprint_map_sites" (dict "Count" (len $previewData)) }}</p>
     {{ end }}
 
     <div class="footprint-preview-wrap">
-        {{/* 预览面板：初始为操作提示卡片（无 JS 时同样可见）；点击地图光点后由 JS 渲染
-            对应地点内容，整块链接进地点详情页。
+        {{/* 预览面板：初始为操作提示卡片（无 JS 时同样可见）；点击省/国区块后由 JS 渲染
+            对应地点内容与统计，整块链接进地点详情页。
             外轮廓与地点态一致（同尺寸骨架撑起高度），提示内容 absolute 覆盖整卡居中 */}}
         <a class="footprint-preview is-hint" id="footprint-preview"
            data-more-format='{{ i18n "footprint_preview_more" (dict "Count" "%COUNT%") }}'>
@@ -116,6 +123,7 @@
         </a>
     </div>
     <script type="application/json" id="footprint-preview-data">{{ $previewData | jsonify | safeJS }}</script>
+    <script type="application/json" id="footprint-stats-data">{{ $statsData | jsonify | safeJS }}</script>
     </div>
 </section>
 {{ end }}
