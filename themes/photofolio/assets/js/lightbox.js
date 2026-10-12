@@ -88,7 +88,7 @@ export function initLightbox() {
         img: lightboxImg,
         area: lightboxImgArea,
         getGlow: () => activeGlow,
-        onSwitch: (dir) => { if (dir > 0) next(); else prev(); }
+        onSwitch: (dir, dx) => { if (dir > 0) next(dx); else prev(dx); }
     });
 
     // 窄屏/中屏底部抽屉（≤1000px）：展开/收起、滚轮与拖动手势（独立模块，见 lightbox-drawer.js）；
@@ -242,7 +242,20 @@ export function initLightbox() {
     // 主图位移百分比按**自身盒宽**解析（object-fit: contain 的照片盒，竖构图时
     // 窄于网格单元）——辉光按像素对齐主图实际位移（百分比补偿只对单元宽度
     // 有效，竖构图下辉光会先于主图移出）
-    const slideStyle = (pct, opacity, transition) => {
+    const slideStyle = (pct, opacity, transition, fromPx) => {
+        if (fromPx !== undefined) {
+            // 滑动提交的显式起点（双相提交）：先无过渡把主图与辉光落位到拖动
+            // 位置并强制提交为过渡起点——依赖「reset 与写入之间无布局读取」
+            // 不可靠：下方 offsetWidth 的强制回流会把辉光的起点钉在 reset 后的
+            // 归位值（中心）、与主图错位——Android 真机滑动切图辉光不同步的根因
+            lightboxImg.style.transition = 'none';
+            lightboxImg.style.transform = `translateX(${fromPx}px)`;
+            if (activeGlow) {
+                activeGlow.style.transition = 'none';
+                activeGlow.style.transform = `translateX(${fromPx}px) scale(2)`;
+            }
+            void lightboxImg.offsetWidth; // 强制回流：提交起点
+        }
         const transform = `translateX(${pct}%)`;
         lightboxImg.style.transform = transform;
         lightboxImg.style.opacity = opacity;
@@ -446,7 +459,7 @@ export function initLightbox() {
         drawer.refresh();
     }
 
-    function open(index) {
+    function open(index, fromPx) {
         if (!currentPhotos.length) collectPhotos();
         if (index < 0 || index >= currentPhotos.length) return;
         swipe.reset(); // 复位滑动内联残留（拖动中关闭后重开图片错位的根源）
@@ -496,7 +509,7 @@ export function initLightbox() {
             // 的 preClickTop/wrapH0，继续运行会把新照片的标题/面板拉到旧位移
             cancelCenterComp();
 
-            slideStyle(-dir * 12, '0', slideTransition);
+            slideStyle(-dir * 12, '0', slideTransition, fromPx);
 
             // 摘除上一次切换的在途滑出监听（快速同向连切时不重放旧作品）
             clearPendingSlideOut();
@@ -626,27 +639,27 @@ export function initLightbox() {
         document.body.style.overflow = '';
     }
 
-    function prev() {
+    function prev(fromPx) {
         // 无条件重建：SPA 换页后旧列表已指向销毁的网格，必须先收集再取模
         collectPhotos();
         if (currentPhotos.length <= 1) {
             // 单张作品：切换无意义——滑动提交走到这里时 open() 不执行，
-            // 须复位内联残留（否则图片停在拖动位移不回弹）
-            swipe.reset();
+            // 走回弹动画归位（原地 reset 会从拖动位移瞬间跳回）
+            swipe.snapBack();
             return;
         }
         const idx = (currentIndex - 1 + currentPhotos.length) % currentPhotos.length;
-        open(idx);
+        open(idx, fromPx);
     }
 
-    function next() {
+    function next(fromPx) {
         collectPhotos();
         if (currentPhotos.length <= 1) {
-            swipe.reset(); // 同 prev：滑动提交单照片集合时复位内联残留
+            swipe.snapBack(); // 同 prev：单照片集合滑动提交回弹归位
             return;
         }
         const idx = (currentIndex + 1) % currentPhotos.length;
-        open(idx);
+        open(idx, fromPx);
     }
 
     function updateArrows() {

@@ -100,8 +100,9 @@ export function initLightboxSwipe({ img, area, getGlow, onSwitch }) {
         if (!takenOver) return;
         if (Math.abs(dx) >= SWIPE_COMMIT) {
             // 右滑 = 上一张（新图从左进入）；滑出动画与左右箭头同款，
-            // 由 open() 的 slideStyle 从当前拖动位置过渡到 12% 目标
-            onSwitch(dx > 0 ? -1 : 1);
+            // 由 open() 的 slideStyle 从当前拖动位置过渡到 12% 目标——
+            // 拖动位移随 dx 传出（slideStyle 的显式过渡起点，双相提交）
+            onSwitch(dx > 0 ? -1 : 1, dx);
         } else {
             snapBack();
         }
@@ -126,5 +127,7 @@ export function initLightboxSwipe({ img, area, getGlow, onSwitch }) {
         }
     };
 
-    return { isGestureActive, getVerdict, reset };
+    // snapBack 导出供 lightbox.js 复用：单照片集合下滑动提交无可切换目标，
+    // open() 不执行——走回弹动画归位（原地 reset 会瞬间跳回）
+    return { isGestureActive, getVerdict, reset, snapBack };
 }
