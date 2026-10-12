@@ -1,19 +1,17 @@
 /* ===== Gallery Page (Masonry) ===== */
-.gallery-page { margin-top: 4.5em; }
+.gallery-page { margin-top: var(--space-page-top); }
 
 .gallery-header {
     padding: 3em 0 2em;
     border-bottom: 0.0625em solid var(--color-border);
-    transition: border-color var(--transition-border);
+    transition: border-color var(--transition-fade);
 }
 
 .page-title {
-    font-family: var(--font-heading);
+    @extend %section-heading;
     font-size: var(--size-h1);
     font-weight: 700;
     margin-bottom: 0.75em;
-    color: var(--color-text);
-    transition: color var(--transition-color);
 }
 
 .masonry-container {
@@ -48,17 +46,13 @@
 }
 
 .photo-card {
-    background: var(--color-bg-card);
-    border-radius: 0.25em;
+    @extend %card-surface;
+    border-radius: var(--radius-xs); /* 锁定值（--radius-xs），永不变 */
     overflow: hidden;
-    border: 0.0625em solid var(--color-border);
-    transition: border-color var(--transition), box-shadow var(--transition), background-color var(--transition-bg), transform var(--transition-spring);
+    transition: border-color var(--transition), box-shadow var(--transition), background-color var(--transition-fade), transform var(--transition-spring);
 
     &:hover {
-        transform: translateY(-0.15em);
-        border-color: var(--color-accent-30);
-        /* 悬停阴影收紧：小偏移小模糊，紧贴卡片下方不喧宾夺主 */
-        box-shadow: 0 0.25em 0.75em rgba(var(--rgb-black), 0.15);
+        @include card-hover(-0.15em, var(--shadow-card)); /* 悬停阴影收紧：小偏移小模糊，紧贴卡片下方 */
     }
 }
 
@@ -102,7 +96,7 @@ img.photo-img {
         text-transform: uppercase;
         color: var(--color-text-muted);
         white-space: nowrap;
-        transition: color var(--transition-color);
+        transition: color var(--transition-fade);
     }
 
     .filter-options {
@@ -124,28 +118,32 @@ img.photo-img {
         }
 
         button {
-            @extend %pill;
+            @extend %pill-ghost;
             flex: none;
             font-family: var(--font-meta);
             font-size: var(--size-small);
             letter-spacing: 0.1em;
-            color: var(--color-text-secondary);
-            background: transparent;
-            border-color: var(--color-border);
             padding: 0.3em 1em;
             cursor: pointer;
-            transition: border-color var(--transition), color var(--transition-color), background-color var(--transition-bg);
+            /* 覆盖基类过渡：hover 三属性统一走 --transition-fade（匀速渐变——
+               cubic-bezier 前快后慢、颜色在前段就跳到位，变化阶段观感突兀） */
+            transition: border-color var(--transition-fade), color var(--transition-fade), background-color var(--transition-fade);
 
             &:hover {
-                border-color: var(--color-accent-30);
                 color: var(--color-text);
             }
 
             &.is-active {
-                background: var(--color-accent);
-                border-color: var(--color-accent);
-                color: var(--color-bg-card);
-                font-weight: 600;
+                @extend %pill-active;
+                font-weight: 600; /* 选中态字重加粗（与未选中区分） */
+
+                &:hover {
+                    /* 激活态 hover 不改变外观（历史行为：hover 只对未激活胶囊生效）——
+                       %pill-active 经 @extend 提升到源前部、同特异性下 hover 规则会反超，
+                       须显式组合选择器钉住 */
+                    border-color: var(--color-accent);
+                    color: var(--color-bg-card);
+                }
             }
         }
     }
@@ -157,7 +155,7 @@ img.photo-img {
     text-align: center;
     font-family: var(--font-meta);
     color: var(--color-text-muted);
-    transition: color var(--transition-color);
+    transition: color var(--transition-fade);
 }
 
 /* ===== Load More Trigger (无限滚动触发器) ===== */
@@ -170,7 +168,7 @@ img.photo-img {
     padding: 3em 0;
     color: var(--color-text-muted);
     font-size: var(--size-small);
-    transition: opacity var(--transition-opacity);
+    transition: opacity var(--transition-fade);
 
     .loading-spinner {
         width: 2em;

@@ -2,6 +2,7 @@
  * 页面切换：拦截站内导航，仅替换主内容区，保持 header/footer 不重载
  */
 import { resetSubMenus } from './nav-dropdown.js';
+import { closeLightbox } from './lightbox.js';
 
 let reinitFn = null;
 
@@ -42,6 +43,10 @@ async function navigateTo(url) {
 }
 
 async function loadContent(url) {
+    // 导航即关灯箱：灯箱在壳层 DOM、不随内容替换——不关闭则旧照片悬在
+    // 新页面上（popstate/返回键路径同样经此）
+    closeLightbox();
+
     const main = document.querySelector('.main-content');
     if (!main) return;
 

@@ -21,7 +21,7 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    transition: background-color var(--transition-bg), color var(--transition-color);
+    transition: background-color var(--transition-fade), color var(--transition-fade);
 }
 
 /* ===== Skip-to-content 无障碍跳转 ===== */
@@ -34,7 +34,7 @@ body {
     background: var(--color-accent);
     color: var(--color-bg-card);
     font-weight: 600;
-    border-radius: 0.375em;
+    border-radius: var(--radius-sm);
     transition: top 0.2s ease;
 
     &:focus {
@@ -127,7 +127,7 @@ body {
     --color-map-border: rgb(var(--rgb-border));
 
     /* 首页轮播背景：固定暗色卡片色——轮播始终为暗色视觉（亮色下 bg-card
-       是暖白，图片加载/交叉淡化时会透出白底、顶部强制白字导航不可读）；
+       是浅色，图片加载/交叉淡化时会透出白底、顶部强制白字导航不可读）；
        中转成语义变量（rgb(var()) 直接写普通属性 Sass 会当函数求值报错） */
     --color-carousel-bg: rgb(var(--dark-rgb-card));
 
@@ -137,12 +137,9 @@ body {
        JS 端 tweenMulti 初始化时解析此变量，与 CSS 过渡同源同节奏 */
     --transition-chart: 0.4s cubic-bezier(0.215, 0.61, 0.355, 1); /* easeOutCubic */
     --transition-spring: 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
-    /* 主题切换过渡（全站统一时长与缓动，改主题动画只动这里）——
-       注意：值只含「时长+缓动」，使用时写成 `background-color var(--transition-bg)` 等 */
-    --transition-color: 0.3s ease;
-    --transition-bg: 0.3s ease;
-    --transition-border: 0.3s ease;
-    --transition-opacity: 0.3s ease;
+    /* 渐隐过渡（原 color/bg/border/opacity 四变量同值、合并单源）——
+       主题切换与一般颜色/透明度过渡共用 */
+    --transition-fade: 0.3s ease;
 
     /* z-index 层级体系（跨组件竞争时统一引用，组件内部局部层级不受影响） */
     --z-underlay: -1;        /* 窄屏菜单面板（垫在导航栏内容之下） */
@@ -159,21 +156,37 @@ body {
     --container-width: 87.5em;
     /* 正文底部留白单源：与页脚 margin-top 2em 合计 3.5em（与首页区块间距一致） */
     --space-footer-gap: 1.5em;
+    /* 页面头与固定导航栏的间距（画廊/关于/足迹等页面统一） */
+    --space-page-top: 4.5em;
+
+    /* 阴影梯度（与圆角梯度同法）：卡片悬停 / 浮层弹层 */
+    --shadow-card: 0 0.25em 0.75em rgba(var(--rgb-black), 0.15);
+    --shadow-pop: 0 0.75em 2em rgba(var(--rgb-black), 0.15);
+
+    /* ═══ 圆角梯度（:root 单源，全站引用）═══
+       --radius-xs 为瀑布流作品卡锁定值（永不改）；
+       胶囊统一走 --radius-pill（50em：完全圆头——全站尺寸体系为 em、
+       胶囊元素均 em 定高，em 随字体缩放同步缩放；灯箱原先的 9999px 混用就此归一）；
+       圆形（50%）与细线端点（0.0625/0.125em）不在梯度内、保持原样 */
+    --radius-xs: 0.25em;    /* 最小档：瀑布流作品卡（锁定值）、下拉面板、小部件 */
+    --radius-sm: 0.5em;     /* 中档：弹层、小按钮 */
+    --radius-card: 0.75em;  /* 卡片档：卡片/大容器 */
+    --radius-pill: 50em;    /* 胶囊：完全圆头 */
 }
 
 /* ===== Light Mode (明亮模式) ===== */
 [data-theme="light"] {
     color-scheme: light; /* UA 原生件（滚动条/表单控件/取色器）随亮色主题 */
 
-    /* 暖纸色板：全部与 #f5f4ef 同调（色温统一为暖黄灰，明暗层级与暗色主题对应） */
-    --rgb-bg: 245, 244, 239; /* #f5f4ef——暖米白（hsl(50, 23%, 95%)） */
-    --rgb-bg-raised: 235, 232, 221; /* #ebe8dd——暖米灰，二级背景面 */
-    --rgb-card: 253, 251, 245; /* #fdfbf5——暖白，比背景亮一档 */
-    --rgb-text: 41, 38, 31; /* #29261f——近黑带轻微暖意，白底对比度 13.7 */
-    --rgb-text-secondary: 92, 86, 74; /* #5c564a——暖灰褐，对比度 6.6 */
-    --rgb-text-muted: 111, 103, 89; /* #6f6759——暖中灰，白底对比度 5.1（≥ AA 4.5） */
+    /* 冷调浅色板：全部与 #f0f3f7 同调（统一冷蓝灰，明暗层级与暗色主题对应） */
+    --rgb-bg: 240, 243, 247; /* #f0f3f7——冷调极浅灰蓝 */
+    --rgb-bg-raised: 226, 230, 236; /* #e2e6ec——冷调浅灰，二级背景面 */
+    --rgb-card: 248, 250, 252; /* #f8fafc——冷调近白，比背景亮一档 */
+    --rgb-text: 28, 31, 38; /* #1c1f26——近黑冷调，白底对比度 14.8 */
+    --rgb-text-secondary: 88, 94, 104; /* #585e68——冷灰蓝，对比度 5.9 */
+    --rgb-text-muted: 102, 108, 122; /* #666c7a——冷中灰，对比度 4.7（过 AA 4.5） */
     --rgb-accent: 47, 112, 104; /* #2f7068（hsl(173, 41%, 31%)）——亮色下更深的墨绿保证可读性 */
-    --rgb-border: 222, 217, 203; /* #ded9cb——暖浅灰 */
+    --rgb-border: 210, 215, 224; /* #d2d7e0——冷浅灰 */
 
     --color-bg: rgb(var(--rgb-bg));
     --color-bg-secondary: rgb(var(--rgb-bg-raised));
@@ -206,7 +219,7 @@ body {
     --color-overlay-subtle: rgba(var(--rgb-black), 0.05);
 
     --color-map-fill: rgba(var(--rgb-black), 0.09); /* 亮色：陆地/区块填充加深一档 */
-    --rgb-map-border: 169, 162, 147;                /* #a9a293 亮色分量：省/国分界线加深一档（暖灰与纸色板同调） */
+    --rgb-map-border: 164, 170, 180;                /* #a4aab4 亮色分量：省/国分界线加深一档（冷灰与色板同调） */
     --color-map-border: rgb(var(--rgb-map-border));
 }
 
@@ -253,7 +266,40 @@ ul { list-style: none; }
 %pill {
     border-style: solid;
     border-width: 0.0625em;
-    border-radius: 50em;
+    border-radius: var(--radius-pill);
+}
+
+/* 卡片表面基类：卡片底色 + 细边框（圆角档/阴影/悬停由使用方按需声明） */
+%card-surface {
+    background: var(--color-bg-card);
+    border: 0.0625em solid var(--color-border);
+}
+
+/* 卡片悬停抬升：上移 + 强调描边 + 阴影（抬升量与阴影 token 由使用方传入） */
+@mixin card-hover($lift, $shadow) {
+    transform: translateY($lift);
+    border-color: var(--color-accent-30);
+    box-shadow: $shadow;
+}
+
+/* 幽灵胶囊基类：透明底 + 边框/文字基色；hover 强调描边（文字色由使用方覆盖） */
+%pill-ghost {
+    @extend %pill;
+    background: transparent;
+    border-color: var(--color-border);
+    color: var(--color-text-secondary);
+    transition: border-color var(--transition), color var(--transition-fade);
+
+    &:hover {
+        border-color: var(--color-accent-30);
+    }
+}
+
+/* 胶囊激活态：强调色填充 + 卡片色文字 */
+%pill-active {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: var(--color-bg-card);
 }
 
 /* 滚动入场基类：初始隐藏并下移，揭示时淡入归位（masonry-item / category-card 共用） */
@@ -273,7 +319,7 @@ ul { list-style: none; }
     font-family: var(--font-heading);
     font-weight: 600;
     color: var(--color-text);
-    transition: color var(--transition-color);
+    transition: color var(--transition-fade);
 }
 
 /* 布局档位信号（--layout-tier，JS 只读）：iPad Safari 旋转后 JS 侧 matchMedia/

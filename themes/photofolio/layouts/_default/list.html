@@ -172,5 +172,8 @@
     {{ end }}
     {{ partial "page-others.html" (dict "titleKey" "other_categories" "cardPartial" "categories-cards.html" "cardCtx" (dict "sections" $otherSections "allPhotos" $sortedPhotos "coverMode" (site.Params.categoryCover | default "latest-landscape")) "hasCards" (gt (len $otherSections) 0)) }}
     {{ end }}
+
+    {{/* 结构化数据：本页照片（仅元信息、不含图片 URL——OSS 额度保护） */}}
+    {{ partial "jsonld-photos.html" (dict "photos" $gridPhotos "title" .Title "url" .Permalink) }}
 </section>
 {{ end }}

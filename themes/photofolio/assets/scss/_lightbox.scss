@@ -68,7 +68,7 @@
     will-change: opacity;
     pointer-events: none;
     opacity: 0;
-    transition: opacity var(--transition-opacity); /* 首开淡入；切图淡入淡出由 JS 内联 0.7s 驱动（对齐参考站 duration-700） */
+    transition: opacity var(--transition-fade); /* 首开淡入；切图淡入淡出由 JS 内联 0.7s 驱动（对齐参考站 duration-700） */
 }
 
 /* 主区：移动优先纵向（图片上、元信息下），桌面端横向（图片左、元信息面板右） */
@@ -99,11 +99,9 @@
     height: 4em;
 }
 
-.lightbox-close {
-    /* 与左右箭头同一套定位机制：绝对定位 + right: 1em，保证与箭头严格同列 */
+/* 灯箱控件按钮基类（关闭/左右箭头共用）：3em 圆形 + 半透底色 + hover 反馈 */
+%lightbox-ctrl {
     position: absolute;
-    top: 0.5em; /* 顶栏 4em 内垂直居中 */
-    right: 1em;
     background: var(--color-lightbox-ctrl-bg);
     border: none;
     color: var(--color-lightbox-ctrl-text);
@@ -120,43 +118,36 @@
     svg {
         width: 1.5em;
         height: 1.5em;
-        transition: transform var(--transition-spring);
     }
 
     &:hover {
         background: var(--color-lightbox-ctrl-hover);
         color: var(--color-lightbox-ctrl-text-hover);
+    }
+}
+
+.lightbox-close {
+    /* 与左右箭头同一套定位机制：绝对定位 + right: 1em，保证与箭头严格同列 */
+    @extend %lightbox-ctrl;
+    top: 0.5em; /* 顶栏 4em 内垂直居中 */
+    right: 1em;
+
+    svg {
+        transition: transform var(--transition-spring);
+    }
+
+    &:hover {
         svg { transform: rotate(90deg); }
     }
 }
 
 .lightbox-arrow {
-    position: absolute;
+    @extend %lightbox-ctrl;
     top: 50%;
     transform: translateY(-50%);
-    background: var(--color-lightbox-ctrl-bg);
-    border: none;
-    color: var(--color-lightbox-ctrl-text);
-    cursor: pointer;
-    width: 3em;
-    height: 3em;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%; /* 与关闭（叉号）按钮一致：圆形 */
+    /* 覆盖基类 transition：补 transform 过渡（旋转/缩放） */
     transition: background 0.2s, color 0.2s, transform var(--transition-35);
     z-index: var(--z-lightbox-arrow);
-    -webkit-tap-highlight-color: transparent;
-
-    &:hover {
-        background: var(--color-lightbox-ctrl-hover);
-        color: var(--color-lightbox-ctrl-text-hover);
-    }
-
-    svg {
-        width: 1.5em;
-        height: 1.5em;
-    }
 
     &:active {
         transform: translateY(-50%) scale(0.9);
@@ -189,6 +180,9 @@
        在到达裁剪边缘前自然衰减——间距过小会露出辉光被硬切的分界线 */
     padding: 1em 1em 2.5em;
     user-select: none; /* 长按拖动抽屉时避免选中/拖图 */
+    /* 触屏滑动手势由 JS（lightbox-swipe）接管，禁浏览器原生手势
+       （原生滚动/捏合会触发 pointercancel 打断拖拽） */
+    touch-action: none;
     transition: padding 0.4s ease; /* 断点切换时左侧留白平滑过渡 */
     position: relative; /* 转圈指示的定位包含块 */
 
@@ -203,11 +197,11 @@
         max-width: 100%;
         max-height: 100%;
         object-fit: contain;
-        border-radius: 0.25em;
+        border-radius: var(--radius-xs);
         /* 无阴影：图片区 overflow:hidden 会裁剪横向阴影，造成上下暗边不对称；
            主图同样无阴影，靠毛玻璃背景衬出 */
         opacity: 0;
-        transition: opacity var(--transition-opacity);
+        transition: opacity var(--transition-fade);
         /* 禁用浏览器原生图片拖拽（会吞掉 pointermove，导致抽屉拖动失效） */
         -webkit-user-drag: none;
         user-drag: none;
@@ -228,7 +222,7 @@
     width: 50%;
     height: 50%;
     object-fit: contain;
-    border-radius: 0.25em;
+    border-radius: var(--radius-xs);
     filter: blur(0.5em) saturate(1.1);
     transform: scale(2);
     transition: opacity 0.25s ease;
@@ -271,7 +265,7 @@
     display: flex;
     flex-direction: column;
     padding: 0.8em 1em; /* 上下留白对称 */
-    transition: border-color var(--transition-border);
+    transition: border-color var(--transition-fade);
     /* 窄屏抽屉手势接管面板：禁止文字选择——拖拽越过可选中文字时浏览器会发起选择
        并触发 pointercancel 打断拖拽；桌面端恢复可选（见下方媒体查询） */
     user-select: none;
@@ -283,7 +277,7 @@
     font-size: 1.2em;
     font-weight: 400;
     margin-bottom: 0.35em;
-    transition: opacity var(--transition-opacity);
+    transition: opacity var(--transition-fade);
 }
 
 /* 标题下方分类/系列胶囊行（抽屉头部固定，随标题常显；JS 填充，点击跳转对应页面） */
@@ -292,7 +286,7 @@
     flex-wrap: wrap;
     gap: 0.5em;
     margin-bottom: 0.6em;
-    transition: opacity var(--transition-opacity); /* 随图片同步淡入 */
+    transition: opacity var(--transition-fade); /* 随图片同步淡入 */
 
     &:empty {
         display: none; /* 无分类/系列时整行隐藏 */
@@ -307,7 +301,7 @@
     font-size: var(--size-meta);
     color: var(--color-accent);
     background: transparent;
-    transition: background-color var(--transition-bg), border-color var(--transition-border), color var(--transition-color);
+    transition: background-color var(--transition-fade), border-color var(--transition-fade), color var(--transition-fade);
 
     &:hover {
         /* 填充绿色背景，文字换深色（与筛选按钮激活态一致） */
@@ -324,7 +318,7 @@
     flex-direction: column;
     align-items: stretch;
     gap: 0.25em;
-    transition: opacity var(--transition-opacity);
+    transition: opacity var(--transition-fade);
 }
 
 .lightbox-meta-group {
@@ -379,7 +373,7 @@
 
     &::-webkit-scrollbar-thumb {
         background: transparent;
-        border-radius: 9999px;
+        border-radius: var(--radius-pill);
     }
 
     &::-webkit-scrollbar-track {
@@ -444,7 +438,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.45em;
-    transition: opacity var(--transition-opacity); /* 随图片同步淡入 */
+    transition: opacity var(--transition-fade); /* 随图片同步淡入 */
     font-family: var(--font-meta);
     font-size: 0.9em;
 
@@ -480,7 +474,7 @@
     .exif-value.is-missing {
         text-decoration: line-through;
         color: var(--color-text-muted);
-        transition: color var(--transition-color);
+        transition: color var(--transition-fade);
     }
 }
 
@@ -505,7 +499,7 @@
     font-size: 0.85em;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition: opacity var(--transition-opacity), color var(--transition-color),
+    transition: opacity var(--transition-fade), color var(--transition-fade),
         max-height 0.4s ease, margin-top 0.4s ease, padding 0.4s ease;
 
     svg {
@@ -566,7 +560,7 @@
     font-size: 0.85em;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition: color var(--transition-color);
+    transition: color var(--transition-fade);
 
     svg {
         width: 0.85em;
@@ -592,7 +586,7 @@
     display: block;
     width: 100%;
     height: 6em;
-    border-radius: 0.25em;
+    border-radius: var(--radius-xs);
     background: var(--color-lightbox-ctrl-bg);
 }
 
@@ -605,7 +599,7 @@
 .lightbox-palette-wrap,
 .lightbox-story-wrap {
     margin-top: 1.1em;
-    transition: opacity var(--transition-opacity); /* 随图片同步淡入 */
+    transition: opacity var(--transition-fade); /* 随图片同步淡入 */
 }
 
 .lightbox-tonal-name,
@@ -622,7 +616,7 @@
     display: block;
     width: 100%;
     height: 6em;
-    border-radius: 0.25em;
+    border-radius: var(--radius-xs);
     background: var(--color-lightbox-ctrl-bg);
     margin-top: 0.5em;
 }
@@ -692,7 +686,7 @@
         left: 0;
         width: 0;
         border: 0.0625em solid var(--color-accent);
-        border-radius: 0.25em;
+        border-radius: var(--radius-xs);
         transition: left var(--transition-chart), width var(--transition-chart);
         pointer-events: none;
     }
@@ -702,7 +696,7 @@
 .lightbox-tone-ratio {
     display: flex;
     height: 0.55em;
-    border-radius: 9999px;
+    border-radius: var(--radius-pill);
     overflow: hidden;
     margin-top: 0.5em;
     background: var(--color-lightbox-ctrl-bg);
@@ -816,7 +810,7 @@
     width: 3em;
     height: 3em;
     flex: none;
-    border-radius: 0.3em; /* 圆角正方形 */
+    border-radius: var(--radius-sm); /* 圆角正方形 */
     border: 0.0625em solid var(--color-overlay-subtle);
 }
 
@@ -853,7 +847,7 @@
     font-weight: 400;
     color: var(--color-text);
     margin-bottom: 0.5em;
-    transition: color var(--transition-color);
+    transition: color var(--transition-fade);
 }
 
 .lightbox-story {
@@ -861,7 +855,7 @@
     line-height: 1.8;
     color: var(--color-text-secondary);
     margin: 0;
-    transition: color var(--transition-color);
+    transition: color var(--transition-fade);
 }
 
 /* 中屏档位（769–1000px，抽屉模式）：屏幕仍较宽，地点/日期简行与 EXIF 分行列表

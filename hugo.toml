@@ -176,3 +176,10 @@ defaultContentLanguage = "zh-cn"
     #     name = "博客"
     #     url = "https://guanqr.com/"
     #     weight = 8
+
+# 站点地图：Hugo 内置生成 /sitemap.xml（仅页面 URL、不含图片地址——OSS 额度保护）；
+# 404 等非内容页默认排除
+[sitemap]
+    changeFreq = "weekly"
+    priority = 0.5
+

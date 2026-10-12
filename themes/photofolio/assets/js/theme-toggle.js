@@ -12,10 +12,20 @@ export function initThemeToggle() {
         } catch (e) { /* noop */ }
     };
 
+    let themeSwitchTimer = null;
     toggleBtn.addEventListener('click', () => {
         const currentTheme = document.documentElement.getAttribute('data-theme');
         // 如果当前是 light，则切回 dark；否则切为 light
         const newTheme = currentTheme === 'light' ? 'dark' : 'light';
         applyTheme(newTheme);
+        // 主题切换期间给导航栏临时恢复时间过渡（与全站 0.3s 渐隐同步），
+        // 结束后摘除，恢复滚动进度驱动的渐变；快速连切时重置计时——
+        // 否则旧定时器会提前摘类、切断第二次切换的在途过渡
+        clearTimeout(themeSwitchTimer);
+        document.documentElement.classList.add('theme-switching');
+        themeSwitchTimer = setTimeout(() => {
+            document.documentElement.classList.remove('theme-switching');
+            themeSwitchTimer = null;
+        }, 350);
     });
 }

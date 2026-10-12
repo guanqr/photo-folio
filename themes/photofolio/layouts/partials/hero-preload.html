@@ -1,0 +1,16 @@
+{{- /* 首页首图预加载：轮播首张精选图为 LCP 元素——head 内 preload 抢先发起请求
+       （早于 CSS/JS 解析与 body 扫描）；URL 与轮播 img 完全一致、浏览器自动复用不重复下载 */ -}}
+{{- if .IsHome -}}
+{{- $sortedPhotos := partial "photo-sorted.html" . -}}
+{{- $featured := slice -}}
+{{- range $sortedPhotos -}}
+    {{- if .featured }}{{ $featured = $featured | append . }}{{ end -}}
+{{- end -}}
+{{- with index $featured 0 -}}
+    {{- $cfg := site.Params.imageSizes | default dict -}}
+    {{- $carouselWidth := $cfg.carousel | default 1920 -}}
+    {{- $carouselQuality := $cfg.ogQuality | default 85 -}}
+    {{- $srcUrl := partial "img-url.html" (dict "src" .src "site" site "width" $carouselWidth "mode" "lfit" "format" "webp" "quality" $carouselQuality) -}}
+    <link rel="preload" as="image" href="{{ $srcUrl }}" fetchpriority="high">
+{{- end -}}
+{{- end -}}

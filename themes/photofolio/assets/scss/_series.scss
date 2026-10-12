@@ -21,7 +21,7 @@
     font-size: 1.05em;
     line-height: 1.9;
     color: var(--color-text);
-    transition: color var(--transition-color);
+    transition: color var(--transition-fade);
 
     p {
         margin-bottom: 1.2em;
@@ -45,7 +45,7 @@
 .page-others {
     padding-top: 3em;
     border-top: 0.0625em solid var(--color-border);
-    transition: border-color var(--transition-border);
+    transition: border-color var(--transition-fade);
 }
 
 /* H2 标题：typography 的 sizeH2 档位（介于 H1 区块标题与 H3 之间） */

@@ -183,12 +183,6 @@ other = "沒有符合條件的作品"
 [date_format_full]
 other = "{{ .Year }}年{{ .Month }}月{{ .Day }}日"
 
-[footprint_preview_more]
-other = "查看全部 {{ .Count }} 張作品 →"
-
-[footprint_preview_hint]
-other = "點擊地圖上的省份區塊，查看該地點的作品與詳情"
-
 [footprint_map_sites]
 other = "已點亮 {{ .Count }} 處區域"
 

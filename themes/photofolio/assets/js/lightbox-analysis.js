@@ -602,7 +602,7 @@ function renderHue(hue, hueYs, labels, els) {
     paintHueHistogram(hue, hueYs, els.histEl);
 }
 
-export function initPhotoAnalysis({ paletteWrap, paletteEl, tone, sat, hue, onDone }) {
+export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, onDone }) {
     const toneEls = tone || {};
     const satEls = sat || {};
     const hueEls = hue || {};

@@ -1,5 +1,5 @@
 /* ===== About Page ===== */
-.about-page { margin-top: 4.5em; }
+.about-page { margin-top: var(--space-page-top); }
 
 .about-container {
     max-width: var(--container-width); /* 与全站其他页面同宽（不再限 40em 窄栏） */
@@ -38,12 +38,10 @@
 }
 
 .about-name {
-    font-family: var(--font-heading);
+    @extend %section-heading;
     font-size: var(--size-h1);
     font-weight: 700;
     margin-bottom: 0.25em;
-    color: var(--color-text);
-    transition: color var(--transition-color);
 }
 
 .about-bio {
@@ -51,7 +49,7 @@
     color: var(--color-text-secondary);
     line-height: 1.7;
     margin: 0;
-    transition: color var(--transition-color);
+    transition: color var(--transition-fade);
 }
 
 /* ===== 拍攝檔案統計（條形圖，構建期數據、零 JS） ===== */
@@ -69,22 +67,18 @@
 }
 
 .about-stats-title {
+    @extend %section-heading;
     grid-column: 1 / -1;
-    font-family: var(--font-heading);
     font-size: var(--size-h3);
-    font-weight: 600;
-    color: var(--color-text);
     margin: 0;
-    transition: color var(--transition-color);
 }
 
 /* 面板错峰入场（沿用原设备区交错入场风格）；卡片样式与全站分类卡片一致 */
 .stats-panel {
-    background: var(--color-bg-card);
-    border: 0.0625em solid var(--color-border);
-    border-radius: 0.75em;
+    @extend %card-surface;
+    border-radius: var(--radius-card);
     padding: 1.5em;
-    transition: border-color var(--transition-border), background-color var(--transition-bg);
+    transition: border-color var(--transition-fade), background-color var(--transition-fade);
     animation: fadeIn 0.5s ease both;
 
     &:nth-child(2) { animation-delay: 0.1s; }
@@ -105,7 +99,7 @@
     color: var(--color-accent);
     font-weight: 600;
     margin-bottom: 0.75em;
-    transition: color var(--transition-color);
+    transition: color var(--transition-fade);
 }
 
 .stats-panel-icon {
@@ -139,15 +133,15 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis; /* 长镜头型号截断，完整名称经 title 悬停查看 */
-    transition: color var(--transition-color);
+    transition: color var(--transition-fade);
 }
 
 .stats-bar-wrap {
     height: 0.45em;
-    border-radius: 0.25em;
+    border-radius: var(--radius-xs);
     background: var(--color-overlay-subtle);
     overflow: hidden;
-    transition: background-color var(--transition-bg);
+    transition: background-color var(--transition-fade);
 }
 
 /* 条形宽度由模板内联 --w（数量/最大值百分比）决定，scaleX 生长避开 libsass min/max 陷阱 */
@@ -160,7 +154,7 @@
     transform-origin: left center;
     animation: statsGrow 0.8s ease-out both;
     animation-delay: var(--d, 0ms);
-    transition: background-color var(--transition-bg);
+    transition: background-color var(--transition-fade);
 }
 
 @keyframes statsGrow {
@@ -174,7 +168,7 @@
     font-variant-numeric: tabular-nums;
     text-align: left; /* 左对齐紧贴条形：数字与条形的间隔恒等于列间距（与左侧标签间隔一致）；
                          右对齐时个位数字左侧留大片空档、视觉间隔远大于左侧 */
-    transition: color var(--transition-color);
+    transition: color var(--transition-fade);
 }
 
 /* 面板行数超 8 时的「展开全部」折叠：隐藏 checkbox + label 纯 CSS 切换（零 JS）——
@@ -216,7 +210,7 @@
     font-size: var(--size-small);
     color: var(--color-text-secondary);
     cursor: pointer;
-    transition: color var(--transition-color);
+    transition: color var(--transition-fade);
 
     &:hover { color: var(--color-accent); }
 }
@@ -256,13 +250,13 @@
     margin-top: 3em;
     padding-top: 1.5em;
     border-top: 0.0625em solid var(--color-border);
-    transition: border-color var(--transition-border);
+    transition: border-color var(--transition-fade);
 
     p {
         font-size: var(--size-small);
         color: var(--color-text-muted);
         line-height: 1.8;
-        transition: color var(--transition-color);
+        transition: color var(--transition-fade);
 
         b { color: var(--color-text-secondary); }
     }
@@ -280,22 +274,20 @@
     color: var(--color-accent);
     line-height: 1;
     margin-bottom: 0.2em;
-    transition: color var(--transition-color);
+    transition: color var(--transition-fade);
 }
 
 .error-title {
-    font-family: var(--font-heading);
+    @extend %section-heading;
     font-size: var(--size-h3);
-    color: var(--color-text);
     margin-bottom: 1em;
-    transition: color var(--transition-color);
 }
 
 .error-desc {
     color: var(--color-text-secondary);
     margin-bottom: 2em;
     line-height: 1.8;
-    transition: color var(--transition-color);
+    transition: color var(--transition-fade);
 }
 
 .error-home-link {
@@ -303,9 +295,9 @@
     padding: 0.75em 2em;
     background: var(--color-accent);
     color: var(--color-bg-card);
-    border-radius: 0.5em;
+    border-radius: var(--radius-sm);
     font-weight: 600;
-    transition: opacity 0.2s, background-color var(--transition-bg);
+    transition: opacity 0.2s, background-color var(--transition-fade);
 
     &:hover { opacity: 0.85; }
 }

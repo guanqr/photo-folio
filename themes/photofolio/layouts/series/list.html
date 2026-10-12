@@ -29,5 +29,8 @@
         </div>
         {{ end }}
     </div>
+
+    {{/* 结构化数据：目录封面照片（仅元信息、不含图片 URL——OSS 额度保护） */}}
+    {{ partial "jsonld-photos.html" (dict "photos" $coverPhotos "title" .Title "url" .Permalink) }}
 </section>
 {{ end }}

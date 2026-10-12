@@ -10,7 +10,7 @@
  * 详情内容仅在全开后可滚动，地点/日期随内容滚动（仅标题固定）。
  * 桌面端：不干预（reset 时清除窄屏残留的内联样式，恢复宽屏详情常显）。
  */
-export function initPanelDrawer({ lightbox, panel, panelDetails, panelToggle, metaEl }) {
+export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle, metaEl, dirVerdict }) {
     const narrowMedia = window.matchMedia('(max-width: 1000px)');
 
     let level = 0;       // 展开程度 0..1
@@ -290,6 +290,7 @@ export function initPanelDrawer({ lightbox, panel, panelDetails, panelToggle, me
     let dragStartY = null;
     let dragStartVirt = 0;
     let dragging = false;
+    let dragFromImgArea = false; // 拖拽起点是否在图片区——方向仲裁仅对图片区起手的手势生效
     lightbox.addEventListener('pointerdown', (e) => {
         if (!narrowMedia.matches || !lightbox.classList.contains('active')) return;
         if (e.target.closest('button') || e.target.closest('a')) return;
@@ -297,30 +298,45 @@ export function initPanelDrawer({ lightbox, panel, panelDetails, panelToggle, me
         cancelScrollAnim(); // 拖拽接管前完成进行中的回滚，保持虚拟位置不变量
         if (maxHeight() - minHeight < 1) return; // 行程为零：拖拽无展开余地，不启动
         dragging = true;
+        dragFromImgArea = !!(e.target.closest && e.target.closest('.lightbox-img-area'));
         dragStartY = e.clientY;
         dragStartVirt = level * (maxHeight() - minHeight) + panelDetails.scrollTop;
         lightbox.setPointerCapture(e.pointerId);
     });
-    lightbox.addEventListener('pointermove', (e) => {
-        if (!dragging) return;
+    // 虚拟位置统一落位（拖动中/接管回滚共用）：virt = 展开程度×行程 + 内容滚动
+    const applyVirt = (virt) => {
         const travel = maxHeight() - minHeight;
-        const virt = dragStartVirt + (dragStartY - e.clientY);
         if (virt <= 0) {
             level = 0;
             panelDetails.scrollTop = 0;
             apply(minHeight, false);
-            updateArrowState();
         } else if (virt < travel) {
             level = virt / travel;
             panelDetails.scrollTop = 0;
             apply(Math.round(minHeight + virt), false);
-            updateArrowState();
         } else {
             level = 1;
             apply(maxHeight(), false);
             panelDetails.scrollTop = Math.min(virt - travel, panelDetails.scrollHeight - panelDetails.clientHeight);
-            updateArrowState();
         }
+        updateArrowState();
+    };
+
+    lightbox.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        // 触屏方向仲裁（见 lightbox-swipe.js getVerdict）：
+        // 未决期抽屉**暂不响应**（水平接管前从未移动、无需回滚——消除
+        // 接管瞬间的回滚抖动与左右/上下「同时进行」观感）；
+        // 垂直意图确认后照常跟随；水平接管后结束本次拖拽
+        if (e.pointerType === 'touch' && dirVerdict && dragFromImgArea) {
+            const v = dirVerdict();
+            if (v === 'horizontal') {
+                dragging = false;
+                return;
+            }
+            if (v === null) return;
+        }
+        applyVirt(dragStartVirt + (dragStartY - e.clientY));
     });
     const endDrag = () => { dragging = false; };
     lightbox.addEventListener('pointerup', endDrag);

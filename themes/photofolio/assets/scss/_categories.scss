@@ -31,18 +31,15 @@
 /* 分类卡片：上图下文结构 */
 .category-card {
     @extend %reveal-entry;
+    @extend %card-surface;
     display: flex;
     flex-direction: column;
-    background-color: var(--color-bg-card);
-    border-radius: 0.75em;
+    border-radius: var(--radius-card);
     overflow: hidden;
-    border: 0.0625em solid var(--color-border);
-    transition: transform var(--transition-spring), border-color var(--transition), box-shadow var(--transition), background-color var(--transition-bg), opacity 0.45s ease;
+    transition: transform var(--transition-spring), border-color var(--transition), box-shadow var(--transition), background-color var(--transition-fade), opacity 0.45s ease;
 
     &:hover {
-        transform: translateY(-0.35em);
-        border-color: var(--color-accent-30);
-        box-shadow: 0 0.75em 2em rgba(var(--rgb-black), 0.2);
+        @include card-hover(-0.35em, var(--shadow-pop));
     }
 }
 
@@ -72,18 +69,15 @@
 }
 
 .category-title {
-    font-family: var(--font-heading);
+    @extend %section-heading;
     font-size: var(--size-h3);
-    font-weight: 600;
-    color: var(--color-text);
-    transition: color var(--transition-color);
 }
 
 .category-count {
     font-size: var(--size-small);
     color: var(--color-accent);
     font-weight: 500;
-    transition: color var(--transition-color);
+    transition: color var(--transition-fade);
 }
 
 .category-desc {
@@ -91,5 +85,5 @@
     color: var(--color-text-secondary);
     margin-top: 0.5em;
     line-height: 1.5;
-    transition: color var(--transition-color);
+    transition: color var(--transition-fade);
 }

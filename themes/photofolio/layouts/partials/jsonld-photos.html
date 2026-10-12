@@ -1,0 +1,35 @@
+{{- /* 照片结构化数据（ImageGallery + Photograph 数组，构建期生成零 JS）：
+       上下文 = dict "photos"（照片对象切片，至少含 src）"title"（页面标题）"url"（页面 URL）。
+       Photograph 只输出元信息文本（名称/描述/拍摄日期/拍摄地点/
+       EXIF 参数 schema.org ExifData/关键词/作者）——**不含任何图片 URL**，
+       避免搜索引擎收录照片地址、抓取 OSS 原图消耗流量额度 */ -}}
+{{- if .photos -}}
+{{- $author := site.Params.author -}}
+{{- $person := dict "@type" "Person" "name" $author.name -}}
+{{- with site.GetPage "/about" }}{{ $person = merge $person (dict "url" (.Permalink | absURL)) }}{{ end -}}
+{{- $imgs := slice -}}
+{{- range .photos -}}
+    {{- $exif := slice -}}
+    {{- with .camera }}{{ $exif = $exif | append (dict "name" (i18n "exif_device") "value" .) }}{{ end -}}
+    {{- with .lens }}{{ $exif = $exif | append (dict "name" (i18n "exif_lens") "value" .) }}{{ end -}}
+    {{- with .focus }}{{ $exif = $exif | append (dict "name" (i18n "exif_focus") "value" (printf "%s mm" .)) }}{{ end -}}
+    {{- with .aperture }}{{ $exif = $exif | append (dict "name" (i18n "exif_aperture") "value" (printf "f/%s" .)) }}{{ end -}}
+    {{- with .shutter }}{{ $exif = $exif | append (dict "name" (i18n "exif_shutter") "value" (printf "%s s" .)) }}{{ end -}}
+    {{- with .iso }}{{ $exif = $exif | append (dict "name" (i18n "exif_iso") "value" (printf "ISO %s" .)) }}{{ end -}}
+    {{- $keywords := slice -}}
+    {{- with .category }}{{ $keywords = $keywords | append . }}{{ end -}}
+    {{- with .series }}{{ $keywords = $keywords | append . }}{{ end -}}
+    {{- with .location }}{{ $keywords = $keywords | append . }}{{ end -}}
+    {{- $img := dict "@type" "Photograph" "name" (.alt | default (path.Base .src)) "creator" $person -}}
+    {{- with .description }}{{ $img = merge $img (dict "description" .) }}{{ end -}}
+    {{- with .time }}{{ $img = merge $img (dict "dateCreated" (. | time.Format "2006-01-02")) }}{{ end -}}
+    {{- $loc := or .place .location -}}
+    {{- with $loc }}{{ $img = merge $img (dict "contentLocation" .) }}{{ end -}}
+    {{- if $exif }}{{ $img = merge $img (dict "exifData" $exif) }}{{ end -}}
+    {{- if $keywords }}{{ $img = merge $img (dict "keywords" $keywords) }}{{ end -}}
+    {{- $imgs = $imgs | append $img -}}
+{{- end -}}
+<script type="application/ld+json">
+{{ dict "@context" "https://schema.org" "@type" "ImageGallery" "name" .title "url" (.url | absURL) "hasPart" $imgs | jsonify | safeJS }}
+</script>
+{{- end -}}

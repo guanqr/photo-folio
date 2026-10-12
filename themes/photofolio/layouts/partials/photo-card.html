@@ -3,6 +3,7 @@
 
 {{ $altText := $photo.alt }}
 {{ $src := $photo.src }}
+{{ $slug := $src | path.Base | strings.TrimSuffix (path.Ext $src) }} {{/* 照片唯一标识：灯箱 URL（?p=）用 */}}
 {{ $year := $photo.time | time.Format "2006" }}
 
 {{ $cfg := $site.Params.imageSizes | default dict }}
@@ -53,6 +54,7 @@
 
 <div class="masonry-item" data-year="{{ $year }}" data-location="{{ $photo.location }}" data-category="{{ $photo.category }}" data-scope="{{ if $photo.featured }}featured {{ end }}{{ $orientation }}">
     <div class="photo-card"
+        data-slug="{{ $slug }}"
         data-title="{{ $displayTitle }}"
         {{ with $description }}data-description="{{ . }}"{{ end }}
         {{ with $place }}data-place="{{ . }}"{{ end }}

@@ -25,7 +25,7 @@
                 {{ $srcUrl := partial "img-url.html" (dict "src" $photo.src "site" $.Site "width" $carouselWidth "mode" "lfit" "format" "webp" "quality" $carouselQuality) }}
                 <div class="carousel-slide{{ if eq $i 0 }} active{{ end }}">
                     <div class="carousel-photo">
-                        <img src="{{ $srcUrl }}" alt="{{ $photo.alt }}" loading="eager" class="carousel-img">
+                        <img src="{{ $srcUrl }}" alt="{{ $photo.alt }}" loading="eager" {{ if eq $i 0 }}fetchpriority="high"{{ end }} class="carousel-img">
                     </div>
                 </div>
                 {{ end }}

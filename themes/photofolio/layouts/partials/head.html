@@ -36,7 +36,11 @@
     <meta name="twitter:image" content="{{ $twImg }}">
 {{ end }}
 
-<!-- 主题固定为暗色 -->
+{{/* 结构化数据 JSON-LD：站点（WebSite）与作者（Person），全站生效 */}}
+{{ partial "jsonld.html" . }}
+
+{{/* 首页轮播首图预加载（LCP 优化，仅首页） */}}
+{{ partial "hero-preload.html" . }}
 
 <!-- 动态引入字体外链 -->
 {{ $typo := .Site.Params.typography }}

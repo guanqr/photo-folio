@@ -3,7 +3,7 @@
     text-align: center;
     padding: 4em 2em;
     background: var(--color-bg-secondary);
-    border-radius: 0.75em;
+    border-radius: var(--radius-card);
     border: 0.0625em dashed var(--color-border);
     margin: 2em 0;
 
@@ -24,14 +24,14 @@
         margin-top: 1em;
         color: var(--color-text-muted);
         font-size: 0.9em;
-        transition: color var(--transition-color);
+        transition: color var(--transition-fade);
     }
 
     code {
         font-family: var(--font-meta);
         background: var(--color-bg-card);
         padding: 0.1em 0.4em;
-        border-radius: 0.2em;
+        border-radius: var(--radius-xs);
         color: var(--color-accent);
         font-size: 0.9em;
     }
@@ -61,7 +61,7 @@
     /* 初始隐藏状态 */
     opacity: 0;
     visibility: hidden;
-    transition: opacity var(--transition-opacity), visibility 0.3s ease, bottom var(--transition-spring), background-color var(--transition-bg), color var(--transition-color);
+    transition: opacity var(--transition-fade), visibility 0.3s ease, bottom var(--transition-spring), background-color var(--transition-fade), color var(--transition-fade);
 
     &:hover {
         background-color: var(--color-accent);

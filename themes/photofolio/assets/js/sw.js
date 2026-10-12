@@ -61,6 +61,12 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url)
   const isNavigation = request.mode === 'navigate'
   const isHashed = /^\/(css|js|fonts|icons)\//.test(url.pathname)
+  // 缓存键去查询串：?y=/?p= 等客户端状态参数服务端返回同一份 HTML——
+  // 导航与 SPA fetch（同源非导航 GET）同键复用，避免重复条目挤占运行时配额；
+  // 旧版本按完整 URL 写入的条目不再命中（一次性离线回退损失，超限自动裁剪回收）
+  const cacheKey = url.search && !isHashed
+    ? new Request(url.origin + url.pathname)
+    : request
 
   event.respondWith((async () => {
     const cache = await runtimeCache
@@ -84,10 +90,10 @@ self.addEventListener('fetch', (event) => {
     // 预缓存进 SHELL_CACHE，而运行时写入在 RUNTIME，只查后者会漏掉
     try {
       const networkResponse = await fetch(request)
-      if (networkResponse.status === 200) cache.put(request, networkResponse.clone())
+      if (networkResponse.status === 200) cache.put(cacheKey, networkResponse.clone())
       return networkResponse
     } catch (e) {
-      const cachedResponse = await cache.match(request)
+      const cachedResponse = await cache.match(cacheKey)
       if (cachedResponse) return cachedResponse
       if (isNavigation) {
         const shell = await caches.match('/')

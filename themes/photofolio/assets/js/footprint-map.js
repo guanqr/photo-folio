@@ -4,17 +4,17 @@
  * - 自绘 SVG 等距圆柱投影（零外部库），世界陆地（Natural Earth 10m）、中国省级边界与
  *   海外国家边界均为一次性生成的简化静态 JSON（同源 fetch、模块级 Promise 记忆化，
  *   sw 自动缓存；失败仅降级为网格 + 点迹）
- * - 省份/国家以**独立区块**呈现（填充 + 描边）：悬停提亮，点击选中（is-active 高亮）
- *   并更新地点预览面板（含该地区数据统计：张数/地点/年份/机身 Top3）——无照片的地区
- *   为中性填充、不可交互
+ * - 省份/国家以**独立区块**呈现（填充 + 描边）：悬停提亮 + 弹层简讯（地名/张数/年份），
+ *   点击直接跳转对应地点详情页——无照片的地区为中性填充、不可交互
  * - 全部照片按坐标形成**点迹**（小圆点，纯展示、pointer-events none）
- * - 弹层（地名 / 张数 / 年份跨度）：桌面悬停/键盘聚焦显示，触屏点按显示并常驻至外部点按/滚动
+ * - 弹层（地名 / 张数 / 年份跨度）：仅悬停设备（hover: hover）悬停与键盘聚焦显示；
+ *   触屏无悬停逻辑——点按区块直接跳转详情页、不显示弹层
  * - 懒加载：IntersectionObserver rootMargin 600px 进入视口才构建
  * - SPA 页面切换重跑 initFootprintMap：同一节点幂等，旧状态（observers）先销毁
  */
 
 const VIEW_W = 1000;       // 视图固定宽（SVG user 单位）
-const MIN_H = 500;         // 视图高下限
+const MIN_H = 400;         // 视图高下限（桌面 0.45 封顶须低于此值；退化守卫由 MIN_SPAN 承担）
 const MAX_H = 1000;        // 视图高上限
 const PAD = 0.15;          // fit-to-bounds 边距比例
 const MIN_SPAN_X = 12;     // 最小经度跨度（°），防单点退化
@@ -25,8 +25,17 @@ import { prefersReducedMotion, FLIP_TRANSITION } from './utils.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-// 窄屏断点（与 CSS 分栏 min-width: 769px 对应）：模块级单例，避免每次点击/构建重建 MediaQueryList
-const MQ_NARROW = window.matchMedia('(max-width: 768px)');
+/* 连续宽高比：窄屏区域（≤768px，与全站断点一致）比例**锁定** 0.75（竖屏友好、
+   不再随宽度变化）；768→1200px 线性插值到 0.45（一屏看全）；1200px 以上取 0.45 */
+const NARROW_MAP_RATIO = 0.75;
+const DESKTOP_MAP_RATIO = 0.45;
+const RATIO_MIN_W = 768;   // 窄屏区域起点：低于此宽度比例锁定
+const RATIO_MAX_W = 1200;
+
+function targetHForWidth(width) {
+    const r = Math.min(1, Math.max(0, (width - RATIO_MIN_W) / (RATIO_MAX_W - RATIO_MIN_W)));
+    return Math.round(VIEW_W * (NARROW_MAP_RATIO + (DESKTOP_MAP_RATIO - NARROW_MAP_RATIO) * r));
+}
 
 // 繁→简省名映射（locations.toml 地点名 → provinces.json 键，数据源为简体省名）；
 // 省份区块的 dataset 存站点地点名（繁），经此映射反向查省界数据
@@ -79,22 +88,21 @@ function loadCountriesData() {
 }
 
 let state = null;          // { root, observer, resizeObserver, cleanup, tooltipCleanup,
-                           //   view, aspect, isNarrow, layoutRects, layoutAnimating }
+                           //   view, layoutRects, layoutAnimating }
 
 export function initFootprintMap() {
     // 清理先于一切：导航到非足迹页时（无 #footprint-map）释放旧状态，
     // 避免 RO/断点监听滞留观察已脱离文档的地图
     destroyState();
 
-    // 预览面板：独立于地图构建（无坐标照片时地图不渲染，面板仍展示默认地点）——
-    // 点击省/国区块后由 build() 内的联动逻辑更新
-    let previewData = [];
-    const previewDataEl = document.getElementById('footprint-preview-data');
-    if (previewDataEl) {
+    // 地点数据：slug → 详情页 URL/张数映射（区块点击跳转与弹层展示用）
+    let locationData = [];
+    const locationDataEl = document.getElementById('footprint-locations-data');
+    if (locationDataEl) {
         try {
-            previewData = JSON.parse(previewDataEl.textContent);
+            locationData = JSON.parse(locationDataEl.textContent);
         } catch (err) {
-            console.warn('[footprint-map] preview data parse failed', err);
+            console.warn('[footprint-map] location data parse failed', err);
         }
     }
     let statsByName = {};
@@ -106,8 +114,6 @@ export function initFootprintMap() {
             console.warn('[footprint-map] stats data parse failed', err);
         }
     }
-    const previewPanel = document.getElementById('footprint-preview');
-
     const root = document.getElementById('footprint-map');
     const dataEl = document.getElementById('footprint-map-data');
     if (!root || !dataEl) return;
@@ -128,13 +134,13 @@ export function initFootprintMap() {
             if (!entries[0].isIntersecting) return;
             state.observer.disconnect();
             state.observer = null;
-            build(root, points, previewData, statsByName, previewPanel).catch((err) => {
+            build(root, points, locationData, statsByName).catch((err) => {
                 console.warn('[footprint-map] build failed', err);
             });
         }, { rootMargin: '600px 0px' });
         state.observer.observe(root);
     } else {
-        build(root, points, previewData, statsByName, previewPanel);
+        build(root, points, locationData, statsByName);
     }
 }
 
@@ -204,7 +210,13 @@ function updateProjection(root, prNew) {
     const view = state.view;
     if (!view || !root.isConnected) return;
     view.svg.setAttribute('viewBox', `0 0 ${prNew.W} ${prNew.H}`);
-    view.grid.setAttribute('transform', matrixFrom(view.gridPr, prNew));
+    // 网格线按新投影重建：旧网格只覆盖旧视图范围，投影放大（如竖屏→横屏）
+    // 后新露出的区域经纬线缺失——线数恒定（步长 10°）、重建成本可忽略；
+    // 陆地/省国路径为全量几何，继续走矩阵增量重投影
+    view.grid.replaceChildren();
+    buildGrid(view.grid, prNew);
+    view.grid.removeAttribute('transform');
+    view.gridPr = prNew;
     if (view.land) view.land.setAttribute('transform', matrixFrom(view.landPr, prNew));
     if (view.prov) view.prov.setAttribute('transform', matrixFrom(view.provPr, prNew));
     if (view.country) view.country.setAttribute('transform', matrixFrom(view.countryPr, prNew));
@@ -213,20 +225,17 @@ function updateProjection(root, prNew) {
         d.inner.setAttribute('transform', `translate(${x},${y})`);
     });
     view.pr = prNew;
-    root.style.aspectRatio = `${prNew.W} / ${prNew.H}`; // 窄屏时决定框高；桌面由 CSS 高度决定（被忽略）
+    root.style.aspectRatio = `${prNew.W} / ${prNew.H}`; // 框高由纵横比决定
 }
 
-// 跨断点布局切换的 FLIP（分栏 ↔ 上下堆叠）：与卡片换行同款——
+// 旋转时布局 FLIP（地图尺寸/图例位置变化）：与卡片换行同款——
 // 基准位置每帧持续刷新（动画期间暂停），RO 检测到模式翻转时从上一帧基准回放。
 // 不依赖 MQL change 事件「先于布局」的时序（不同环境下并不可靠）
 function layoutEls() {
-    // FLIP 作用于地图框/图例/预览面板本身，而非它们的容器 section——
-    // section 的窄屏 padding-top（2em）会使 rect 顶缘比宽屏高 32px（紧贴页头横线），
-    // FLIP 会把内边距差当位移、起点压到横线上；地图框两态顶缘一致（实测均为 header+2em）
+    // FLIP 作用于地图框/图例本身，而非容器 section
     return [
         document.getElementById('footprint-map'),
         document.querySelector('.footprint-map-legend'),
-        document.querySelector('.footprint-preview-wrap'),
     ].filter(Boolean);
 }
 
@@ -278,6 +287,28 @@ function flipLayout() {
     }, 400);
 }
 
+/* 区块图层构建（省/国共用）：每个地区合并为单个 path，挂地点名/计数/年份
+   数据属性；nameOf 把数据键映射为站点地点名（省经繁简映射、国恒等）；
+   无照片地区中性填充、不可交互 */
+function buildRegionLayer(g, data, pr, locationData, statsByName, nameOf) {
+    for (const [key, polys] of Object.entries(data.data)) {
+        const siteName = nameOf(key);
+        const entry = siteName ? locationData.find((d) => d.name === siteName) : null;
+        const attrs = {
+            class: 'fm-region' + (entry ? '' : ' is-inert'),
+            'data-name': siteName || key,
+        };
+        if (entry) {
+            attrs['data-slug'] = entry.slug;
+            attrs['data-count'] = entry.count;
+            const st = statsByName[siteName] || {};
+            attrs['data-min-year'] = st.yearMin || '';
+            attrs['data-max-year'] = st.yearMax || '';
+        }
+        buildRegionPath(g, polys, pr, data.quant, attrs);
+    }
+}
+
 /* 区块 path：一个地区（省/国）的全部多边形合并为单个 path（多环子路径空格连接），
    便于整块点击/悬停/选中 */
 function buildRegionPath(g, polys, pr, quant, attrs) {
@@ -323,7 +354,7 @@ function computeBounds(points, provData, activeNames) {
     return { minLng, maxLng, minLat, maxLat };
 }
 
-async function build(root, points, previewData, statsByName, previewPanel) {
+async function build(root, points, locationData, statsByName) {
     // 增量重投影快速路径（拖动窗口宽高比漂移/跨断点）：只改 viewBox、组的 matrix
     // 变换与点迹坐标，不重建 DOM、不重投影路径。必须在递增构建序号之前——
     // 否则首建在等待数据 fetch 期间被增量更新「取代」，几何会永久缺失
@@ -332,20 +363,8 @@ async function build(root, points, previewData, statsByName, previewPanel) {
         if (width > 0) {
             // 模式判定用媒体查询（与 CSS 分栏断点一致）——不能用框高是否为 0 判断：
             // 跨断点后内联 aspect-ratio 会让窄屏框高也非 0，导致误按桌面模式算投影
-            const isNarrow = MQ_NARROW.matches;
-            // 桌面分栏：行高由右侧等高卡片决定——直接测卡片所在面板的高度，
-            // 而非地图框自身（避免「框高由框的纵横比派生」的循环量测）
-            let targetH = null;
-            if (!isNarrow) {
-                const panelWrap = document.querySelector('.footprint-preview-wrap');
-                const refHeight = panelWrap ? panelWrap.getBoundingClientRect().height : root.getBoundingClientRect().height;
-                if (refHeight > 0) {
-                    targetH = Math.round((VIEW_W * refHeight) / width);
-                }
-            }
-            // 视图范围沿用首次构建的完整区块 bounds（含省/国区块包围盒）
-            updateProjection(root, fitProjection(state.bounds, targetH));
-            state.aspect = (state.view.pr.W / state.view.pr.H);
+            // 连续宽高比（targetHForWidth）；视图范围沿用首次构建的完整区块 bounds
+            updateProjection(root, fitProjection(state.bounds, targetHForWidth(width)));
         }
         return;
     }
@@ -363,24 +382,11 @@ async function build(root, points, previewData, statsByName, previewPanel) {
 
     // 模式判定用媒体查询（与 CSS 分栏断点一致）——不能用框高是否为 0 判断：
     // 跨断点后内联 aspect-ratio 会让窄屏框高也非 0，导致误按桌面模式算投影
-    const isNarrow = MQ_NARROW.matches;
-    // 桌面分栏：行高由右侧等高卡片决定——直接测卡片所在面板的高度，
-    // 而非地图框自身（避免「框高由框的纵横比派生」的循环量测）
-    let targetH = null;
-    if (!isNarrow) {
-        const panelWrap = document.querySelector('.footprint-preview-wrap');
-        const refHeight = panelWrap ? panelWrap.getBoundingClientRect().height : root.getBoundingClientRect().height;
-        if (refHeight > 0) {
-            targetH = Math.round((VIEW_W * refHeight) / width);
-        }
-    }
-
     const countFormat = root.dataset.countFormat;
     const yearFormat = root.dataset.yearRangeFormat || '%MIN% — %MAX%';
 
-    // 可交互区块名单：previewData 里有该地点才可点（无照片的地区中性填充、pointer-events none）
-    const activeNames = new Set(previewData.map((d) => d.name));
-    const regionList = []; // [{ path, name }]——高亮联动用
+    // 可交互区块名单：locationData 里有该地点才可点（无照片的地区中性填充、pointer-events none）
+    const activeNames = new Set(locationData.map((d) => d.name));
 
     // 几何数据先于投影加载：视图范围 = 照片点迹 ∪ 全部有照片地区的完整区块
     //（省区块完整可见、不被 viewBox 裁切——如青海照片在中东部、省界西段须完整露出）
@@ -416,7 +422,7 @@ async function build(root, points, previewData, statsByName, previewPanel) {
         { lng: bounds.minLng, lat: bounds.minLat },
         { lng: bounds.maxLng, lat: bounds.maxLat },
     ];
-    const pr = fitProjection(fitPoints, targetH);
+    const pr = fitProjection(fitPoints, targetHForWidth(width));
     state.bounds = fitPoints; // 增量重投影沿用同一视图范围
 
     // 以下为首次构建：先清理上一次构建的监听与 DOM（防点击监听叠加、弹层重复）
@@ -500,25 +506,7 @@ async function build(root, points, previewData, statsByName, previewPanel) {
     if (provData) {
         const prov = document.createElementNS(SVG_NS, 'g');
         prov.setAttribute('class', 'fm-regions');
-        for (const [key, polys] of Object.entries(provData.data)) {
-            const siteName = PROVINCE_NAMES_REV[key] || null;
-            const entry = siteName ? previewData.find((d) => d.name === siteName) : null;
-            const attrs = {
-                class: 'fm-region' + (entry ? '' : ' is-inert'),
-                'data-name': siteName || key,
-            };
-            if (entry) {
-                attrs['data-slug'] = entry.slug;
-                attrs['data-count'] = entry.count;
-                const st = statsByName[siteName] || {};
-                attrs['data-min-year'] = st.yearMin || '';
-                attrs['data-max-year'] = st.yearMax || '';
-            }
-            const path = buildRegionPath(prov, polys, pr, provData.quant, attrs);
-            if (entry) {
-                regionList.push({ path, name: siteName }); // 高亮联动只需 path 与地点名
-            }
-        }
+        buildRegionLayer(prov, provData, pr, locationData, statsByName, (key) => PROVINCE_NAMES_REV[key] || null);
         prov.setAttribute('transform', matrixFrom(pr, state.view.pr));
         state.view.prov = prov;
         state.view.provPr = pr;
@@ -529,24 +517,7 @@ async function build(root, points, previewData, statsByName, previewPanel) {
     if (countryData) {
         const country = document.createElementNS(SVG_NS, 'g');
         country.setAttribute('class', 'fm-regions');
-        for (const [key, polys] of Object.entries(countryData.data)) {
-            const entry = previewData.find((d) => d.name === key);
-            const attrs = {
-                class: 'fm-region' + (entry ? '' : ' is-inert'),
-                'data-name': key,
-            };
-            if (entry) {
-                attrs['data-slug'] = entry.slug;
-                attrs['data-count'] = entry.count;
-                const st = statsByName[key] || {};
-                attrs['data-min-year'] = st.yearMin || '';
-                attrs['data-max-year'] = st.yearMax || '';
-            }
-            const path = buildRegionPath(country, polys, pr, countryData.quant, attrs);
-            if (entry) {
-                regionList.push({ path, name: key });
-            }
-        }
+        buildRegionLayer(country, countryData, pr, locationData, statsByName, (key) => key);
         country.setAttribute('transform', matrixFrom(pr, state.view.pr));
         state.view.country = country;
         state.view.countryPr = pr;
@@ -554,13 +525,17 @@ async function build(root, points, previewData, statsByName, previewPanel) {
     }
 
     if (seq !== buildSeq) return; // 成功路径在 await 后已守卫，此处兜底（如未缓存 fetch 快速完成）
-    state.aspect = pr.W / pr.H; // 构建生效后才写入（避免被取代的构建污染漂移检测基准）
     state.tooltipCleanup = bindTooltip(root, tooltip, countFormat, yearFormat);
 
     // resize/旋转：关闭弹层；桌面等高模式下宽高比漂移超过 1% 时做增量重投影——
     // 该路径成本极低（改 viewBox + 组变换 + 点迹坐标），无需防抖，拖动中地图实时跟随
     if ('ResizeObserver' in window) {
         let rebuildQueued = false;
+        // 屏幕朝向类型（iOS 16.4+ 提供；不可用时为 null）：区分旋转（一次性大跳变 → FLIP）
+        // 与拖动（连续小变化 → 直接跟随、不 FLIP）
+        let lastOrientationType = (typeof screen !== 'undefined' && screen.orientation)
+            ? screen.orientation.type
+            : null;
         state.resizeObserver = new ResizeObserver(() => {
             hideTooltip(tooltip);
             if (rebuildQueued) return;
@@ -568,61 +543,58 @@ async function build(root, points, previewData, statsByName, previewPanel) {
             requestAnimationFrame(() => {
                 rebuildQueued = false;
                 if (!root.isConnected) return;
-                // 跨断点检测（RO 为后布局回调，此时布局已按新断点排好）：
-                // 布局切换 FLIP + 地图重建（分栏/堆叠投影切换）
-                const nowNarrow = MQ_NARROW.matches;
-                if (nowNarrow !== state.isNarrow) {
-                    state.isNarrow = nowNarrow;
-                    // 先让地图完成投影/尺寸切换，再量测做 FLIP——动画目标（Last）
-                    // 必须包含地图的最终尺寸，否则动画结束后地图会再跳一次
-                    build(root, points, previewData, statsByName, previewPanel).catch((err) => {
-                        console.warn('[footprint-map] breakpoint rebuild failed', err);
-                    });
-                    flipLayout();
-                    return;
-                }
-                // 基准位置每帧刷新（动画期间暂停）：下一次模式翻转的 FLIP First
-                if (!state.layoutAnimating) {
-                    state.layoutRects = rectsOf(layoutEls());
-                }
                 const w = root.getBoundingClientRect().width;
                 const h = root.getBoundingClientRect().height;
                 if (!(w > 0) || !(h > 0)) return;
-                const cur = w / h;
-                if (state.aspect && Math.abs(cur - state.aspect) / state.aspect > 0.01) {
-                    build(root, points, previewData, statsByName, previewPanel).catch((err) => {
+                // 连续宽高比（targetHForWidth）：偏差超 0.5% 即增量重投影
+                //（fast path 每帧级成本）——拖动窗口时地图随宽度连续形变、无跳变
+                const targetRatio = targetHForWidth(w) / VIEW_W;
+                const drift = Math.abs(h / w - targetRatio) / targetRatio;
+                // 基准位置每帧刷新（动画期间暂停）：旋转 FLIP 的 First
+                const prevRects = state.layoutRects;
+                if (!state.layoutAnimating) {
+                    state.layoutRects = rectsOf(layoutEls());
+                }
+                if (drift > 0.005) {
+                    build(root, points, locationData, statsByName).catch((err) => {
                         console.warn('[footprint-map] rebuild failed', err);
                     });
+                    // 旋转带来的一次性大跳变：以旋转前的基准回放 FLIP 平滑过渡
+                    //（拖动不触发；fast path 同步完成后再量测 Last）
+                    const rotated = lastOrientationType !== null
+                        && screen.orientation && screen.orientation.type !== lastOrientationType;
+                    lastOrientationType = screen.orientation
+                        ? screen.orientation.type
+                        : lastOrientationType;
+                    if (rotated) {
+                        state.layoutRects = prevRects;
+                        flipLayout();
+                    }
                 }
             });
         });
         state.resizeObserver.observe(root);
     }
 
-    // 断点同步：跨 769px 时地图与卡片切换分栏/上下堆叠。
-    // 由 RO（后布局回调，必然触发）驱动，而非 MQL change 事件（其时序在不同环境
-    // 下不可靠）；FLIP 用「上一帧持续刷新的基准位置」回放（与卡片换行 FLIP 同款，
-    // 不依赖「先量后变」的时序假设）
-    state.isNarrow = MQ_NARROW.matches;
+    // 布局 FLIP 基准：RO 每 tick 刷新（动画期间暂停），旋转时回放
     state.layoutRects = null;
     state.layoutAnimating = false;
 
-    // ===== 联动：省/国区块 ↔ 地点预览面板（点击区块更新面板内容与统计，面板整块链接进详情页） =====
-    const highlightRegion = (name) => {
-        document.querySelectorAll('.fm-region.is-active').forEach((el) => el.classList.remove('is-active'));
-        const target = regionList.find((r) => r.name === name);
-        if (target) target.path.classList.add('is-active');
-    };
-
+    // ===== 联动：省/国区块点击 → 直接跳转地点详情页 =====
     const onRegionClick = (e) => {
         const path = e.target.closest('.fm-region');
         if (!path || !path.dataset.slug) return;
         e.preventDefault();
         e.stopPropagation();
-        highlightRegion(path.dataset.name);
-        renderPreview(previewData, path.dataset.slug);
-        // 不做自动滚动：点击区块后页面保持在原位（区块高亮即反馈），
-        // 自动滚入面板会把地图顶出视口、页面跳位
+        const entry = locationData.find((d) => d.slug === path.dataset.slug);
+        if (!entry || !entry.url) return;
+        // 创建 <a> 触发 click 走站内 SPA 切换管线（page-transition 拦截），
+        // 与普通站内链接跳转体验一致；弹层在滚动/点按外部时照常收起
+        const link = document.createElement('a');
+        link.href = entry.url;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
     };
     root.addEventListener('click', onRegionClick);
 
@@ -633,60 +605,7 @@ async function build(root, points, previewData, statsByName, previewPanel) {
             state.tooltipCleanup();
             state.tooltipCleanup = null;
         }
-        // 在途预览切换计时一并作废：SPA 换页后不得用旧页面的 slug 渲染新页面的面板
-        if (renderPreview.timer) {
-            clearTimeout(renderPreview.timer);
-            renderPreview.timer = null;
-        }
     };
-}
-
-/* ===== 预览面板渲染（数据 JSON 由模板生成：slug → 名称/详情页/总数/展示照片；
-   面板卡片结构与样式与旧光点版完全一致，不额外展示统计信息） ===== */
-function renderPreview(data, slug) {
-    const panel = document.getElementById('footprint-preview');
-    if (!panel) return;
-    const FADE_MS = prefersReducedMotion() ? 0 : 200;
-
-    // 切换动画：淡出旧内容 → 换内容 → 淡入；
-    // 快速连续点击区块时重置计时，以最新一次选择为准
-    panel.style.opacity = '0';
-    clearTimeout(renderPreview.timer);
-    renderPreview.timer = setTimeout(() => {
-        const entry = data.find((d) => d.slug === slug) || data[0];
-        if (!entry || !entry.cover) {
-            panel.style.opacity = '1';
-            return;
-        }
-
-        panel.href = entry.url;
-        panel.classList.remove('is-hint'); // 离开提示态（恢复链接交互与悬停样式）
-
-        const name = document.createElement('h3');
-        name.className = 'preview-name';
-        name.textContent = entry.name;
-
-        const media = document.createElement('div');
-        media.className = 'preview-media';
-        const img = document.createElement('img');
-        img.src = entry.cover.src;
-        img.alt = entry.cover.alt;
-        // 不设 loading="lazy"：动态创建的元素不在 lazy-load 的监听范围内，
-        // img[loading="lazy"] 的载入前模糊（blur）永远不会被清除，画面呈毛玻璃状
-        media.appendChild(img);
-
-        const more = document.createElement('span');
-        more.className = 'preview-more';
-        more.textContent = panel.dataset.moreFormat.replace('%COUNT%', entry.count);
-
-        // 分类卡片同款结构：图片在上、信息块（地名 + 查看全部）在下
-        const info = document.createElement('div');
-        info.className = 'preview-info';
-        info.append(name, more);
-
-        panel.replaceChildren(media, info);
-        panel.style.opacity = '1';
-    }, FADE_MS);
 }
 
 /* 网格线：等距圆柱下均为直线；按可视范围反推经纬度起止 */
@@ -838,55 +757,13 @@ function bindTooltip(root, tooltip, countFormat, yearFormat) {
         render(el, anchorX, anchorY);
     };
 
-    // 触屏点按显示（非悬停设备）：点按区块后弹层**常驻**（触屏没有「指针离开」可依赖），
-    // 直到点按地图外任意处 / 页面滚动 / Escape / resize / 重建才收起。
-    // 悬停设备不受影响：touchShown 只会经 onTap（悬停门禁之后）置位，hover 设备恒为 false
-    let touchShown = false;
-    let touchDismiss = null; // 常驻态的收起监听（外部点按 + 滚动），首次点按后懒挂载
-    const dismissTouch = () => {
-        touchShown = false;
-        hide();
-        if (touchDismiss) {
-            touchDismiss();
-            touchDismiss = null;
-        }
-    };
-    const ensureTouchDismiss = () => {
-        if (touchDismiss) return;
-        const onDocDown = (e) => {
-            // 点按任意区块不收起（随后的 click 会立即在对应区块重新显示）
-            if (e.target.closest && e.target.closest('.fm-region')) return;
-            dismissTouch();
-        };
-        // 页面滚动：弹层随地图滚走，常驻态一并结束（capture 覆盖内部滚动容器）
-        const onScroll = () => dismissTouch();
-        document.addEventListener('pointerdown', onDocDown, true);
-        window.addEventListener('scroll', onScroll, { passive: true, capture: true });
-        touchDismiss = () => {
-            document.removeEventListener('pointerdown', onDocDown, true);
-            window.removeEventListener('scroll', onScroll, { passive: true, capture: true });
-        };
-    };
-
     const onPointerEnter = (e) => {
         if (!isHoverCapable) return;
         const link = e.target.closest('.fm-region');
         if (link && link.dataset.slug) show(link, e.clientX, e.clientY);
     };
     const onPointerLeave = (e) => {
-        // 触屏常驻弹层不随 pointerleave 收起（触屏点按抬起即触发 leave，会立即关掉刚显示的弹层）
-        if (touchShown) return;
         if (e.target.closest('.fm-region')) hide();
-    };
-    // 触屏点按兜底：pointerenter 被悬停门禁挡掉；走 click 而非 pointerdown 触发——
-    // 手指起手滚动不产生 click，不会误显示弹层
-    const onTap = (e) => {
-        if (isHoverCapable) return;
-        const link = e.target.closest('.fm-region');
-        if (!link || !link.dataset.slug) return;
-        show(link, e.clientX, e.clientY);
-        touchShown = true;
-        ensureTouchDismiss();
     };
     const onFocusIn = (e) => {
         const link = e.target.closest('.fm-region');
@@ -897,31 +774,18 @@ function bindTooltip(root, tooltip, countFormat, yearFormat) {
         if (e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.fm-region')) return;
         if (e.target.closest('.fm-region')) hide();
     };
-    const onKeydown = (e) => {
-        if (e.key === 'Escape') dismissTouch();
-    };
-
     root.addEventListener('pointerenter', onPointerEnter, true);
     root.addEventListener('pointerleave', onPointerLeave, true);
-    root.addEventListener('click', onTap);
     root.addEventListener('focusin', onFocusIn);
     root.addEventListener('focusout', onFocusOut);
-    root.addEventListener('keydown', onKeydown);
 
     // 返回移除函数：重建时会重新绑定弹层监听，旧监听必须移除（否则随重建次数累积，
     // 每次悬停都会在已脱离文档的旧弹层上重复执行布局读取）
     return () => {
         root.removeEventListener('pointerenter', onPointerEnter, true);
         root.removeEventListener('pointerleave', onPointerLeave, true);
-        root.removeEventListener('click', onTap);
         root.removeEventListener('focusin', onFocusIn);
         root.removeEventListener('focusout', onFocusOut);
-        root.removeEventListener('keydown', onKeydown);
-        // 常驻态的外部监听一并移除（SPA 换页/重建时不得滞留观察已脱离文档的地图）
-        if (touchDismiss) {
-            touchDismiss();
-            touchDismiss = null;
-        }
     };
 }
 

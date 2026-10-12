@@ -4,13 +4,15 @@
  * - 筛选切换：以「下拉加载更多」分页模式重启网格——集合外隐藏、集合内重新分页
  *   （首批 12 张揭示，其余滚动加载；无限滚动照常工作，触发器保持可见）
  * - 无匹配时显示空状态文案并隐藏触发器
- * - 筛选状态同步到 URL（参考站同款）：?s=范围 &y=年份 &l=地点 &c=类型（history.replaceState，
- *   默认值不写入）；直接打开带参数的 URL 或 SPA 返回时自动恢复筛选
+ * - 筛选状态同步到 URL（参考站同款）：?s=范围 &y=年份 &l=地点 &c=类型（pushState——
+ *   iOS 地址栏实时更新、历史入栈返回键可逐步回退筛选，默认值不写入；
+ *   加载恢复/过期参数清理走 replaceState 不产生历史）；直接打开带参数的 URL
+ *   或 SPA 返回时自动恢复筛选
  */
 
 import { restartMasonryGrid } from './masonry.js';
 import { initInfiniteScroll } from './infinite-scroll.js';
-import { prefersReducedMotion, easeOutCubic } from './utils.js';
+import { prefersReducedMotion, easeOutCubic, pushQueryState } from './utils.js';
 
 export const PARAM_KEYS = { scope: 's', year: 'y', location: 'l', category: 'c' };
 
@@ -70,16 +72,16 @@ export function initGalleryFilter() {
         });
     };
 
-    /* URL 同步：replaceState（不产生历史记录），默认值不写入 */
-    const syncUrl = () => {
-        const params = new URLSearchParams();
+    /* URL 同步：pushState（iOS 地址栏实时更新、历史入栈返回键可逐步回退筛选；
+       路径保持站点目录式规范形态带尾斜杠）；未激活维度显式清除（含过期参数
+       清理），?p= 等其余参数自动保留（pushQueryState 克隆基准）。
+       replace=true 仅用于加载恢复的清理路径——不产生历史（返回键不留死循环） */
+    const syncUrl = (replace = false) => {
+        const updates = {};
         groups.forEach((g) => {
-            const v = valueOf(g.dataset.dim);
-            if (v) params.set(PARAM_KEYS[g.dataset.dim], v);
+            updates[PARAM_KEYS[g.dataset.dim]] = valueOf(g.dataset.dim) || null;
         });
-        const qs = params.toString();
-        const url = location.pathname + (qs ? '?' + qs : '');
-        history.replaceState({ url: location.origin + url }, '', url);
+        pushQueryState(updates, { replace });
     };
 
     /* 横向滚动渐隐遮罩：仅当右侧还有内容时显示（参考站 can-scroll-r） */
@@ -98,7 +100,7 @@ export function initGalleryFilter() {
         updateMask(box);
     };
 
-    const apply = () => {
+    const apply = (replace = false) => {
         // 每轮筛选只解析一次各维度值（避免在匹配谓词中逐项重复查询 DOM）
         const scope = valueOf('scope');
         const year = valueOf('year');
@@ -142,7 +144,7 @@ export function initGalleryFilter() {
         }
         // 若无限滚动的监听曾因加载完成被移除，重新挂载；仍生效时幂等跳过
         initInfiniteScroll();
-        syncUrl();
+        syncUrl(replace);
     };
 
     bar.addEventListener('click', (e) => {
@@ -182,5 +184,6 @@ export function initGalleryFilter() {
     // 带筛选参数但无按钮可匹配（维度已关闭/值过期/空值）时也必须执行 apply——
     // 否则 skipReveal 跳过了首屏揭示而无人接管，网格整页空白；apply 后过期参数会被 syncUrl 清理
     const hadFilterParams = Object.values(PARAM_KEYS).some((k) => params.has(k));
-    if (restored || hadFilterParams) apply();
+    // 加载恢复/过期参数清理走 replaceState：URL 净化不产生历史（返回键不留死循环）
+    if (restored || hadFilterParams) apply(true);
 }

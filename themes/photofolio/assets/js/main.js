@@ -1,4 +1,4 @@
-import { initLightbox } from './lightbox.js';
+import { initLightbox, openLightboxFromUrl } from './lightbox.js';
 import { initLazyLoad } from './lazy-load.js';
 import { initHeaderScroll } from './header-scroll.js';
 import { initMobileNav } from './mobile-nav.js';
@@ -51,6 +51,7 @@ function initPageModules() {
     initAboutStats();
     revealCategoryCards();
     initCardsFlip();
+    openLightboxFromUrl(); // URL 带 ?p= 时恢复灯箱（首次加载与 SPA 跳转均会执行）
 }
 
 // 全局模块（仅首次初始化，页面切换后不重复执行）

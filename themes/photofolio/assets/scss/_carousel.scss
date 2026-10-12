@@ -30,7 +30,7 @@
     pointer-events: none;
 }
 
-/* 顶部渐变阴影，保证透明导航栏文字可读（明暗主题各自定义） */
+/* 顶部渐变阴影，保证透明导航栏文字可读（固定暗色遮罩，不随主题切换） */
 .carousel::after {
     content: '';
     position: absolute;
@@ -116,7 +116,7 @@
     font-size: 1em;
     letter-spacing: 0.08em;
     text-shadow: var(--carousel-text-shadow);
-    transition: border-color var(--transition-border);
+    transition: border-color var(--transition-fade);
 
     &:hover,
     &:focus-visible {
@@ -324,7 +324,7 @@
     .carousel-dot-bar {
         width: 2em;
         height: 0.2em;
-        border-radius: 0.1em;
+        border-radius: 0.1em; /* 细条端点不在圆角梯度内（--radius-xs 大于条高会成全圆头胶囊） */
         background: rgba(var(--rgb-white), 0.35);
         overflow: hidden;
         /* 同样覆盖变形属性，保证两个方向的断点切换都能丝滑过渡 */

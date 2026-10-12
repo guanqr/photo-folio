@@ -45,26 +45,32 @@
     position: fixed;
     top: 0; left: 0; right: 0;
     z-index: var(--z-header);
-    /* 顶部透明：不遮挡首页轮播；下拉滚动后显示背景（缓慢过渡） */
-    background: transparent;
+    /* 顶部透明：不遮挡首页轮播。背景/底边线/阴影不透明度随下拉程度连续渐变——
+       --header-progress 由 JS 按滚动距离写入（0 透明 → 1 完全不透明），
+       过程受滚动位置控制、不受时间过渡控制；Sass 无法在普通属性里求值
+       含 var() 的颜色函数，中转成局部语义变量 */
+    --header-progress: 0;
+    --header-bg: rgba(var(--rgb-bg), var(--header-progress));
+    --header-border: rgba(var(--rgb-border), var(--header-progress));
+    --header-shadow: rgba(var(--rgb-black), calc(var(--header-progress) * 0.06));
+    background: var(--header-bg);
     backdrop-filter: none;
-    border-bottom: 0.0625em solid transparent;
-    transition: background 0.5s ease, box-shadow 0.5s ease, border-color 0.5s ease, backdrop-filter 0.5s ease;
-
-    &.is-scrolled {
-        background: var(--color-nav-bg); /* 完全不透明，无需毛玻璃 */
-        border-bottom-color: var(--color-border);
-        /* 淡淡投影：与背景/底边线同 0.5s 缓动渐入，拉开导航与滚动内容层次
-           （顶部透明阶段不加阴影——悬在轮播图上不可有） */
-        box-shadow: 0 0.15em 0.6em rgba(var(--rgb-black), 0.06);
-    }
+    border-bottom: 0.0625em solid var(--header-border);
+    box-shadow: 0 0.15em 0.6em var(--header-shadow);
 
     /* 菜单展开时：导航栏与下拉面板合为一体（背景由面板从 top:0 统一填充），
-       隐藏底边线（含滚动态）与阴影，交界处无分隔线、无颜色堆叠 */
+       隐藏底边线与阴影，交界处无分隔线、无颜色堆叠 */
     &.menu-open {
         border-bottom-color: transparent;
         box-shadow: none;
     }
+}
+
+/* 主题切换瞬间临时恢复时间过渡（theme-toggle.js 挂 html.theme-switching）：
+   页面其余区域 0.3s 渐隐时导航栏随同渐变；结束后摘除、恢复滚动进度驱动 */
+html.theme-switching .site-header {
+    transition: background var(--transition-fade), border-color var(--transition-fade),
+                box-shadow var(--transition-fade);
 }
 
 .header-inner {
@@ -83,7 +89,7 @@
     font-weight: 700;
     letter-spacing: -0.02em;
     color: var(--color-text);
-    transition: color var(--transition-color);
+    transition: color var(--transition-fade);
 }
 
 .site-nav {
@@ -104,7 +110,7 @@
         align-items: center;
         /* 颜色过渡：a 链接由 _base 全局规则提供，span 父项（.nav-parent）无——
            亮色首页滚动跨越 10px 阈值 / 明暗切换时文字颜色跳变，此处统一补上 */
-        transition: color var(--transition-color);
+        transition: color var(--transition-fade);
         /* 父项为 span（非链接/按钮）：iOS Safari 只向「可交互」元素派发 click
            （原生交互元素或声明 cursor:pointer 者），无此声明窄屏手风琴点不动 */
         cursor: pointer;
@@ -129,7 +135,7 @@
             transform-origin: center;
             will-change: transform;
             /* 背景色一并过渡：亮色首页滚动跨越阈值 / 明暗切换时下划线颜色随文字平滑变化 */
-            transition: transform var(--transition), background-color var(--transition-bg);
+            transition: transform var(--transition), background-color var(--transition-fade);
         }
     }
 
@@ -165,20 +171,19 @@
        是 WebKit 旋转后视口宽度永久取旧值（Bug 287042）的触发模式，该面板常驻
        页面，旋转时即触发（横竖屏样式不切换的根因），故彻底移除 transform */
     .nav-dropdown {
+        @extend %card-surface;
         position: absolute;
         top: 100%;
         left: -2.3em;
         margin-top: 0.5em;
         min-width: 0;
         padding: 0.25em 0; /* 上下留白收紧，只保留左右边距 */
-        background: var(--color-bg-card);
-        border: 0.0625em solid var(--color-border);
-        border-radius: 0.25em; /* 与瀑布流作品卡圆角一致 */
-        box-shadow: 0 0.75em 2em rgba(var(--rgb-black), 0.15);
+        border-radius: var(--radius-xs); /* 与瀑布流作品卡同档 */
+        box-shadow: var(--shadow-pop);
         opacity: 0;
         visibility: hidden;
         transition: opacity var(--transition), visibility 0.3s,
-                    border-color var(--transition-border), background-color var(--transition-bg);
+                    border-color var(--transition-fade), background-color var(--transition-fade);
 
         a {
             display: flex;
@@ -265,7 +270,7 @@
     display: none;
     visibility: hidden;
     opacity: 0;
-    transition: opacity var(--transition-opacity), visibility 0.3s;
+    transition: opacity var(--transition-fade), visibility 0.3s;
 
     span {
         position: absolute;
@@ -280,7 +285,7 @@
         border-radius: 0.0625em;
         transition: transform var(--transition),
                     opacity var(--transition),
-                    background-color var(--transition-bg);
+                    background-color var(--transition-fade);
 
         &:nth-child(1) { transform: translateY(-0.475em) rotate(0deg); }
         &:nth-child(2) { transform: scaleX(1); }

@@ -33,6 +33,28 @@ export function isImageReady(img) {
 // @media (max-width: 768px)，两处改动必须同步
 export const BP_DESKTOP_MIN = 769;
 
+// URL 查询参数状态同步（灯箱 ?p= 与筛选 ?y=/?s=/?l=/?c= 共用）：
+// 克隆当前参数、按 updates 写/删（null/'' 删除），与当前 URL **规范化比较**
+// （键排序——location.search 原始串可能乱序/编码不同，字符串比较会误判）
+// 后 pushState / replaceState；无变化不推历史。
+// replace=true 用于加载恢复的清理路径——不产生历史（返回键不留死循环）
+export function pushQueryState(updates, { replace = false } = {}) {
+    const params = new URLSearchParams(location.search);
+    Object.entries(updates).forEach(([k, v]) => {
+        if (v === null || v === '') params.delete(k);
+        else params.set(k, v);
+    });
+    const canon = (p) => [...p.entries()]
+        .sort(([a], [b]) => (a < b ? -1 : 1))
+        .map(([k, v]) => `${k}=${v}`)
+        .join('&');
+    if (canon(params) === canon(new URLSearchParams(location.search))) return;
+    const qs = params.toString();
+    const url = location.pathname + (qs ? '?' + qs : '');
+    if (replace) history.replaceState({ url: location.origin + url }, '', url);
+    else history.pushState({ url: location.origin + url }, '', url);
+}
+
 // 裸元素层栈（灯箱背景层与辉光层共用）：最新层 = 末位；剪枝只留末层
 // （延时由调用方传入，均取「淡入时长 + 50ms 余量」）；关闭时全清。
 // 层元素自身的状态标志（背景 _shown / 辉光 _ready）由调用方维护。

@@ -6,7 +6,7 @@
     font-family: var(--font-footer);
     font-size: var(--size-footer);
     flex-shrink: 0;
-    transition: border-color var(--transition-border), color var(--transition-color);
+    transition: border-color var(--transition-fade), color var(--transition-fade);
 }
 
 .footer-inner {

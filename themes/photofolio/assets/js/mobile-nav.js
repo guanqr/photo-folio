@@ -14,16 +14,17 @@ export function initMobileNav() {
 
     if (!btn || !nav) return;
 
+    // 开合过渡公共前缀：位移/淡入/可见性（两变体共用，避免逐字重复）
+    const TRANSITION_BASE =
+        'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, visibility 0.3s, ';
+
     const TRANSITION_STYLE =
-        'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, visibility 0.3s, ' +
-        'background 0.5s ease, backdrop-filter 0.5s ease, -webkit-backdrop-filter 0.5s ease, ' +
-        'box-shadow 0.5s ease';
+        TRANSITION_BASE + 'background 0.3s ease, backdrop-filter 0.3s ease, -webkit-backdrop-filter 0.3s ease, box-shadow 0.3s ease';
 
     // 仅位移/淡入的过渡（页面已滚动时用：面板直接不透明打开，不做背景渐变；
     // 底部阴影仍随开合渐入渐出，与未滚动态一致）
     const TRANSITION_STYLE_NO_BG =
-        'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, visibility 0.3s, ' +
-        'box-shadow 0.5s ease';
+        TRANSITION_BASE + 'box-shadow 0.3s ease';
 
     function toggleMenu() {
         // 页面未滚动（导航栏透明）时，面板从透明渐变到不透明；

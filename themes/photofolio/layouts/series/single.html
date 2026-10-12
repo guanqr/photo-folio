@@ -70,5 +70,8 @@
     {{/* 联动跳转：页面最下端以卡片展示其他系列入口（排除当前系列） */}}
     {{ $otherCovers := partial "series-covers.html" (dict "photos" $sortedPhotos "exclude" $seriesName) }}
     {{ partial "page-others.html" (dict "titleKey" "other_series" "cardPartial" "series-cards.html" "cardCtx" (dict "covers" $otherCovers "allPhotos" $sortedPhotos) "hasCards" (gt (len $otherCovers) 0)) }}
+
+    {{/* 结构化数据：本页照片（仅元信息、不含图片 URL——OSS 额度保护） */}}
+    {{ partial "jsonld-photos.html" (dict "photos" $ordered "title" .Title "url" .Permalink) }}
 </section>
 {{ end }}
