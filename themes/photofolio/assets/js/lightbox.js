@@ -425,6 +425,14 @@ export function initLightbox() {
                 activeGlow.style.opacity = '0';
             }
         }
+        if (reducedMotion) {
+            // 减弱动态：无滑入过渡（transitionend 不触发）——直接收尾，
+            // 辉光淡入由上方 reduced 分支的 fadeGlowIn 处理
+            switching = false;
+            lightboxImg.style.transform = '';
+            lightboxImg.style.transition = '';
+            return;
+        }
         lightboxImg.addEventListener('transitionend', function slideInDone() {
             lightboxImg.removeEventListener('transitionend', slideInDone);
             switching = false;
@@ -526,13 +534,11 @@ export function initLightbox() {
                 activeGlow = spawnGlow(p.thumb || p.src);
             }
 
-            lightboxImg.addEventListener('transitionend', pendingSlideOut = function slideOutDone() {
-                lightboxImg.removeEventListener('transitionend', slideOutDone);
-                pendingSlideOut = null;
+            // 换内容（滑出完成）：新图在进入侧待命（辉光层经 slideStyle 同步
+            // 就位入口侧；mainSlideStarted 已在切换开始复位，辉光淡入由
+            // startSlideIn 门控）
+            const swapIn = () => {
                 switching = true; // 滑入期间 onLoad 不强制透明度
-
-                // 换内容：新图在进入侧待命（辉光层经 slideStyle 同步就位入口侧；
-                // mainSlideStarted 已在切换开始复位，辉光淡入由 startSlideIn 门控）
                 slideStyle(dir * 12, '0', 'none');
                 lightboxImg.src = src;
                 lightboxImg.alt = p.alt;
@@ -565,7 +571,19 @@ export function initLightbox() {
                     lightboxImg.addEventListener('load', pendingSwitch.load);
                     lightboxImg.addEventListener('error', pendingSwitch.error);
                 }
-            });
+            };
+
+            if (reducedMotion) {
+                // 减弱动态：滑出过渡为 none（transitionend 不触发）——跳过滑出
+                // 等待直接换图；滑出位移从未渲染（同一任务内完成换图）
+                swapIn();
+            } else {
+                lightboxImg.addEventListener('transitionend', pendingSlideOut = function slideOutDone() {
+                    lightboxImg.removeEventListener('transitionend', slideOutDone);
+                    pendingSlideOut = null;
+                    swapIn();
+                });
+            }
         } else {
             lightboxImg.style.opacity = '0';
             closeGlow(); // 清空残留辉光层（关闭灯箱时通常已清空，兜底）
