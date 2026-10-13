@@ -1,0 +1,102 @@
+/* ===== Lightbox 分析区开合（触发行 / 容器 / 收起按钮） ===== */
+/* 图像分析按需加载：EXIF 下方一行安静的文字触发（灰色小字 + 下箭头，
+   无框无底色——不喧宾夺主），点击展开下方分析区；展开后触发隐藏、
+   收起按钮位于区域底部；触发随元信息同组淡入。
+   触发行不用 display:none 瞬间移除（内容骤减一行、居中块会整体下移约
+   半行）——改为 max-height/边距/透明度随开合平滑收拢，与图表区同曲线
+   同时长，布局高度变化连续、居中位移顺滑无跳变 */
+.lightbox-analysis-trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+    margin-top: 1.1em;
+    padding: 0.2em 0;
+    max-height: 2em; /* 略高于自然高度（一行 0.85em + 0.4em 边距） */
+    overflow: hidden;
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    font-family: var(--font-meta);
+    font-size: 0.85em;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: opacity var(--transition-fade), color var(--transition-fade),
+        max-height 0.4s ease, margin-top 0.4s ease, padding 0.4s ease;
+
+    svg {
+        width: 0.85em;
+        height: 0.85em;
+        transition: transform var(--transition-spring);
+    }
+
+    &.is-open {
+        /* 展开后收起入口移至分析区底部；上下内边距一并归零——border-box 下
+           max-height 无法压缩内边距，残留的内边距条会露出文字行中间一条 */
+        max-height: 0;
+        margin-top: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        opacity: 0;
+    }
+
+    &:hover {
+        color: var(--color-text-secondary);
+    }
+}
+
+/* 分析区容器：展开/收起 max-height + opacity 过渡（与抽屉同曲线同时长）。
+   展开走 class 兜底大值（内容高度未知、加载后增长，可见部分由内容
+   自然高度决定）；收起由 JS 先按当前 clientHeight 内联定值再移除
+   is-open（从固定大值收起会在动画前段无可见变化、有停顿感） */
+.lightbox-analysis {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    /* 收起态不可见（visibility 离散过渡至时长末才翻转，内容淡出不被瞬间切断）；
+       同时把容器内的收起按钮移出 Tab 序——aria-hidden 不阻止聚焦，可见性才阻止 */
+    visibility: hidden;
+    transition: max-height 0.4s ease, opacity 0.3s ease, visibility 0.4s;
+
+    &.is-open {
+        max-height: 80em;
+        opacity: 1;
+        visibility: visible;
+    }
+}
+
+/* 加载期图表区照常展示（影調/色卡等区块标题与图表框即占位），不额外显示
+   加载指示，数据就绪后直接填充——与切图同理（旧图表保持显示、按既有形变过渡替换） */
+
+/* 收起按钮：分析区底部的安静灰色文字（上箭头），左对齐——与触发行同缘 */
+.lightbox-analysis-collapse {
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+    margin: 1.1em 0 0;
+    padding: 0.2em 0;
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    font-family: var(--font-meta);
+    font-size: 0.85em;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: color var(--transition-fade);
+
+    svg {
+        width: 0.85em;
+        height: 0.85em;
+    }
+
+    &:hover {
+        color: var(--color-text-secondary);
+    }
+}
+
+/* 减弱动态偏好：分析区与触发行开合直切 */
+@media (prefers-reduced-motion: reduce) {
+    .lightbox-analysis,
+    .lightbox-analysis-trigger {
+        transition: none;
+    }
+}

@@ -31,9 +31,20 @@ function smoothScrollTo(targetY, duration = 700) {
     requestAnimationFrame(step);
 }
 
+// 模块级自动播放定时器：SPA 离开首页后轮播 DOM 被替换销毁，但闭包定时器
+// 仍持有一整套 slide img 并每 5s 空转——重新进入非首页时清掉上一轮定时器，
+// 释放闭包与解码位图（往返首页多次不再叠加）
+let runningTimer = null;
+
 export function initCarousel() {
     const carousel = document.getElementById('home-carousel');
-    if (!carousel) return;
+    if (!carousel) {
+        if (runningTimer) {
+            clearInterval(runningTimer);
+            runningTimer = null;
+        }
+        return;
+    }
 
     // 自动播放间隔：hugo.toml [params].carouselInterval 经容器 data 属性传入
     //（0 = 禁用自动播放；未配置/非法值回退 5000ms；其余钳制最小 1200ms，与淡入淡出时长一致防重叠）
@@ -49,19 +60,28 @@ export function initCarousel() {
     if (!slides.length || !dotsEl) return;
 
     let index = 0;
-    let autoplayTimer = null;
+
+    // 轮播图懒加载：第 2+ 张为 data-src（首张保持 src + eager，LCP 不受影响）——
+    // 切换前确保目标与左右邻居已加载：预载领先于 1.2s 淡入过渡、切换无空窗
+    const slideImgs = slides.map((slide) => slide.querySelector('img'));
+    const ensureLoaded = (i) => {
+        const img = slideImgs[i];
+        if (img && img.dataset.src && !img.src) {
+            img.src = img.dataset.src;
+        }
+    };
 
     function startAutoplay() {
         stopAutoplay();
         if (AUTOPLAY_MS > 0 && slides.length > 1) {
-            autoplayTimer = setInterval(next, AUTOPLAY_MS);
+            runningTimer = setInterval(next, AUTOPLAY_MS);
         }
     }
 
     function stopAutoplay() {
-        if (autoplayTimer) {
-            clearInterval(autoplayTimer);
-            autoplayTimer = null;
+        if (runningTimer) {
+            clearInterval(runningTimer);
+            runningTimer = null;
         }
     }
 
@@ -69,6 +89,10 @@ export function initCarousel() {
         // 点击当前正在播放的项时，不重置、不暂停，保持正常轮播
         if (!force && i === index) return;
         index = (i + slides.length) % slides.length;
+        // 目标与左右邻居确保已加载（首张 src 恒在、邻居预载一次即命中）
+        ensureLoaded(index);
+        ensureLoaded((index + 1) % slides.length);
+        ensureLoaded((index - 1 + slides.length) % slides.length);
         slides.forEach((s, k) => s.classList.toggle('active', k === index));
         dots.forEach((d, k) => d.classList.toggle('active', k === index));
         resetProgress();

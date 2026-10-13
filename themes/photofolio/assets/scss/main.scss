@@ -18,8 +18,13 @@
 @import "series-ambient";
 @import "about";
 
-// 4. 交互与工具
-@import "lightbox";
+// 4. 交互与工具（lightbox 按部件拆分：core 骨架 → 图片区 → 元信息面板 →
+//    分析区开合 → 分析图表，%lightbox-ctrl/%chart-note 占位符随各自 partial 自含）
+@import "lightbox-core";
+@import "lightbox-image";
+@import "lightbox-panel";
+@import "lightbox-analysis-control";
+@import "lightbox-charts";
 @import "utils";
 
 // 5. 响应式覆盖 (必须最后引入，确保优先级最高)

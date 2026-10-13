@@ -1,0 +1,280 @@
+/* ===== Lightbox 分析图表（影調 / 色卡 / 飽和度 / 色相）与故事 ===== */
+/* 合并直方图（已并入影调区块）：JS 计算绘制（对数纵轴平滑曲线），
+   CORS 未开启时整个影调区块隐藏（优雅降级） */
+.lightbox-histogram {
+    display: block;
+    width: 100%;
+    height: 6em;
+    border-radius: var(--radius-xs);
+    background: var(--color-lightbox-ctrl-bg);
+}
+
+/* 影调与色彩分析：区块标题与结论同处一行（同字号、仅颜色区分）；
+   明度直方图（三分区底色 + P50 标记 + 剪裁标记）、區域系統 11 级灰阶、
+   三区占比条、饱和度/色相直方图——全部文字采用霞鹜（--font-meta）、字号 0.9em */
+.lightbox-tonal-wrap,
+.lightbox-sat-wrap,
+.lightbox-hue-wrap,
+.lightbox-palette-wrap,
+.lightbox-story-wrap {
+    margin-top: 1.1em;
+    transition: opacity var(--transition-fade); /* 随图片同步淡入 */
+}
+
+.lightbox-tonal-name,
+.lightbox-sat-name,
+.lightbox-hue-name {
+    margin-left: 0.6em;
+    font-family: var(--font-meta);
+    color: var(--color-accent);
+}
+
+/* 饱和度 / 色相直方图：与合并直方图同款底色圆角容器 */
+.lightbox-sat-hist,
+.lightbox-hue-hist {
+    display: block;
+    width: 100%;
+    height: 6em;
+    border-radius: var(--radius-xs);
+    background: var(--color-lightbox-ctrl-bg);
+    margin-top: 0.5em;
+}
+
+/* 图表标注共用样式：霞鹜 0.8em 灰字（说明文字/图例/轴标注） */
+%chart-note {
+    font-family: var(--font-meta);
+    font-size: 0.8em;
+    color: var(--color-text-secondary);
+}
+
+/* 图表说明文字：位于图表上方的小号灰色标注（如「直方圖」「區域系統 0–X」） */
+.lightbox-chart-caption {
+    @extend %chart-note;
+    margin: 0.55em 0 0.3em;
+}
+
+/* 直方图图例：通道色圆点 + 名称（R/G/B/明度） */
+.lightbox-hist-legend {
+    @extend %chart-note;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3em 1em;
+    margin-top: 0.3em;
+
+    > span {
+        display: flex;
+        align-items: center;
+        gap: 0.35em;
+    }
+
+    i {
+        width: 0.7em;
+        height: 0.7em;
+        border-radius: 50%;
+        flex: none;
+    }
+}
+
+/* 饱和度/色相轴标注（低飽和 ←→ 高飽和；色名沿横向均布，对应彩虹渐变） */
+.lightbox-sat-axis,
+.lightbox-hue-axis {
+    @extend %chart-note;
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.25em;
+}
+
+/* 區域系統标尺：11 级灰阶（0 纯黑 → X 纯白，感知均匀，JS 生成色阶），
+   括号标记照片占據區域 */
+.lightbox-zone-strip {
+    display: flex;
+    gap: 0.125em;
+    margin-top: 0.4em;
+    position: relative;
+
+    > span:not(.lightbox-zone-bracket) {
+        flex: 1;
+        height: 0.9em;
+        border-radius: 0.125em;
+    }
+
+    .lightbox-zone-bracket {
+        position: absolute;
+        top: -0.25em;
+        bottom: -0.25em;
+        left: 0;
+        width: 0;
+        border: 0.0625em solid var(--color-accent);
+        border-radius: var(--radius-xs);
+        transition: left var(--transition-chart), width var(--transition-chart);
+        pointer-events: none;
+    }
+}
+
+/* 三区占比条：陰影/中間調/高光三段堆叠 */
+.lightbox-tone-ratio {
+    display: flex;
+    height: 0.55em;
+    border-radius: var(--radius-pill);
+    overflow: hidden;
+    margin-top: 0.5em;
+    background: var(--color-lightbox-ctrl-bg);
+}
+
+.lightbox-tone-ratio-seg {
+    display: block;
+    height: 100%;
+    width: 0;
+    transition: width var(--transition-chart);
+
+    &:nth-child(1) { background: var(--color-zone-shadow-fg); }
+    &:nth-child(2) { background: var(--color-zone-mid-fg); }
+    &:nth-child(3) { background: var(--color-zone-high-fg); }
+}
+
+/* 占比文字与过程数据行 */
+.lightbox-tonal-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3em 1em;
+    margin-top: 0.45em;
+    font-family: var(--font-meta);
+    font-size: 0.9em;
+    color: var(--color-text-secondary); /* 与色卡灰色一致 */
+
+    /* 窄屏（移动优先基础态）：三区占比文字独占一行，動態範圍/亮度中位數
+       另起一行——与占比文字同排时断行错落、可读性差 */
+    > span:first-child {
+        flex-basis: 100%;
+    }
+}
+
+.lightbox-tonal-stat {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4em;
+}
+
+.lightbox-tonal-stat-value {
+    color: var(--color-text);
+}
+
+/* 色卡：JS 提取的主色（与直方图共用采样管线）——每行：色块 + hex + 占比 */
+.lightbox-palette {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6em;
+    margin-top: 0.5em;
+}
+
+.lightbox-palette-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    font-family: var(--font-meta);
+    font-size: 0.8em;
+}
+
+.lightbox-palette-swatch {
+    width: 3em;
+    height: 3em;
+    flex: none;
+    border-radius: var(--radius-sm); /* 圆角正方形 */
+    border: 0.0625em solid var(--color-overlay-subtle);
+}
+
+.lightbox-palette-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.lightbox-palette-hex {
+    color: var(--color-text-secondary);
+}
+
+.lightbox-palette-pct {
+    color: var(--color-text);
+    flex: none;
+    align-self: center; /* 靠右、上下均中（相对 hex/HSL 两行） */
+    margin-left: auto;
+}
+
+.lightbox-palette-hsl {
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 作品背后的故事 / 直方图 等区块标题（与 EXIF 标签同款：白色、同字号） */
+.lightbox-section-title {
+    font-family: var(--font-meta);
+    font-size: 0.9em;
+    font-weight: 400;
+    color: var(--color-text);
+    margin-bottom: 0.5em;
+    transition: color var(--transition-fade);
+}
+
+.lightbox-story {
+    font-size: 0.9em;
+    line-height: 1.8;
+    color: var(--color-text-secondary);
+    margin: 0;
+    transition: color var(--transition-fade);
+}
+
+/* 中屏档位（769–1000px，抽屉模式）图表区双列网格（影調 / 色卡 / 飽和度 / 色相）——
+   单列时每个图表整行过于拉长，双列并排后抽屉内容高度显著缩短；配对按高度相近编排：
+   影調与色卡同行（色卡更高时影調的直方图弹性补足、不留空缺），飽和度与色相同行
+   （两张单图等高）。列间竖分隔线挂在第二列各块的左侧（每块一段）——块与块之间的
+   边距自然形成中断：EXIF 与图表区之间、影調/色卡行与飽和度/色相行之间均有中断，
+   简行与 EXIF 之间无中断 */
+@media (min-width: 769px) and (max-width: 1000px) {
+    .lightbox-charts {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 4.5rem;
+        position: relative;
+    }
+
+    .lightbox-charts > :nth-child(even)::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        /* 列间距（4.5rem）的一半再左移半个线宽：竖线恰居两列正中 */
+        left: calc(-2.25rem - 0.03125rem);
+        width: 0.0625rem;
+        background: var(--color-border);
+    }
+
+    .lightbox-tonal-wrap,
+    .lightbox-sat-wrap,
+    .lightbox-hue-wrap,
+    .lightbox-palette-wrap {
+        display: flex;
+        flex-direction: column;
+        position: relative; /* 竖分隔线（第二列各块的 ::before）的定位包含块 */
+    }
+
+    .lightbox-histogram {
+        flex: 1 1 auto;
+        height: 4.5em;
+    }
+
+    /* 网格项关闭自动最小尺寸（色卡行不足单元格一半，无溢出风险） */
+    .lightbox-palette-row {
+        min-width: 0;
+    }
+}
+
+@media (min-width: 1001px) {
+    /* 宽屏恢复：占比文字与两项数据同行（窄屏独占一行的规则见基础态） */
+    .lightbox-tonal-stats > span:first-child {
+        flex-basis: auto;
+    }
+}

@@ -1,7 +1,7 @@
 /**
  * 灯箱图片分析（直方图 + 色卡 + 影调与色彩）
  *
- * 管线：探测加载 w_1024 缩略图（crossOrigin=anonymous，OSS 未开 CORS 时失败优雅降级；
+ * 管线：探测加载 w_800 缩略图（crossOrigin=anonymous，OSS 未开 CORS 时失败优雅降级；
  * 离屏 canvas 采样 → 统计三通道 256 桶直方图（窗口 5 平滑、对数纵轴）与
  * 6 个主色色卡（16 级量化 + 贪心种子 + k-means 细化，占比之和 ≈ 100%）。
  * 结果按 src 缓存——切换/回看作品时无需重新探测下载。
@@ -12,7 +12,7 @@
  * 對比度 = 動態範圍（P5–P95 换算为档）；剪裁 = ≥2% 像素落在两端（高光/陰影剪裁）；
  * 區域系統 = 安塞尔·亚当斯 11 级灰阶；飽和度/色相 = HSV 分布（色相按饱和度加权）。
  */
-import { prefersReducedMotion, easeOutCubic } from './utils.js';
+import { prefersReducedMotion, easeOutCubic, loadWithAvifFallback } from './utils.js';
 
 /* RGB → HSL 文本（如 H210 S12 L70） */
 function rgbToHsl(r, g, b) {
@@ -633,7 +633,7 @@ export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, o
         if (hueEls.wrap) hueEls.wrap.style.display = 'none';
     }
 
-    /* 分析指定作品：缓存命中直接重绘；否则探测加载 w_1024 缩略图统计。
+    /* 分析指定作品：缓存命中直接重绘；否则探测加载 w_800 缩略图统计。
        所有分析区块都被配置关闭时跳过探测（不发请求）。
        请求代次（analyzeSeq）：快速切图时慢探测乱序完成，代次不符不渲染过期结果。
        onDone 完成回调（图表内容高度变化后由调用方刷新抽屉箭头状态）：仅当前
@@ -651,9 +651,10 @@ export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, o
             if (onDone) onDone(true);
             return;
         }
-        const probeSrc = src.replace(/w_\d+/, 'w_1024'); // 采样探测：≤1024px 缩略图
+        const probeSrc = src.replace(/w_\d+/, 'w_800'); // 采样探测：800px 缩略图（统计口径对分辨率不敏感）
         const probe = new Image();
         probe.crossOrigin = 'anonymous';
+        loadWithAvifFallback(probe); // 游离 Image 不进 document 捕获监听：AVIF 探测失败时实例级回退 WebP 重试
         probe.onload = () => {
             try {
                 const off = document.createElement('canvas');

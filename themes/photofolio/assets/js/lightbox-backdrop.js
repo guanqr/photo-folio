@@ -77,6 +77,13 @@ export function initLightboxBackdrop({ container, insertBefore, reducedMotion })
         } else {
             el.addEventListener('load', show, { once: true });
             el.addEventListener('error', () => {
+                // AVIF 兜底重试在途（avif-fallback 捕获阶段已换 webp、新加载
+                // 已开始）：不删层、不处理——重试成功后其 load 监听照常走 show
+                // 淡入；若在此删层，在途的 webp 加载将落空、背景回退旧图
+                if (el.dataset.avifRetry) {
+                    delete el.dataset.avifRetry;
+                    return;
+                }
                 const idx = backdropLayers.indexOf(el);
                 if (idx < 0) return;
                 backdropLayers.splice(idx, 1);

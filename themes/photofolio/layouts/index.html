@@ -22,10 +22,14 @@
         <div class="carousel" id="home-carousel" data-autoplay-ms="{{ .Site.Params.carouselInterval }}">
             <div class="carousel-track">
                 {{ range $i, $photo := $carouselPhotos }}
-                {{ $srcUrl := partial "img-url.html" (dict "src" $photo.src "site" $.Site "width" $carouselWidth "mode" "lfit" "format" "webp" "quality" $carouselQuality) }}
+                {{ $srcUrl := partial "img-url.html" (dict "src" $photo.src "site" $.Site "width" $carouselWidth "mode" "lfit" "format" "avif" "quality" $carouselQuality) }}
                 <div class="carousel-slide{{ if eq $i 0 }} active{{ end }}">
                     <div class="carousel-photo">
-                        <img src="{{ $srcUrl }}" alt="{{ $photo.alt }}" loading="eager" {{ if eq $i 0 }}fetchpriority="high"{{ end }} class="carousel-img">
+                        {{/* 首张保持 src + eager + fetchpriority（LCP 元素，hero-preload 同 URL 预载）；
+                            其余张 data-src 由 JS 按需加载（邻居预载领先于淡入过渡） */}}
+                        {{/* 首张另带内联 AVIF 兜底：preload 请求早于 defer bundle，
+                            error 可能先于 JS 监听到达（非 AVIF 环境二次访问确定性复现） */}}
+                        <img {{ if eq $i 0 }}src="{{ $srcUrl }}" loading="eager" fetchpriority="high" onerror="this.onerror=null;if(this.src.indexOf('format,avif')>-1)this.src=this.src.replace('format,avif','format,webp')"{{ else }}data-src="{{ $srcUrl }}"{{ end }} alt="{{ $photo.alt }}" class="carousel-img">
                     </div>
                 </div>
                 {{ end }}

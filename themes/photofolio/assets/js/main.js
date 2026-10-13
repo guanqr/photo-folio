@@ -14,6 +14,7 @@ import { initSeriesAmbient } from './series-ambient.js';
 import { initPageTransition } from './page-transition.js';
 import { initCarousel } from './carousel.js';
 import { initAboutStats } from './about-stats.js';
+import { initAvifFallback } from './avif-fallback.js';
 
 // 首页分类卡片：滚动进入视口时交错渐入
 function revealCategoryCards() {
@@ -53,6 +54,11 @@ function initPageModules() {
     initCardsFlip();
     openLightboxFromUrl(); // URL 带 ?p= 时恢复灯箱（首次加载与 SPA 跳转均会执行）
 }
+
+// AVIF 兜底在 bundle 求值时立即挂载（defer 脚本先于 DOMContentLoaded）：
+// hero 首图带 eager+preload、error 可能早于 DCL 到达——若挂在 initGlobalModules
+// （DCL 内）会漏接首图错误，非 AVIF 环境二次访问 LCP 首图确定性破图
+initAvifFallback();
 
 // 全局模块（仅首次初始化，页面切换后不重复执行）
 let globalInited = false;

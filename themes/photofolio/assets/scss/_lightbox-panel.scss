@@ -1,0 +1,337 @@
+/* ===== Lightbox 元信息面板（窄屏底部抽屉 / 桌面右栏） ===== */
+/* 元信息面板：移动优先——图片下方，折叠态只露简行，点箭头展开详情
+   （窄屏不加顶部分隔线；桌面端以左边线分隔，见媒体查询） */
+.lightbox-panel {
+    flex: none;
+    position: relative; /* 右侧下拉进度条的定位包含块 */
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 0.8em 1em; /* 上下留白对称 */
+    transition: border-color var(--transition-fade);
+    /* 窄屏抽屉手势接管面板：禁止文字选择——拖拽越过可选中文字时浏览器会发起选择
+       并触发 pointercancel 打断拖拽；桌面端恢复可选（见下方媒体查询） */
+    user-select: none;
+}
+
+.lightbox-caption {
+    color: var(--color-text);
+    font-family: var(--font-heading);
+    font-size: 1.2em;
+    font-weight: 400;
+    margin-bottom: 0.35em;
+    transition: opacity var(--transition-fade);
+}
+
+/* 标题下方分类/系列胶囊行（抽屉头部固定，随标题常显；JS 填充，点击跳转对应页面） */
+.lightbox-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5em;
+    margin-bottom: 0.6em;
+    transition: opacity var(--transition-fade); /* 随图片同步淡入 */
+
+    &:empty {
+        display: none; /* 无分类/系列时整行隐藏 */
+    }
+}
+
+.lightbox-tag {
+    @extend %pill;
+    padding: 0.2em 0.8em;
+    border-color: var(--color-accent); /* 默认绿色描边 + 绿色文字 */
+    font-family: var(--font-meta);
+    font-size: var(--size-meta);
+    color: var(--color-accent);
+    background: transparent;
+    transition: background-color var(--transition-fade), border-color var(--transition-fade), color var(--transition-fade);
+
+    &:hover {
+        /* 填充绿色背景，文字换深色（与筛选按钮激活态一致） */
+        background: var(--color-accent);
+        border-color: var(--color-accent);
+        color: var(--color-bg-card);
+    }
+}
+
+/* 简略信息（地点 / 日期）：位于详情区顶部——收起态默认可见，随内容滚动（仅标题固定） */
+.lightbox-meta {
+    display: flex;
+    flex-wrap: nowrap;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25em;
+    transition: opacity var(--transition-fade);
+}
+
+.lightbox-meta-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5em; /* 与 EXIF 行一致：所有宽度下标签左缘对齐 */
+    white-space: nowrap; /* 组内不换行 */
+    color: var(--color-text);
+    font-family: var(--font-meta);
+    font-size: 0.9em;
+
+    .lightbox-meta-label {
+        color: var(--color-text);
+        flex: none;
+    }
+
+    .lightbox-meta-text {
+        margin-left: auto;
+        text-align: right;
+    }
+
+    .icon {
+        color: var(--color-accent);
+        display: flex;
+        flex: none;
+        width: 0.95em; /* 与 EXIF 图标盒宽一致：地点/日期标签与设备等标签对齐 */
+
+        svg {
+            width: 0.95em;
+            height: 0.95em;
+        }
+    }
+}
+
+/* 详情区：窄屏折叠（max-height 过渡），展开后限高滚动；桌面端常显并整体滚动
+   （手势由根元素 touch-action: none 统一禁用，无需单独声明） */
+.lightbox-panel-details {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.4s ease, opacity 0.3s ease;
+    padding-right: 0.5em; /* 内容与滚动条之间留出间距（窄屏） */
+    /* 统一细滚动条：始终预留空间（scrollbar-gutter），空闲时隐藏、
+       滚动中显示（面板 is-scrolling 类由 JS 控制）——出现/隐藏不引起文字横向移动 */
+    scrollbar-width: thin;
+    scrollbar-gutter: stable;
+    scrollbar-color: transparent transparent;
+
+    &::-webkit-scrollbar {
+        width: 0.375em;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: transparent;
+        border-radius: var(--radius-pill);
+    }
+
+    &::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .lightbox-panel.is-open & {
+        /* 兜底值（JS 会按「50% 视口 − 面板头部」精确覆盖）：下拉到底图片区不小于页面一半 */
+        max-height: calc(50vh - 9em);
+        opacity: 1;
+        overflow-y: auto;
+    }
+}
+
+/* 滚动条按需显示：滚动中（面板 is-scrolling，JS 在滚轮/拖动时挂上、停止约 0.6s 后移除）
+   显示细圆角滑块；空闲时透明隐藏——scrollbar-gutter 始终预留空间，文字不横向移动 */
+.lightbox-panel.is-scrolling .lightbox-panel-details {
+    scrollbar-color: var(--color-border) transparent;
+
+    &::-webkit-scrollbar-thumb {
+        background: var(--color-border);
+
+        &:hover {
+            background: var(--color-text-muted);
+        }
+    }
+}
+
+/* 底部箭头：窄屏显示——点击只全开抽屉（不做滚动定位，能展开到哪里算哪里）；
+   箭头仅在内容到达绝对底部时翻转（翻转后点击回到顶部收起），桌面端隐藏 */
+.lightbox-panel-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    background: none;
+    border: none;
+    color: var(--color-lightbox-ctrl-text);
+    cursor: pointer;
+    padding: 0.2em 1em;
+    -webkit-tap-highlight-color: transparent;
+    transition: color 0.2s;
+
+    &:hover { color: var(--color-lightbox-ctrl-text-hover); }
+
+    svg {
+        width: 1.1em;
+        height: 1.1em;
+        transition: transform var(--transition-spring);
+    }
+
+    .lightbox-panel.is-at-bottom & svg {
+        transform: rotate(180deg);
+    }
+}
+
+/* EXIF 分行列表（图标/标签/值，行结构由模板渲染）；顶距与行距一致（0.45em），
+   与上方简行（日期）之间的间距不比其他行大 */
+.lightbox-exif {
+    list-style: none;
+    margin-top: 0.45em;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45em;
+    transition: opacity var(--transition-fade); /* 随图片同步淡入 */
+    font-family: var(--font-meta);
+    font-size: 0.9em;
+
+    li {
+        display: flex;
+        align-items: center;
+        gap: 0.5em;
+    }
+
+    .exif-icon {
+        display: flex;
+        flex: none;
+        color: var(--color-accent);
+
+        svg {
+            width: 0.95em;
+            height: 0.95em;
+        }
+    }
+
+    .exif-label {
+        color: var(--color-text);
+        flex: none;
+    }
+
+    .exif-value {
+        color: var(--color-text);
+        margin-left: auto;
+        text-align: right;
+    }
+
+    /* 相机/镜头信息缺失：删除线占位样式 */
+    .exif-value.is-missing {
+        text-decoration: line-through;
+        color: var(--color-text-muted);
+        transition: color var(--transition-fade);
+    }
+}
+
+/* 中屏档位（769–1000px，抽屉模式）：屏幕仍较宽，地点/日期简行与 EXIF 分行列表
+   改为两列网格（相邻两项同行：地点/日期、设备/镜头、焦距/光圈、快门/感光度），
+   避免单条一行过于稀疏；列间竖分隔线防视觉粘连。
+   色卡不在此处双列——已并入图表区双列网格作为第四格（保持单列，双栏里不再套双栏）。
+   【间距单位】容器级间距/线宽用 rem：EXIF 自带 0.9em、meta 继承 1em，em 会随
+   各容器字号解析出 72px/80px 两种结果（第一行比其余行宽 8px、逐行错位的根源）；
+   rem 恒按根字号解析，两块恒等（4.5rem = 72px，与 EXIF 行内 5em@0.9em 的设计值一致）；
+   行内图标/标签/行距的 em 均在各自 0.9em 上下文中，保持一致；
+   网格项统一 min-width: 0——关闭自动最小尺寸，任何内容都不会撑宽轨道，列宽恒等；
+   ≤768px 超窄/窄屏与 >1000px 宽屏保持单列 */
+@media (min-width: 769px) and (max-width: 1000px) {
+    .lightbox-meta,
+    .lightbox-exif {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 4.5rem;
+        position: relative;
+
+        /* 竖分隔线：等宽两列下容器中线恰为列间距中心（不贴左列）；
+           线宽/颜色与宽屏灯箱面板左边线一致（1px + var(--color-border)） */
+        &::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 0.0625rem;
+            transform: translateX(-50%);
+            background: var(--color-border);
+        }
+    }
+
+    .lightbox-meta { row-gap: 0.25em; }
+    .lightbox-exif { row-gap: 0.45em; }
+
+    /* 简行与 EXIF 之间的竖线衔接成连续一段：EXIF 的线向上延伸 0.45em
+       补上自身的外边距缺口，与简行线相接 */
+    .lightbox-exif::before {
+        top: -0.45em;
+    }
+
+    /* 网格项关闭自动最小尺寸（最长的地名/镜头型号也不足单元格一半，无溢出风险） */
+    .lightbox-meta-group,
+    .lightbox-exif li {
+        min-width: 0;
+    }
+
+    /* 竖线按区域分段（简行 / EXIF / 双图表各一段，互不衔接——这是三个不同区域）。
+       简行与 EXIF 的图标盒宽/间距对齐已提升到基础样式（所有宽度生效） */
+}
+
+@media (min-width: 1001px) {
+    .lightbox-panel {
+        flex: none;
+        width: var(--lightbox-panel-w);
+        height: 100%;
+        border-top: none;
+        /* 上下留白对称（叉号悬浮于右侧箭头列，不占面板顶部空间）；右侧留出箭头按钮列；
+           左侧 2em 与图片区辉光保持距离 */
+        padding: 2em 1.25em 2em 2em;
+        margin-right: 4.25em;
+        user-select: text; /* 桌面端面板恢复文字选择（窄屏由抽屉手势接管、禁止选择） */
+    }
+
+    .lightbox-panel-details {
+        /* 标题与分类胶囊固定在面板顶部，仅数据区滚动；数据区内容放得下时
+           上下居中——用首末子块 auto 边距均分剩余空间（溢出时 auto 边距归零
+           贴顶）。不用 justify-content: center/safe：Chromium 对居中滚动容器
+           的 scrollHeight 会随滚动膨胀，滚动范围与进度条比例失真 */
+        flex: 1;
+        min-height: 0;
+        max-height: none;
+        opacity: 1;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        padding-right: 0.75em; /* 内容与滚动条之间留出间距（桌面） */
+        scrollbar-width: thin; /* 原生细滚动条（与 0.14.0 一致，按需显示由 is-scrolling 控制） */
+
+        /* 子块保持天然高度：内容超高时溢出滚动，而非被 flex 压缩（压缩会导致
+           滚动失效） */
+        > * {
+            flex-shrink: 0;
+        }
+
+        /* 放得下：剩余空间均分给首末边距（整体居中）；溢出：auto 边距归零贴顶 */
+        > *:first-child {
+            margin-top: auto;
+        }
+
+        > *:last-child {
+            margin-bottom: auto;
+        }
+    }
+
+    /* 全部内容放得下（is-fit 由 JS 测量后挂上）：面板整体上下居中（含标题与胶囊），
+       详情区不再滚动。收起期间 is-fit 由 fitAdjuster 提前挂上——unsafe center +
+       overflow hidden：内容仍高于面板的过渡帧同样保持居中（上下对称裁切），
+       居中与收起是同一段动画（safe center 在溢出时顶对齐，居中运动会被
+       挤到过渡末尾、呈现「收起完才开始居中」的拖尾） */
+    .lightbox-panel.is-fit {
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .lightbox-panel.is-fit .lightbox-panel-details {
+        flex: none;
+        overflow-y: visible;
+    }
+
+    .lightbox-panel-toggle {
+        display: none;
+    }
+}

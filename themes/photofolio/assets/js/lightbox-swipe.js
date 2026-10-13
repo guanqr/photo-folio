@@ -38,10 +38,18 @@ export function initLightboxSwipe({ img, area, getGlow, onSwitch }) {
         if (glow) glow.style.transform = `translateX(${dx}px) scale(2)`;
     };
 
+    // 拖拽期间放开图片区裁剪：图片随手指越过面板区域完整显示（面板透明、
+    // 文字在 DOM 后位浮于图片之上）；未达阈值回弹/垂直交还/复位时恢复
+    const setOverflowVisible = (v) => { if (area) area.style.overflow = v ? 'visible' : ''; };
+
     const snapBack = () => {
         // 未达阈值：回弹归位（reduced-motion 直切）
         const reduced = prefersReducedMotion();
         const tr = reduced ? 'none' : 'transform 0.2s ease';
+        // 无位移（键盘切图等非拖拽路径）时写入不产生过渡与 transitionend——
+        // 直接同步收尾：否则幽灵监听残留，会在下次切换的滑出 transitionend 上
+        // 提前恢复图片区裁剪
+        const moved = img.style.transform !== '';
         img.style.transition = tr;
         const glow = getGlow();
         if (glow) glow.style.transition = tr;
@@ -50,9 +58,10 @@ export function initLightboxSwipe({ img, area, getGlow, onSwitch }) {
         const cleanup = () => {
             img.style.transition = '';
             if (glow) glow.style.transition = '';
+            setOverflowVisible(false); // 回弹归位：恢复图片区裁剪
             img.removeEventListener('transitionend', cleanup);
         };
-        if (reduced) cleanup();
+        if (reduced || !moved) cleanup();
         else img.addEventListener('transitionend', cleanup);
     };
 
@@ -84,10 +93,12 @@ export function initLightboxSwipe({ img, area, getGlow, onSwitch }) {
             verdict = 'horizontal';
             area.setPointerCapture(e.pointerId);
             img.style.transition = 'none';
+            setOverflowVisible(true); // 拖拽越过面板区域不裁剪（面板文字浮于图片之上）
             applyFollow(dx);
         } else if (Math.abs(dy) > SWIPE_ABANDON && Math.abs(dy) > Math.abs(dx)) {
             gesture = null; // 垂直意图：交还抽屉（抽屉随即照常跟随）
             verdict = 'vertical';
+            setOverflowVisible(false); // 未水平接管：恢复裁剪
         }
     };
 
@@ -125,6 +136,7 @@ export function initLightboxSwipe({ img, area, getGlow, onSwitch }) {
             glow.style.transition = '';
             glow.style.transform = 'scale(2)';
         }
+        setOverflowVisible(false); // 恢复图片区裁剪（拖动中关闭/重开的残留）
     };
 
     // snapBack 导出供 lightbox.js 复用：单照片集合下滑动提交无可切换目标，

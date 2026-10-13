@@ -1,0 +1,103 @@
+/* ===== Lightbox 图片区与辉光层 ===== */
+.lightbox-img-area {
+    flex: 1;
+    min-height: 0;
+    /* 单网格单元叠放主图与辉光层：同一轨道、同一套 contain 约束——
+       两图天然同框，不依赖绝对定位（替换元素对 inset 拉伸不生效，
+       且桌面端左右内边距不对称会使定位中心与 flex 中心错位） */
+    display: grid;
+    grid-template: 100% / 100%;
+    place-items: center;
+    overflow: hidden; /* 水平滑动切换时图片裁剪在图片区内 */
+    /* 底部 2.5em：窄屏抽屉升到最高时，辉光的 blur 向外溢出（约 1.5~2em）
+       在到达裁剪边缘前自然衰减——间距过小会露出辉光被硬切的分界线 */
+    padding: 1em 1em 2.5em;
+    user-select: none; /* 长按拖动抽屉时避免选中/拖图 */
+    /* 触屏滑动手势由 JS（lightbox-swipe）接管，禁浏览器原生手势
+       （原生滚动/捏合会触发 pointercancel 打断拖拽） */
+    touch-action: none;
+    transition: padding 0.4s ease; /* 断点切换时左侧留白平滑过渡 */
+    position: relative; /* 转圈指示的定位包含块 */
+
+    > * {
+        grid-area: 1 / 1;
+        min-width: 0;
+        min-height: 0;
+    }
+
+    img:not(.lightbox-img-glow) {
+        position: relative; /* 必须：辉光的 filter 会创建层叠上下文，静态主图会被盖在模糊层之下 */
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        border-radius: var(--radius-xs);
+        /* 无阴影：图片区 overflow:hidden 会裁剪横向阴影，造成上下暗边不对称；
+           主图同样无阴影，靠毛玻璃背景衬出 */
+        opacity: 0;
+        transition: opacity var(--transition-fade);
+        /* 禁用浏览器原生图片拖拽（会吞掉 pointermove，导致抽屉拖动失效） */
+        -webkit-user-drag: none;
+        user-drag: none;
+    }
+}
+
+/* 图片辉光层：主图的同框模糊副本——与主图永远同中心绑定、尺寸完全一致，
+   边缘的柔和过渡由 blur 滤镜像外溢出提供。内容经 object-fit: contain 与
+   主图渲染矩形完全重合——辉光大小只随主图渲染大小变化，与窗口尺寸无关。
+   半分辨率栅格化：0.5em 半径经 2× 放大视觉等同原 1em（与背景层同法，
+   淡入阶段光栅化尖峰约降至 1/16）；盒 50%×50% 由网格 place-items:center
+   自动居中。scale 并入 transform 属性（JS 内联 transform 同步带上 scale(2)）——
+   独立 scale 属性与 transform 的合成顺序会把 transform 的位移也放大 2 倍
+   （辉光滑出速度翻倍、与主图拖尾错位，harness 实测位移 192px vs 主图 96px）。
+   层为动态创建（见 lightbox.js 辉光层模型）：每张作品一层、新层解码后
+   淡入旧层剪枝——消除就地换 src（iOS 过滤图换源闪烁根因） */
+.lightbox-img-glow {
+    width: 50%;
+    height: 50%;
+    object-fit: contain;
+    border-radius: var(--radius-xs);
+    filter: blur(0.5em) saturate(1.1);
+    transform: scale(2);
+    transition: opacity 0.25s ease;
+    pointer-events: none;
+}
+
+/* 抽屉展开态：照片贴顶时辉光顶部溢出被图片区边缘硬裁——顶部内边距 1em
+   不足以容纳 1.5~2em 的 blur 溢出（底部特意留了 2.5em、顶部此前未留），
+   展开时顶部内边距补到与底部一致（随既有 padding 过渡平滑变化） */
+.lightbox-main:has(.lightbox-panel.is-open) .lightbox-img-area {
+    padding-top: 2.5em;
+}
+
+/* 图片加载转圈：与瀑布流加载指示器同款（新图未就绪时显示，加载完成后随图片滑入消失） */
+.lightbox-img-loading {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 2.5em;
+    height: 2.5em;
+    margin: -1.25em 0 0 -1.25em;
+    border: 0.2em solid var(--color-border);
+    border-top-color: var(--color-accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    pointer-events: none;
+
+    &.is-active {
+        display: block;
+    }
+}
+
+/* 图片区左侧留白与右侧对称：右侧面板内容到右缘 = 面板内边距 1.25em + 箭头列 4.25em = 5.5em，
+   左侧同样留 5.5em（箭头列 4.25em + 内边距 1.25em）——作品不贴左缘、不被左箭头遮挡；
+   右侧留 2em 给辉光溢出余地，避免切入面板区域。
+   上下内边距对称（1em/1em）：图片真正上下居中——基础态的底部 2.5em 是为窄屏抽屉
+   升起时辉光衰减留的（桌面无抽屉，辉光溢出被裁切的边缘在屏幕底缘、压在暗色背景上不可见） */
+@media (min-width: 1001px) {
+    .lightbox-img-area {
+        padding-left: 5.5em;
+        padding-right: 2em;
+        padding-bottom: 1em;
+    }
+}

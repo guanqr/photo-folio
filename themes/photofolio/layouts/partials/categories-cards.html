@@ -23,7 +23,7 @@
         <a href="{{ $cardLink }}" class="category-card">
             <div class="category-image">
                 {{- with $coverImg -}}
-                    {{ $coverUrl := partial "img-url.html" (dict "src" . "site" site "width" ($cfg.category | default 1000) "mode" "lfit" "format" "webp" "quality" ($cfg.quality | default 80)) }}
+                    {{ $coverUrl := partial "img-url.html" (dict "src" . "site" site "width" ($cfg.category | default 1000) "mode" "lfit" "format" "avif" "quality" ($cfg.quality | default 80)) }}
                     <img src="{{ $coverUrl }}" alt="{{ $cardTitle }}" loading="lazy">
                 {{- end -}}
             </div>

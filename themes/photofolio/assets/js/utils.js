@@ -27,6 +27,20 @@ export function isImageReady(img) {
     return !!(img && img.complete && img.naturalWidth > 0);
 }
 
+// AVIF 兜底（游离 Image 用）：脱离 DOM 的 Image 的 error 不传播到 document
+// 捕获监听（avif-fallback.js），预载/探测层需在实例上自行挂兜底——
+// error 时 format,avif → format,webp 重试一次（webp 再失败时 src 已不含
+// format,avif、天然不重试，无循环）；dataset.avifRetry 标记供消费方
+// （背景层的错误处理器）识别「重试在途」
+export function loadWithAvifFallback(img) {
+    img.addEventListener('error', () => {
+        const src = img.src;
+        if (!src || !src.includes('format,avif')) return;
+        img.dataset.avifRetry = '1';
+        img.src = src.replace('format,avif', 'format,webp');
+    });
+}
+
 // 桌面断点单源（nav-dropdown 与 mobile-nav 共用）：与样式表 max-width: 768px
 // 严格互补——平板竖屏恰为 768px，JS 若用 min-width: 768 会与窄屏样式同时命中
 // （汉堡菜单已显示而点击被视为桌面端）。CSS 侧对应值见 _responsive.scss 的

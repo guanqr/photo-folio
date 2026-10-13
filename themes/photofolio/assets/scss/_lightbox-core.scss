@@ -1,0 +1,235 @@
+/* ===== Lightbox 核心骨架 ===== */
+/* 灯箱固定暗色：图片相关区域的文字/背景/图表配色不随明暗主题切换——
+   组件内重新声明被亮色主题覆盖的变量（分量取自 :root 的 --dark-rgb-* 固定值） */
+.lightbox {
+    --color-text: rgb(var(--dark-rgb-text));
+    --color-text-secondary: rgb(var(--dark-rgb-text-secondary));
+    --color-text-muted: rgb(var(--dark-rgb-text-muted));
+    --color-border: rgb(var(--dark-rgb-border));
+    --color-bg-card: rgb(var(--dark-rgb-card));
+    --color-accent: rgb(var(--dark-rgb-accent));
+    --color-accent-15: rgba(var(--dark-rgb-accent), 0.15);
+    --color-accent-30: rgba(var(--dark-rgb-accent), 0.3);
+    --color-zone-shadow-bg: rgba(var(--rgb-white), 0.05);
+    --color-zone-mid-bg: rgba(var(--rgb-white), 0.1);
+    --color-zone-high-bg: rgba(var(--rgb-white), 0.05);
+    --color-zone-shadow-fg: rgb(var(--dark-rgb-text-muted));
+    --color-zone-mid-fg: rgb(var(--dark-rgb-text-secondary));
+    --color-zone-high-fg: rgb(var(--rgb-white));
+    --color-sat-curve: rgb(var(--dark-rgb-text));
+    --color-clip: rgb(var(--dark-rgb-accent));
+    --color-overlay-subtle: rgba(var(--rgb-white), 0.1);
+}
+
+.lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-lightbox);
+    background: var(--color-lightbox-bg);
+    display: flex;
+    flex-direction: column; /* 上下分区：顶部关闭栏、下方主区 */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+    /* 抽屉拖动手势：禁止浏览器滚动接管（否则拖动一小段即触发 pointercancel）；
+       对整个灯箱生效（含详情区——内容滚动由抽屉统一虚拟位置模型接管，不依赖原生滚动） */
+    touch-action: none;
+
+    /* 桌面端右侧元信息面板宽度（箭头按钮右移避让用同一变量） */
+    --lightbox-panel-w: 22em;
+
+    &.active {
+        opacity: 1;
+        visibility: visible;
+    }
+}
+
+/* 背景：当前作品铺满屏幕的模糊毛玻璃（cover 填充 + blur 压暗）。
+   层级：背景 0 < 灯箱内容 2，绝不遮挡前景作品。
+   半分辨率栅格化：整屏糊化的装饰层以半屏尺寸光栅化、2× 放大——
+   模糊对分辨率不敏感，观感与满分辨率等同；滤镜输出像素降至 ¼、
+   半径减半（1.25em ≈ 满分辨率 2.5em）使每像素成本再降，新层首次
+   光栅化尖峰整体约 1/16，淡入动画不再被尖峰打断（旧版 Chromium
+   掉帧根因）；源图与网格缩略图同 URL（w_800）——灯箱打开即缓存命中，
+   背景不会因新请求等待而黑屏；纹理内存 ¼ */
+.lightbox-backdrop {
+    position: absolute;
+    top: 25%; /* 半屏盒居中于屏幕：25% + 50%/2 */
+    left: 25%;
+    width: 50%;
+    height: 50%;
+    z-index: 0;
+    object-fit: cover;
+    filter: blur(1.25em) brightness(0.55);
+    transform: scale(2.2); /* 2× 半分辨率补偿 + 原 1.1 放大防白边（1.1×2） */
+    /* 钉住合成层：旧版 Chromium 在 GPU 内存压力下会降级图层，降级期间 opacity
+       过渡每帧重跑滤镜链（荣耀暗角卡顿）；will-change 提示浏览器保持图层提升，
+       模糊只光栅化一次、融替纯纹理合成（参考站同样卡顿、未做此提示） */
+    will-change: opacity;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--transition-fade); /* 首开淡入；切图淡入淡出由 JS 内联 0.7s 驱动（对齐参考站 duration-700） */
+}
+
+/* 主区：移动优先纵向（图片上、元信息下），桌面端横向（图片左、元信息面板右） */
+.lightbox-content {
+    position: relative;
+    z-index: 2;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.lightbox-main {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 关闭栏全宽悬浮、不占独立一行（所有宽度）：图片区在整屏高度内垂直居中；
+   z-index 高于 content（绝对定位后必须，否则被内容层盖住点不到） */
+.lightbox-topbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 3;
+    height: 4em;
+}
+
+/* 灯箱控件按钮基类（关闭/左右箭头共用）：3em 圆形 + 半透底色 + hover 反馈 */
+%lightbox-ctrl {
+    position: absolute;
+    background: var(--color-lightbox-ctrl-bg);
+    border: none;
+    color: var(--color-lightbox-ctrl-text);
+    cursor: pointer;
+    width: 3em;
+    height: 3em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.2s, color 0.2s;
+    -webkit-tap-highlight-color: transparent;
+
+    svg {
+        width: 1.5em;
+        height: 1.5em;
+    }
+
+    &:hover {
+        background: var(--color-lightbox-ctrl-hover);
+        color: var(--color-lightbox-ctrl-text-hover);
+    }
+}
+
+.lightbox-close {
+    /* 与左右箭头同一套定位机制：绝对定位 + right: 1em，保证与箭头严格同列 */
+    @extend %lightbox-ctrl;
+    top: 0.5em; /* 顶栏 4em 内垂直居中 */
+    right: 1em;
+
+    svg {
+        transition: transform var(--transition-spring);
+    }
+
+    &:hover {
+        svg { transform: rotate(90deg); }
+    }
+}
+
+.lightbox-arrow {
+    @extend %lightbox-ctrl;
+    top: 50%;
+    transform: translateY(-50%);
+    /* 覆盖基类 transition：补 transform 过渡（旋转/缩放） */
+    transition: background 0.2s, color 0.2s, transform var(--transition-35);
+    z-index: var(--z-lightbox-arrow);
+
+    &:active {
+        transform: translateY(-50%) scale(0.9);
+    }
+}
+
+.lightbox-prev {
+    left: 1em; /* 与顶栏内边距一致 */
+    /* 无水平位移：与叉号保持同一列对齐（悬停仅变背景/颜色） */
+    &:hover { transform: translateY(-50%); }
+    &:active { transform: translateY(-50%) scale(0.9); }
+}
+.lightbox-next {
+    right: 1em; /* 与顶部叉号右缘对齐（同为 3em 宽、右边距 1em） */
+    &:hover { transform: translateY(-50%); }
+    &:active { transform: translateY(-50%) scale(0.9); }
+}
+
+/* 断点切换过渡：布局方向（列↔行）是离散跳变，用面板/图片区的动画柔化；
+   prefers-reduced-motion 时关闭 */
+@media (prefers-reduced-motion: no-preference) {
+    .lightbox.is-layout-switching .lightbox-panel {
+        animation: panel-layout-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .lightbox.is-layout-switching .lightbox-img-area {
+        animation: img-layout-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    /* 窄屏抽屉内双列↔单列转换（768px）：仅面板轻量淡入滑动，不扰动图片区 */
+    .lightbox.is-layout-switching-inner .lightbox-panel {
+        animation: panel-inner-layout-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+}
+
+@keyframes panel-inner-layout-in {
+    from {
+        opacity: 0.35;
+        transform: translateY(0.6em);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes panel-layout-in {
+    from {
+        opacity: 0;
+        transform: translateY(2.5em) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes img-layout-in {
+    from {
+        opacity: 0.5;
+        transform: scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* 宽屏端（>1000px，与瀑布流宽屏档位一致）：图片左、面板右（面板常显、详情区内部滚动），
+   下一张箭头右移避让面板；≤1000px 为窄屏/中屏「上图下信息」抽屉模式——
+   宽屏布局下图片区域随视口收窄持续变小（768px 时仅约 245px 宽），中屏即切换保证图片不小于半屏 */
+@media (min-width: 1001px) {
+    .lightbox-main {
+        flex-direction: row;
+    }
+
+    /* 箭头边距与顶栏一致（向右箭头与叉号右缘对齐） */
+    .lightbox-prev {
+        left: 1em;
+    }
+
+    .lightbox-next {
+        right: 1em;
+    }
+}

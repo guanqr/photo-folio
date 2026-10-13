@@ -1,91 +1,25 @@
 /**
- * 足迹世界地图（/footprint/ 顶部）
+ * 足迹世界地图（/footprint/ 顶部）——核心编排
  *
  * - 自绘 SVG 等距圆柱投影（零外部库），世界陆地（Natural Earth 10m）、中国省级边界与
- *   海外国家边界均为一次性生成的简化静态 JSON（同源 fetch、模块级 Promise 记忆化，
- *   sw 自动缓存；失败仅降级为网格 + 点迹）
- * - 省份/国家以**独立区块**呈现（填充 + 描边）：悬停提亮 + 弹层简讯（地名/张数/年份），
- *   点击直接跳转对应地点详情页——无照片的地区为中性填充、不可交互
- * - 全部照片按坐标形成**点迹**（小圆点，纯展示、pointer-events none）
- * - 弹层（地名 / 张数 / 年份跨度）：仅悬停设备（hover: hover）悬停与键盘聚焦显示；
- *   触屏无悬停逻辑——点按区块直接跳转详情页、不显示弹层
+ *   海外国家边界均为一次性生成的简化静态 JSON；省份/国家以独立区块呈现（悬停提亮 +
+ *   弹层简讯、点击直接跳转对应地点详情页），照片坐标形成纯展示点迹
+ * - 模块结构：几何/路径构建 → footprint-geometry.js（纯函数）、数据读取 →
+ *   footprint-map-data.js、弹层 → footprint-tooltip.js；本文件保留状态生命周期
+ *   （init/destroy）、build() 编排、增量重投影、布局 FLIP 与区块点击跳转
  * - 懒加载：IntersectionObserver rootMargin 600px 进入视口才构建
  * - SPA 页面切换重跑 initFootprintMap：同一节点幂等，旧状态（observers）先销毁
  */
-
-const VIEW_W = 1000;       // 视图固定宽（SVG user 单位）
-const MIN_H = 400;         // 视图高下限（桌面 0.45 封顶须低于此值；退化守卫由 MIN_SPAN 承担）
-const MAX_H = 1000;        // 视图高上限
-const PAD = 0.15;          // fit-to-bounds 边距比例
-const MIN_SPAN_X = 12;     // 最小经度跨度（°），防单点退化
-const MIN_SPAN_Y = 9;      // 最小纬度跨度（°）
-const GRID_STEP = 10;      // 网格线步长（°）
-
 import { prefersReducedMotion, FLIP_TRANSITION } from './utils.js';
-
-const SVG_NS = 'http://www.w3.org/2000/svg';
-
-/* 连续宽高比：窄屏区域（≤768px，与全站断点一致）比例**锁定** 0.75（竖屏友好、
-   不再随宽度变化）；768→1200px 线性插值到 0.45（一屏看全）；1200px 以上取 0.45 */
-const NARROW_MAP_RATIO = 0.75;
-const DESKTOP_MAP_RATIO = 0.45;
-const RATIO_MIN_W = 768;   // 窄屏区域起点：低于此宽度比例锁定
-const RATIO_MAX_W = 1200;
-
-function targetHForWidth(width) {
-    const r = Math.min(1, Math.max(0, (width - RATIO_MIN_W) / (RATIO_MAX_W - RATIO_MIN_W)));
-    return Math.round(VIEW_W * (NARROW_MAP_RATIO + (DESKTOP_MAP_RATIO - NARROW_MAP_RATIO) * r));
-}
-
-// 繁→简省名映射（locations.toml 地点名 → provinces.json 键，数据源为简体省名）；
-// 省份区块的 dataset 存站点地点名（繁），经此映射反向查省界数据
-const PROVINCE_NAMES = {
-    '廣東': '广东省',
-    '浙江': '浙江省',
-    '雲南': '云南省',
-    '安徽': '安徽省',
-    '福建': '福建省',
-    '江西': '江西省',
-    '上海': '上海市',
-    '天津': '天津市',
-    '青海': '青海省',
-    '內蒙古': '内蒙古自治区',
-};
-const PROVINCE_NAMES_REV = Object.fromEntries(Object.entries(PROVINCE_NAMES).map(([k, v]) => [v, k]));
-
-let landPromise = null;      // 陆地几何 fetch 记忆化（跨 SPA 页面切换复用）
-let provincesPromise = null; // 省级边界 fetch 记忆化（同款）
-let countriesPromise = null; // 海外国家边界 fetch 记忆化（同款）
-
-function loadLandData() {
-    if (!landPromise) {
-        landPromise = fetch(new URL('/maps/land-10m.json', document.baseURI)).then((res) => {
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            return res.json();
-        });
-    }
-    return landPromise;
-}
-
-function loadProvincesData() {
-    if (!provincesPromise) {
-        provincesPromise = fetch(new URL('/maps/provinces.json', document.baseURI)).then((res) => {
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            return res.json();
-        });
-    }
-    return provincesPromise;
-}
-
-function loadCountriesData() {
-    if (!countriesPromise) {
-        countriesPromise = fetch(new URL('/maps/countries.json', document.baseURI)).then((res) => {
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            return res.json();
-        });
-    }
-    return countriesPromise;
-}
+import {
+    SVG_NS, VIEW_W, targetHForWidth, fitProjection, project, matrixFrom,
+    buildGrid, buildLand, buildRegionLayer, computeBounds
+} from './footprint-geometry.js';
+import {
+    readMapData, loadLandData, loadProvincesData, loadCountriesData,
+    resetLandData, resetProvincesData, resetCountriesData, provinceNameOf
+} from './footprint-map-data.js';
+import { initFootprintTooltip } from './footprint-tooltip.js';
 
 let state = null;          // { root, observer, resizeObserver, cleanup, tooltipCleanup,
                            //   view, layoutRects, layoutAnimating }
@@ -96,36 +30,9 @@ export function initFootprintMap() {
     destroyState();
 
     // 地点数据：slug → 详情页 URL/张数映射（区块点击跳转与弹层展示用）
-    let locationData = [];
-    const locationDataEl = document.getElementById('footprint-locations-data');
-    if (locationDataEl) {
-        try {
-            locationData = JSON.parse(locationDataEl.textContent);
-        } catch (err) {
-            console.warn('[footprint-map] location data parse failed', err);
-        }
-    }
-    let statsByName = {};
-    const statsEl = document.getElementById('footprint-stats-data');
-    if (statsEl) {
-        try {
-            statsByName = JSON.parse(statsEl.textContent);
-        } catch (err) {
-            console.warn('[footprint-map] stats data parse failed', err);
-        }
-    }
-    const root = document.getElementById('footprint-map');
-    const dataEl = document.getElementById('footprint-map-data');
-    if (!root || !dataEl) return;
-
-    let points;
-    try {
-        points = JSON.parse(dataEl.textContent);
-    } catch (err) {
-        console.warn('[footprint-map] data parse failed', err);
-        return;
-    }
-    if (!Array.isArray(points) || points.length === 0) return;
+    const mapData = readMapData();
+    if (!mapData) return;
+    const { root, points, locationData, statsByName } = mapData;
 
     state = { root, observer: null, resizeObserver: null };
 
@@ -148,61 +55,12 @@ function destroyState() {
     if (!state) return;
     if (state.observer) state.observer.disconnect();
     if (state.resizeObserver) state.resizeObserver.disconnect();
+    if (state.layoutTimer) clearTimeout(state.layoutTimer); // FLIP 收尾定时器（SPA 跳页后 state 置空，回调会解引用 null 抛 TypeError）
     if (typeof state.cleanup === 'function') state.cleanup();
     state = null;
 }
 
-/* ===== 投影与视图适配（等距圆柱，φ1 = 视图纬度中点） =====
-   视图范围 = 全部照片坐标的包围盒（+ 15% 边距 + 最小跨度守卫）。
-   targetH 传入时（桌面分栏：地图框高度由等高卡片决定）按框的宽高比重算视图高，
-   地图内容始终填满等高框（多出的区域表现为更多的网格/海洋，而非 letterbox） */
-function fitProjection(points, targetH) {
-    let lngMin = Infinity, lngMax = -Infinity;
-    let latMin = Infinity, latMax = -Infinity;
-    for (const p of points) {
-        lngMin = Math.min(lngMin, p.lng);
-        lngMax = Math.max(lngMax, p.lng);
-        latMin = Math.min(latMin, p.lat);
-        latMax = Math.max(latMax, p.lat);
-    }
-    const phi1 = (latMin + latMax) / 2;
-    const cos1 = Math.cos((phi1 * Math.PI) / 180);
-
-    let dx = (lngMax - lngMin) * cos1;
-    let dy = latMax - latMin;
-    // 最小跨度守卫：世界视野防单点退化
-    dx = Math.max(dx, MIN_SPAN_X);
-    dy = Math.max(dy, MIN_SPAN_Y);
-
-    // 视图高随数据纵横比锁定，限制在 2:1 ~ 1:1 之间；桌面分栏时由等高框决定（同样钳制）
-    const H = Math.min(MAX_H, Math.max(MIN_H, targetH || Math.round((VIEW_W * dy) / dx)));
-    const s = Math.min(VIEW_W / (dx * (1 + 2 * PAD)), H / (dy * (1 + 2 * PAD)));
-
-    return {
-        W: VIEW_W,
-        H,
-        s,
-        ox: VIEW_W / 2 - s * cos1 * (lngMin + lngMax) / 2,
-        oy: H / 2 + s * (latMin + latMax) / 2,
-        cos1
-    };
-}
-
-function project(pr, lng, lat) {
-    return [pr.ox + pr.s * pr.cos1 * lng, pr.oy - pr.s * lat];
-}
-
-/* ===== 构建 ===== */
 let buildSeq = 0; // 构建序号：断点重建与 RO 重建可能并发，只允许最新一次构建生效
-
-// 仿射映射：等距圆柱投影变化（s/ox/oy/cos1）→ 旧坐标系到新坐标系的 matrix（x' = a·x + b，y' = c·y + d）
-function matrixFrom(prFrom, prTo) {
-    const a = (prTo.s * prTo.cos1) / (prFrom.s * prFrom.cos1);
-    const b = prTo.ox - a * prFrom.ox;
-    const c = prTo.s / prFrom.s;
-    const d = prTo.oy - c * prFrom.oy;
-    return `matrix(${a} 0 0 ${c} ${b} ${d})`;
-}
 
 // 增量重投影（拖动窗口/跨断点时的重建路径）：陆地/区块/网格只改组的 matrix 变换、
 // 点迹只重定位坐标——不重建任何 DOM、不重投影路径，每帧级成本（拖动中无卡顿）
@@ -278,80 +136,15 @@ function flipLayout() {
     });
     state.layoutRects = lasts;
     state.layoutAnimating = true;
-    setTimeout(() => {
+    state.layoutTimer = setTimeout(() => {
+        state.layoutTimer = null;
+        if (!state) return; // SPA 跳页后 destroyState 已置空（定时器本应被取消，双保险）
         state.layoutAnimating = false;
         els.forEach((el) => {
             if (el.style.transition === FLIP_TRANSITION) el.style.transition = '';
             if (el.style.transformOrigin === '0 0') el.style.transformOrigin = '';
         });
     }, 400);
-}
-
-/* 区块图层构建（省/国共用）：每个地区合并为单个 path，挂地点名/计数/年份
-   数据属性；nameOf 把数据键映射为站点地点名（省经繁简映射、国恒等）；
-   无照片地区中性填充、不可交互 */
-function buildRegionLayer(g, data, pr, locationData, statsByName, nameOf) {
-    for (const [key, polys] of Object.entries(data.data)) {
-        const siteName = nameOf(key);
-        const entry = siteName ? locationData.find((d) => d.name === siteName) : null;
-        const attrs = {
-            class: 'fm-region' + (entry ? '' : ' is-inert'),
-            'data-name': siteName || key,
-        };
-        if (entry) {
-            attrs['data-slug'] = entry.slug;
-            attrs['data-count'] = entry.count;
-            const st = statsByName[siteName] || {};
-            attrs['data-min-year'] = st.yearMin || '';
-            attrs['data-max-year'] = st.yearMax || '';
-        }
-        buildRegionPath(g, polys, pr, data.quant, attrs);
-    }
-}
-
-/* 区块 path：一个地区（省/国）的全部多边形合并为单个 path（多环子路径空格连接），
-   便于整块点击/悬停/选中 */
-function buildRegionPath(g, polys, pr, quant, attrs) {
-    let d = '';
-    for (const poly of polys) {
-        d += poly.map((ring) => buildRingPath(ring, pr, quant)).join(' ');
-    }
-    const path = document.createElementNS(SVG_NS, 'path');
-    path.setAttribute('d', d);
-    for (const [key, value] of Object.entries(attrs)) {
-        path.setAttribute(key, value);
-    }
-    g.appendChild(path);
-    return path;
-}
-
-/* 视图范围 = 照片点迹 ∪ 全部有照片省份的完整区块包围盒（海外国家除外——
-   省份完整可见不被 viewBox 裁切，如青海照片在中东部、省界西段须完整露出；
-   海外国家不并入包围盒，随照片点自然呈现） */
-function computeBounds(points, provData, activeNames) {
-    let minLng = Infinity, maxLng = -Infinity, minLat = Infinity, maxLat = -Infinity;
-    const extend = (lng, lat) => {
-        minLng = Math.min(minLng, lng);
-        maxLng = Math.max(maxLng, lng);
-        minLat = Math.min(minLat, lat);
-        maxLat = Math.max(maxLat, lat);
-    };
-    for (const p of points) extend(p.lng, p.lat);
-
-    const extendRings = (polys, quant) => {
-        for (const poly of polys) {
-            for (const ring of poly) {
-                for (const [xq, yq] of ring) extend(xq / quant, yq / quant);
-            }
-        }
-    };
-    if (provData) {
-        for (const [key, polys] of Object.entries(provData.data)) {
-            const siteName = PROVINCE_NAMES_REV[key];
-            if (siteName && activeNames.has(siteName)) extendRings(polys, provData.quant);
-        }
-    }
-    return { minLng, maxLng, minLat, maxLat };
 }
 
 async function build(root, points, locationData, statsByName) {
@@ -394,7 +187,7 @@ async function build(root, points, locationData, statsByName) {
     try {
         landPolys = await loadLandData();
     } catch (err) {
-        landPromise = null;
+        resetLandData();
         console.warn('[footprint-map] land geometry load failed', err);
     }
     if (!root.isConnected || seq !== buildSeq) return;
@@ -403,7 +196,7 @@ async function build(root, points, locationData, statsByName) {
     try {
         provData = await loadProvincesData();
     } catch (err) {
-        provincesPromise = null;
+        resetProvincesData();
         console.warn('[footprint-map] province boundaries load failed', err);
     }
     if (!root.isConnected || seq !== buildSeq) return;
@@ -412,12 +205,12 @@ async function build(root, points, locationData, statsByName) {
     try {
         countryData = await loadCountriesData();
     } catch (err) {
-        countriesPromise = null;
+        resetCountriesData();
         console.warn('[footprint-map] country boundaries load failed', err);
     }
     if (!root.isConnected || seq !== buildSeq) return;
 
-    const bounds = computeBounds(points, provData, activeNames);
+    const bounds = computeBounds(points, provData, activeNames, provinceNameOf);
     const fitPoints = [
         { lng: bounds.minLng, lat: bounds.minLat },
         { lng: bounds.maxLng, lat: bounds.maxLat },
@@ -506,7 +299,7 @@ async function build(root, points, locationData, statsByName) {
     if (provData) {
         const prov = document.createElementNS(SVG_NS, 'g');
         prov.setAttribute('class', 'fm-regions');
-        buildRegionLayer(prov, provData, pr, locationData, statsByName, (key) => PROVINCE_NAMES_REV[key] || null);
+        buildRegionLayer(prov, provData, pr, locationData, statsByName, provinceNameOf);
         prov.setAttribute('transform', matrixFrom(pr, state.view.pr));
         state.view.prov = prov;
         state.view.provPr = pr;
@@ -525,7 +318,8 @@ async function build(root, points, locationData, statsByName) {
     }
 
     if (seq !== buildSeq) return; // 成功路径在 await 后已守卫，此处兜底（如未缓存 fetch 快速完成）
-    state.tooltipCleanup = bindTooltip(root, tooltip, countFormat, yearFormat);
+    const tooltipMod = initFootprintTooltip({ root, tooltip, countFormat, yearFormat });
+    state.tooltipCleanup = tooltipMod.cleanup;
 
     // resize/旋转：关闭弹层；桌面等高模式下宽高比漂移超过 1% 时做增量重投影——
     // 该路径成本极低（改 viewBox + 组变换 + 点迹坐标），无需防抖，拖动中地图实时跟随
@@ -537,7 +331,7 @@ async function build(root, points, locationData, statsByName) {
             ? screen.orientation.type
             : null;
         state.resizeObserver = new ResizeObserver(() => {
-            hideTooltip(tooltip);
+            tooltipMod.hide();
             if (rebuildQueued) return;
             rebuildQueued = true;
             requestAnimationFrame(() => {
@@ -606,203 +400,4 @@ async function build(root, points, locationData, statsByName) {
             state.tooltipCleanup = null;
         }
     };
-}
-
-/* 网格线：等距圆柱下均为直线；按可视范围反推经纬度起止 */
-function buildGrid(g, pr) {
-    const lngMin = (0 - pr.ox) / (pr.s * pr.cos1);
-    const lngMax = (pr.W - pr.ox) / (pr.s * pr.cos1);
-    const latMin = (pr.H - pr.oy) / -pr.s;
-    const latMax = (0 - pr.oy) / -pr.s;
-
-    for (let lng = Math.ceil(lngMin / GRID_STEP) * GRID_STEP; lng <= lngMax; lng += GRID_STEP) {
-        const [x] = project(pr, lng, 0);
-        const line = document.createElementNS(SVG_NS, 'line');
-        line.setAttribute('x1', x);
-        line.setAttribute('x2', x);
-        line.setAttribute('y1', 0);
-        line.setAttribute('y2', pr.H);
-        g.appendChild(line);
-    }
-    for (let lat = Math.ceil(latMin / GRID_STEP) * GRID_STEP; lat <= latMax; lat += GRID_STEP) {
-        const [, y] = project(pr, 0, lat);
-        const line = document.createElementNS(SVG_NS, 'line');
-        line.setAttribute('x1', 0);
-        line.setAttribute('x2', pr.W);
-        line.setAttribute('y1', y);
-        line.setAttribute('y2', y);
-        g.appendChild(line);
-    }
-}
-
-/* 陆地 path：逐点等距圆柱映射；换日线断段守卫 */
-function buildLand(g, polys, pr, quant = 20) {
-    for (const poly of polys) {
-        const d = poly.map((ring) => buildRingPath(ring, pr, quant)).join(' ');
-        const path = document.createElementNS(SVG_NS, 'path');
-        path.setAttribute('d', d);
-        g.appendChild(path);
-    }
-}
-
-function buildRingPath(ring, pr, quant = 20) {
-    let d = '';
-    let prev = null;
-    // 数据为量化整数对（陆地/国家 20 单位/度 = 0.05°；省界 200 单位/度 = 0.005°，
-    // 见 tools/map-data/generate-maps.py），投影前按口径还原为度
-    ring.forEach(([xq, yq], i) => {
-        const [x, y] = project(pr, xq / quant, yq / quant);
-        if (i === 0) {
-            d += `M${round1(x)},${round1(y)}`;
-        } else if (prev !== null && Math.abs(x - prev) > pr.W / 2) {
-            // 换日线：断开重起（当前东亚视野不会触发，仅防御）
-            d += `M${round1(x)},${round1(y)}`;
-        } else {
-            d += `L${round1(x)},${round1(y)}`;
-        }
-        prev = x;
-    });
-    return d + 'Z';
-}
-
-function round1(v) {
-    return Math.round(v * 10) / 10;
-}
-
-/* ===== 弹层 ===== */
-function bindTooltip(root, tooltip, countFormat, yearFormat) {
-    const mapRect = () => root.getBoundingClientRect();
-    const hide = () => hideTooltip(tooltip);
-    const isHoverCapable = matchMedia('(hover: hover)').matches;
-
-    // 弹层内容与定位渲染（先恢复显示并测量——读取 offset 强制初始态样式生效，
-    // 随后加 fm-visible 才有淡入过渡）。
-    // 锚点为指针坐标（凹形区块如內蒙古的包围盒中心会落在区块之外、弹层漂移）：
-    // 悬停/点按传 e.clientX/Y，键盘聚焦无指针坐标时回退区块包围盒中心
-    const render = (el, anchorX, anchorY) => {
-        const { name, count, minYear, maxYear } = el.dataset;
-        const years = minYear === maxYear ? String(minYear) : yearFormat.replace('%MIN%', minYear).replace('%MAX%', maxYear);
-        tooltip.innerHTML = '';
-        const nameEl = document.createElement('strong');
-        nameEl.textContent = name;
-        const countEl = document.createElement('span');
-        countEl.textContent = countFormat.replace('%COUNT%', count);
-        const yearEl = document.createElement('span');
-        yearEl.textContent = years;
-        tooltip.append(nameEl, countEl, yearEl);
-        tooltip.dataset.slug = el.dataset.slug || '';
-
-        // 淡出途中的重新显示：作废在途的隐藏计时，从当前透明度平滑淡回
-        if (tooltip.hideTimer) {
-            clearTimeout(tooltip.hideTimer);
-            tooltip.hideTimer = null;
-        }
-        tooltip.style.display = '';
-        tooltip.style.left = '0px';
-        tooltip.style.top = '0px';
-        const w = tooltip.offsetWidth;
-        const h = tooltip.offsetHeight;
-
-        // 在视口坐标系做 clamp 与上下翻转，最后换算回容器相对坐标
-        //（tooltip 的定位包含块是 #footprint-map，不是视口）
-        const rect = mapRect();
-        let x = anchorX;
-        let y = anchorY;
-        if (x == null || y == null) {
-            const dotRect = el.getBoundingClientRect();
-            x = dotRect.left + dotRect.width / 2;
-            y = dotRect.top + dotRect.height / 2;
-        }
-        const leftVp = Math.min(Math.max(x - w / 2, rect.left + 12), rect.left + rect.width - w - 12);
-        // 指针上方留 16px 间距；上方空间不足（弹层高 + 间距）则翻转到指针下方
-        let topVp = y - 16 - h;
-        if (topVp < rect.top + 8) topVp = y + 16;
-        tooltip.style.left = (leftVp - rect.left) + 'px';
-        tooltip.style.top = (topVp - rect.top) + 'px';
-        tooltip.classList.add('fm-visible');
-    };
-
-    // 已显示时换区块：交叉淡入淡出——旧弹层克隆为幽灵元素在旧位置原地淡出，
-    // 新弹层同时在新位置从 0 淡入，两段动画并行、无「先消失再出现」的真空期；
-    // 幽灵垫在主弹层之下（后插入者在上）——两框重叠时新内容直接叠在旧内容上淡入
-    const swap = (el, anchorX, anchorY) => {
-        const ghost = tooltip.cloneNode(true);
-        ghost.removeAttribute('role'); // 状态播报只保留主弹层
-        root.insertBefore(ghost, tooltip);
-        // 先入 DOM、强制提交带类样式（opacity 1），再摘类触发淡出——
-        // 顺序颠倒时幽灵的首次计算样式就是 0，过渡无从播放、旧弹层瞬间消失
-        void ghost.offsetWidth;
-        ghost.classList.remove('fm-visible');
-        setTimeout(() => ghost.remove(), prefersReducedMotion() ? 0 : TOOLTIP_FADE_MS);
-
-        // 主弹层同步瞬移到隐藏态：关过渡 + 内联 opacity 0，强制提交 0 基准，
-        // 再恢复样式表过渡并交还类控制——render 加回 fm-visible 后必然从已提交的
-        // 0 起淡入（不依赖 display:none 抑制过渡的行为，WebKit 下同样可靠）
-        tooltip.style.transition = 'none';
-        tooltip.classList.remove('fm-visible');
-        tooltip.style.opacity = '0';
-        void tooltip.offsetWidth;
-        tooltip.style.transition = '';
-        tooltip.style.opacity = '';
-        render(el, anchorX, anchorY);
-    };
-
-    const show = (el, anchorX, anchorY) => {
-        // 同一区块重复触发：无需动作（避免无意义的淡出淡入闪烁）
-        if (tooltip.classList.contains('fm-visible') && tooltip.dataset.slug === (el.dataset.slug || '')) return;
-        if (tooltip.classList.contains('fm-visible')) {
-            swap(el, anchorX, anchorY);
-            return;
-        }
-        render(el, anchorX, anchorY);
-    };
-
-    const onPointerEnter = (e) => {
-        if (!isHoverCapable) return;
-        const link = e.target.closest('.fm-region');
-        if (link && link.dataset.slug) show(link, e.clientX, e.clientY);
-    };
-    const onPointerLeave = (e) => {
-        if (e.target.closest('.fm-region')) hide();
-    };
-    const onFocusIn = (e) => {
-        const link = e.target.closest('.fm-region');
-        if (link && link.dataset.slug) show(link);
-    };
-    const onFocusOut = (e) => {
-        // 焦点在区块之间移动时不闪烁（focusin 会立即重新显示）
-        if (e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.fm-region')) return;
-        if (e.target.closest('.fm-region')) hide();
-    };
-    root.addEventListener('pointerenter', onPointerEnter, true);
-    root.addEventListener('pointerleave', onPointerLeave, true);
-    root.addEventListener('focusin', onFocusIn);
-    root.addEventListener('focusout', onFocusOut);
-
-    // 返回移除函数：重建时会重新绑定弹层监听，旧监听必须移除（否则随重建次数累积，
-    // 每次悬停都会在已脱离文档的旧弹层上重复执行布局读取）
-    return () => {
-        root.removeEventListener('pointerenter', onPointerEnter, true);
-        root.removeEventListener('pointerleave', onPointerLeave, true);
-        root.removeEventListener('focusin', onFocusIn);
-        root.removeEventListener('focusout', onFocusOut);
-    };
-}
-
-// 淡出时长与 .fm-tooltip 的 transition（--transition = 0.3s）一致
-const TOOLTIP_FADE_MS = 300;
-
-function hideTooltip(tooltip) {
-    tooltip.classList.remove('fm-visible');
-    // display:none 必须等淡出过渡结束再设置——同帧设置会让过渡无从播放、瞬间消失；
-    // 但 display:none 不能省：visibility:hidden 的绝对定位元素在 Chrome 中
-    // 仍计入 scrollable overflow，缩小窗口时残留位置会撑出横向滚动
-    if (tooltip.hideTimer) clearTimeout(tooltip.hideTimer);
-    tooltip.hideTimer = setTimeout(() => {
-        tooltip.hideTimer = null;
-        // 淡出期间被重新显示（再次悬停/点按）时放弃本次隐藏
-        if (!tooltip.classList.contains('fm-visible')) {
-            tooltip.style.display = 'none';
-        }
-    }, prefersReducedMotion() ? 0 : TOOLTIP_FADE_MS);
 }
