@@ -54,6 +54,9 @@
 
 <div class="masonry-item" data-year="{{ $year }}" data-location="{{ $photo.location }}" data-category="{{ $photo.category }}" data-scope="{{ if $photo.featured }}featured {{ end }}{{ $orientation }}">
     <div class="photo-card"
+        tabindex="0"
+        role="button"
+        aria-label="{{ $displayTitle }}"
         data-slug="{{ $slug }}"
         data-title="{{ $displayTitle }}"
         {{ with $description }}data-description="{{ . }}"{{ end }}

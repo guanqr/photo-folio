@@ -11,6 +11,7 @@
  */
 
 import { revealBatch } from './masonry.js';
+import { loadWithAvifFallback } from './utils.js';
 
 let current = null; // { trigger, grid, onScroll }
 
@@ -75,8 +76,24 @@ export function initInfiniteScroll() {
 
         const batch = Math.min(pageSize, grid._pendingItems.length);
 
-        // 先展示转圈图标 700ms，再测量并揭示作品（revealBatch 完成后恢复状态）
-        setTimeout(async () => {
+        // 先展示转圈图标 700ms，再测量并揭示作品（revealBatch 完成后恢复状态）。
+        // 批次首图探测与转圈并行：已缓存（回看/二次加载）时解码瞬间完成、
+        // 提前揭示不再空等转圈；慢网首访探测迟迟不就绪、仍走完整 700ms 节奏
+        // （探测单图、同 URL 的在途请求浏览器自动合并，不产生重复下载）
+        const firstImg = grid._pendingItems[0] &&
+            grid._pendingItems[0].querySelector('img.photo-img');
+        const probeReady = new Promise((resolve) => {
+            if (!firstImg || !firstImg.dataset.src) { resolve(); return; }
+            const probe = new Image();
+            loadWithAvifFallback(probe); // 游离 Image 不进 document 捕获监听：实例级 AVIF 兜底
+            probe.onload = resolve;
+            probe.onerror = resolve; // 探测失败不阻塞揭示（revealBatch 自有兜底）
+            probe.src = firstImg.dataset.src;
+        });
+        Promise.race([
+            probeReady,
+            new Promise((resolve) => setTimeout(resolve, 700))
+        ]).then(async () => {
             await revealBatch(grid, batch);
             isLoading = false;
             trigger.classList.remove('is-loading');
@@ -88,7 +105,7 @@ export function initInfiniteScroll() {
             if (distToBottom() <= TRIGGER_OFFSET) {
                 loadMore();
             }
-        }, 700);
+        });
     }
 
     function finishLoading() {

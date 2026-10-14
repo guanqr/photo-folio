@@ -39,6 +39,11 @@
 {{/* 结构化数据 JSON-LD：站点（WebSite）与作者（Person），全站生效 */}}
 {{ partial "jsonld.html" . }}
 
+{{/* 图片 CDN 预连接（域名由 hugo.toml imageCDN 配置；全站生效）：
+   首屏缩略图/轮播图/灯箱图同域——DNS/TCP/TLS 提前建立，
+   hero 预载与瀑布流首批缩略图省一次连接往返 */}}
+{{ with .Site.Params.imageCDN }}<link rel="preconnect" href="{{ . }}">{{ end }}
+
 {{/* 首页轮播首图预加载（LCP 优化，仅首页） */}}
 {{ partial "hero-preload.html" . }}
 

@@ -73,6 +73,9 @@ img.photo-img {
     /* 宽高由 JS 按作品自身比例精确给定；cover 仅兜底取整误差，绝不拉伸 */
     object-fit: cover;
     max-width: none;
+    /* 解码前占位底色：宽高属性已使盒子形状正确，图片加载/解码期间
+       显示淡色占位而非空白块，明暗主题随变量自动切换 */
+    background: var(--color-bg-secondary);
 }
 
 /* ===== 筛选栏（全部作品页）：胶囊按钮组，参考站同款横向滚动 + 渐隐遮罩 ===== */

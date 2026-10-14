@@ -8,6 +8,7 @@ import { initLightboxCollection } from './lightbox-collection.js';
 import { initLightboxSwitch } from './lightbox-switch.js';
 import { initLightboxAnalysisControl } from './lightbox-analysis-control.js';
 import { prefersReducedMotion } from './utils.js';
+import { revealUpToItem } from './masonry.js';
 
 let inited = false;
 
@@ -197,6 +198,20 @@ export function initLightbox() {
         switchModule.openByImg(img);
     });
 
+    // 键盘打开作品：焦点在作品卡上时 Enter/Space 与鼠标点击同管线——
+    // 卡内链接（组照图标）不拦截、灯箱激活时由下方键盘处理接管；
+    // Space 的页面滚动默认行为被拦截
+    document.addEventListener('keydown', (e) => {
+        if (lightbox.classList.contains('active')) return;
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        if (e.target.closest('a')) return;
+        const card = e.target.closest('.photo-card');
+        if (!card) return;
+        e.preventDefault();
+        const wrapper = card.querySelector('.photo-wrapper');
+        if (wrapper) wrapper.click();
+    });
+
     // 关闭
     if (lightboxClose) lightboxClose.addEventListener('click', () => switchModule.close());
 
@@ -235,12 +250,23 @@ export function initLightbox() {
 
 /* 从 URL 恢复灯箱（?p=照片 slug）：页面加载/SPA 跳转后由 main.js 调用——
    经文档级点击监听触发 open（initLightbox 已绑定、幂等）。
-   仅能恢复已渲染（有 src）的作品——无限滚动隐藏批次外照片、深位置不恢复 */
-export function openLightboxFromUrl() {
+   目标尚未揭示（无限滚动未加载到的深位置）时按分页连续揭示至目标进入
+   已显示集合（instant、无逐张动画），再滚入视口打开——缩放浮现动画
+   有可见缩略图作起点、关闭灯箱后停留在目标照片处；
+   被筛选隐藏（不在待加载队列）的目标静默放弃（点击经既有路径，
+   openByImg 收集不到时自然返回） */
+export async function openLightboxFromUrl() {
     const slug = new URLSearchParams(location.search).get('p');
     if (!slug) return;
     const card = document.querySelector(`.photo-card[data-slug="${CSS.escape(slug)}"]`);
     const wrapper = card ? card.querySelector('.photo-wrapper') : null;
     if (!wrapper) return;
+
+    const grid = document.getElementById('masonry-grid');
+    const item = grid ? card.closest('.masonry-item') : null;
+    if (grid && item && grid._pendingItems && grid._pendingItems.includes(item)) {
+        await revealUpToItem(grid, item);
+        item.scrollIntoView({ block: 'center', behavior: 'instant' });
+    }
     wrapper.click();
 }

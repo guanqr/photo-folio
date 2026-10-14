@@ -48,6 +48,8 @@ export function initMasonry(skipInitialReveal = false) {
     // 带滞回，防止断点附近来回切换；按当前宽度初始化
     grid._tier = null;
     updateTier(grid);
+    grid._gridGen = 0; // 网格状态代次：筛选重启递增、作废在途揭示批次的布局与淡入计时器（见 revealBatch）
+    grid._pageSize = pageSize; // 深层 ?p= 恢复按常规分页大小连续揭示（见 revealUpToItem）
     grid._rows = null; // 当前行划分（以全部已显示作品为坐标系；resize 时冻结复用，仅按比例缩放）
 
     grid.classList.add('masonry-ready');
@@ -68,55 +70,88 @@ export function initMasonry(skipInitialReveal = false) {
 
 /**
  * 揭示下一批作品：测量宽高比 → 计算行布局 → 逐张淡入
- * 返回 Promise，在全部揭示动画完成后 resolve（供无限滚动等待）
+ * 返回 Promise，在全部揭示处理完成后 resolve（供无限滚动等待）。
+ *
+ * 批次串行化：布局读写 grid._rows/_shownItems 的当时状态，并发的 revealBatch
+ * （筛选恢复 + ?p= 深层恢复 + 无限滚动）交错执行会互相污染尾行合并与行划分——
+ * 链到上一批完成后再执行本批；批次成员在调用瞬间确定（同步 splice），
+ * 串行的只是布局执行顺序。
+ * instant（深层 ?p= 恢复用）：跳过逐张淡入与转圈，全批即时揭示。
  */
-export async function revealBatch(grid, count) {
+export function revealBatch(grid, count, instant = false) {
     const batch = grid._pendingItems.splice(0, Math.min(count, grid._pendingItems.length));
-    if (!batch.length) return;
+    if (!batch.length) return Promise.resolve();
 
-    grid._shownItems.push(...batch);
+    const gen = grid._gridGen || 0; // 调用瞬间的代次：筛选重启会递增、作废本批
 
-    // 解除隐藏并显式设置图片 src（不依赖浏览器原生懒加载——
-    // SPA 注入的 img 在某些浏览器中懒加载可能失效导致首跳空白；按批控制加载是确定性的）
-    batch.forEach((item) => {
-        item.classList.remove('is-hidden');
-        const img = item.querySelector('img.photo-img');
-        if (img && img.dataset.src && !img.src) {
-            img.src = img.dataset.src;
-            img.removeAttribute('data-src');
-        }
-    });
+    const run = async () => {
+        if ((grid._gridGen || 0) !== gen) return; // 筛选重启已重置网格状态：放弃本批，防旧批次污染新集合
 
-    // 等待测量，最多 800ms：
-    // 快速路径（缓存命中等）直接用真实比例排布揭示——动画连贯无校正；
-    // 慢速路径（如首次跳转 CDN 未缓存）先按兜底比例揭示让作品马上可见，
-    // 测量完成后等揭示动画全部结束再做校正，避免动画中途跳变
-    const measurePromise = measureRatios(grid, batch);
-    const measured = await Promise.race([
-        measurePromise.then(() => true),
-        new Promise((resolve) => setTimeout(() => resolve(false), 800))
-    ]);
+        grid._shownItems.push(...batch);
 
-    layoutRows(grid, batch);
+        // 解除隐藏并显式设置图片 src（不依赖浏览器原生懒加载——
+        // SPA 注入的 img 在某些浏览器中懒加载可能失效导致首跳空白；按批控制加载是确定性的）
+        batch.forEach((item) => {
+            item.classList.remove('is-hidden');
+            const img = item.querySelector('img.photo-img');
+            if (img && img.dataset.src && !img.src) {
+                img.src = img.dataset.src;
+                img.removeAttribute('data-src');
+            }
+        });
 
-    await new Promise((resolve) => {
-        batch.forEach((item, i) => {
-            setTimeout(() => {
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => item.classList.add('is-revealed'));
+        // 等待测量，最多 800ms：
+        // 快速路径（缓存命中等）直接用真实比例排布揭示——动画连贯无校正；
+        // 慢速路径（如首次跳转 CDN 未缓存）先按兜底比例揭示让作品马上可见，
+        // 测量完成后等揭示动画全部结束再做校正，避免动画中途跳变
+        const measurePromise = measureRatios(grid, batch);
+        const measured = await Promise.race([
+            measurePromise.then(() => true),
+            new Promise((resolve) => setTimeout(() => resolve(false), 800))
+        ]);
+
+        layoutRows(grid, batch);
+
+        if (instant) {
+            batch.forEach((item) => item.classList.add('is-revealed'));
+        } else {
+            await new Promise((resolve) => {
+                batch.forEach((item, i) => {
+                    setTimeout(() => {
+                        if ((grid._gridGen || 0) !== gen) return; // 筛选重启后旧批次的淡入计时器作废（防提前揭示新队列作品）
+                        requestAnimationFrame(() => {
+                            requestAnimationFrame(() => item.classList.add('is-revealed'));
+                        });
+                    }, i * REVEAL_STAGGER);
                 });
-            }, i * REVEAL_STAGGER);
-        });
-        setTimeout(resolve, batch.length * REVEAL_STAGGER + 50);
-    });
+                setTimeout(resolve, batch.length * REVEAL_STAGGER + 50);
+            });
+        }
 
-    if (!measured) {
-        // 慢速路径校正：等揭示动画结束后用真实尺寸重排（仅尾部行变化）
-        measurePromise.then(async () => {
-            await new Promise((resolve) => setTimeout(resolve, 400));
-            if (!grid._pendingItems || grid._shownItems.length === 0) return;
-            rebuildAll(grid, true);
-        });
+        if (!measured) {
+            // 慢速路径校正：等揭示动画结束后用真实尺寸重排（仅尾部行变化）
+            measurePromise.then(async () => {
+                await new Promise((resolve) => setTimeout(resolve, 400));
+                if ((grid._gridGen || 0) !== gen) return; // 筛选重启后放弃校正
+                if (!grid._pendingItems || grid._shownItems.length === 0) return;
+                rebuildAll(grid, true);
+            });
+        }
+    };
+
+    const chained = (grid._layoutChain || Promise.resolve()).then(run);
+    grid._layoutChain = chained.catch(() => {});
+    return chained;
+}
+
+/* 深层 ?p= 恢复：按常规分页大小连续揭示批次，直到目标作品进入已显示集合
+   （instant、无逐张动画无转圈）——目标随批自然就位，行划分与常规揭示同规则；
+   被筛选隐藏的目标不在待加载队列中，函数直接返回（调用方静默放弃） */
+export async function revealUpToItem(grid, item) {
+    if (!grid || !item || !grid._pendingItems || !grid._pendingItems.includes(item)) return;
+    const size = grid._pageSize || 12;
+    while (grid._pendingItems.length > 0 && grid._pendingItems.includes(item)) {
+        await revealBatch(grid, size, true);
     }
 }
 
@@ -602,6 +637,7 @@ export function restartMasonryGrid(grid, items) {
 
     grid._shownItems = [];
     grid._pendingItems = [...items];
+    grid._gridGen = (grid._gridGen || 0) + 1; // 作废在途揭示批次（旧批次捕获的代次不再匹配）
 
     const trigger = document.getElementById('load-more-trigger');
     if (trigger) {

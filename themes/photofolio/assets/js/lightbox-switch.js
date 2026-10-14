@@ -372,13 +372,24 @@ export function initLightboxSwitch({
                 lightboxImg.src = thumbSrc;
                 lightboxImg.alt = p.alt;
                 lightboxImg.style.transition = 'none';
-                lightboxImg.style.opacity = '1';
-                // 缩略图未解码（慢网点未就绪的网格图）：显示与瀑布流同款转圈，
-                // 就绪/失败后收起（error 常驻监听同时按 zoomPending 门控揭示）
-                if (!isImageReady(lightboxImg)) {
+                if (isImageReady(lightboxImg)) {
+                    // 已就绪：同帧亮出，缩放动画无空窗
+                    lightboxImg.style.opacity = '1';
+                } else {
+                    // 换 src 后上一张照片的像素仍留在元素里直到新缩略图解码完成——
+                    // 未就绪时保持隐藏（打开瞬间闪现上一张照片的根因）并转圈，
+                    // 就绪后由 load 恢复；缩略图失败路径：常驻 error 监听收起转圈，
+                    // 全尺寸换源的 load 兜底恢复 opacity（不会黑屏）
+                    lightboxImg.style.opacity = '0';
                     showImgLoading();
                 }
-                lightboxImg.addEventListener('load', hideImgLoading, { once: true });
+                // 恢复监听入 pendingFirstLoad 槽位（open 顶部已清同槽位残留）：
+                // 关闭/重开/切图时被摘除，防陈旧监听跨打开重放
+                lightboxImg.addEventListener('load', pendingFirstLoad = () => {
+                    pendingFirstLoad = null;
+                    lightboxImg.style.opacity = '1';
+                    hideImgLoading();
+                });
                 backdrop.open(p.thumb || p.src);
                 lightbox.style.transition = 'none';
                 lightbox.classList.add('active');
