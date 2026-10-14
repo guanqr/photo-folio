@@ -1,0 +1,43 @@
+/* ===== 全局滚动条 =====
+   参考站同款（粗细 0.5em 同口径、滑块低对比灰、hover/active 渐入主色
+   半透明档 50%/75%——主色与参考站同为 169,25%,58% 绿）；Firefox 标准属性
+   与 webkit 伪元素双写；灯箱面板与筛选胶囊组的局部滚动条样式作用域独立、
+   互不干扰 */
+
+::-webkit-scrollbar {
+    width: 0.5em;
+    height: 0.5em;
+}
+
+::-webkit-scrollbar-track {
+    background-color: var(--color-bg);
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: var(--color-border);
+    border-radius: var(--radius-xs); /* 两端圆角（0.25em = 条宽一半，胶囊端） */
+
+    &:hover {
+        background-color: var(--color-accent-50);
+    }
+
+    &:active {
+        background-color: var(--color-accent-75);
+    }
+}
+
+::-webkit-scrollbar-corner {
+    background-color: var(--color-bg);
+}
+
+/* Firefox 标准属性——必须限定在仅 Firefox 命中的特性查询（libsass 不支持
+   @supports selector()，-moz-appearance 为 Firefox 专属且现代版本仍支持）：
+   Chrome 121+ 同时支持两者且 scrollbar-color/scrollbar-width 优先于
+   webkit 伪元素，直接声明会把上方的宽度与 hover/active 样式整体压掉
+   （滑块恒灰、宽度回默认） */
+@supports (-moz-appearance:none) {
+    html {
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-border) var(--color-bg);
+    }
+}

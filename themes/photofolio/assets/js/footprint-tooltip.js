@@ -10,8 +10,10 @@
  * - 隐藏须等淡出过渡结束再 display:none（同帧设置会让过渡无从播放、瞬间消失；
  *   但 display:none 不能省——visibility:hidden 的绝对定位元素在 Chrome 中
  *   仍计入 scrollable overflow，缩小窗口时残留位置会撑出横向滚动）
- * - 仅悬停设备（hover: hover）悬停显示；触屏无悬停逻辑——点按区块直接跳转
- *   详情页、不显示弹层
+ * - 按事件指针类型判定悬停：触屏（pointerType='touch'）不显示弹层——
+ *   点按区块直接跳转详情页；鼠标与触控笔悬停显示。设备级 hover 能力查询
+ *   （(hover: hover)）在 iPad 桌面级浏览/外接键鼠配置下会匹配为真，
+ *   手指触碰的 pointerenter 被放行、点按跳转前的空窗内弹层闪现——不可用
  */
 import { prefersReducedMotion } from './utils.js';
 
@@ -20,7 +22,6 @@ const TOOLTIP_FADE_MS = 300;
 
 export function initFootprintTooltip({ root, tooltip, countFormat, yearFormat }) {
     const mapRect = () => root.getBoundingClientRect();
-    const isHoverCapable = matchMedia('(hover: hover)').matches;
 
     // 弹层内容与定位渲染（先恢复显示并测量——读取 offset 强制初始态样式生效，
     // 随后加 fm-visible 才有淡入过渡）。
@@ -112,7 +113,7 @@ export function initFootprintTooltip({ root, tooltip, countFormat, yearFormat })
     };
 
     const onPointerEnter = (e) => {
-        if (!isHoverCapable) return;
+        if (e.pointerType === 'touch') return; // 触屏无悬停：点按直接跳转详情页（鼠标/触控笔悬停照常）
         const link = e.target.closest('.fm-region');
         if (link && link.dataset.slug) show(link, e.clientX, e.clientY);
     };

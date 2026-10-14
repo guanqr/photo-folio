@@ -93,7 +93,7 @@
            （胶囊按钮组，可横向滚动；缺省仅开启 year）——开关解析一次成 dict */}}
         {{ $filtersCfg := merge (dict "year" true "location" false "category" false "scope" false) (default dict site.Params.galleryFilters) }}
         {{ if and (eq $sectionName "gallery") (or $filtersCfg.year $filtersCfg.location $filtersCfg.category $filtersCfg.scope) }}
-        <div class="gallery-filters" role="group" aria-label="{{ i18n "filter_photos" }}" data-empty-text="{{ i18n "filter_empty" }}">
+        <div class="gallery-filters" role="group" aria-label="{{ i18n "filter_photos" }}">
             {{ if $filtersCfg.scope }}
             <div class="filter-group" data-dim="scope">
                 <span class="filter-label">{{ i18n "filter_scope" }}</span>
@@ -145,6 +145,15 @@
                 {{ partial "photo-card.html" (dict "photo" . "site" $.Site) }}
             {{ end }}
         </div>
+
+        {{/* 筛选无结果提示：与分类空状态同款卡片（圆角虚线框 + 图标 + 标题），
+            构建期预渲染、筛选 JS 切换 hidden（hidden 默认收起） */}}
+        {{ if and (eq $sectionName "gallery") (or $filtersCfg.year $filtersCfg.location $filtersCfg.category $filtersCfg.scope) }}
+        <div class="empty-state" id="gallery-filter-empty" hidden>
+            <div class="empty-icon">{{ hugo.Data.svg.camera | safeHTML }}</div>
+            <h3>{{ i18n "filter_empty" }}</h3>
+        </div>
+        {{ end }}
 
         {{ if gt (len $gridPhotos) $pageSize }}
         <div class="load-more-trigger" id="load-more-trigger" data-page-size="{{ $pageSize }}" data-finished-text="{{ i18n "no_more_photos" }}">

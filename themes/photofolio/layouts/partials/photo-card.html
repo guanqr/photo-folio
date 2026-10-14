@@ -43,7 +43,8 @@
 {{/* 卡片/灯箱标题：一律显示作品自己的 alt（系列封面点击已改为开灯箱，不再显示系列名） */}}
 {{ $displayTitle := $altText }}
 
-{{/* 灯箱完整元信息（地点 · 分类 · 日期 · EXIF）：通过 data 属性传给灯箱，卡片上仅显示标题 */}}
+{{/* 灯箱完整元信息（地点 · 分类 · 日期 · EXIF）：通过 data 属性传给灯箱；
+   卡片上仅悬停显示标题与焦距·光圈两行小字（见下方 photo-hover-info） */}}
 {{ $dateStr := "" }}
 {{ with $time }}
     {{ $year := . | time.Format "2006" }}
@@ -73,10 +74,18 @@
         {{ with $photo.camera }}data-camera="{{ . }}"{{ end }}
         {{ with $photo.lens }}data-lens="{{ . }}"{{ end }}>
 
-        {{/* 作品一律渲染普通 img（点击开灯箱）；卡片上不显示任何元信息，
-            标题与完整元信息仅在灯箱放大后显示，wrapper 统一用 div 避免 a 嵌套 a */}}
+        {{/* 作品一律渲染普通 img（点击开灯箱）；卡片上仅悬停显示标题与焦距·光圈
+            两行小字（触屏无悬停，详情由灯箱承担）；wrapper 统一用 div 避免 a 嵌套 a */}}
         <div class="photo-wrapper">
             <img data-src="{{ $srcUrl }}" data-full-src="{{ $fullUrl }}" alt="{{ $altText }}" loading="lazy" class="photo-img" {{ with $photo.width }}width="{{ . }}"{{ end }} {{ with $photo.height }}height="{{ . }}"{{ end }}>
+            {{/* 悬停信息层：底部渐变遮罩 + 标题/焦距·光圈（aria-hidden——卡片
+                aria-label 已含标题，此处为视觉副本；格式与灯箱 EXIF 一致） */}}
+            <div class="photo-hover-info" aria-hidden="true">
+                <span class="photo-hover-title">{{ $displayTitle }}</span>
+                {{ if or $focus $aperture }}
+                <span class="photo-hover-meta">{{ with $focus }}{{ . }}mm{{ end }}{{ if and $focus $aperture }} · {{ end }}{{ with $aperture }}f/{{ . }}{{ end }}</span>
+                {{ end }}
+            </div>
         </div>
     </div>
 </div>

@@ -46,7 +46,7 @@ body {
 :focus-visible {
     outline: 0.125em solid var(--color-accent);
     outline-offset: 0.125em;
-    border-radius: 0.125em;
+    border-radius: var(--radius-2xs);
 }
 
 .main-content {
@@ -92,6 +92,8 @@ body {
     --color-accent: rgb(var(--rgb-accent));
     --color-accent-15: rgba(var(--rgb-accent), 0.15);
     --color-accent-30: rgba(var(--rgb-accent), 0.3);
+    --color-accent-50: rgba(var(--rgb-accent), 0.5);  /* 滚动条 thumb hover */
+    --color-accent-75: rgba(var(--rgb-accent), 0.75); /* 滚动条 thumb active */
 
     --color-border: rgb(var(--rgb-border));
 
@@ -122,6 +124,12 @@ body {
     /* 轮播大标题文字投影（标题/副标题/胶囊按钮共用） */
     --carousel-text-shadow: 0 0.1em 0.5em rgba(var(--rgb-black), 0.5);
 
+    /* 瀑布流卡片悬停信息（底部渐变遮罩 + 两行小字；与轮播同法——颜色走 root 分量，
+       图片相关区域不随明暗主题切换） */
+    --photo-hover-overlay: linear-gradient(to top, rgba(var(--rgb-black), 0.62), rgba(var(--rgb-black), 0));
+    --color-photo-hover-title: rgb(var(--rgb-white));
+    --color-photo-hover-meta: rgba(var(--rgb-white), 0.75);
+
     /* 足迹地图区块配色（明暗主题各自定义，亮色下加深保证可读性） */
     --color-map-fill: rgba(var(--rgb-white), 0.1);
     --color-map-border: rgb(var(--rgb-border));
@@ -149,6 +157,7 @@ body {
     --z-back-to-top: 990;    /* 返回顶部（低于 Header） */
     --z-header: 1000;        /* 顶部导航栏 */
     --z-nav-toggle: 1002;    /* 汉堡按钮 */
+    --z-progress: 1005;      /* SPA 导航进度条（高于固定导航；导航会先关灯箱、不与灯箱叠层） */
     --z-lightbox: 9999;      /* 灯箱 */
     --z-lightbox-arrow: 10000; /* 灯箱箭头 */
     --z-skip-link: 10000;    /* 无障碍跳转链接 */
@@ -167,11 +176,61 @@ body {
        --radius-xs 为瀑布流作品卡锁定值（永不改）；
        胶囊统一走 --radius-pill（50em：完全圆头——全站尺寸体系为 em、
        胶囊元素均 em 定高，em 随字体缩放同步缩放；灯箱原先的 9999px 混用就此归一）；
-       圆形（50%）与细线端点（0.0625/0.125em）不在梯度内、保持原样 */
+       圆形（50%）与更细的线端点（0.0625/0.1em）不在梯度内、保持原样 */
+    --radius-2xs: 0.125em;  /* 细圆角：焦点环、图表占比条 */
     --radius-xs: 0.25em;    /* 最小档：瀑布流作品卡（锁定值）、下拉面板、小部件 */
     --radius-sm: 0.5em;     /* 中档：弹层、小按钮 */
     --radius-card: 0.75em;  /* 卡片档：卡片/大容器 */
     --radius-pill: 50em;    /* 胶囊：完全圆头 */
+}
+
+/* ===== 主题切换整页快照过渡（View Transitions，见 theme-toggle.js）=====
+   整页组（root）交叉淡化：旧态与新态各光栅化一次、合成器淡化——时长与
+   全站 --transition 同长；不支持 VT 的浏览器自动走既有 CSS 过渡路径 */
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: 0.3s;
+    animation-timing-function: ease;
+}
+
+/* ===== 全局减弱动态兜底（CSS 侧一刀切）=====
+   此前 prefers-reduced-motion 处理逐模块分散、多处遗漏（跨断点导航滑入滑出、
+   首页向下箭头无限弹跳、轮播进度条无限填充、入场 fadeIn 等无任何降级）——
+   reduce 下全部 CSS 动画/过渡时长归零、无限循环只跑一次；各模块的既有
+   reduce 规则同向、保持无害；注意 author !important 同样压过普通内联
+   transition 声明——JS 写入的内联过渡时长也被归零（内联样式并不豁免），
+   与各模块 JS 侧 reduce 检查同向、构成双重保险 */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* 白名单：加载转圈是功能性状态指示（不是装饰动画），保持旋转。
+   不能写 revert——revert 回滚到用户/UA 来源、会跳过作者来源的
+   animation: spin 声明，最终落到初始值 0s/1 次（转圈静止）；
+   必须显式重声明完整动画（spin 关键帧为文档级、跨文件可用） */
+.loading-spinner,
+.lightbox-img-loading {
+    animation: spin 0.8s linear infinite !important;
+}
+
+/* ===== SPA 导航顶部进度条（page-transition.js 驱动，惰性创建）=====
+   基础态隐藏；宽度/透明度过渡由 JS 内联控制（减弱动态下全局兜底归零过渡、
+   宽度瞬时跳变，进度条为功能性反馈仍保留显示） */
+.spa-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 2px;
+    background: var(--color-accent);
+    z-index: var(--z-progress);
+    pointer-events: none;
+    opacity: 0;
 }
 
 /* ===== Light Mode (明亮模式) ===== */
@@ -199,6 +258,8 @@ body {
     --color-accent: rgb(var(--rgb-accent));
     --color-accent-15: rgba(var(--rgb-accent), 0.15);
     --color-accent-30: rgba(var(--rgb-accent), 0.3);
+    --color-accent-50: rgba(var(--rgb-accent), 0.5);  /* 滚动条 thumb hover */
+    --color-accent-75: rgba(var(--rgb-accent), 0.75); /* 滚动条 thumb active */
 
     --color-border: rgb(var(--rgb-border));
 

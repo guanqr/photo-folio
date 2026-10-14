@@ -219,6 +219,10 @@
     <!-- 【核心】使用 Hugo Extended 的 js.Build (esbuild) 编译所有 ES6 模块 -->
     {{ $js := resources.Get "js/main.js" }}
     {{ $opts := dict "targetPath" "js/bundle.js" }}
+    <!-- 导航超时单源：经 js.Build params（主 bundle）与 ExecuteAsTemplate（sw.js）
+         注入，两处 JS 不再各自声明 NAV_TIMEOUT_MS -->
+    {{ $navTimeoutMs := 10000 }}
+    {{ $opts = merge $opts (dict "params" (dict "navTimeoutMs" $navTimeoutMs)) }}
 
     {{ if hugo.IsProduction }}
       {{ $opts = merge $opts (dict "minify" true) }}
@@ -240,7 +244,7 @@
 
     <!-- PWA Service Worker 注册 (必须独立，不参与 js.Build) -->
     {{ if and .Site.Params.enableServiceWorker (eq hugo.Environment "production") }}
-        {{- $sw := resources.Get "js/sw.js" | resources.ExecuteAsTemplate "sw.js" (dict "version" (now.Format "20060102150405")) -}}
+        {{- $sw := resources.Get "js/sw.js" | resources.ExecuteAsTemplate "sw.js" (dict "version" (now.Format "20060102150405") "navTimeoutMs" $navTimeoutMs) -}}
         {{- $dummy := "" | resources.FromString "dummy.js" -}}
         {{- $url := (slice $sw $dummy | resources.Concat "sw.js").RelPermalink -}}
 

@@ -19,7 +19,10 @@ let current = null; // { trigger, grid, onScroll }
 function markFinished(trigger) {
     trigger.classList.remove('is-loading');
     trigger.classList.add('is-finished');
-    trigger.innerHTML = `<span class="load-more-text">${trigger.dataset.finishedText}</span>`;
+    // 完成文案经 textContent 写入（不 innerHTML 拼接——i18n 文案虽为站点自有，
+    // 仍按内容安全惯例统一不经 HTML 解析）
+    trigger.innerHTML = '<span class="load-more-text"></span>';
+    trigger.querySelector('.load-more-text').textContent = trigger.dataset.finishedText;
 }
 
 /* 拆线：移除滚动监听并清空当前实例（换页清理 / 早退分支 / 完成收尾共用） */

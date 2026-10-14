@@ -3,8 +3,63 @@
  */
 import { resetSubMenus } from './nav-dropdown.js';
 import { closeLightbox } from './lightbox.js';
+import { navTimeoutMs } from '@params';
 
 let reinitFn = null;
+
+// 导航请求超时：弱网下连接挂起（既不 resolve 也不 reject）时 abort 触发
+// reject、回退完整导航——页面不长期停在淡出后的空白主内容区。
+// 值由 baseof.html 的 js.Build params 注入（与 sw.js 的模板注入同源，单点修改）
+const NAV_TIMEOUT_MS = navTimeoutMs || 10000;
+
+/* ===== SPA 导航顶部进度条 =====
+   fetch 无 Content-Length 可依赖：宽度模拟推进（快速到 25% → 缓慢蠕动至
+   80% 保持），内容替换完成后冲到 100% 短暂停留后淡出收起；惰性创建
+   （首次导航才插入 DOM）；失败/超时走完整导航回退——整页重载自然重置 */
+let progressEl = null;
+let progressTimer = null;
+// 收尾两级定时器入模块级槽位：快速连导（500ms 内再次导航）时 startProgress
+// 先作废旧收尾链——否则旧定时器会把第二次导航的进度条中途熄灭
+let progressFadeTimer = null;
+let progressResetTimer = null;
+
+function startProgress() {
+    if (!progressEl) {
+        progressEl = document.createElement('div');
+        progressEl.className = 'spa-progress';
+        progressEl.style.width = '0';
+        document.body.appendChild(progressEl);
+    }
+    if (progressTimer) clearInterval(progressTimer);
+    clearTimeout(progressFadeTimer);
+    clearTimeout(progressResetTimer);
+    progressEl.style.transition = 'width 0.3s ease, opacity 0.2s ease';
+    progressEl.style.opacity = '1';
+    progressEl.style.width = '25%';
+    let pct = 25;
+    progressTimer = setInterval(() => {
+        if (pct >= 80) {
+            clearInterval(progressTimer);
+            progressTimer = null;
+            return;
+        }
+        pct = Math.min(80, pct + 4);
+        progressEl.style.width = pct + '%';
+    }, 300);
+}
+
+function finishProgress() {
+    if (!progressEl) return;
+    if (progressTimer) {
+        clearInterval(progressTimer);
+        progressTimer = null;
+    }
+    progressEl.style.width = '100%';
+    progressFadeTimer = setTimeout(() => {
+        progressEl.style.opacity = '0';
+        progressResetTimer = setTimeout(() => { progressEl.style.width = '0'; }, 250);
+    }, 250);
+}
 
 export function initPageTransition(reinit) {
     reinitFn = reinit;
@@ -55,9 +110,21 @@ async function loadContent(url) {
     main.style.opacity = '0';
     await sleep(150);
 
+    startProgress(); // fetch 窗口的加载反馈（模拟推进，见其注释）
+
     try {
-        const res = await fetch(url);
-        const html = await res.text();
+        // 超时控制见 NAV_TIMEOUT_MS：abort 同时中断正文流读取（headers 到达后
+        // 正文停滞同样超时），finally 清理计时器防正常完成路径误触 abort
+        const controller = new AbortController();
+        const timeoutTimer = setTimeout(() => controller.abort(), NAV_TIMEOUT_MS);
+        let res;
+        let html;
+        try {
+            res = await fetch(url, { signal: controller.signal });
+            html = await res.text();
+        } finally {
+            clearTimeout(timeoutTimer);
+        }
         const doc = new DOMParser().parseFromString(html, 'text/html');
 
         const newMain = doc.querySelector('.main-content');
@@ -111,10 +178,12 @@ async function loadContent(url) {
         // 重新初始化页面 JS
         if (reinitFn) reinitFn();
     } catch (err) {
-        // 网络错误等回退到完整导航
+        // 网络错误/超时等回退到完整导航（浏览器自带加载指示，不留在空白正文）
         window.location = url;
         return;
     }
+
+    finishProgress(); // 内容已就绪：进度冲满并淡出收起
 
     // 淡入
     requestAnimationFrame(() => {

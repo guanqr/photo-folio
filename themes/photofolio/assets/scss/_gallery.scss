@@ -56,10 +56,14 @@
     }
 }
 
-/* 图片过渡：模糊渐清。
-   img.photo-img 与 base 中 img[loading="lazy"] 同权重（0,1,1），靠后导入的 gallery 覆盖其 transition */
+/* 图片滤镜与过渡覆盖：img.photo-img 与 base 中 img[loading="lazy"] 同权重（0,1,1），
+   靠后导入的 gallery 覆盖——模糊渐清是分类/系列封面与轮播的加载语言（单批张数少、
+   无尖峰）；网格照片每批 12 张同时揭示，blur 使 GPU 为每张并发建模糊纹理、
+   栅格化尖峰叠在逐张淡入上（低端机掉帧），揭示已由 %reveal-entry 承担、此处整体关闭 */
 img.photo-img {
     transition: filter 0.4s ease, opacity 0.4s ease;
+    filter: none;
+    opacity: 1;
 }
 
 .photo-wrapper {
@@ -77,6 +81,53 @@ img.photo-img {
        显示淡色占位而非空白块，明暗主题随变量自动切换 */
     background: var(--color-bg-secondary);
 }
+
+/* 悬停信息层：底部渐变遮罩 + 标题/焦距·光圈两行小字——仅悬停显示
+   （hover:hover 门禁防触屏粘性 hover 闪烁；触屏详情由灯箱承担）；
+   渐变与文字色走 :root token（见 --photo-hover-overlay 等），
+   图片相关区域不随明暗主题切换；为 wrapper 子元素，点击仍走
+   .photo-wrapper 管线开灯箱 */
+.photo-hover-info {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2em;
+    padding: 1.6em 0.75em 0.6em;
+    background: var(--photo-hover-overlay);
+    opacity: 0;
+    transition: opacity var(--transition-fade);
+}
+
+.photo-hover-title {
+    font-family: var(--font-body);
+    font-size: 0.8em;
+    line-height: 1.3;
+    color: var(--color-photo-hover-title);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.photo-hover-meta {
+    font-family: var(--font-meta);
+    font-size: 0.75em;
+    line-height: 1.3;
+    color: var(--color-photo-hover-meta);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (hover: hover) {
+    .photo-card:hover .photo-hover-info {
+        opacity: 1;
+    }
+}
+/* 减弱动态由 _base.scss 全局兜底覆盖（transition-duration 归零），
+   此处不再写模块级 reduce 规则 */
 
 /* ===== 筛选栏（全部作品页）：胶囊按钮组，参考站同款横向滚动 + 渐隐遮罩 ===== */
 .gallery-filters {
@@ -150,15 +201,6 @@ img.photo-img {
             }
         }
     }
-}
-
-/* 筛选无匹配提示 */
-.filter-empty {
-    padding: 3em 0;
-    text-align: center;
-    font-family: var(--font-meta);
-    color: var(--color-text-muted);
-    transition: color var(--transition-fade);
 }
 
 /* ===== Load More Trigger (无限滚动触发器) ===== */

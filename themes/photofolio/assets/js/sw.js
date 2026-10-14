@@ -15,6 +15,10 @@ const SHELL_CACHE = `mimo-shell-${VERSION}`
 const RUNTIME = 'mimo-runtime'
 const MAX_RUNTIME_ENTRIES = 500
 const PRECACHE = ['/']
+// 导航网络请求超时：弱网下连接挂起（既不 resolve 也不 reject）时 abort、
+// 回退缓存/缓存壳（与 page-transition.js 的 SPA 侧超时同值，两层兜底）；
+// 值由 baseof.html 的 ExecuteAsTemplate dict 注入（单一来源）
+const NAV_TIMEOUT_MS = {{ .navTimeoutMs }}
 
 // 运行时缓存句柄全生命周期复用（避免每个请求都 caches.open 一次）
 const runtimeCache = caches.open(RUNTIME)
@@ -89,7 +93,22 @@ self.addEventListener('fetch', (event) => {
     // 导航再回退缓存壳（SPA 首页）——caches.match 全局查找：壳由 install
     // 预缓存进 SHELL_CACHE，而运行时写入在 RUNTIME，只查后者会漏掉
     try {
-      const networkResponse = await fetch(request)
+      // 导航网络请求超时控制：AbortController 超时 abort（同时中断 headers
+      // 到达后的正文流读取），abort 抛错走下方缓存/壳回退——败方请求不残留
+      // 僵尸连接；计时器 settle 后必清（fetch 先完成时同样不挂死定时器）。
+      // 非导航同源资源不加超时（其失败只影响单个资源、不阻塞页面呈现）
+      let networkResponse
+      if (isNavigation) {
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), NAV_TIMEOUT_MS)
+        try {
+          networkResponse = await fetch(request, { signal: controller.signal })
+        } finally {
+          clearTimeout(timer)
+        }
+      } else {
+        networkResponse = await fetch(request)
+      }
       if (networkResponse.status === 200) cache.put(cacheKey, networkResponse.clone())
       return networkResponse
     } catch (e) {

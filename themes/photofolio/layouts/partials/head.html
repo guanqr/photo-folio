@@ -52,12 +52,19 @@
 {{ with $typo.fontLinks }}
     {{/* 遍历配置中的字体链接对象 */}}
     {{ range . }}
-        <link rel="{{ .rel }}" href="{{ .href }}" {{ if .crossorigin }}crossorigin{{ end }}>
+        {{ if eq .rel "stylesheet" }}
+            {{/* 字体 CSS 异步加载（media="print" + onload 切换）：第三方字体样式表不再阻塞
+               首帧——首帧以回退字体渲染，字体到达后按 font-display: swap 渐进换字
+               （两条外链字体均已声明 swap）；preconnect 条目原样输出 */}}
+            <link rel="stylesheet" href="{{ .href }}" media="print" onload="this.media='all'" {{ if .crossorigin }}crossorigin{{ end }}>
+        {{ else }}
+            <link rel="{{ .rel }}" href="{{ .href }}" {{ if .crossorigin }}crossorigin{{ end }}>
+        {{ end }}
     {{ end }}
 {{ else }}
-    {{/* 默认回退：如果没有配置 fontLinks，使用默认的 Google Fonts 镜像 */}}
+    {{/* 默认回退：如果没有配置 fontLinks，使用默认的字体服务镜像（同样异步加载） */}}
     <link rel="preconnect" href="https://fonts.loli.net" crossorigin>
-    <link rel="stylesheet" href="https://fonts.loli.net/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap">
+    <link rel="stylesheet" href="https://fonts.loli.net/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap" media="print" onload="this.media='all'">
 {{ end }}
 
 <!-- 动态注入排版变量 -->

@@ -2,8 +2,8 @@
  * 灯箱作品集合与预加载（独立模块；集成见 lightbox.js）
  *
  * - 作品收集：扫描页面全部 .photo-wrapper，抽取 src/元信息为灯箱可预览列表
- *   （跳过未揭示与筛选隐藏的作品）——本模块不持有列表状态，扫描结果由调用方
- *   （lightbox-switch）持有，模块只提供无状态工具
+ *   （跳过未揭示与筛选隐藏的作品）——结果带缓存（脏检查见 collect）：
+ *   switch 的 prev/next 每次切图调用 collect 时不重扫 DOM
  * - 邻居预加载：保留 Image 引用（切图时用于同步探测缓存状态，避免重复请求）；
  *   pruneKeep 只保留当前图与左右邻居，防止长时间翻看累积解码位图
  *   （每张 w_1920 约 10MB）
@@ -13,21 +13,22 @@
 import { isImageReady, pushQueryState, loadWithAvifFallback } from './utils.js';
 
 export function initLightboxCollection({ shortLens }) {
-    // 预加载缓存（裸 Image 引用）：已就绪的条目直接复用；失败过的条目
-    // （complete 但 naturalWidth=0）换新 Image 重试——否则一次瞬时失败会让
-    // 该照片整个会话缓存探针恒为 false
+    // 预加载缓存（裸 Image 引用）：已就绪与在途（complete=false）的条目都保留
+    // 现有引用——在途重建会丢弃进行中的下载/解码，慢网下同一张 10MB 图解码两次；
+    // 只有失败过的条目（complete 但 naturalWidth=0）换新 Image 重试——否则一次
+    // 瞬时失败会让该照片整个会话缓存探针恒为 false
     const preloadCache = new Map();
     const preload = (url) => {
         if (!url) return;
         const existing = preloadCache.get(url);
-        if (isImageReady(existing)) return;
+        if (existing && (!existing.complete || existing.naturalWidth > 0)) return;
         const img = new Image();
         loadWithAvifFallback(img); // 游离 Image 不进 document 捕获监听，实例级挂 AVIF 兜底
         img.src = url;
         preloadCache.set(url, img);
     };
 
-    // 只保留 keepUrls（当前图与左右邻居）的预载引用
+    // 只保留 keepUrls（当前图与左右各两位邻居，见 lightbox-switch）的预载引用
     const pruneKeep = (keepUrls) => {
         preloadCache.forEach((_, url) => {
             if (!keepUrls.includes(url)) preloadCache.delete(url);
@@ -37,8 +38,34 @@ export function initLightboxCollection({ shortLens }) {
     // 缓存探测：切图时据此区分「HTTP 已缓存但解码未完成」与「未缓存」两种路径
     const isCached = (url) => isImageReady(preloadCache.get(url));
 
-    // 收集当前页面所有可预览的作品
+    // 收集当前页面所有可预览的作品。
+    // 结果缓存：脏检查从网格既有状态惰性推导（O(1) 比较，无需跨模块推送脏标记）——
+    // ① 网格元素身份变化 = SPA 换页（新页面新网格元素）；② _gridGen 变化 =
+    // 筛选重启（代次递增，见 masonry.js）；③ _shownItems 数量变化 = 无限滚动
+    // 揭示增长（灯箱打开时在途批次揭示完成同样自动感知）。打开入口 openByImg
+    // 恒先 collect 再 open，快照对灯箱会话恒新鲜
+    let cachedGrid = null;
+    let cachedGen = -1;
+    let cachedShownCount = -1;
+    let cachedPhotos = null;
+    // 网格状态读取唯一口径（脏检查与 collect 快照共用——归一化只在此处定义，
+    // 两处口径失同步会致缓存永不失效或永不命中）
+    const readGridState = () => {
+        const grid = document.getElementById('masonry-grid');
+        return {
+            grid,
+            gen: grid ? (grid._gridGen || 0) : -1,
+            shown: grid && grid._shownItems ? grid._shownItems.length : -1
+        };
+    };
+    const isGridDirty = () => {
+        const s = readGridState();
+        if (s.grid !== cachedGrid) return true;
+        if (!s.grid) return false;
+        return s.gen !== cachedGen || s.shown !== cachedShownCount;
+    };
     const collect = () => {
+        if (cachedPhotos && !isGridDirty()) return cachedPhotos;
         const wrappers = document.querySelectorAll('.photo-wrapper');
         const photos = [];
         wrappers.forEach(wrapper => {
@@ -71,6 +98,12 @@ export function initLightboxCollection({ shortLens }) {
                 lens: shortLens(card ? (card.dataset.lens || '') : '')
             });
         });
+        // 快照网格状态供脏检查（口径见 readGridState）
+        const s = readGridState();
+        cachedGrid = s.grid;
+        cachedGen = s.gen;
+        cachedShownCount = s.shown;
+        cachedPhotos = photos;
         return photos;
     };
 

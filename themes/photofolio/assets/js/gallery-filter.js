@@ -119,20 +119,11 @@ export function initGalleryFilter() {
         // 恢复原始时间顺序（DOM 顺序已被历次筛选拍平打乱）
         matching.sort((a, b) => (grid._origOrder.get(a) ?? 0) - (grid._origOrder.get(b) ?? 0));
 
-        // 空状态：筛选激活且无匹配时显示，并隐藏触发器
-        let emptyEl = document.getElementById('gallery-filter-empty');
-        if (active && matching.length === 0) {
-            if (!emptyEl) {
-                emptyEl = document.createElement('div');
-                emptyEl.id = 'gallery-filter-empty';
-                emptyEl.className = 'filter-empty';
-                emptyEl.textContent = bar.dataset.emptyText || '';
-                grid.after(emptyEl);
-            }
-            emptyEl.style.display = '';
-        } else if (emptyEl) {
-            emptyEl.style.display = 'none';
-        }
+        // 空状态：筛选激活且无匹配时显示，并隐藏触发器。
+        // 卡片由模板预渲染（渲染条件与筛选栏相同——bar 存在则节点恒存在，
+        // 无需 JS 兜底创建），这里只切换 hidden
+        const emptyEl = document.getElementById('gallery-filter-empty');
+        if (emptyEl) emptyEl.hidden = !(active && matching.length === 0);
 
         restartMasonryGrid(grid, matching);
         // 头部计数随筛选结果滚动动画（数字包在 #photo-count-num 中）

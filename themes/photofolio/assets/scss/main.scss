@@ -4,6 +4,7 @@
 
 // 1. 基础与变量 (必须最先引入；%pill / %reveal-entry 占位符也在此定义，供后续 @extend)
 @import "base";
+@import "scrollbar";
 
 // 2. 布局组件
 @import "header";

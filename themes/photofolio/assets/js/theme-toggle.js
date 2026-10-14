@@ -1,5 +1,7 @@
 // 明暗主题切换：点击按钮在 dark/light 间切换并写入 localStorage；
 // 初始主题由 baseof.html 头部的内联脚本在首帧前恢复（避免闪烁），本模块只负责切换
+import { prefersReducedMotion } from './utils.js';
+
 export function initThemeToggle() {
     const toggleBtn = document.getElementById('theme-toggle');
     if (!toggleBtn) return;
@@ -17,7 +19,15 @@ export function initThemeToggle() {
         const currentTheme = document.documentElement.getAttribute('data-theme');
         // 如果当前是 light，则切回 dark；否则切为 light
         const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-        applyTheme(newTheme);
+        // 主题切换是全页颜色突变的一次性巨大重绘（背景/卡片/文字/地图数万路径），
+        // 低端机可能掉帧——支持 View Transitions 的浏览器（Chrome/Edge 111+、
+        // Safari 18+）走整页快照交叉淡化（新旧态各光栅化一次、合成器淡化）；
+        // 不支持与减弱动态偏好降级为即时切换（导航栏 theme-switching 过渡不变）
+        if (document.startViewTransition && !prefersReducedMotion()) {
+            document.startViewTransition(() => applyTheme(newTheme));
+        } else {
+            applyTheme(newTheme);
+        }
         // 主题切换期间给导航栏临时恢复时间过渡（与全站 0.3s 渐隐同步），
         // 结束后摘除，恢复滚动进度驱动的渐变；快速连切时重置计时——
         // 否则旧定时器会提前摘类、切断第二次切换的在途过渡

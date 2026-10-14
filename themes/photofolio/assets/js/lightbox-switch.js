@@ -236,12 +236,17 @@ export function initLightboxSwitch({
         const src = displaySrc(p);
 
         if (currentPhotos.length > 1) {
-            const nextSrc = displaySrc(currentPhotos[(currentIndex + 1) % currentPhotos.length]);
-            const prevSrc = displaySrc(currentPhotos[(currentIndex - 1 + currentPhotos.length) % currentPhotos.length]);
-            // 只保留当前图与左右邻居的预载引用：防止长时间翻看累积解码位图（每张 w_1920 约 10MB）
-            collection.pruneKeep([src, nextSrc, prevSrc]);
-            collection.preload(nextSrc);
-            collection.preload(prevSrc);
+            // 预载窗口 = 当前 ± 左右各两位邻居（去重、排除当前图）：覆盖「翻走一张
+            // 再回来」的来回翻看——走开两张后回翻仍在引用内、不重解位图/重新请求；
+            // 严格限窗防长时间翻看累积解码位图（每张 w_1920 约 10MB、5 张 ≈ 50MB）
+            const len = currentPhotos.length;
+            const nextSrc = displaySrc(currentPhotos[(currentIndex + 1) % len]);
+            const next2Src = displaySrc(currentPhotos[(currentIndex + 2) % len]);
+            const prevSrc = displaySrc(currentPhotos[(currentIndex - 1 + len) % len]);
+            const prev2Src = displaySrc(currentPhotos[(currentIndex - 2 + len) % len]);
+            const neighbors = [...new Set([nextSrc, next2Src, prevSrc, prev2Src])].filter((u) => u !== src);
+            collection.pruneKeep([src, ...neighbors]);
+            neighbors.forEach((url) => collection.preload(url));
         }
 
         if (isSwitch) {
