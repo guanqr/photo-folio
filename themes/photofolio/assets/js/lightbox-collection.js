@@ -90,6 +90,10 @@ export function initLightboxCollection({ shortLens }) {
                 categoryUrl: card ? (card.dataset.categoryUrl || '') : '',
                 series: card ? (card.dataset.series || '') : '',
                 seriesUrl: card ? (card.dataset.seriesUrl || '') : '',
+                // 照片真实像素尺寸（photo.toml 回填的 width/height 属性）：
+                // 供缩放目标按展示图自然尺寸封顶（超宽屏不再放大过头）
+                width: parseFloat(img.getAttribute('width')) || 0,
+                height: parseFloat(img.getAttribute('height')) || 0,
                 focus: card ? (card.dataset.focus || '') : '',
                 aperture: card ? (card.dataset.aperture || '') : '',
                 shutter: card ? (card.dataset.shutter || '') : '',

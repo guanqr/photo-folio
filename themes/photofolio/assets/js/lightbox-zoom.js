@@ -6,6 +6,9 @@
  *   目标矩形由照片宽高比对图片区（扣除 padding）做 contain 拟合得出，
  *   不依赖大图解码时机；起点精确覆盖缩略图（sx/sy 独立映射盒矩形，
  *   缩略图与全尺寸的宽高比舍入差被吸收、无扭曲）
+ * - 目标矩形与布局盒锁按展示图自然尺寸（调用方经 maxW/maxH 传入）封顶：
+ *   超宽屏 contain 拟合大于自然尺寸时不再放大过头，换源后自然尺寸接管
+ *   盒不缩回（拟合盒先 clamp 再 contain，普通屏拟合小于自然尺寸、不生效）
  * - 纯动画职责：start 驱动 transform 过渡、transitionend 收尾（清理
  *   transform-origin 与内联残留）后回调 onDone；cancel 作废在途动画
  *   （关闭/重开/切图前调用，防陈旧收尾回调重放）
@@ -31,8 +34,9 @@ export function initLightboxZoom({ img, area, reducedMotion }) {
         }
     };
 
-    // startRect：点击缩略图的视口矩形（其宽高比即照片宽高比）
-    const start = (startRect, onDone) => {
+    // startRect：点击缩略图的视口矩形（其宽高比即照片宽高比）；
+    // maxW/maxH：展示图自然尺寸上限（调用方传入，0 表示不封顶）
+    const start = (startRect, onDone, maxW, maxH) => {
         cancel();
         if (reducedMotion || !area) {
             onDone();
@@ -57,11 +61,23 @@ export function initLightboxZoom({ img, area, reducedMotion }) {
         const pb = parseFloat(cs.paddingBottom);
         const boxW = areaRect.width - pl - pr;
         const boxH = areaRect.height - pt - pb;
-        const aspect = startRect.width / startRect.height;
-        let tw = boxW;
+        // 目标宽高比优先取自然尺寸比例（maxW/maxH，即照片真实宽高比）：网格
+        // 单元矩形有取整差（如 1.4964 vs 1.5），以其算目标会在封顶边上残留
+        // 亚像素偏差——用真实比例则目标恒等于换源后 CSS contain 的结果（零跳变）；
+        // 无自然尺寸（旧数据未回填）时退回缩略图矩形比例
+        const aspect = maxW > 0 && maxH > 0
+            ? maxW / maxH
+            : startRect.width / startRect.height;
+        // 自然尺寸封顶：拟合盒先 clamp 到展示图自然尺寸（0 不封顶）再 contain
+        // 拟合——与换源后 CSS 的 max-width/max-height contain 口径一致，仅
+        // 超宽屏生效（普通屏 contain 拟合小于自然尺寸、clamp 不动）；
+        // 最大显示到自然尺寸、不再放大，换源后盒零跳变
+        const fitW = maxW > 0 ? Math.min(boxW, maxW) : boxW;
+        const fitH = maxH > 0 ? Math.min(boxH, maxH) : boxH;
+        let tw = fitW;
         let th = tw / aspect;
-        if (th > boxH) {
-            th = boxH;
+        if (th > fitH) {
+            th = fitH;
             tw = th * aspect;
         }
         const targetLeft = areaRect.left + pl + (boxW - tw) / 2;

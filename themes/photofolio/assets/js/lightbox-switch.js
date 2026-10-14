@@ -90,7 +90,10 @@ export function initLightboxSwitch({
     };
 
     // 缩放换源后的 width/height 锁摘除监听（load）：换源后 load 事件为独立任务、
-    // 与关闭/重开窗口竞态——摘除槽位防陈旧监听在下次打开时摘掉新锁
+    // 与关闭/重开窗口竞态——摘除槽位防陈旧监听在下次打开时摘掉新锁；
+    // once 触发即自摘除：若只清槽位不摘监听，幽灵监听会残留在 img 上、
+    // 在后续打开/切图的每个 load 事件上重复摘锁（新开照片缩略图 load
+    // 时锁刚上好即被摘掉——「打开显示小图、大图就绪后跳变」的根因）
     let pendingUnlock = null;
     const clearPendingUnlock = () => {
         if (pendingUnlock) {
@@ -394,7 +397,7 @@ export function initLightboxSwitch({
                     pendingFirstLoad = null;
                     lightboxImg.style.opacity = '1';
                     hideImgLoading();
-                });
+                }, { once: true });
                 backdrop.open(p.thumb || p.src);
                 lightbox.style.transition = 'none';
                 lightbox.classList.add('active');
@@ -402,11 +405,19 @@ export function initLightboxSwitch({
                 document.body.style.overflow = 'hidden';
                 const token = openToken;
                 zoomPending = true; // 揭示交由 zoom.onDone；error 监听不提前揭示
+                // 展示图自然尺寸上限：OSS lfit 仅按宽度封顶（w_1920/w_1280、
+                // 高度随比例）——超宽屏 contain 拟合大于自然尺寸时，缩放目标
+                // 与布局盒锁按自然尺寸封顶（最大显示到自然尺寸、不再放大），
+                // 换源后自然尺寸接管时盒不缩回；无尺寸属性（旧数据）时不封顶
+                const srcWMatch = /w_(\d+)/.exec(src);
+                const srcW = srcWMatch ? parseInt(srcWMatch[1], 10) : 0;
+                const maxW = srcW && p.width ? Math.min(p.width, srcW) : 0;
+                const maxH = maxW && p.height ? p.height * maxW / p.width : 0;
                 zoom.start(zoomFrom, () => {
                     zoomPending = false;
                     lightbox.style.transition = ''; // 恢复容器淡入淡出（关闭保留淡出）
                     revealMain(); // 面板文字与辉光随缩放完成淡入
-                });
+                }, maxW, maxH);
                 // 全尺寸预载自点击瞬间启动（与旧流程同窗）：带宽不再被推迟到
                 // 动画结束后、与 w_800 分析探测错峰；就绪即换源（无需等动画
                 // 结束）——width/height 布局盒锁使缩放途中换入也无视觉变化
@@ -423,7 +434,7 @@ export function initLightboxSwitch({
                         pendingUnlock = null;
                         lightboxImg.style.width = '';
                         lightboxImg.style.height = '';
-                    });
+                    }, { once: true });
                 };
                 full.onerror = () => {
                     if (openToken !== token) return; // 旧打开的失败不得影响当前打开
@@ -455,7 +466,7 @@ export function initLightboxSwitch({
                         if (!switching) lightboxImg.style.opacity = '1';
                         hideImgLoading();
                         revealMain();
-                    });
+                    }, { once: true });
                 }
             }
         }
