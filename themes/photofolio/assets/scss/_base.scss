@@ -215,7 +215,8 @@ body {
    animation: spin 声明，最终落到初始值 0s/1 次（转圈静止）；
    必须显式重声明完整动画（spin 关键帧为文档级、跨文件可用） */
 .loading-spinner,
-.lightbox-img-loading {
+.lightbox-img-loading,
+.footprint-map-loading {
     animation: spin 0.8s linear infinite !important;
 }
 

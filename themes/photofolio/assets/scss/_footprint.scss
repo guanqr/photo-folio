@@ -37,6 +37,22 @@
         border-radius: inherit; /* 贴齐圆角，避免方角溢出框架 */
     }
 
+    /* 地图加载指示：几何数据 fetch 期间居中转圈（与灯箱转圈同款），
+       JS 构建完成后移除；无坐标照片时地图整块不渲染、不存在此元素 */
+    .footprint-map-loading {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 2.5em;
+        height: 2.5em;
+        margin: -1.25em 0 0 -1.25em;
+        border: 0.2em solid var(--color-border);
+        border-top-color: var(--color-accent);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        pointer-events: none;
+    }
+
     /* 陆地与网格：地图专用配色（明暗主题各自加深一档，保证地图可读性）。
        SVG 内全部颜色不设过渡：陆地/省国路径数万坐标点、照片点迹数百个小圆，
        主题切换时全量元素同跑 0.3s fill/stroke 过渡会逐帧重光栅化巨量路径

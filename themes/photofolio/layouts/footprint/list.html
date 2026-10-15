@@ -82,6 +82,8 @@
         <div class="footprint-map" id="footprint-map"
              data-count-format='{{ i18n "photo_count" (dict "Count" "%COUNT%") }}'
              data-year-range-format='{{ i18n "footprint_map_year_range" (dict "Min" "%MIN%" "Max" "%MAX%") }}'>
+            {{/* 地图加载指示：几何数据 fetch 与 SVG 构建期间居中转圈（JS 构建完成后移除） */}}
+            <span class="footprint-map-loading" role="status" aria-label="{{ i18n "loading" }}"></span>
             <noscript>
                 <ul class="footprint-map-fallback">
                     {{ range $previewData }}

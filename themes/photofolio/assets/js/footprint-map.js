@@ -318,6 +318,10 @@ async function build(root, points, locationData, statsByName) {
     }
 
     if (seq !== buildSeq) return; // 成功路径在 await 后已守卫，此处兜底（如未缓存 fetch 快速完成）
+    // 地图构建完成（含几何失败的网格+点迹降级）：移除加载指示——陈旧代次的
+    // 构建已在上方 return、不会误摘新构建的指示
+    const mapLoading = root.querySelector('.footprint-map-loading');
+    if (mapLoading) mapLoading.remove();
     const tooltipMod = initFootprintTooltip({ root, tooltip, countFormat, yearFormat });
     state.tooltipCleanup = tooltipMod.cleanup;
 
