@@ -82,6 +82,8 @@
            逐帧重光栅化、明暗切换恢复卡顿（iPad 实测） */
         &:hover { fill: var(--color-accent-15); }
         &:focus-visible {
+            outline: none; /* SVG 元素的 outline 按包围盒画矩形（点击/聚焦出现大黑框）——
+                             区块自有 accent 描边聚焦样式沿形状绘制，焦点指示仍清晰 */
             stroke: var(--color-accent);
             stroke-width: 1;
         }
