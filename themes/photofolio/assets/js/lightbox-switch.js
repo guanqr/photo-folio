@@ -19,6 +19,7 @@ export function initLightboxSwitch({
     btnPrev, btnNext, revealSynced, narrowLightbox, reducedMotion,
     collection, renderPanel,
     glow, backdrop, swipe, drawer,
+    closeBtn, pageRoots,
     onSwitchStart, onClose
 }) {
     let currentPhotos = [];
@@ -145,6 +146,25 @@ export function initLightboxSwitch({
     // 打开代次：缩放浮现完成后的全尺寸换源前校验（快速连切/关闭期间
     // 换源作废，防旧照片覆盖当前显示）
     let openToken = 0;
+
+    // dialog 语义：打开时焦点移入关闭按钮、背景页 inert（头部/主内容/页脚——
+    // 灯箱在壳层不属其内）；关闭时先恢复背景、再把焦点还原到触发卡片
+    //（SPA 导航关闭 keepUrl 不还原——页面内容即将替换）
+    let opener = null;
+    const enterDialog = () => {
+        if (closeBtn) closeBtn.focus();
+        if (pageRoots) pageRoots.forEach((el) => el.setAttribute('inert', ''));
+    };
+    const exitDialog = (restoreFocus) => {
+        if (pageRoots) pageRoots.forEach((el) => el.removeAttribute('inert'));
+        if (restoreFocus && opener) {
+            const el = opener;
+            opener = null;
+            if (el.isConnected) el.focus({ preventScroll: true });
+        } else {
+            opener = null;
+        }
+    };
 
     // 图片加载转圈：新图未就绪时隐藏图片并显示（与瀑布流加载指示器同款），就绪后滑入消失
     const showImgLoading = () => {
@@ -401,6 +421,7 @@ export function initLightboxSwitch({
                 backdrop.open(p.thumb || p.src);
                 lightbox.style.transition = 'none';
                 lightbox.classList.add('active');
+                enterDialog();
                 drawer.refreshFit(); // 激活后强制重判「放得下」：关灯箱重置期间的 is-fit 状态可能过期
                 document.body.style.overflow = 'hidden';
                 const token = openToken;
@@ -446,6 +467,7 @@ export function initLightboxSwitch({
                 lightboxImg.alt = p.alt;
                 backdrop.open(p.thumb || p.src);
                 lightbox.classList.add('active');
+                enterDialog();
                 drawer.refreshFit(); // 激活后强制重判「放得下」：关灯箱重置期间的 is-fit 状态可能过期
                 document.body.style.overflow = 'hidden';
 
@@ -473,8 +495,30 @@ export function initLightboxSwitch({
         updateArrows();
     }
 
-    function close() {
+    // keepUrl：SPA 导航关闭（见 lightbox.js closeLightbox）保留目标 URL 的
+    // ?p=——前进/后退到 ?p= 条目后由 openLightboxFromUrl 恢复灯箱（无条件
+    // 清理会把恢复条目的 p 抹掉并改写历史）；按钮/Escape/胶囊跳转关闭恒清理
+    function close({ keepUrl = false } = {}) {
+        // 关闭逆向 FLIP 目标：仅当当前照片的网格卡片仍在视口内（切图切到视口外
+        // 照片时原路返回无意义）；SPA 导航关闭与减弱动态退化为普通淡出
+        const collapseRect = (() => {
+            if (keepUrl || reducedMotion) return null;
+            const p = currentIndex >= 0 && currentIndex < currentPhotos.length ? currentPhotos[currentIndex] : null;
+            if (!p || !p.slug) return null;
+            const card = document.querySelector(`.photo-card[data-slug="${CSS.escape(p.slug)}"]`);
+            if (!card) return null;
+            const r = card.getBoundingClientRect();
+            if (r.width <= 0 || r.height <= 0 || r.right <= 0 || r.bottom <= 0 ||
+                r.left >= window.innerWidth || r.top >= window.innerHeight) return null;
+            return r;
+        })();
+        if (collapseRect) {
+            // 容器淡出与缩小同时长——样式表 0.3s 的 visibility 翻转须一并覆盖，
+            // 否则 visibility 瞬时翻转、缩小动画不可见
+            lightbox.style.transition = 'opacity 0.35s ease, visibility 0.35s';
+        }
         lightbox.classList.remove('active');
+        exitDialog(!keepUrl); // 恢复背景 inert 并还原焦点（SPA 导航关闭不还原，见 exitDialog 注释）
         zoom.cancel(); // 作废在途缩放动画（含容器直显内联残留）
         lightbox.style.transition = '';
         zoomPending = false;
@@ -493,8 +537,13 @@ export function initLightboxSwitch({
         backdrop.clear(); // 移除所有背景层（下次首开重建，不残留旧作品背景）
         closeGlow(); // 移除所有辉光层（下次首开重建，不残留旧作品辉光）
         swipe.reset(); // 作废在途滑动手势与内联样式残留
-        collection.syncPhotoUrl('', true); // 关闭 replace 移除 ?p=（保留筛选参数）：历史回到打开前的页面状态，不残留过期照片 URL
-        lightboxImg.style.opacity = '0';
+        if (!keepUrl) collection.syncPhotoUrl('', true); // 关闭 replace 移除 ?p=（保留筛选参数）：历史回到打开前的页面状态，不残留过期照片 URL
+        if (collapseRect) {
+            // 缩小回缩略图位置：容器淡出与图片缩小并行，收尾时隐藏主图
+            zoom.collapse(collapseRect, () => { lightboxImg.style.opacity = '0'; });
+        } else {
+            lightboxImg.style.opacity = '0';
+        }
         document.body.style.overflow = '';
     }
 
@@ -559,6 +608,7 @@ export function initLightboxSwitch({
         currentPhotos = collection.collect();
         const idx = collection.findIndexByImg(currentPhotos, img);
         if (idx < 0) return;
+        opener = img.closest('.photo-card') || null; // 关闭时焦点还原目标（dialog 语义）
         const rect = img.getBoundingClientRect();
         const zoomFrom = !reducedMotion && rect.width > 0 && rect.height > 0 &&
             rect.right > 0 && rect.bottom > 0 &&

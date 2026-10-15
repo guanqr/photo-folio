@@ -9,8 +9,13 @@
     flex-direction: column;
     padding: 0.8em 1em; /* 上下留白对称 */
     transition: border-color var(--transition-fade);
-    /* 窄屏抽屉手势接管面板：禁止文字选择——拖拽越过可选中文字时浏览器会发起选择
-       并触发 pointercancel 打断拖拽；桌面端恢复可选（见下方媒体查询） */
+    /* 文字选择仅在触屏拖拽期间禁用（.lightbox.is-dragging，由抽屉拖拽进入/
+       结束时切换）：拖拽越过可选中文字时浏览器会发起选择并触发
+       pointercancel 打断拖拽；鼠标不进入拖拽模型（滚轮覆盖展开路径）、
+       任意宽度下可正常选择/复制 EXIF 与标题 */
+}
+
+.lightbox.is-dragging .lightbox-panel {
     user-select: none;
 }
 
@@ -282,7 +287,6 @@
            左侧 2em 与图片区辉光保持距离 */
         padding: 2em 1.25em 2em 2em;
         margin-right: 4.25em;
-        user-select: text; /* 桌面端面板恢复文字选择（窄屏由抽屉手势接管、禁止选择） */
     }
 
     .lightbox-panel-details {

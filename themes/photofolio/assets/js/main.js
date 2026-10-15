@@ -17,9 +17,13 @@ import { initAboutStats } from './about-stats.js';
 import { initAvifFallback } from './avif-fallback.js';
 
 // 首页分类卡片：滚动进入视口时交错渐入
+let categoryObserver = null;
 function revealCategoryCards() {
     const cards = document.querySelectorAll('.category-card:not(.is-revealed)');
     if (!cards.length) return;
+    // 换页断开旧观察（与 lazy-load 同因：观察器对未揭示目标持强引用，
+    // 换页后永不 intersect、累积持有已脱离文档的卡片子树）
+    if (categoryObserver) categoryObserver.disconnect();
     const observer = new IntersectionObserver((entries) => {
         entries.forEach((entry) => {
             if (!entry.isIntersecting) return;
@@ -29,6 +33,7 @@ function revealCategoryCards() {
             observer.unobserve(card);
         });
     }, { rootMargin: '0px 0px -40px 0px' });
+    categoryObserver = observer;
     cards.forEach((card) => observer.observe(card));
 }
 

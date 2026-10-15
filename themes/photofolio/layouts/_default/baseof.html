@@ -38,8 +38,8 @@
 
     {{- partial "footer.html" . -}}
 
-    <!-- Lightbox 全局容器 -->
-    <div class="lightbox" id="lightbox">
+    <!-- Lightbox 全局容器（dialog 语义：读屏器视作模态对话框、背景 inert 由 JS 管理） -->
+    <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="{{ i18n "lightbox_dialog" }}">
         <!-- 毛玻璃背景层由 JS 动态创建（每张作品一层） -->
         <div class="lightbox-topbar">
             <button class="lightbox-close" id="lightbox-close" aria-label="{{ i18n "close" }}">
@@ -56,7 +56,7 @@
             <div class="lightbox-main">
                 <div class="lightbox-img-area">
                     <img src="" alt="" id="lightbox-img" draggable="false">
-                    <span class="lightbox-img-loading" id="lightbox-img-loading"></span>
+                    <span class="lightbox-img-loading" id="lightbox-img-loading" role="status" aria-label="{{ i18n "loading" }}"></span>
                 </div>
                 <aside class="lightbox-panel" id="lightbox-panel">
                     {{/* 灯箱信息区块开关（hugo.toml [params.lightbox]，缺省全开） */}}
@@ -140,10 +140,10 @@
                                 <span class="lightbox-tonal-name" id="lightbox-tonal-name"></span>
                             </h4>
                             <p class="lightbox-chart-caption">{{ i18n "lightbox_histogram" }}</p>
-                            <svg class="lightbox-histogram" id="lightbox-histogram" viewBox="0 0 256 96" preserveAspectRatio="none" role="img"></svg>
+                            <svg class="lightbox-histogram" id="lightbox-histogram" viewBox="0 0 256 96" preserveAspectRatio="none" role="img" aria-label="{{ i18n "lightbox_histogram" }}"></svg>
                             <div class="lightbox-hist-legend" id="lightbox-hist-legend"></div>
                             <p class="lightbox-chart-caption">{{ i18n "tonal_zone_system" }}</p>
-                            <div class="lightbox-zone-strip" id="lightbox-zone-strip" role="img">
+                            <div class="lightbox-zone-strip" id="lightbox-zone-strip" role="img" aria-label="{{ i18n "tonal_zone_system" }}">
                                 <span class="lightbox-zone-bracket" id="lightbox-zone-bracket"></span>
                             </div>
                             <div class="lightbox-tone-ratio" id="lightbox-tone-ratio">
@@ -169,7 +169,7 @@
                                 <span>{{ i18n "lightbox_saturation" }}</span>
                                 <span class="lightbox-sat-name" id="lightbox-sat-name"></span>
                             </h4>
-                            <svg class="lightbox-sat-hist" id="lightbox-sat-hist" viewBox="0 0 100 48" preserveAspectRatio="none" role="img"></svg>
+                            <svg class="lightbox-sat-hist" id="lightbox-sat-hist" viewBox="0 0 100 48" preserveAspectRatio="none" role="img" aria-label="{{ i18n "lightbox_saturation" }}"></svg>
                             <div class="lightbox-sat-axis">
                                 <span>{{ i18n "sat_low" }}</span>
                                 <span>{{ i18n "sat_high" }}</span>
@@ -184,7 +184,7 @@
                                 <span>{{ i18n "lightbox_hue" }}</span>
                                 <span class="lightbox-hue-name" id="lightbox-hue-name"></span>
                             </h4>
-                            <svg class="lightbox-hue-hist" id="lightbox-hue-hist" viewBox="0 0 360 48" preserveAspectRatio="none" role="img"></svg>
+                            <svg class="lightbox-hue-hist" id="lightbox-hue-hist" viewBox="0 0 360 48" preserveAspectRatio="none" role="img" aria-label="{{ i18n "lightbox_hue" }}"></svg>
                             <div class="lightbox-hue-axis" id="lightbox-hue-axis"></div>
                         </div>
                         {{ end }}
@@ -239,7 +239,9 @@
 
     <!-- Instant.page 预加载加速 (使用 jsDelivr CDN) -->
     {{ if .Site.Params.enableInstantPage }}
-    <script src="https://cdn.jsdelivr.net/npm/instant.page@5.2.0/instantpage.min.js" type="module" crossorigin></script>
+    {{/* instant.page 自托管（static/js，含 MIT 许可证头）：消除唯一无 SRI 的第三方
+       同源脚本依赖——CDN 被投毒即获得整站同源脚本执行能力（供应链风险） */}}
+    <script src="/js/instantpage.min.js" type="module"></script>
     {{ end }}
 
     <!-- PWA Service Worker 注册 (必须独立，不参与 js.Build) -->

@@ -109,10 +109,12 @@ export function revealBatch(grid, count, instant = false) {
             measurePromise.then(() => true),
             new Promise((resolve) => setTimeout(() => resolve(false), 800))
         ]);
+        if ((grid._gridGen || 0) !== gen) return; // 测量窗口内筛选重启：复检放弃——继续执行会向新集合的 _rows/_shownItems 写入幽灵记录（旧批次作品随行容器在下一次 rebuildAll 被整棵移除、永久丢失）
 
         layoutRows(grid, batch);
 
-        if (instant) {
+        if (instant || prefersReducedMotion()) {
+            // 减弱动态：逐张错峰同款直切（60ms/张的 setTimeout 不受 CSS 兜底影响）
             batch.forEach((item) => item.classList.add('is-revealed'));
         } else {
             await new Promise((resolve) => {
@@ -182,8 +184,15 @@ function measureRatios(grid, items) {
                 settle(wAttr / hAttr);
                 return;
             }
-            // 无属性（新作品未回填）时沿用加载测量 + 超时兜底路径
-            timer = setTimeout(() => settle(DEFAULT_RATIO), MEASURE_TIMEOUT);
+            // 无属性（新作品未回填）时沿用加载测量 + 超时兜底路径。
+            // 超时不写缓存：兜底比例只影响本次排布（applyRows 对缺失条目同样
+            // 回退 DEFAULT_RATIO）；不置 settled——图片之后就绪/失败仍经
+            // load/error 写入真实比例、供慢速校正重排使用（此前把错误比例
+            // 永久写入 _ratios，后续 resize 重排与尾行合并永远沿用）
+            timer = setTimeout(() => {
+                clearTimeout(timer);
+                resolve();
+            }, MEASURE_TIMEOUT);
             if (isImageReady(img)) {
                 settle(img.naturalWidth / img.naturalHeight);
                 return;
@@ -624,9 +633,27 @@ function flattenRows(grid) {
 
 /* 筛选切换 / 清空筛选：以「下拉加载更多」分页模式重启网格——
    仅展示给定作品集合：全部重新隐藏，集合内进入分页队列（首批 12 张由 revealBatch
-   逐批解除隐藏，其余等待滚动加载；无限滚动照常工作，触发器保持可见） */
+   逐批解除隐藏，其余等待滚动加载；无限滚动照常工作，触发器保持可见）。
+   重启前旧集合整体快速淡出（0.12s）：与揭示错峰淡入衔接、替代瞬间消失；
+   连点筛选时旧定时器作废（网格保持淡出态直至最后一次切换执行） */
+let restartFadeTimer = null;
+
 export function restartMasonryGrid(grid, items) {
     if (!grid || !grid._shownItems) return;
+
+    if (restartFadeTimer) clearTimeout(restartFadeTimer);
+    const run = () => {
+        restartFadeTimer = null;
+        grid.style.transition = '';
+        grid.style.opacity = '';
+        restartGrid(grid, items);
+    };
+    grid.style.transition = 'opacity 0.12s ease';
+    grid.style.opacity = '0.4';
+    restartFadeTimer = setTimeout(run, 120);
+}
+
+function restartGrid(grid, items) {
 
     flattenRows(grid);
     const allItems = Array.from(grid.querySelectorAll('.masonry-item'));

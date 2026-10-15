@@ -18,19 +18,26 @@ export const PARAM_KEYS = { scope: 's', year: 'y', location: 'l', category: 'c' 
 
 let resizeBound = false; // 模块级：跨 SPA 页面实例只挂一个窗口监听
 
-/* 作品计数滚动动画：旧值平滑滚动到新值（easeOutCubic，450ms） */
+let countAnimRaf = null; // 计数动画单槽位：快速连点启动多个 rAF 循环会交替写同一 textContent（数字闪烁）
+
+/* 作品计数滚动动画：旧值平滑滚动到新值（easeOutCubic，450ms）；减弱动态直切 */
 function animateCount(el, target) {
     const from = parseInt(el.textContent, 10) || 0;
     if (from === target) return;
+    if (prefersReducedMotion()) {
+        el.textContent = String(target);
+        return;
+    }
+    if (countAnimRaf) cancelAnimationFrame(countAnimRaf);
     const start = performance.now();
     const DURATION = 450;
     const step = (now) => {
         const p = Math.min(1, (now - start) / DURATION);
         const eased = easeOutCubic(p);
         el.textContent = String(Math.round(from + (target - from) * eased));
-        if (p < 1) requestAnimationFrame(step);
+        countAnimRaf = p < 1 ? requestAnimationFrame(step) : null;
     };
-    requestAnimationFrame(step);
+    countAnimRaf = requestAnimationFrame(step);
 }
 
 export function initGalleryFilter() {

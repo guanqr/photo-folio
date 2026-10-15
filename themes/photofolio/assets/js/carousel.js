@@ -85,6 +85,21 @@ export function initCarousel() {
         }
     }
 
+    // Ken Burns 微缩放（WAAPI）：激活 slide 在自动播放时长内 1→1.05 极缓推近
+    //（fill forwards 保持末端态）；切换时旧 slide 不做缩回——保持放大态随
+    // 交叉淡化淡出（用户要求：展示期与切换均无缩小过程）；旧图重新激活时
+    // 取消残留动画、从 1 重新缓推（此时它正从透明淡入、无可见跳变）
+    const KENBURNS_SCALE = 1.05;
+    const kenBurnsIn = (slide) => {
+        const img = slide.querySelector('img');
+        if (!img) return;
+        img.getAnimations().forEach((a) => a.cancel()); // 清残留（上一轮缓推）防同属性动画叠加
+        img.animate(
+            [{ transform: 'scale(1)' }, { transform: `scale(${KENBURNS_SCALE})` }],
+            { duration: AUTOPLAY_MS, easing: 'linear', fill: 'forwards' }
+        );
+    };
+
     function goTo(i, force = false) {
         // 点击当前正在播放的项时，不重置、不暂停，保持正常轮播
         if (!force && i === index) return;
@@ -93,8 +108,21 @@ export function initCarousel() {
         ensureLoaded(index);
         ensureLoaded((index + 1) % slides.length);
         ensureLoaded((index - 1 + slides.length) % slides.length);
-        slides.forEach((s, k) => s.classList.toggle('active', k === index));
-        dots.forEach((d, k) => d.classList.toggle('active', k === index));
+        // Ken Burns：新激活 slide 重新缓推（旧 slide 保持放大态淡出、不缩回；
+        // 减弱动态与自动播放禁用时跳过）
+        if (!prefersReducedMotion() && AUTOPLAY_MS > 0) {
+            kenBurnsIn(slides[index]);
+        }
+        // 当前 slide 语义：非激活图对读屏器隐藏、激活圆点 aria-current 标记
+        slides.forEach((s, k) => {
+            s.classList.toggle('active', k === index);
+            s.toggleAttribute('aria-hidden', k !== index);
+        });
+        dots.forEach((d, k) => {
+            d.classList.toggle('active', k === index);
+            if (k === index) d.setAttribute('aria-current', 'true');
+            else d.removeAttribute('aria-current');
+        });
         resetProgress();
         // 每次切换后重置自动播放计时器，确保每张图都有完整展示时间
         startAutoplay();

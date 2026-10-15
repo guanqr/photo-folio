@@ -13,10 +13,12 @@ import { revealUpToItem } from './masonry.js';
 let inited = false;
 
 // SPA 导航时由 page-transition 调用的关闭钩子（initLightbox 后指向内部 close）：
-// 灯箱在壳层 DOM、不随内容替换——不关闭则旧照片悬在新页面上、URL 状态错乱
+// 灯箱在壳层 DOM、不随内容替换——不关闭则旧照片悬在新页面上、URL 状态错乱；
+// keepUrl 保留目标 URL 的 ?p=（此时 location 已是导航目标地址）——前进/后退
+// 到 ?p= 条目后由 openLightboxFromUrl 恢复灯箱，清理则会抹掉恢复条目并改写历史
 let closeLightboxRef = null;
 export function closeLightbox() {
-    if (closeLightboxRef) closeLightboxRef();
+    if (closeLightboxRef) closeLightboxRef({ keepUrl: true });
 }
 
 export function initLightbox() {
@@ -34,6 +36,13 @@ export function initLightbox() {
     const lightboxClose = document.getElementById('lightbox-close');
     const btnPrev = document.getElementById('lightbox-prev');
     const btnNext = document.getElementById('lightbox-next');
+    // dialog 语义：打开时背景页（头部/主内容/页脚）对键盘与读屏器隐藏
+    //（inert——灯箱自身在壳层、不在这三个元素内），关闭时恢复
+    const pageRoots = [
+        document.querySelector('.site-header'),
+        document.getElementById('main-content'),
+        document.querySelector('.site-footer')
+    ].filter(Boolean);
     // 元信息面板（桌面右栏 / 窄屏底部抽屉）
     const panel = document.getElementById('lightbox-panel');
     const panelDetails = document.getElementById('lightbox-panel-details');
@@ -172,6 +181,7 @@ export function initLightbox() {
         btnPrev, btnNext, revealSynced, narrowLightbox, reducedMotion,
         collection, renderPanel,
         glow, backdrop, swipe, drawer,
+        closeBtn: lightboxClose, pageRoots,
         onSwitchStart: () => analysisControl.cancelCenterComp(),
         onClose: () => analysisControl.reset()
     });
@@ -264,8 +274,15 @@ export async function openLightboxFromUrl() {
 
     const grid = document.getElementById('masonry-grid');
     const item = grid ? card.closest('.masonry-item') : null;
-    if (grid && item && grid._pendingItems && grid._pendingItems.includes(item)) {
-        await revealUpToItem(grid, item);
+    if (grid && item) {
+        if (grid._pendingItems && grid._pendingItems.includes(item)) {
+            await revealUpToItem(grid, item);
+        } else if (item.classList.contains('is-hidden') && grid._layoutChain) {
+            // 目标在首批揭示中（已出待加载队列但仍在布局链上、尚未解除隐藏）：
+            // 等链完成再打开——否则 collect 因无 src 跳过、点击落空
+            // （首批照片的 ?p= 恢复静默失败）
+            await grid._layoutChain;
+        }
         item.scrollIntoView({ block: 'center', behavior: 'instant' });
     }
     wrapper.click();

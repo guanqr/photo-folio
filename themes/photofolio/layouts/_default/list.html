@@ -156,7 +156,8 @@
         {{ end }}
 
         {{ if gt (len $gridPhotos) $pageSize }}
-        <div class="load-more-trigger" id="load-more-trigger" data-page-size="{{ $pageSize }}" data-finished-text="{{ i18n "no_more_photos" }}">
+        {{/* role=status：加载与「已展示全部」完成文案经 live 区域通告读屏器 */}}
+        <div class="load-more-trigger" id="load-more-trigger" role="status" aria-live="polite" data-page-size="{{ $pageSize }}" data-finished-text="{{ i18n "no_more_photos" }}">
             <div class="loading-spinner"></div>
             <span class="load-more-text">{{ i18n "loading" }}</span>
         </div>

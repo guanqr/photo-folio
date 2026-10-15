@@ -31,12 +31,15 @@
 
     &.is-open {
         /* 展开后收起入口移至分析区底部；上下内边距一并归零——border-box 下
-           max-height 无法压缩内边距，残留的内边距条会露出文字行中间一条 */
+           max-height 无法压缩内边距，残留的内边距条会露出文字行中间一条；
+           visibility 移出 Tab 序（0 高不可见的按钮仍可聚焦、焦点环画在
+           不可见元素上——与分析区容器的收起处理一致） */
         max-height: 0;
         margin-top: 0;
         padding-top: 0;
         padding-bottom: 0;
         opacity: 0;
+        visibility: hidden;
     }
 
     &:hover {

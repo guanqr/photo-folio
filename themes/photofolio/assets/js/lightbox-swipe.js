@@ -42,6 +42,11 @@ export function initLightboxSwipe({ img, area, getGlow, onSwitch }) {
     // 文字在 DOM 后位浮于图片之上）；未达阈值回弹/垂直交还/复位时恢复
     const setOverflowVisible = (v) => { if (area) area.style.overflow = v ? 'visible' : ''; };
 
+    // 回弹收尾监听槽位：回弹 0.2s 内 reset（打开/关闭）会清掉内联 transition、
+    // transitionend 永不触发——残留收尾会在下次切图滑出的 transitionend 上
+    // 提前恢复裁剪并清空过渡（幽灵监听，与 switch 各槽位同根因）
+    let snapCleanup = null;
+
     const snapBack = () => {
         // 未达阈值：回弹归位（reduced-motion 直切）
         const reduced = prefersReducedMotion();
@@ -56,13 +61,15 @@ export function initLightboxSwipe({ img, area, getGlow, onSwitch }) {
         img.style.transform = '';
         if (glow) glow.style.transform = 'scale(2)';
         const cleanup = () => {
+            snapCleanup = null;
             img.style.transition = '';
             if (glow) glow.style.transition = '';
             setOverflowVisible(false); // 回弹归位：恢复图片区裁剪
             img.removeEventListener('transitionend', cleanup);
         };
+        if (snapCleanup) img.removeEventListener('transitionend', snapCleanup);
         if (reduced || !moved) cleanup();
-        else img.addEventListener('transitionend', cleanup);
+        else img.addEventListener('transitionend', snapCleanup = cleanup);
     };
 
     area.addEventListener('pointerdown', (e) => {
@@ -129,6 +136,11 @@ export function initLightboxSwipe({ img, area, getGlow, onSwitch }) {
     const reset = () => {
         gesture = null;
         verdict = null;
+        // 摘除在途回弹收尾监听（其 transitionend 已随内联 transition 清除而不会触发）
+        if (snapCleanup) {
+            img.removeEventListener('transitionend', snapCleanup);
+            snapCleanup = null;
+        }
         img.style.transition = '';
         img.style.transform = '';
         const glow = getGlow();

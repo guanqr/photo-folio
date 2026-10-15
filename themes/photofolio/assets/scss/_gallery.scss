@@ -54,6 +54,13 @@
     &:hover {
         @include card-hover(-0.15em, var(--shadow-card)); /* 悬停阴影收紧：小偏移小模糊，紧贴卡片下方 */
     }
+
+    &:active {
+        /* 按压反馈：抬起量收回到 -0.05em（仍高于静止位）——按下瞬时响应
+           （transition-duration 缩短）、松开弹簧回弹，与灯箱打开衔接 */
+        transform: translateY(-0.05em);
+        transition-duration: 0.05s;
+    }
 }
 
 /* 图片滤镜与过渡覆盖：img.photo-img 与 base 中 img[loading="lazy"] 同权重（0,1,1），

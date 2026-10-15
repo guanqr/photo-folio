@@ -3,28 +3,30 @@ let imageObserver;
 export function initLazyLoad() {
     if (!('IntersectionObserver' in window)) return;
 
-    if (!imageObserver) {
-        imageObserver = new IntersectionObserver(entries => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const img = entry.target;
-                    if (img.dataset.src) {
-                        img.src = img.dataset.src;
-                        img.removeAttribute('data-src');
-                    }
-                    if (img.complete) {
-                        img.classList.add('is-loaded');
-                    } else {
-                        img.addEventListener('load', function onLoad() {
-                            img.removeEventListener('load', onLoad);
-                            img.classList.add('is-loaded');
-                        });
-                    }
-                    imageObserver.unobserve(img);
+    // 换页断开旧观察再重建：旧页面中未进入视口的图片永远不会 intersect、
+    // 不被 unobserve——观察器对目标持强引用，随导航累积持有已脱离文档的
+    // img 子树（含已解码位图）
+    if (imageObserver) imageObserver.disconnect();
+    imageObserver = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const img = entry.target;
+                if (img.dataset.src) {
+                    img.src = img.dataset.src;
+                    img.removeAttribute('data-src');
                 }
-            });
-        }, { rootMargin: '200px' });
-    }
+                if (img.complete) {
+                    img.classList.add('is-loaded');
+                } else {
+                    img.addEventListener('load', function onLoad() {
+                        img.removeEventListener('load', onLoad);
+                        img.classList.add('is-loaded');
+                    });
+                }
+                imageObserver.unobserve(img);
+            }
+        });
+    }, { rootMargin: '200px' });
 
     observeNewImages(document);
 }

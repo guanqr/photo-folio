@@ -37,9 +37,12 @@
         <link>{{ printf "/gallery/?y=%s" ($p0.time | time.Format "2006") | absURL }}</link>
         <guid isPermaLink="false">{{ . }}</guid>
         <pubDate>{{ $p0.time | time.Format "Mon, 02 Jan 2006 15:04:05 -0700" }}</pubDate>
+        {{- /* CDATA 内的自由文本（alt/地点）转义 ]]>：含该序列会提前闭合 CDATA
+               注入 XML（isPlainText 输出格式下 Hugo 不自动转义）；按标准拆段法
+               替换为 ]]]]><![CDATA[> */ -}}
         <description><![CDATA[
         {{- range $photos -}}
-<p>《{{ .alt }}》{{ with default .location .place }} · {{ . }}{{ end }}{{ with .time }} · {{ . }}{{ end }}</p>
+<p>《{{ replace .alt "]]>" "]]]]><![CDATA[>" }}》{{ with default .location .place }} · {{ replace . "]]>" "]]]]><![CDATA[>" }}{{ end }}{{ with .time }} · {{ . }}{{ end }}</p>
         {{- end -}}
         ]]></description>
     </item>

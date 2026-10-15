@@ -12,6 +12,12 @@ other = "{{ .Title }} 下暫無作品"
 [close]
 other = "關閉"
 
+[lightbox_dialog]
+other = "照片檢視器"
+
+[scroll_down]
+other = "向下捲動"
+
 [theme_toggle]
 other = "切換主題"
 

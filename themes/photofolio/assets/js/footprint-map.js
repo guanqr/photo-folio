@@ -299,7 +299,7 @@ async function build(root, points, locationData, statsByName) {
     if (provData) {
         const prov = document.createElementNS(SVG_NS, 'g');
         prov.setAttribute('class', 'fm-regions');
-        buildRegionLayer(prov, provData, pr, locationData, statsByName, provinceNameOf);
+        buildRegionLayer(prov, provData, pr, locationData, statsByName, provinceNameOf, countFormat);
         prov.setAttribute('transform', matrixFrom(pr, state.view.pr));
         state.view.prov = prov;
         state.view.provPr = pr;
@@ -310,7 +310,7 @@ async function build(root, points, locationData, statsByName) {
     if (countryData) {
         const country = document.createElementNS(SVG_NS, 'g');
         country.setAttribute('class', 'fm-regions');
-        buildRegionLayer(country, countryData, pr, locationData, statsByName, (key) => key);
+        buildRegionLayer(country, countryData, pr, locationData, statsByName, (key) => key, countFormat);
         country.setAttribute('transform', matrixFrom(pr, state.view.pr));
         state.view.country = country;
         state.view.countryPr = pr;
@@ -391,10 +391,21 @@ async function build(root, points, locationData, statsByName) {
         link.remove();
     };
     root.addEventListener('click', onRegionClick);
+    // 键盘：区块可聚焦（tabindex/role 见 buildRegionLayer），Enter/Space 与
+    // 点击同管线跳转地点详情页
+    const onRegionKeydown = (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const path = e.target.closest('.fm-region');
+        if (!path) return;
+        e.preventDefault();
+        onRegionClick({ target: path, preventDefault: () => {}, stopPropagation: () => {} });
+    };
+    root.addEventListener('keydown', onRegionKeydown);
 
     state.cleanup = () => {
         root.querySelectorAll('.fm-tooltip').forEach((t) => t.remove());
         root.removeEventListener('click', onRegionClick);
+        root.removeEventListener('keydown', onRegionKeydown);
         if (typeof state.tooltipCleanup === 'function') {
             state.tooltipCleanup();
             state.tooltipCleanup = null;

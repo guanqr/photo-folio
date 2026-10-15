@@ -21,18 +21,67 @@ export function initNavDropdown() {
     // 门控永不武装，下拉点不开
     const touchOnly = window.matchMedia('(hover: none) and (pointer: coarse)');
 
+    // aria-expanded 同步：sub-open 切换与键盘聚焦路径（桌面悬停展开不受焦点
+    // 事件驱动、无法同步——读屏器可经 :focus-within 展开后 Tab 进入子项）
+    const syncExpanded = (parent) => {
+        const li = parent.closest('li');
+        parent.setAttribute('aria-expanded', li.classList.contains('sub-open') ? 'true' : 'false');
+    };
+
     // 窄屏手风琴 / 触屏桌面点击：切换子导航展开态
     nav.querySelectorAll('.nav-parent').forEach((el) => {
         el.addEventListener('click', () => {
             if (mqDesktop.matches && !touchOnly.matches) return; // 桌面鼠标：悬停展开，点击不处理
             el.closest('li').classList.toggle('sub-open');
+            syncExpanded(el);
+        });
+        // 键盘：Enter/Space 与点击同管线切换（桌面鼠标模式下点击被悬停路径
+        // 接管、键盘仍需可用），Escape 收起并保持焦点在父项
+        el.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                el.closest('li').classList.remove('sub-open');
+                syncExpanded(el);
+                return;
+            }
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            e.preventDefault();
+            el.closest('li').classList.toggle('sub-open');
+            syncExpanded(el);
         });
     });
 
-    // 桌面触屏：点击下拉之外关闭；点击下拉内的链接同样关闭——SPA 跳转后
-    // header 不重渲染，不重置则下拉残留展开、盖在新页面上
+    // 焦点进出同步 aria-expanded（span 聚焦 → :focus-within 展开；焦点在
+    // span 与子链接之间移动不算收起）
+    nav.addEventListener('focusin', (e) => {
+        const li = e.target.closest('.has-dropdown');
+        const parent = li && li.querySelector(':scope > .nav-parent');
+        if (parent) parent.setAttribute('aria-expanded', 'true');
+    });
+    nav.addEventListener('focusout', (e) => {
+        const li = e.target.closest('.has-dropdown');
+        const parent = li && li.querySelector(':scope > .nav-parent');
+        if (parent && !(e.relatedTarget && li.contains(e.relatedTarget))) {
+            syncExpanded(parent);
+        }
+    });
+    // Escape：焦点在子链接上时收起并回到父项
+    nav.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        const li = e.target.closest('.has-dropdown');
+        if (!li) return;
+        li.classList.remove('sub-open');
+        const parent = li.querySelector(':scope > .nav-parent');
+        if (parent) {
+            parent.setAttribute('aria-expanded', 'false');
+            parent.focus();
+        }
+    });
+
+    // 桌面：点击下拉之外关闭；点击下拉内的链接同样关闭——SPA 跳转后
+    // header 不重渲染，不重置则下拉残留展开、盖在新页面上（键盘展开的
+    // sub-open 同样经此收起）
     document.addEventListener('click', (e) => {
-        if (!mqDesktop.matches || !touchOnly.matches) return;
+        if (!mqDesktop.matches) return;
         if (!e.target.closest('.has-dropdown') || e.target.closest('.has-dropdown a')) {
             resetSubMenus(nav);
         }
@@ -78,5 +127,9 @@ export function initNavDropdown() {
 
 /* 重置子导航展开态（收起菜单时由 mobile-nav 调用，跨断点时本模块内部调用） */
 export function resetSubMenus(nav) {
-    nav.querySelectorAll('.has-dropdown.sub-open').forEach((li) => li.classList.remove('sub-open'));
+    nav.querySelectorAll('.has-dropdown.sub-open').forEach((li) => {
+        li.classList.remove('sub-open');
+        const parent = li.querySelector(':scope > .nav-parent');
+        if (parent) parent.setAttribute('aria-expanded', 'false');
+    });
 }

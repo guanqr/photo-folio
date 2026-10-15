@@ -7,6 +7,11 @@ import { navTimeoutMs } from '@params';
 
 let reinitFn = null;
 
+// 并发导航守卫代次：快速连点/加载中按 Back 会启动并行 loadContent——各自
+// fetch、各自写主内容区，最后 resolve 者胜（地址栏是 B、内容是 A 的错配）。
+// 代次在每次导航递增，各 await 恢复点校验、被取代的旧导航静默退出
+let navSeq = 0;
+
 // 导航请求超时：弱网下连接挂起（既不 resolve 也不 reject）时 abort 触发
 // reject、回退完整导航——页面不长期停在淡出后的空白主内容区。
 // 值由 baseof.html 的 js.Build params 注入（与 sw.js 的模板注入同源，单点修改）
@@ -98,6 +103,8 @@ async function navigateTo(url) {
 }
 
 async function loadContent(url) {
+    const seq = ++navSeq;
+
     // 导航即关灯箱：灯箱在壳层 DOM、不随内容替换——不关闭则旧照片悬在
     // 新页面上（popstate/返回键路径同样经此）
     closeLightbox();
@@ -109,6 +116,7 @@ async function loadContent(url) {
     main.style.transition = 'opacity 0.15s ease';
     main.style.opacity = '0';
     await sleep(150);
+    if (seq !== navSeq) return; // 淡出期间被更新的导航取代：后续流程（含淡入）由新导航接管
 
     startProgress(); // fetch 窗口的加载反馈（模拟推进，见其注释）
 
@@ -125,10 +133,15 @@ async function loadContent(url) {
         } finally {
             clearTimeout(timeoutTimer);
         }
+        if (seq !== navSeq) return; // fetch 期间被取代：不动 DOM（新导航负责淡入与重初始化）
+
         const doc = new DOMParser().parseFromString(html, 'text/html');
 
         const newMain = doc.querySelector('.main-content');
-        if (!newMain) { window.location = url; return; }
+        if (!newMain) {
+            if (seq === navSeq) window.location = url;
+            return;
+        }
 
         // 替换主内容
         main.innerHTML = newMain.innerHTML;
@@ -178,6 +191,7 @@ async function loadContent(url) {
         // 重新初始化页面 JS
         if (reinitFn) reinitFn();
     } catch (err) {
+        if (seq !== navSeq) return; // 被取代的旧导航失败：不得回退到陈旧 URL（新导航自会处理）
         // 网络错误/超时等回退到完整导航（浏览器自带加载指示，不留在空白正文）
         window.location = url;
         return;
@@ -205,6 +219,9 @@ function updateActiveNav(url) {
     links.forEach(el => {
         const match = el.tagName === 'A' && (el.href === url || el.href === url + '/');
         el.classList.toggle('active', match);
+        // aria-current 同步（读屏器当前页语义；父项是按钮不是链接、不设）
+        if (match) el.setAttribute('aria-current', 'page');
+        else el.removeAttribute('aria-current');
         // 下拉子项匹配时，父级菜单项（如「作品」）一并高亮
         if (match && el.closest('.nav-dropdown')) {
             const parentLink = el.closest('li.has-dropdown').querySelector(':scope > a, :scope > .nav-parent');
@@ -214,6 +231,9 @@ function updateActiveNav(url) {
     // 首页特殊处理
     if (url === location.origin + '/' || url === location.origin) {
         const homeLink = document.querySelector('.site-nav a[href="/"]');
-        if (homeLink) homeLink.classList.add('active');
+        if (homeLink) {
+            homeLink.classList.add('active');
+            homeLink.setAttribute('aria-current', 'page');
+        }
     }
 }

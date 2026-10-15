@@ -175,14 +175,16 @@ html.theme-switching .site-header {
         position: absolute;
         top: 100%;
         left: -2.3em;
-        margin-top: 0.5em;
+        /* 入场位移用 margin 而非 transform：absolute + transform + 过渡时长>0 是
+           WebKit 旋转后视口宽度永久取旧值（Bug 287042）的触发模式（见下注释） */
+        margin-top: 0.1em;
         min-width: 0;
         padding: 0.25em 0; /* 上下留白收紧，只保留左右边距 */
         border-radius: var(--radius-xs); /* 与瀑布流作品卡同档 */
         box-shadow: var(--shadow-pop);
         opacity: 0;
         visibility: hidden;
-        transition: opacity var(--transition), visibility 0.3s,
+        transition: opacity var(--transition), visibility 0.3s, margin-top var(--transition),
                     border-color var(--transition-fade), background-color var(--transition-fade);
 
         a {
@@ -222,6 +224,7 @@ html.theme-switching .site-header {
         &.sub-open .nav-dropdown {
             opacity: 1;
             visibility: visible;
+            margin-top: 0.5em;
         }
     }
 
@@ -236,6 +239,7 @@ html.theme-switching .site-header {
             &.hover-ready:focus-within .nav-dropdown {
                 opacity: 1;
                 visibility: visible;
+                margin-top: 0.5em;
             }
         }
     }

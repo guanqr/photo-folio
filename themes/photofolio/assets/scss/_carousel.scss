@@ -53,6 +53,13 @@
 }
 
 /* 标题与副标题悬浮在轮播图中央 */
+/* 首载入场：标题/副标题/胶囊按钮依次上浮淡入（首页渲染时播放一次；
+   减弱动态由全局兜底归零） */
+@keyframes hero-rise {
+    from { opacity: 0; transform: translateY(0.8em); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
 .carousel-overlay {
     position: absolute;
     inset: 0;
@@ -62,6 +69,10 @@
     align-items: center;
     justify-content: center;
     gap: 0.5em;
+
+    h2 { animation: hero-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.05s both; }
+    p  { animation: hero-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both; }
+    .carousel-actions { animation: hero-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.25s both; }
     text-align: center;
     pointer-events: none;
     animation: fadeIn 0.6s ease both;
@@ -229,8 +240,11 @@
     justify-content: flex-end;
     /* 窄屏文字与圆点间距稍大 */
     gap: 0.8em;
-    /* 窄屏字号更小；横向内边距扩大圆点的点按区域 */
-    padding: 0 0.5em;
+    /* 窄屏字号更小；横向内边距扩大圆点的点按区域。纵向内边距 + 负外边距：
+       点按区域向上下各扩 0.7em（总高约 29px，原仅进度条高约 6px）而
+       视觉位置不变（负边距抵消、行间距仍由容器 gap 决定） */
+    padding: 0.7em 0.5em;
+    margin: -0.7em 0;
     border: none;
     background: transparent;
     color: rgba(var(--rgb-white), 0.9);
@@ -248,7 +262,7 @@
 
     /* 未播放项 hover：进度条变亮、稍长，并显示标题（仅桌面端，窄屏无 hover） */
     @media (min-width: 768px) {
-        padding: 0;
+        padding: 0.7em 0; /* 纵向点按区域扩大与窄屏同法（负边距在基础态、断点通用） */
         font-size: 0.85em;
         gap: 0.5em;
 

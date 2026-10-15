@@ -10,6 +10,8 @@
  * 详情内容仅在全开后可滚动，地点/日期随内容滚动（仅标题固定）。
  * 桌面端：不干预（reset 时清除窄屏残留的内联样式，恢复宽屏详情常显）。
  */
+import { prefersReducedMotion } from './utils.js';
+
 export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle, metaEl, dirVerdict }) {
     const narrowMedia = window.matchMedia('(max-width: 1000px)');
 
@@ -118,6 +120,7 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
 
     function reset(animate = false) {
         cancelScrollAnim();
+        lightbox.classList.remove('is-dragging'); // 打开兜底清除拖拽残留（拖动中关闭/重开的残留）
         if (!narrowMedia.matches) {
             // 桌面：清除窄屏残留的内联样式（内联优先级高于媒体查询 CSS），恢复宽屏详情常显
             panelDetails.style.maxHeight = '';
@@ -189,8 +192,8 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
             if (atTarget()) {
                 level = 0;
                 apply(minHeight, true);
-                // 内容回滚动画：与收起过渡同曲线同时长，锁步合拢
-                animateScrollTop(0, 400);
+                // 内容回滚动画：与收起过渡同曲线同时长，锁步合拢（减弱动态直切）
+                animateScrollTop(0, prefersReducedMotion() ? 0 : 400);
             } else {
                 level = 1;
                 apply(maxHeight(), true);
@@ -294,10 +297,15 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
     lightbox.addEventListener('pointerdown', (e) => {
         if (!narrowMedia.matches || !lightbox.classList.contains('active')) return;
         if (e.target.closest('button') || e.target.closest('a')) return;
+        // 鼠标不进入拖拽模型（展开由滚轮路径覆盖）：保留中屏桌面的文本
+        // 选择/复制（触屏选择本就被 touch-action:none 禁止、拖拽期间另由
+        // .is-dragging 禁选中防 pointercancel 打断）
+        if (e.pointerType !== 'touch') return;
         e.preventDefault(); // 阻止原生图片拖拽/文本选择抢走 pointermove
         cancelScrollAnim(); // 拖拽接管前完成进行中的回滚，保持虚拟位置不变量
         if (maxHeight() - minHeight < 1) return; // 行程为零：拖拽无展开余地，不启动
         dragging = true;
+        lightbox.classList.add('is-dragging'); // 拖拽期间禁选中（见 _lightbox-panel.scss）
         dragFromImgArea = !!(e.target.closest && e.target.closest('.lightbox-img-area'));
         dragStartY = e.clientY;
         dragStartVirt = level * (maxHeight() - minHeight) + panelDetails.scrollTop;
@@ -338,7 +346,11 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
         }
         applyVirt(dragStartVirt + (dragStartY - e.clientY));
     });
-    const endDrag = () => { dragging = false; };
+    const endDrag = () => {
+        if (!dragging) return;
+        dragging = false;
+        lightbox.classList.remove('is-dragging'); // 拖拽结束恢复文字选择
+    };
     lightbox.addEventListener('pointerup', endDrag);
     lightbox.addEventListener('pointercancel', endDrag);
 

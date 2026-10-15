@@ -59,10 +59,11 @@ self.addEventListener('fetch', (event) => {
   const { request } = event
   // 仅同源 GET；跨域（OSS 图片）与 Range 请求不拦截
   if (request.method !== 'GET') return
-  if (!request.url.startsWith(self.location.origin)) return
-  if (request.headers.has('range')) return
-
   const url = new URL(request.url)
+  // origin 精确比较而非字符串前缀：startsWith 会放行 photo.guanqr.com.evil.com
+  // 等前缀相同域名、把跨域响应写入运行时缓存
+  if (url.origin !== self.location.origin) return
+  if (request.headers.has('range')) return
   const isNavigation = request.mode === 'navigate'
   const isHashed = /^\/(css|js|fonts|icons)\//.test(url.pathname)
   // 缓存键去查询串：?y=/?p= 等客户端状态参数服务端返回同一份 HTML——

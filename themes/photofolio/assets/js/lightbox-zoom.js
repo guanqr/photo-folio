@@ -12,6 +12,9 @@
  * - 纯动画职责：start 驱动 transform 过渡、transitionend 收尾（清理
  *   transform-origin 与内联残留）后回调 onDone；cancel 作废在途动画
  *   （关闭/重开/切图前调用，防陈旧收尾回调重放）
+ * - collapse：关闭逆向 FLIP——主图从当前全屏位缩小回目标缩略图矩形
+ *   （打开动画的逆过程；目标矩形可见性由调用方校验，不可用时退化淡出）；
+ *   与 start 共用 pendingDone 槽位
  */
 import { FLIP_TRANSITION } from './utils.js';
 
@@ -119,5 +122,39 @@ export function initLightboxZoom({ img, area, reducedMotion }) {
         });
     };
 
-    return { start, cancel };
+    // 关闭逆向 FLIP：从当前渲染矩形（含在途位移）缩小回 targetRect（当前照片
+    // 网格缩略图矩形）——transform 只做位移与缩放、布局盒不动；缩小途中放开
+    // 裁剪（与 start 同因），收尾清理内联与裁剪后回调 onDone
+    const collapse = (targetRect, onDone) => {
+        cancel();
+        if (reducedMotion || !area) {
+            onDone();
+            return;
+        }
+        const rect = img.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0 || targetRect.width <= 0 || targetRect.height <= 0) {
+            onDone();
+            return;
+        }
+        const dx = targetRect.left - rect.left;
+        const dy = targetRect.top - rect.top;
+        const sx = targetRect.width / rect.width;
+        const sy = targetRect.height / rect.height;
+        area.style.overflow = 'visible';
+        img.style.transformOrigin = '0 0';
+        img.style.transition = FLIP_TRANSITION;
+        img.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
+        img.addEventListener('transitionend', pendingDone = function done(e) {
+            if (e.propertyName !== 'transform') return;
+            img.removeEventListener('transitionend', done);
+            pendingDone = null;
+            img.style.transition = '';
+            img.style.transform = '';
+            img.style.transformOrigin = '';
+            area.style.overflow = '';
+            onDone();
+        });
+    };
+
+    return { start, collapse, cancel };
 }

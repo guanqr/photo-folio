@@ -23,7 +23,8 @@
             <div class="carousel-track">
                 {{ range $i, $photo := $carouselPhotos }}
                 {{ $srcUrl := partial "img-url.html" (dict "src" $photo.src "site" $.Site "width" $carouselWidth "mode" "lfit" "format" "avif" "quality" $carouselQuality) }}
-                <div class="carousel-slide{{ if eq $i 0 }} active{{ end }}">
+                {{/* 非激活 slide 对读屏器隐藏（aria-hidden 随切换由 carousel.js 同步） */}}
+                <div class="carousel-slide{{ if eq $i 0 }} active{{ end }}"{{ if ne $i 0 }} aria-hidden="true"{{ end }}>
                     <div class="carousel-photo">
                         {{/* 首张保持 src + eager + fetchpriority（LCP 元素，hero-preload 同 URL 预载）；
                             其余张 data-src 由 JS 按需加载（邻居预载领先于淡入过渡） */}}
@@ -52,7 +53,7 @@
             </div>
 
             {{/* 向下滚动箭头：点击平滑滚动到分类卡片区域 */}}
-            <button class="carousel-scroll-down" id="carousel-scroll-down" aria-label="向下滚动">
+            <button class="carousel-scroll-down" id="carousel-scroll-down" aria-label="{{ i18n "scroll_down" }}">
                 {{ hugo.Data.svg.arrow_down | safeHTML }}
             </button>
         </div>

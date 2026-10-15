@@ -25,7 +25,9 @@
                         {{ range .Children }}
                             {{ if strings.HasPrefix $.RelPermalink .URL }}{{ $parentActive = true }}{{ end }}
                         {{ end }}
-                        <span class="nav-parent {{ if $parentActive }}active{{ end }}">
+                        {{/* 键盘可达：父项可聚焦（:focus-within 展开后 Tab 进入子项链接），
+                           Enter/Space/Escape 由 nav-dropdown.js 处理 */}}
+                        <span class="nav-parent {{ if $parentActive }}active{{ end }}" tabindex="0" role="button" aria-haspopup="true" aria-expanded="false">
                             {{ with .Params.icon }}
                                 <span class="nav-icon">{{ index hugo.Data.svg . | safeHTML }}</span>
                             {{ end }}
@@ -33,7 +35,7 @@
                             <span class="nav-caret">{{ hugo.Data.svg.arrow_down | safeHTML }}</span>
                         </span>
                         {{ else }}
-                        <a href="{{ .URL }}" {{ if eq $.RelPermalink .URL }}class="active"{{ end }}>
+                        <a href="{{ .URL }}" {{ if eq $.RelPermalink .URL }}class="active" aria-current="page"{{ end }}>
                             {{ with .Params.icon }}
                                 <span class="nav-icon">{{ index hugo.Data.svg . | safeHTML }}</span>
                             {{ end }}
