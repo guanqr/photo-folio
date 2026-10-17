@@ -635,11 +635,17 @@ function flattenRows(grid) {
    仅展示给定作品集合：全部重新隐藏，集合内进入分页队列（首批 12 张由 revealBatch
    逐批解除隐藏，其余等待滚动加载；无限滚动照常工作，触发器保持可见）。
    重启前旧集合整体快速淡出（0.12s）：与揭示错峰淡入衔接、替代瞬间消失；
-   连点筛选时旧定时器作废（网格保持淡出态直至最后一次切换执行） */
+   连点筛选时旧定时器作废（网格保持淡出态直至最后一次切换执行）。
+   onRestarted：重启真正执行后回调——调用方借此同步依赖 _pendingItems 的模块
+   （如无限滚动初始化）；重启前调用会读到旧队列状态。连点筛选时旧回调随
+   旧定时器一并作废，只有最后一次重启会触发 */
 let restartFadeTimer = null;
 
-export function restartMasonryGrid(grid, items) {
-    if (!grid || !grid._shownItems) return;
+export function restartMasonryGrid(grid, items, onRestarted) {
+    if (!grid || !grid._shownItems) {
+        if (onRestarted) onRestarted();
+        return;
+    }
 
     if (restartFadeTimer) clearTimeout(restartFadeTimer);
     const run = () => {
@@ -647,6 +653,7 @@ export function restartMasonryGrid(grid, items) {
         grid.style.transition = '';
         grid.style.opacity = '';
         restartGrid(grid, items);
+        if (onRestarted) onRestarted();
     };
     grid.style.transition = 'opacity 0.12s ease';
     grid.style.opacity = '0.4';
@@ -668,7 +675,9 @@ function restartGrid(grid, items) {
 
     const trigger = document.getElementById('load-more-trigger');
     if (trigger) {
-        trigger.style.display = '';
+        // 按新集合是否为空决定显示：apply 的空匹配分支先 display:none 隐藏触发器，
+        // 重启无条件恢复显示会把触发器残留在空状态卡片下方
+        trigger.style.display = items.length ? '' : 'none';
         trigger.classList.remove('is-finished', 'is-loading');
         if (grid._triggerHtml) trigger.innerHTML = grid._triggerHtml;
     }

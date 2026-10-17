@@ -132,7 +132,12 @@ export function initGalleryFilter() {
         const emptyEl = document.getElementById('gallery-filter-empty');
         if (emptyEl) emptyEl.hidden = !(active && matching.length === 0);
 
-        restartMasonryGrid(grid, matching);
+        // 网格重启（0.12s 淡出后真正执行）完成的回调里再初始化无限滚动：
+        // 立即调用会读到重启前的旧待加载队列——上一轮筛选全部加载完时队列为空、
+        // 误判「已展示全部」摘除滚动监听，重启后剩余作品（如 13 张组合结果
+        // 首批揭示 12 张、剩 1 张待加载）永远加载不出来、触发器卡「载入中」；
+        // 回调时刻 _pendingItems 已是首批揭示后的准确状态，挂载/幂等早退均基于真实队列
+        restartMasonryGrid(grid, matching, () => initInfiniteScroll());
         // 头部计数随筛选结果滚动动画（数字包在 #photo-count-num 中）
         const countNum = document.getElementById('photo-count-num');
         if (countNum) animateCount(countNum, matching.length);
@@ -140,8 +145,6 @@ export function initGalleryFilter() {
             const trigger = document.getElementById('load-more-trigger');
             if (trigger) trigger.style.display = 'none';
         }
-        // 若无限滚动的监听曾因加载完成被移除，重新挂载；仍生效时幂等跳过
-        initInfiniteScroll();
         syncUrl(replace);
     };
 
