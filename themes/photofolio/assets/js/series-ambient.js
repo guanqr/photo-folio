@@ -1,125 +1,34 @@
-// 系列页氛围粒子引擎：canvas 单 rAF 循环 + 离屏 sprite 预渲染（动画期仅 drawImage 变换）。
+// 系列页氛围粒子引擎：SVG 矢量渲染（2026-10-18 自 canvas 迁移）——
+// 粒子为 circle/path 节点，每帧仅更新 transform 与 opacity 属性（不重建节点），
+// 矢量天然适应高 DPI 与浏览器缩放；颜色直接引用 CSS 变量（--color-particle
+// 各主题四元组 + --color-white），canvas 时代的 RGB 分量数据变量
+// （--rgb-particle / --rgb-white）已删除，颜色体系统一为 HSL 四元组。
 // 主题由 series/single.html 渲染的 data-ambient 键驱动：
 //   falling-leaves——白桦落叶随风飘摆；firecracker——鞭炮爆裂碎屑 + 火星升腾；
 //   dust——空气中悬浮的尘土：全视口缓慢漂移、微微沉浮、明暗闪烁。
 // SPA 约定（main.js initPageModules 每次换页重入）：先销毁旧状态再初始化（root 幂等）；
 // 换页销毁子树时同步 cancel rAF / disconnect observers（footprint-map.js 同款生命周期）。
-// 减弱动态：prefers-reduced-motion 跳过粒子（另有 CSS 兜底隐藏 canvas）。
-// 颜色取自 CSS 变量 --rgb-particle（各主题在 SCSS 中声明自身粒子配色，不影响页面强调色）；
-// 白色火点用 --rgb-white。
+// 减弱动态：prefers-reduced-motion 跳过粒子（另有 CSS 兜底隐藏 svg）。
 
 import { prefersReducedMotion } from './utils.js';
 
+const SVG_NS = 'http://www.w3.org/2000/svg';
 const rand = (a, b) => a + Math.random() * (b - a);
 
-/* ---- 离屏 sprite 预渲染（2x 绘制保证高 DPI 清晰） ---- */
+/* ---- 矢量形状定义（自原 canvas sprite 坐标逐点迁移，quadraticCurveTo → Q） ---- */
 
-function makeCanvas(w, h) {
-    const c = document.createElement('canvas');
-    c.width = w;
-    c.height = h;
-    return c;
-}
+// 白桦叶：卵形锯齿缘叶身 + 叶柄 + 中脉与侧脉（逻辑 52×48，叶尖朝右）
+const LEAF_BODY = 'M10,25 Q14,16 18,17 Q22,18 24,13 Q28,10 32,11 Q36,12 38,15 Q42,20 46,24 Q41,29 37,30 Q33,32 31,37 Q27,40 23,38 Q17,35 13,34 Q9,30 10,25 Z';
+const LEAF_STEM = 'M10,25 L3,32';
+const LEAF_VEINS = 'M12,26 L42,24 M18,24.5 L17,15 M26,23.5 L27,12 M34,23.5 L35,13';
 
-// 白桦叶：卵形锯齿缘叶身 + 叶柄 + 中脉与侧脉（逻辑尺寸 52×48，叶尖朝右）
-function makeLeafSprite(rgb) {
-    const c = makeCanvas(104, 96);
-    const ctx = c.getContext('2d');
-    ctx.scale(2, 2);
-    ctx.fillStyle = `rgb(${rgb})`;
-    ctx.beginPath();
-    ctx.moveTo(10, 25);
-    ctx.quadraticCurveTo(14, 16, 18, 17);
-    ctx.quadraticCurveTo(22, 18, 24, 13);
-    ctx.quadraticCurveTo(28, 10, 32, 11);
-    ctx.quadraticCurveTo(36, 12, 38, 15);
-    ctx.quadraticCurveTo(42, 20, 46, 24);
-    ctx.quadraticCurveTo(41, 29, 37, 30);
-    ctx.quadraticCurveTo(33, 32, 31, 37);
-    ctx.quadraticCurveTo(27, 40, 23, 38);
-    ctx.quadraticCurveTo(17, 35, 13, 34);
-    ctx.quadraticCurveTo(9, 30, 10, 25);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = `rgba(${rgb}, 0.8)`;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(10, 25);
-    ctx.lineTo(3, 32);
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(12, 26);
-    ctx.lineTo(42, 24);
-    ctx.moveTo(18, 24.5);
-    ctx.lineTo(17, 15);
-    ctx.moveTo(26, 23.5);
-    ctx.lineTo(27, 12);
-    ctx.moveTo(34, 23.5);
-    ctx.lineTo(35, 13);
-    ctx.stroke();
-    return c;
-}
+// 纸屑：细长小条（鞭炮爆裂碎屑，逻辑 16×8）
+const SHARD_PATH = 'M1,4 Q2,1 8,1 Q14,1 15,4 Q14,7 8,7 Q2,7 1,4 Z';
 
-// 纸屑：细长小条（鞭炮爆裂碎屑，逻辑尺寸 16×8）
-function makeShardSprite(rgb) {
-    const c = makeCanvas(32, 16);
-    const ctx = c.getContext('2d');
-    ctx.scale(2, 2);
-    ctx.fillStyle = `rgb(${rgb})`;
-    ctx.beginPath();
-    ctx.moveTo(1, 4);
-    ctx.quadraticCurveTo(2, 1, 8, 1);
-    ctx.quadraticCurveTo(14, 1, 15, 4);
-    ctx.quadraticCurveTo(14, 7, 8, 7);
-    ctx.quadraticCurveTo(2, 7, 1, 4);
-    ctx.closePath();
-    ctx.fill();
-    return c;
-}
-
-// 爆裂闪光：白芯 → 主题色 → 透明的径向渐变（逻辑尺寸 64×64）
-function makeFlashSprite(rgb) {
-    const c = makeCanvas(128, 128);
-    const ctx = c.getContext('2d');
-    ctx.scale(2, 2);
-    const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-    g.addColorStop(0, 'rgba(255, 255, 255, 1)');
-    g.addColorStop(0.3, `rgba(${rgb}, 0.45)`);
-    g.addColorStop(1, `rgba(${rgb}, 0)`);
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, 64, 64);
-    return c;
-}
-
-// 火星：白芯 → 主题色 → 透明的径向渐变（芯更亮、色环更强，逻辑尺寸 32×32）
-function makeSparkSprite(rgb) {
-    const c = makeCanvas(64, 64);
-    const ctx = c.getContext('2d');
-    ctx.scale(2, 2);
-    const g = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
-    g.addColorStop(0, 'rgba(255, 255, 255, 1)');
-    g.addColorStop(0.25, `rgba(${rgb}, 0.6)`);
-    g.addColorStop(1, `rgba(${rgb}, 0)`);
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, 32, 32);
-    return c;
-}
-
-// 尘土：柔和的土黄雾点（逻辑尺寸 64×64）
-function makeDustSprite(rgb) {
-    const c = makeCanvas(128, 128);
-    const ctx = c.getContext('2d');
-    ctx.scale(2, 2);
-    const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-    g.addColorStop(0, `rgba(${rgb}, 0.75)`);
-    g.addColorStop(0.35, `rgba(${rgb}, 0.45)`);
-    g.addColorStop(0.7, `rgba(${rgb}, 0.18)`);
-    g.addColorStop(1, `rgba(${rgb}, 0)`);
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, 64, 64);
-    return c;
+function makeEl(tag, attrs) {
+    const el = document.createElementNS(SVG_NS, tag);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
 }
 
 /* ---- 各主题粒子构建（数组插入顺序即绘制顺序，先入先画） ---- */
@@ -268,9 +177,22 @@ function adjustDustCount(st) {
     for (let i = kept; i < target; i++) {
         st.particles.push(makeDustParticle(st));
     }
+    // 数量增减后重建节点：尘土节点全量重挂（其余种类节点保持引用不动；
+    // 尘土主题全部粒子均为尘土，重挂顺序无影响）
+    for (const p of st.particles) {
+        if (p.kind === 'dust' && p.el) {
+            p.el.remove();
+            p.el = null;
+        }
+    }
+    for (const p of st.particles) {
+        if (p.kind !== 'dust') continue;
+        p.el = makeEl('circle', { r: 32, fill: st.gradients.dust });
+        st.root.appendChild(p.el);
+    }
 }
 
-/* ---- 粒子更新与绘制 ---- */
+/* ---- 粒子更新与渲染 ---- */
 
 function stepParticle(st, p, dt) {
     switch (p.kind) {
@@ -384,48 +306,82 @@ function stepParticle(st, p, dt) {
     }
 }
 
-function drawParticle(ctx, st, p) {
+// 每帧只更新 transform 与 opacity 属性（不重建节点）；rotate 用角度制（canvas 为弧度）
+function applyParticle(st, p) {
+    const el = p.el;
+    if (!el) return;
     switch (p.kind) {
         case 'leaf': {
-            ctx.save();
-            ctx.translate(p.x, p.y);
-            ctx.rotate(p.rot);
-            ctx.globalAlpha = p.alpha;
-            const w = p.size * (52 / 48);
-            ctx.drawImage(st.sprites.leaf, -w / 2, -p.size / 2, w, p.size);
-            ctx.restore();
+            const k = p.size / 48;
+            el.setAttribute('transform', `translate(${p.x},${p.y}) rotate(${p.rot * 180 / Math.PI}) scale(${k})`);
+            el.setAttribute('opacity', p.alpha);
             break;
         }
         case 'debris': {
-            if (!p.active) break;
-            ctx.save();
-            ctx.translate(p.x, p.y);
-            ctx.rotate(p.rot);
-            ctx.globalAlpha = p.alpha;
-            const h = p.size * 0.5;
-            ctx.drawImage(st.sprites.shards[p.shardIdx], -p.size / 2, -h / 2, p.size, h);
-            ctx.restore();
+            if (!p.active) { el.setAttribute('opacity', '0'); break; }
+            el.setAttribute('fill', p.shardIdx === 0 ? 'var(--color-particle)' : 'var(--color-white)');
+            const k = p.size / 16;
+            el.setAttribute('transform', `translate(${p.x},${p.y}) rotate(${p.rot * 180 / Math.PI}) scale(${k})`);
+            el.setAttribute('opacity', p.alpha);
             break;
         }
         case 'flash': {
-            if (!p.active) break;
-            const s = p.size * (p.scale || 1);
-            ctx.globalAlpha = p.alpha;
-            ctx.drawImage(st.sprites.flash, p.x - s / 2, p.y - s / 2, s, s);
+            if (!p.active) { el.setAttribute('opacity', '0'); break; }
+            const k = (p.size * (p.scale || 1)) / 64;
+            el.setAttribute('transform', `translate(${p.x},${p.y}) scale(${k})`);
+            el.setAttribute('opacity', p.alpha);
             break;
         }
         case 'spark': {
-            // 无旋转：直接绘制，避免 save/restore 的全状态克隆
-            ctx.globalAlpha = p.alpha;
-            const s = p.size * p.scale;
-            ctx.drawImage(st.sprites.spark, p.x - s / 2, p.y - s / 2, s, s);
+            const k = (p.size * p.scale) / 32;
+            el.setAttribute('transform', `translate(${p.x},${p.y}) scale(${k})`);
+            el.setAttribute('opacity', p.alpha);
             break;
         }
         case 'dust': {
-            ctx.globalAlpha = p.alpha;
-            ctx.drawImage(st.sprites.dust, p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+            const k = p.size / 64;
+            el.setAttribute('transform', `translate(${p.x},${p.y}) scale(${k})`);
+            el.setAttribute('opacity', p.alpha);
             break;
         }
+    }
+}
+
+/* ---- 节点构建 ---- */
+
+let uidSeq = 0;
+
+// 径向渐变 defs（闪光/火星/尘土共用构造：白芯或纯色芯 → 主题色 → 透明）
+function makeRadialGradient(id, stops) {
+    const g = makeEl('radialGradient', { id });
+    for (const s of stops) {
+        g.appendChild(makeEl('stop', s));
+    }
+    return g;
+}
+
+function buildNode(p, st) {
+    switch (p.kind) {
+        case 'leaf': {
+            const g = makeEl('g', {});
+            const body = makeEl('path', { d: LEAF_BODY, fill: 'var(--color-particle)' });
+            const stem = makeEl('path', { d: LEAF_STEM, fill: 'none', stroke: 'var(--color-particle)', 'stroke-opacity': 0.8, 'stroke-width': 1.5 });
+            const veins = makeEl('path', { d: LEAF_VEINS, fill: 'none', stroke: 'var(--color-white)', 'stroke-opacity': 0.35, 'stroke-width': 1 });
+            g.appendChild(body);
+            g.appendChild(stem);
+            g.appendChild(veins);
+            return g;
+        }
+        case 'debris':
+            return makeEl('path', { d: SHARD_PATH, fill: 'var(--color-particle)' });
+        case 'flash':
+            return makeEl('circle', { r: 32, fill: st.gradients.flash });
+        case 'spark':
+            return makeEl('circle', { r: 16, fill: st.gradients.spark });
+        case 'dust':
+            return makeEl('circle', { r: 32, fill: st.gradients.dust });
+        default:
+            return null; // burst 控制器无节点
     }
 }
 
@@ -438,6 +394,7 @@ function destroyState() {
     cancelAnimationFrame(state.rafId);
     if (state.resizeObserver) state.resizeObserver.disconnect();
     if (state.onVisibility) document.removeEventListener('visibilitychange', state.onVisibility);
+    if (state.root) state.root.replaceChildren();
     state = null;
 }
 
@@ -461,24 +418,22 @@ function frame(t) {
     // 后台切回时 dt 钳制，防止长时间挂起后粒子瞬间跳变
     const dt = state.lastT === null ? 0 : Math.min((t - state.lastT) / 1000, 0.05);
     state.lastT = t;
-    const ctx = state.ctx;
-    ctx.clearRect(0, 0, state.w, state.h);
     for (const p of state.particles) {
         stepParticle(state, p, dt);
-        drawParticle(ctx, state, p);
+        applyParticle(state, p);
     }
 }
 
 export function initSeriesAmbient() {
     const section = document.querySelector('.series-themed[data-ambient]');
-    const canvas = section ? section.querySelector('canvas.series-canvas') : null;
+    const svg = section ? section.querySelector('svg.series-ambient') : null;
 
     // 清理先于早退：导航到非系列页也要释放旧状态（infinite-scroll.js 同款约定）
-    if (!section || !canvas) {
+    if (!section || !svg) {
         destroyState();
         return;
     }
-    if (state && state.root === canvas) return; // 幂等（footprint-map.js 同款）
+    if (state && state.root === svg) return; // 幂等（footprint-map.js 同款）
     destroyState();
 
     if (prefersReducedMotion()) return; // 粒子跳过
@@ -486,60 +441,58 @@ export function initSeriesAmbient() {
     const builder = THEME_SPECS[section.dataset.ambient];
     if (!builder) return;
 
-    const css = getComputedStyle(section);
-    const rgbWhite = (css.getPropertyValue('--rgb-white') || '').trim() || '255, 255, 255';
-    // 粒子配色：读各主题块声明的 --rgb-particle，缺省回退柔白
-    const rgbParticle = (css.getPropertyValue('--rgb-particle') || '').trim() || rgbWhite;
+    const uid = `series-ambient-${++uidSeq}`;
 
     state = {
-        root: canvas,
+        root: svg,
         theme: section.dataset.ambient,
-        ctx: canvas.getContext('2d'), w: 0, h: 0,
+        w: 0, h: 0,
         em: parseFloat(getComputedStyle(document.documentElement).fontSize) || 16,
         particles: [],
-        sprites: {
-            leaf: makeLeafSprite(rgbParticle),
-            shards: [makeShardSprite(rgbParticle), makeShardSprite(rgbWhite)],
-            flash: makeFlashSprite(rgbParticle),
-            spark: makeSparkSprite(rgbParticle),
-            dust: makeDustSprite(rgbParticle),
+        gradients: {
+            flash: `url(#${uid}-flash)`,
+            spark: `url(#${uid}-spark)`,
+            dust: `url(#${uid}-dust)`,
         },
         rafId: 0, running: false, lastT: null,
         resizeObserver: null, onVisibility: null,
         measureFrames: 0,
-        snapshot: document.createElement('canvas'), // 后备存储调整时的可复用快照
         dustTarget: null, // 上次调整后的尘土数量（相等时跳过重建）
     };
+
+    // 渐变 defs：id 带实例序号，避免 SPA 过渡期新旧页面同名 id 串扰
+    const defs = makeEl('defs', {});
+    defs.appendChild(makeRadialGradient(`${uid}-flash`, [
+        { offset: 0, 'stop-color': 'var(--color-white)' },
+        { offset: 0.3, 'stop-color': 'var(--color-particle)', 'stop-opacity': 0.45 },
+        { offset: 1, 'stop-color': 'var(--color-particle)', 'stop-opacity': 0 },
+    ]));
+    defs.appendChild(makeRadialGradient(`${uid}-spark`, [
+        { offset: 0, 'stop-color': 'var(--color-white)' },
+        { offset: 0.25, 'stop-color': 'var(--color-particle)', 'stop-opacity': 0.6 },
+        { offset: 1, 'stop-color': 'var(--color-particle)', 'stop-opacity': 0 },
+    ]));
+    defs.appendChild(makeRadialGradient(`${uid}-dust`, [
+        { offset: 0, 'stop-color': 'var(--color-particle)', 'stop-opacity': 0.75 },
+        { offset: 0.35, 'stop-color': 'var(--color-particle)', 'stop-opacity': 0.45 },
+        { offset: 0.7, 'stop-color': 'var(--color-particle)', 'stop-opacity': 0.18 },
+        { offset: 1, 'stop-color': 'var(--color-particle)', 'stop-opacity': 0 },
+    ]));
+    svg.appendChild(defs);
 
     // 本 init 的 state 令牌：销毁/重初始化后，残留的 measure/RO 回调对不上令牌即自停
     const myState = state;
 
     const measure = () => {
         if (!myState || state !== myState) return;
-        const w = canvas.clientWidth;
-        const h = canvas.clientHeight;
+        const w = svg.clientWidth;
+        const h = svg.clientHeight;
         if (w === 0 || h === 0) {
             // 布局未就绪：重试 ≤30 帧后放弃（footprint-map.js 同款守卫）
             if (state.measureFrames++ < 30) state.rafId = requestAnimationFrame(measure);
             return;
         }
         state.measureFrames = 0; // 成功即归零（预算按次生效而非终身一次性消耗）
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const bw = Math.round(w * dpr);
-        const bh = Math.round(h * dpr);
-        if (canvas.width !== bw || canvas.height !== bh) {
-            // 调整后备存储会清空画布——先把旧画面复制到可复用快照，尺寸调整后按像素
-            // 原样贴回，下一帧完整重绘覆盖；拖动窗口时避免每步「清空→重绘」的频闪
-            const snap = state.snapshot;
-            snap.width = canvas.width;
-            snap.height = canvas.height;
-            snap.getContext('2d').drawImage(canvas, 0, 0);
-            canvas.width = bw;
-            canvas.height = bh;
-            state.ctx.drawImage(snap, 0, 0); // 像素 1:1 贴回（此时变换被尺寸赋值重置为恒等）
-        }
-        // 尺寸赋值会重置上下文变换，且 dpr 可能随浏览器缩放变化——每次同步
-        state.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         // 尺寸变化不清屏重建：先更新尺寸，再对既有粒子做保活缩放（时间轴/相位保留）、
         // 尘土数量多退少补——动画连续无跳变（首次构建除外）
         const sizeChanged = state.w !== w || state.h !== h;
@@ -556,6 +509,11 @@ export function initSeriesAmbient() {
                 if (widthChanged && state.theme === 'dust') adjustDustCount(state);
             } else {
                 state.particles = builder(state); // 首次构建（此时 w/h 已更新）
+                for (const p of state.particles) {
+                    const el = buildNode(p, state);
+                    p.el = el;
+                    if (el) svg.appendChild(el);
+                }
             }
         }
         start();
@@ -573,12 +531,14 @@ export function initSeriesAmbient() {
             measure();
         });
     });
-    state.resizeObserver.observe(canvas);
+    state.resizeObserver.observe(svg);
 
-    // 切后台停帧、回前台续帧（canvas 全视口铺满，不做视口可见性判定）
+    // 切后台停帧、回前台续帧（svg 全视口铺满，不做视口可见性判定）
     state.onVisibility = () => {
         if (document.hidden) stop();
         else start();
     };
     document.addEventListener('visibilitychange', state.onVisibility);
+
+    measure();
 }

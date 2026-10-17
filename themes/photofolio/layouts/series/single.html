@@ -29,7 +29,7 @@
     {{ warnf "系列《%s》的 theme 键「%s」未注册（可用：falling-leaves / firecracker / dust），氛围粒子不会渲染" .Title $ambientTheme }}
 {{ end }}
 <section class="gallery-page{{ with $ambientTheme }} series-themed{{ end }}"{{ with $ambientTheme }} data-ambient="{{ . }}"{{ end }}>
-    {{ with $ambientTheme }}<canvas class="series-canvas" aria-hidden="true"></canvas>{{ end }}
+    {{ with $ambientTheme }}<svg class="series-ambient" aria-hidden="true"></svg>{{ end }}
     <div class="gallery-header">
         <div class="container">
             <h1 class="page-title">{{ .Title }}</h1>

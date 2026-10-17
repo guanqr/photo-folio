@@ -87,9 +87,6 @@ body {
     @include defineColorHSL(--color-white, 0, 0%, 100%);
     @include defineColorHSL(--color-black, 0, 0%, 0%);
 
-    /* canvas 数据（非 CSS 颜色）：series-ambient.js 读取原始 RGB 分量 */
-    --rgb-white: 255, 255, 255;
-
     /* 主题色派生：透明度阶梯（分量引用上方四元组，随主题自动切换） */
     --color-accent-15: hsla(var(--color-accent-h), var(--color-accent-s), var(--color-accent-l), 0.15);
     --color-accent-30: hsla(var(--color-accent-h), var(--color-accent-s), var(--color-accent-l), 0.3);
