@@ -1,6 +1,6 @@
 {{ define "main" }}
 {{/* 1. 全站作品时间排序（按地点聚合展示全部作品，含系列内页——与全站拆分一致） */}}
-{{ $sortedPhotos := partial "photo-sorted.html" . }}
+{{ $sortedPhotos := partialCached "utils/photo-sorted.html" . "desc" }}
 
 {{/* 2. 按 location 单趟聚合（输入时间降序 → 首见即最新、末见即最早） */}}
 {{ $locAgg := dict }}
@@ -26,7 +26,7 @@
 {{ $locations := sort $locationData "time" "desc" }}
 
 {{/* 3. 足迹地点注册表（slug/url/坐标一次构建，地图与预览面板共用） */}}
-{{ $locReg := partial "location-registry.html" . }}
+{{ $locReg := partialCached "utils/location-registry.html" . "locations" }}
 
 {{/* 4. 地点数据：单趟遍历地点列表——slug/名称/详情页 URL/张数
       （点击区块跳转用 URL、悬停弹层用张数） */}}

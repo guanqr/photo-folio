@@ -53,91 +53,89 @@ body {
     flex: 1 0 auto;
 }
 
+// 颜色四元组：每个颜色产出 --x 主值 + --x-h/-s/-l 分量（HSL 体系，
+// 2026-10-17 自 --rgb-* 分量迁移，与博客机制一致）；
+// 透明/派生色用 hsla(var(--x-h), var(--x-s), var(--x-l), a) 引用分量
+@mixin defineColorHSL($color, $hue, $saturation, $lightness){
+    #{$color}: unquote("hsl(#{$hue}, #{$saturation}, #{$lightness})");#{$color}-h: #{$hue};#{$color}-s: #{$saturation};#{$color}-l: #{$lightness};
+}
+
 :root {
-    /* ═══ 固定暗色分量（单源，不随明暗主题切换，仅 :root 定义）═══
-       :root 的 --rgb-* 暗色值即本组别名（改动同步生效）；
+    /* ═══ 颜色体系（HSL 四元组，唯一颜色定义，2026-10-17 自 --rgb-* 分量迁移）═══
+       所有颜色值仅在本文件定义；--rgb-white/--rgb-particle 为
+       series-ambient.js 的 canvas 数据（非 CSS 颜色），例外保留 */
+
+    /* 固定暗色分量（单源，不随明暗主题切换，仅 :root 定义）：
        灯箱组件、亮色首页顶部强制暗色导航与首页轮播背景/进度条内
        重新声明被亮色主题覆盖的语义变量时引用本组 */
-    --dark-rgb-bg: 14, 19, 22; /* #0e1316 */
-    --dark-rgb-bg-raised: 20, 25, 29; /* 与背景同色系，逐级略亮 */
-    --dark-rgb-card: 24, 30, 35;
-    --dark-rgb-text: 232, 232, 232;
-    --dark-rgb-text-secondary: 153, 153, 153;
-    --dark-rgb-text-muted: 102, 102, 102;
-    --dark-rgb-accent: 121, 175, 165; /* hsl(169, 25%, 58%) 转 RGB */
-    --dark-rgb-border: 36, 43, 50;
+    @include defineColorHSL(--dark-card, 207.3, 18.6%, 11.6%);
+    @include defineColorHSL(--dark-text, 0, 0%, 91%);
+    @include defineColorHSL(--dark-text-secondary, 0, 0%, 60%);
+    @include defineColorHSL(--dark-text-muted, 0, 0%, 40%);
+    @include defineColorHSL(--dark-accent, 168.9, 25.2%, 58%);
+    @include defineColorHSL(--dark-border, 210, 16.3%, 16.9%);
 
-    /* ═══ RGB 原色（唯一颜色定义，后面全部引用这些分量）═══
-       暗色主题底色为蓝灰色调（偏蓝灰，非纯黑）——暗色值引用上方固定暗色分量 */
-    --rgb-bg: var(--dark-rgb-bg);
-    --rgb-bg-raised: var(--dark-rgb-bg-raised);
-    --rgb-card: var(--dark-rgb-card);
-    --rgb-text: var(--dark-rgb-text);
-    --rgb-text-secondary: var(--dark-rgb-text-secondary);
-    --rgb-text-muted: var(--dark-rgb-text-muted);
-    --rgb-accent: var(--dark-rgb-accent);
-    --rgb-border: var(--dark-rgb-border);
+    /* 主题色（暗色主题底色为蓝灰色调、非纯黑；亮色值见 [data-theme="light"]） */
+    @include defineColorHSL(--color-bg, 202.5, 22.2%, 7.1%);
+    @include defineColorHSL(--color-bg-secondary, 206.7, 18.4%, 9.6%);
+    @include defineColorHSL(--color-bg-card, 207.3, 18.6%, 11.6%);
+    @include defineColorHSL(--color-text, 0, 0%, 91%);
+    @include defineColorHSL(--color-text-secondary, 0, 0%, 60%);
+    @include defineColorHSL(--color-text-muted, 0, 0%, 40%);
+    @include defineColorHSL(--color-accent, 168.9, 25.2%, 58%);
+    @include defineColorHSL(--color-border, 210, 16.3%, 16.9%);
+    @include defineColorHSL(--color-white, 0, 0%, 100%);
+    @include defineColorHSL(--color-black, 0, 0%, 0%);
+
+    /* canvas 数据（非 CSS 颜色）：series-ambient.js 读取原始 RGB 分量 */
     --rgb-white: 255, 255, 255;
-    --rgb-black: 0, 0, 0;
 
-    /* ═══ 语义颜色（全部引用上方 RGB）═══ */
-    --color-bg: rgb(var(--rgb-bg));
-    --color-bg-secondary: rgb(var(--rgb-bg-raised));
-    --color-bg-card: rgb(var(--rgb-card));
-
-    --color-text: rgb(var(--rgb-text));
-    --color-text-secondary: rgb(var(--rgb-text-secondary));
-    --color-text-muted: rgb(var(--rgb-text-muted));
-
-    --color-accent: rgb(var(--rgb-accent));
-    --color-accent-15: rgba(var(--rgb-accent), 0.15);
-    --color-accent-30: rgba(var(--rgb-accent), 0.3);
-    --color-accent-50: rgba(var(--rgb-accent), 0.5);  /* 滚动条 thumb hover */
-    --color-accent-75: rgba(var(--rgb-accent), 0.75); /* 滚动条 thumb active */
-
-    --color-border: rgb(var(--rgb-border));
+    /* 主题色派生：透明度阶梯（分量引用上方四元组，随主题自动切换） */
+    --color-accent-15: hsla(var(--color-accent-h), var(--color-accent-s), var(--color-accent-l), 0.15);
+    --color-accent-30: hsla(var(--color-accent-h), var(--color-accent-s), var(--color-accent-l), 0.3);
+    --color-accent-50: hsla(var(--color-accent-h), var(--color-accent-s), var(--color-accent-l), 0.5);  /* 滚动条 thumb hover */
+    --color-accent-75: hsla(var(--color-accent-h), var(--color-accent-s), var(--color-accent-l), 0.75); /* 滚动条 thumb active */
 
     /* 影调分析图表配色：明度直方图三分区底色 / 占比条三段（陰影·中間調·高光）、
-       明度曲线、饱和度曲线、剪裁标记 */
-    --color-zone-shadow-bg: rgba(var(--rgb-white), 0.05);
-    --color-zone-mid-bg: rgba(var(--rgb-white), 0.1);
-    --color-zone-high-bg: rgba(var(--rgb-white), 0.05);
-    --color-zone-shadow-fg: rgb(var(--rgb-text-muted));
-    --color-zone-mid-fg: rgb(var(--rgb-text-secondary));
-    --color-zone-high-fg: rgb(var(--rgb-white));
-    --color-sat-curve: rgb(var(--rgb-text));
-    --color-clip: rgb(var(--rgb-accent));
+       明度曲线、饱和度曲线、剪裁标记（暗色白基，亮色黑基见 [data-theme="light"]） */
+    --color-zone-shadow-bg: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.05);
+    --color-zone-mid-bg: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.1);
+    --color-zone-high-bg: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.05);
+    --color-zone-shadow-fg: var(--color-text-muted);
+    --color-zone-mid-fg: var(--color-text-secondary);
+    --color-zone-high-fg: var(--color-white);
+    --color-sat-curve: var(--color-text);
+    --color-clip: var(--color-accent);
 
-    --color-header-bg: rgba(var(--rgb-bg), 0.85);
-    --color-nav-bg: rgb(var(--rgb-bg)); /* 完全不透明 */
-    --color-lightbox-bg: rgb(var(--rgb-black)); /* 不透光纯黑（与参考网站灯箱一致；移动端高亮屏不透视站内文字） */
+    --color-header-bg: hsla(var(--color-bg-h), var(--color-bg-s), var(--color-bg-l), 0.85);
+    --color-nav-bg: var(--color-bg); /* 完全不透明 */
+    --color-lightbox-bg: var(--color-black); /* 不透光纯黑（与参考站灯箱一致；移动端高亮屏不透视站内文字） */
 
-    --color-overlay-subtle: rgba(var(--rgb-white), 0.1);
+    --color-overlay-subtle: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.1);
 
-    --color-lightbox-ctrl-bg: rgba(var(--rgb-black), 0.4);
-    --color-lightbox-ctrl-hover: rgba(var(--rgb-black), 0.6);
-    --color-lightbox-ctrl-text: rgba(var(--rgb-white), 0.8);
-    --color-lightbox-ctrl-text-hover: rgba(var(--rgb-white), 1);
+    --color-lightbox-ctrl-bg: hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.4);
+    --color-lightbox-ctrl-hover: hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.6);
+    --color-lightbox-ctrl-text: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.8);
+    --color-lightbox-ctrl-text-hover: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 1);
 
     /* 首页轮播顶部渐变（透明导航栏文字可读性） */
-    --carousel-top-overlay: linear-gradient(to bottom, rgba(var(--rgb-black), 0.5), rgba(var(--rgb-black), 0));
+    --carousel-top-overlay: linear-gradient(to bottom, hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.5), hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0));
     /* 轮播大标题文字投影（标题/副标题/胶囊按钮共用） */
-    --carousel-text-shadow: 0 0.1em 0.5em rgba(var(--rgb-black), 0.5);
+    --carousel-text-shadow: 0 0.1em 0.5em hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.5);
 
-    /* 瀑布流卡片悬停信息（底部渐变遮罩 + 两行小字；与轮播同法——颜色走 root 分量，
-       图片相关区域不随明暗主题切换） */
-    --photo-hover-overlay: linear-gradient(to top, rgba(var(--rgb-black), 0.62), rgba(var(--rgb-black), 0));
-    --color-photo-hover-title: rgb(var(--rgb-white));
-    --color-photo-hover-meta: rgba(var(--rgb-white), 0.75);
+    /* 瀑布流卡片悬停信息（底部渐变遮罩 + 两行小字；与轮播同法——颜色走固定
+       白黑分量，图片相关区域不随明暗主题切换） */
+    --photo-hover-overlay: linear-gradient(to top, hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.62), hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0));
+    --color-photo-hover-title: var(--color-white);
+    --color-photo-hover-meta: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.75);
 
     /* 足迹地图区块配色（明暗主题各自定义，亮色下加深保证可读性） */
-    --color-map-fill: rgba(var(--rgb-white), 0.1);
-    --color-map-border: rgb(var(--rgb-border));
+    --color-map-fill: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.1);
+    --color-map-border: var(--color-border);
 
     /* 首页轮播背景：固定暗色卡片色——轮播始终为暗色视觉（亮色下 bg-card
-       是浅色，图片加载/交叉淡化时会透出白底、顶部强制白字导航不可读）；
-       中转成语义变量（rgb(var()) 直接写普通属性 Sass 会当函数求值报错） */
-    --color-carousel-bg: rgb(var(--dark-rgb-card));
+       是浅色，图片加载/交叉淡化时会透出白底、顶部强制白字导航不可读） */
+    --color-carousel-bg: var(--dark-card);
 
     --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-35: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
@@ -239,50 +237,33 @@ body {
     color-scheme: light; /* UA 原生件（滚动条/表单控件/取色器）随亮色主题 */
 
     /* 冷调浅色板：全部与 #f0f3f7 同调（统一冷蓝灰，明暗层级与暗色主题对应） */
-    --rgb-bg: 240, 243, 247; /* #f0f3f7——冷调极浅灰蓝 */
-    --rgb-bg-raised: 226, 230, 236; /* #e2e6ec——冷调浅灰，二级背景面 */
-    --rgb-card: 248, 250, 252; /* #f8fafc——冷调近白，比背景亮一档 */
-    --rgb-text: 28, 31, 38; /* #1c1f26——近黑冷调，白底对比度 14.8 */
-    --rgb-text-secondary: 88, 94, 104; /* #585e68——冷灰蓝，对比度 5.9 */
-    --rgb-text-muted: 102, 108, 122; /* #666c7a——冷中灰，对比度 4.7（过 AA 4.5） */
-    --rgb-accent: 47, 112, 104; /* #2f7068（hsl(173, 41%, 31%)）——亮色下更深的墨绿保证可读性 */
-    --rgb-border: 210, 215, 224; /* #d2d7e0——冷浅灰 */
-
-    --color-bg: rgb(var(--rgb-bg));
-    --color-bg-secondary: rgb(var(--rgb-bg-raised));
-    --color-bg-card: rgb(var(--rgb-card));
-
-    --color-text: rgb(var(--rgb-text));
-    --color-text-secondary: rgb(var(--rgb-text-secondary));
-    --color-text-muted: rgb(var(--rgb-text-muted));
-
-    --color-accent: rgb(var(--rgb-accent));
-    --color-accent-15: rgba(var(--rgb-accent), 0.15);
-    --color-accent-30: rgba(var(--rgb-accent), 0.3);
-    --color-accent-50: rgba(var(--rgb-accent), 0.5);  /* 滚动条 thumb hover */
-    --color-accent-75: rgba(var(--rgb-accent), 0.75); /* 滚动条 thumb active */
-
-    --color-border: rgb(var(--rgb-border));
+    @include defineColorHSL(--color-bg, 214.3, 30.4%, 95.5%);
+    @include defineColorHSL(--color-bg-secondary, 216, 20.8%, 90.6%);
+    @include defineColorHSL(--color-bg-card, 210, 40%, 98%);
+    @include defineColorHSL(--color-text, 222, 15.2%, 12.9%);
+    @include defineColorHSL(--color-text-secondary, 217.5, 8.3%, 37.6%);
+    @include defineColorHSL(--color-text-muted, 222, 8.9%, 43.9%);
+    @include defineColorHSL(--color-accent, 172.6, 40.9%, 31.2%);
+    @include defineColorHSL(--color-border, 218.6, 18.4%, 85.1%);
 
     /* 影调分析图表配色（亮色主题：黑基阴影、白基高光） */
-    --color-zone-shadow-bg: rgba(var(--rgb-black), 0.12);
-    --color-zone-mid-bg: rgba(var(--rgb-black), 0.05);
-    --color-zone-high-bg: rgba(var(--rgb-black), 0.12);
-    --color-zone-shadow-fg: rgb(var(--rgb-text-secondary));
-    --color-zone-mid-fg: rgb(var(--rgb-text-muted));
-    --color-zone-high-fg: rgb(var(--rgb-text));
-    --color-sat-curve: rgb(var(--rgb-text));
-    --color-clip: rgb(var(--rgb-accent));
+    --color-zone-shadow-bg: hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.12);
+    --color-zone-mid-bg: hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.05);
+    --color-zone-high-bg: hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.12);
+    --color-zone-shadow-fg: var(--color-text-secondary);
+    --color-zone-mid-fg: var(--color-text-muted);
+    --color-zone-high-fg: var(--color-text);
+    --color-sat-curve: var(--color-text);
+    --color-clip: var(--color-accent);
 
-    --color-header-bg: rgba(var(--rgb-bg), 0.85);
-    --color-nav-bg: rgb(var(--rgb-bg)); /* 完全不透明 */
-    --color-lightbox-bg: rgb(var(--rgb-black)); /* 不透光纯黑（与参考网站灯箱一致；移动端高亮屏不透视站内文字） */
+    --color-header-bg: hsla(var(--color-bg-h), var(--color-bg-s), var(--color-bg-l), 0.85);
+    --color-nav-bg: var(--color-bg); /* 完全不透明 */
+    --color-lightbox-bg: var(--color-black); /* 不透光纯黑（与参考站灯箱一致；移动端高亮屏不透视站内文字） */
 
-    --color-overlay-subtle: rgba(var(--rgb-black), 0.05);
+    --color-overlay-subtle: hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.05);
 
-    --color-map-fill: rgba(var(--rgb-black), 0.09); /* 亮色：陆地/区块填充加深一档 */
-    --rgb-map-border: 164, 170, 180;                /* #a4aab4 亮色分量：省/国分界线加深一档（冷灰与色板同调） */
-    --color-map-border: rgb(var(--rgb-map-border));
+    --color-map-fill: hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.09); /* 亮色：陆地/区块填充加深一档 */
+    --color-map-border: hsl(217.5, 9.6%, 67.5%); /* 亮色：省/国分界线加深一档（冷灰与色板同调） */
 }
 
 img { max-width: 100%; height: auto; display: block; }

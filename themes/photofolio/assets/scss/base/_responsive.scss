@@ -60,7 +60,7 @@
         &.active {
             background: var(--color-nav-bg);
             /* 底部同款淡投影（与滚动态导航栏一致）：面板下缘与页面内容分隔 */
-            box-shadow: 0 0.15em 0.6em rgba(var(--rgb-black), 0.06);
+            box-shadow: 0 0.15em 0.6em hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.06);
             opacity: 1 !important;
             visibility: visible !important;
             transform: translateY(0) !important;

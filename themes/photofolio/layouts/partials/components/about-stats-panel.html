@@ -8,11 +8,11 @@
 {{ $rest := after 8 .rows }}
 <div class="stats-panel">
     <h3 class="stats-panel-title"><span class="stats-panel-icon">{{ index hugo.Data.svg .icon | safeHTML }}</span>{{ .title }}</h3>
-    {{ partial "about-stats-rows.html" (dict "rows" $visible "max" $max) }}
+    {{ partial "components/about-stats-rows.html" (dict "rows" $visible "max" $max) }}
     {{ if $rest }}
     <div class="stats-fold">
         <input type="checkbox" id="stats-fold-{{ .foldId }}" class="stats-fold-toggle">
-        {{ partial "about-stats-rows.html" (dict "rows" $rest "max" $max "offset" 8 "extraClass" "stats-fold-list") }}
+        {{ partial "components/about-stats-rows.html" (dict "rows" $rest "max" $max "offset" 8 "extraClass" "stats-fold-list") }}
         <label class="stats-fold-btn" for="stats-fold-{{ .foldId }}">
             <span class="stats-expand">{{ i18n "stats_expand" (dict "Count" (len $rest)) }}</span>
             <span class="stats-collapse">{{ i18n "stats_collapse" }}</span>

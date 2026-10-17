@@ -12,8 +12,8 @@
 {{ $quality := $cfg.quality | default 80 }}
 {{ $fullQuality := $cfg.lightboxQuality | default 90 }}
 
-{{ $srcUrl := partial "img-url.html" (dict "src" $src "site" $site "width" $thumbWidth "mode" "lfit" "format" "avif" "quality" $quality) }}
-{{ $fullUrl := partial "img-url.html" (dict "src" $src "site" $site "width" $fullWidth "mode" "lfit" "format" "avif" "quality" $fullQuality) }}
+{{ $srcUrl := partial "utils/img-url-cached.html" (dict "src" $src "site" $site "width" $thumbWidth "mode" "lfit" "format" "avif" "quality" $quality) }}
+{{ $fullUrl := partial "utils/img-url-cached.html" (dict "src" $src "site" $site "width" $fullWidth "mode" "lfit" "format" "avif" "quality" $fullQuality) }}
 
 {{ $place := $photo.place }}
 {{ $time := $photo.time }}
@@ -37,7 +37,7 @@
 {{/* 反查系列的英文 URL（灯箱系列胶囊跳转用；见 series-url.html 唯一实现） */}}
 {{ $seriesUrl := "" }}
 {{ if $seriesName }}
-    {{ $seriesUrl = partial "series-url.html" $seriesName }}
+    {{ $seriesUrl = partial "utils/series-url.html" $seriesName }}
 {{ end }}
 
 {{/* 卡片/灯箱标题：一律显示作品自己的 alt（系列封面点击已改为开灯箱，不再显示系列名） */}}

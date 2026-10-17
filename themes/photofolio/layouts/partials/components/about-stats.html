@@ -4,7 +4,7 @@
      檔位面板（焦距/光圈/快門/感光度）：固定檔位順序、空檔隱藏；年度走勢升序、僅列有照片的年份。
      條形寬度 = 數量 / 面板最大值（百分比），行級交錯延遲由 about-stats-rows.html 生成。 */}}
 
-{{ $photos := partial "photo-sorted.html" . }}
+{{ $photos := partialCached "utils/photo-sorted.html" . "desc" }}
 
 {{/* 測試數據：data/photo-test.toml 存在時併入統計聚合——僅關於頁統計，
     不影響全站任何頁面；測試完成刪除該文件即恢復真實統計。
@@ -156,11 +156,11 @@
 {{ if $photos }}
 <section class="about-stats">
     <h2 class="about-stats-title">{{ i18n "about_stats_title" }}</h2>
-    {{ partial "about-stats-panel.html" (dict "title" (i18n "stats_camera") "icon" "camera" "rows" $camList "max" $camMax "foldId" "camera") }}
-    {{ partial "about-stats-panel.html" (dict "title" (i18n "stats_focus") "icon" "focal" "rows" $focusRows "max" $focusMax "foldId" "focus") }}
-    {{ partial "about-stats-panel.html" (dict "title" (i18n "stats_aperture") "icon" "aperture" "rows" $aperRows "max" $aperMax "foldId" "aperture") }}
-    {{ partial "about-stats-panel.html" (dict "title" (i18n "stats_shutter") "icon" "shutter" "rows" $shutterRows "max" $shutterMax "foldId" "shutter") }}
-    {{ partial "about-stats-panel.html" (dict "title" (i18n "stats_iso") "icon" "iso" "rows" $isoRows "max" $isoMax "foldId" "iso") }}
-    {{ partial "about-stats-panel.html" (dict "title" (i18n "stats_year") "icon" "trend_up" "rows" $yearList "max" $yearMax "foldId" "year") }}
+    {{ partial "components/about-stats-panel.html" (dict "title" (i18n "stats_camera") "icon" "camera" "rows" $camList "max" $camMax "foldId" "camera") }}
+    {{ partial "components/about-stats-panel.html" (dict "title" (i18n "stats_focus") "icon" "focal" "rows" $focusRows "max" $focusMax "foldId" "focus") }}
+    {{ partial "components/about-stats-panel.html" (dict "title" (i18n "stats_aperture") "icon" "aperture" "rows" $aperRows "max" $aperMax "foldId" "aperture") }}
+    {{ partial "components/about-stats-panel.html" (dict "title" (i18n "stats_shutter") "icon" "shutter" "rows" $shutterRows "max" $shutterMax "foldId" "shutter") }}
+    {{ partial "components/about-stats-panel.html" (dict "title" (i18n "stats_iso") "icon" "iso" "rows" $isoRows "max" $isoMax "foldId" "iso") }}
+    {{ partial "components/about-stats-panel.html" (dict "title" (i18n "stats_year") "icon" "trend_up" "rows" $yearList "max" $yearMax "foldId" "year") }}
 </section>
 {{ end }}

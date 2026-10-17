@@ -1,7 +1,7 @@
 {{/* 足迹地点注册表（唯一实现）：地点名 → { slug, url, lat, lng }
      - slug 来自 data/locations.toml（缺省回退 urlize 名称）；url = /footprint/<slug>/（地点页由 content/footprint/_content.gotmpl 内容适配器生成）
      - 坐标来自 data/locations.toml（无坐标的地点 lat/lng 为 0，地图跳过、时间线与地点页不受影响）
-     调用：{{ $reg := partial "location-registry.html" . }} */}}
+     调用：{{ $reg := partialCached "utils/location-registry.html" . "locations" }} */}}
 {{ $reg := dict }}
 {{ range hugo.Data.locations.location }}
     {{ $slug := .slug | default (.name | urlize) }}

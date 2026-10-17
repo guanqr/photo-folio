@@ -6,7 +6,7 @@
     {{ $sectionName = .Title | urlize }}
 {{ end }}
 
-{{ $sortedPhotos := partial "photo-sorted.html" . }}
+{{ $sortedPhotos := partialCached "utils/photo-sorted.html" . "desc" }}
 
 {{/* 瀑布流每批加载数量：hugo.toml [params].pageSize（JS 兜底默认 12 同源） */}}
 {{ $pageSize := site.Params.pageSize | default 12 | int }}
@@ -39,7 +39,7 @@
 {{ $catList := slice }}
 {{ if eq $sectionName "gallery" }}
     {{/* 地点 slug 取自足迹地点注册表（URL 参数用，如 guangdong/japan；显示仍为中文名） */}}
-    {{ $locReg := partial "location-registry.html" . }}
+    {{ $locReg := partialCached "utils/location-registry.html" . "locations" }}
     {{ $locNames := slice }}
     {{ $catNames := slice }}
     {{ $locCount := dict }}
@@ -142,7 +142,7 @@
         <div class="masonry-grid" id="masonry-grid">
             <!-- 渲染全部作品（系列拆分为封面+内页） -->
             {{ range $gridPhotos }}
-                {{ partial "photo-card.html" (dict "photo" . "site" $.Site) }}
+                {{ partial "components/photo-card.html" (dict "photo" . "site" $.Site) }}
             {{ end }}
         </div>
 
@@ -180,10 +180,10 @@
             {{ $otherSections = $otherSections | append . }}
         {{ end }}
     {{ end }}
-    {{ partial "page-others.html" (dict "titleKey" "other_categories" "cardPartial" "categories-cards.html" "cardCtx" (dict "sections" $otherSections "allPhotos" $sortedPhotos "coverMode" (site.Params.categoryCover | default "latest-landscape")) "hasCards" (gt (len $otherSections) 0)) }}
+    {{ partial "page-others.html" (dict "titleKey" "other_categories" "cardPartial" "components/categories-cards.html" "cardCtx" (dict "sections" $otherSections "allPhotos" $sortedPhotos "coverMode" (site.Params.categoryCover | default "latest-landscape")) "hasCards" (gt (len $otherSections) 0)) }}
     {{ end }}
 
     {{/* 结构化数据：本页照片（仅元信息、不含图片 URL——OSS 额度保护） */}}
-    {{ partial "jsonld-photos.html" (dict "photos" $gridPhotos "title" .Title "url" .Permalink) }}
+    {{ partial "utils/jsonld-photos.html" (dict "photos" $gridPhotos "title" .Title "url" .Permalink) }}
 </section>
 {{ end }}

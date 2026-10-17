@@ -2,7 +2,7 @@
 {{ $seriesName := .Title }}
 
 {{/* 系列内页按拍摄顺序（时间升序）排列 */}}
-{{ $sortedPhotos := partial "photo-sorted.html" (dict "order" "asc") }}
+{{ $sortedPhotos := partialCached "utils/photo-sorted.html" (dict "order" "asc") "asc" }}
 
 {{/* 使用 range + eq 手动过滤，确保精准匹配系列名称 */}}
 {{ $photos := slice }}
@@ -50,7 +50,7 @@
         <div class="series-masonry">
             <div class="masonry-grid" id="masonry-grid">
                 {{ range $ordered }}
-                    {{ partial "photo-card.html" (dict "photo" . "site" $.Site) }}
+                    {{ partial "components/photo-card.html" (dict "photo" . "site" $.Site) }}
                 {{ end }}
             </div>
         </div>
@@ -68,10 +68,10 @@
     {{ end }}
 
     {{/* 联动跳转：页面最下端以卡片展示其他系列入口（排除当前系列） */}}
-    {{ $otherCovers := partial "series-covers.html" (dict "photos" $sortedPhotos "exclude" $seriesName) }}
-    {{ partial "page-others.html" (dict "titleKey" "other_series" "cardPartial" "series-cards.html" "cardCtx" (dict "covers" $otherCovers "allPhotos" $sortedPhotos) "hasCards" (gt (len $otherCovers) 0)) }}
+    {{ $otherCovers := partial "components/series-covers.html" (dict "photos" $sortedPhotos "exclude" $seriesName) }}
+    {{ partial "page-others.html" (dict "titleKey" "other_series" "cardPartial" "components/series-cards.html" "cardCtx" (dict "covers" $otherCovers "allPhotos" $sortedPhotos) "hasCards" (gt (len $otherCovers) 0)) }}
 
     {{/* 结构化数据：本页照片（仅元信息、不含图片 URL——OSS 额度保护） */}}
-    {{ partial "jsonld-photos.html" (dict "photos" $ordered "title" .Title "url" .Permalink) }}
+    {{ partial "utils/jsonld-photos.html" (dict "photos" $ordered "title" .Title "url" .Permalink) }}
 </section>
 {{ end }}

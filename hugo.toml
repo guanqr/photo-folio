@@ -1,9 +1,9 @@
 baseURL = "https://photo.guanqr.com/"
-locale = "zh-cn"
+locale = "zh-hant"
 title = "啼鳥怨年華"
 theme = "photofolio"
 
-defaultContentLanguage = "zh-cn"
+defaultContentLanguage = "zh-hant"
 
 # 清空 Hugo 内置分类法（默认 tag/categories 不用）——否则 content/categories/ 会被
 # 识别为「categories 分类法」而非普通 Section，子目录变成 term 页

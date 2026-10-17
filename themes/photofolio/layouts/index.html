@@ -1,7 +1,7 @@
 {{ define "main" }}
 <!-- ================= 首页轮播：按时间排序最新的精选图，数量由 carouselCount 配置（1-12 张） ================= -->
 <section class="carousel-section">
-    {{ $sortedPhotos := partial "photo-sorted.html" . }}
+    {{ $sortedPhotos := partialCached "utils/photo-sorted.html" . "desc" }}
     {{ $featured := slice }}
     {{ range $sortedPhotos }}
         {{ if .featured }}
@@ -22,7 +22,7 @@
         <div class="carousel" id="home-carousel" data-autoplay-ms="{{ .Site.Params.carouselInterval }}">
             <div class="carousel-track">
                 {{ range $i, $photo := $carouselPhotos }}
-                {{ $srcUrl := partial "img-url.html" (dict "src" $photo.src "site" $.Site "width" $carouselWidth "mode" "lfit" "format" "avif" "quality" $carouselQuality) }}
+                {{ $srcUrl := partial "utils/img-url-cached.html" (dict "src" $photo.src "site" $.Site "width" $carouselWidth "mode" "lfit" "format" "avif" "quality" $carouselQuality) }}
                 {{/* 非激活 slide 对读屏器隐藏（aria-hidden 随切换由 carousel.js 同步） */}}
                 <div class="carousel-slide{{ if eq $i 0 }} active{{ end }}"{{ if ne $i 0 }} aria-hidden="true"{{ end }}>
                     <div class="carousel-photo">
@@ -67,18 +67,18 @@
         {{/* 分类目录卡片（与 /categories/ 合集页同款；见 categories-cards.html） */}}
         {{ $categoriesSection := site.GetPage "categories" }}
         {{ if $categoriesSection }}
-            {{ partial "categories-cards.html" (dict "sections" $categoriesSection.Sections.ByWeight "allPhotos" $sortedPhotos "coverMode" (.Site.Params.categoryCover | default "latest-landscape")) }}
+            {{ partial "components/categories-cards.html" (dict "sections" $categoriesSection.Sections.ByWeight "allPhotos" $sortedPhotos "coverMode" (.Site.Params.categoryCover | default "latest-landscape")) }}
         {{ end }}
     </div>
 </section>
 
 <!-- ================= 系列（系列封面卡片，分类下方） ================= -->
-{{ $coverPhotos := partial "series-covers.html" (dict "photos" $sortedPhotos) }}
+{{ $coverPhotos := partial "components/series-covers.html" (dict "photos" $sortedPhotos) }}
 {{ if gt (len $coverPhotos) 0 }}
 <section class="home-section">
     <div class="container">
         <h2 class="home-section-title">{{ i18n "series_title" }}</h2>
-        {{ partial "series-cards.html" (dict "covers" $coverPhotos "allPhotos" $sortedPhotos) }}
+        {{ partial "components/series-cards.html" (dict "covers" $coverPhotos "allPhotos" $sortedPhotos) }}
     </div>
 </section>
 {{ end }}

@@ -1,0 +1,74 @@
+{{/* 字体外链与排版变量注入：仅依赖 .Site.Params.typography、与页面无关——
+     调用点用 partialCached，variant 含语言 */}}
+<!-- 动态引入字体外链 -->
+{{ $typo := .Site.Params.typography }}
+{{ with $typo.fontLinks }}
+    {{/* 遍历配置中的字体链接对象 */}}
+    {{ range . }}
+        {{ if eq .rel "stylesheet" }}
+            {{/* 字体 CSS 异步加载（media="print" + onload 切换）：第三方字体样式表不再阻塞
+               首帧——首帧以回退字体渲染，字体到达后按 font-display: swap 渐进换字
+               （两条外链字体均已声明 swap）；preconnect 条目原样输出 */}}
+            <link rel="stylesheet" href="{{ .href }}" media="print" onload="this.media='all'" {{ if .crossorigin }}crossorigin{{ end }}>
+        {{ else }}
+            <link rel="{{ .rel }}" href="{{ .href }}" {{ if .crossorigin }}crossorigin{{ end }}>
+        {{ end }}
+    {{ end }}
+{{ else }}
+    {{/* 默认回退：如果没有配置 fontLinks，使用默认的字体服务镜像（同样异步加载） */}}
+    <link rel="preconnect" href="https://fonts.loli.net" crossorigin>
+    <link rel="stylesheet" href="https://fonts.loli.net/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap" media="print" onload="this.media='all'">
+{{ end }}
+
+<!-- 动态注入排版变量 -->
+{{ $typo := .Site.Params.typography }}
+<style>
+    @font-face {
+        font-family: 'Glyph Correction';
+        src: url('{{ "/fonts/glyph-correction.woff2" | relURL }}') format('woff2');
+        font-weight: normal;
+        font-style: normal;
+        font-display: swap; /* 确保文本在字体加载期间依然可见 */
+    }
+
+    :root {
+        /*
+        字体族设置：
+        1. 使用 printf 自动为配置中的字体名加上单引号和 fallback (如 , serif)
+        2. 使用 safeCSS 告诉 Hugo 这是合法的 CSS，防止 ZgotmplZ 报错
+        */
+        {{/* 字体族表驱动（2026-10-17 收敛，对齐博客的 slice 循环注入）：
+            名称 → (参数键, CSS 变量名)，字体名拆分/加引号/fallback 只写一遍 */}}
+        {{ $fontStacks := slice
+            (dict "param" "headingFont" "var" "--font-heading")
+            (dict "param" "bodyFont" "var" "--font-body")
+            (dict "param" "footerFont" "var" "--font-footer")
+            (dict "param" "metaFont" "var" "--font-meta")
+        }}
+        {{ range $f := $fontStacks }}
+            {{ $stack := "'Glyph Correction', 'Noto Serif TC', serif" }}
+            {{ with index $typo $f.param }}
+                {{ $q := slice }}{{ range split . "," }}{{ $q = $q | append (printf "'%s'" (trim . " ")) }}{{ end }}
+                {{ $stack = printf "%s, serif" (delimit $q ", ") }}
+            {{ end }}
+            {{ printf "%s: %s;" $f.var $stack | safeCSS }}
+        {{ end }}
+
+        {{/* 字号比例表驱动（纯数值，直接输出） */}}
+        {{ $sizeVars := slice
+            (dict "param" "baseFontSize" "var" "--base-font-size" "default" "16px")
+            (dict "param" "sizeH1" "var" "--size-h1" "default" "2.5em")
+            (dict "param" "sizeH2" "var" "--size-h2" "default" "2em")
+            (dict "param" "sizeH3" "var" "--size-h3" "default" "1.5em")
+            (dict "param" "sizeBody" "var" "--size-body" "default" "1em")
+            (dict "param" "sizeSmall" "var" "--size-small" "default" "0.875em")
+            (dict "param" "sizeMeta" "var" "--size-meta" "default" "0.8em")
+            (dict "param" "sizeFooter" "var" "--size-footer" "default" "0.85em")
+        }}
+        {{ range $s := $sizeVars }}
+            {{ with index $typo $s.param | default $s.default }}
+                {{ printf "%s: %s;" $s.var . | safeCSS }}
+            {{ end }}
+        {{ end }}
+    }
+</style>

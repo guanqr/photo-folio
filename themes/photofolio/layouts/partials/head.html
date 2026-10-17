@@ -23,7 +23,7 @@
 <meta property="og:url" content="{{ .Permalink }}">
 <meta property="og:site_name" content="{{ .Site.Title }}">
 {{ with .Params.cover }}
-    {{ $ogImg := partial "img-url.html" (dict "src" . "site" $.Site "width" $ogWidth "height" $ogHeight "mode" "fill" "format" "webp" "quality" $ogQuality) }}
+    {{ $ogImg := partial "utils/img-url-cached.html" (dict "src" . "site" $.Site "width" $ogWidth "height" $ogHeight "mode" "fill" "format" "webp" "quality" $ogQuality) }}
     <meta property="og:image" content="{{ $ogImg }}">
 {{ end }}
 
@@ -32,12 +32,12 @@
 <meta name="twitter:title" content="{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }} - {{ .Site.Title }}{{ end }}">
 <meta name="twitter:description" content="{{ $desc }}">
 {{ with .Params.cover }}
-    {{ $twImg := partial "img-url.html" (dict "src" . "site" $.Site "width" $ogWidth "height" $ogHeight "mode" "fill" "format" "webp" "quality" $ogQuality) }}
+    {{ $twImg := partial "utils/img-url-cached.html" (dict "src" . "site" $.Site "width" $ogWidth "height" $ogHeight "mode" "fill" "format" "webp" "quality" $ogQuality) }}
     <meta name="twitter:image" content="{{ $twImg }}">
 {{ end }}
 
 {{/* 结构化数据 JSON-LD：站点（WebSite）与作者（Person），全站生效 */}}
-{{ partial "jsonld.html" . }}
+{{ partial "utils/jsonld.html" . }}
 
 {{/* 图片 CDN 预连接（域名由 hugo.toml imageCDN 配置；全站生效）：
    首屏缩略图/轮播图/灯箱图同域——DNS/TCP/TLS 提前建立，
@@ -47,117 +47,11 @@
 {{/* 首页轮播首图预加载（LCP 优化，仅首页） */}}
 {{ partial "hero-preload.html" . }}
 
-<!-- 动态引入字体外链 -->
-{{ $typo := .Site.Params.typography }}
-{{ with $typo.fontLinks }}
-    {{/* 遍历配置中的字体链接对象 */}}
-    {{ range . }}
-        {{ if eq .rel "stylesheet" }}
-            {{/* 字体 CSS 异步加载（media="print" + onload 切换）：第三方字体样式表不再阻塞
-               首帧——首帧以回退字体渲染，字体到达后按 font-display: swap 渐进换字
-               （两条外链字体均已声明 swap）；preconnect 条目原样输出 */}}
-            <link rel="stylesheet" href="{{ .href }}" media="print" onload="this.media='all'" {{ if .crossorigin }}crossorigin{{ end }}>
-        {{ else }}
-            <link rel="{{ .rel }}" href="{{ .href }}" {{ if .crossorigin }}crossorigin{{ end }}>
-        {{ end }}
-    {{ end }}
-{{ else }}
-    {{/* 默认回退：如果没有配置 fontLinks，使用默认的字体服务镜像（同样异步加载） */}}
-    <link rel="preconnect" href="https://fonts.loli.net" crossorigin>
-    <link rel="stylesheet" href="https://fonts.loli.net/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap" media="print" onload="this.media='all'">
-{{ end }}
+{{/* 字体外链与排版变量：站点级配置产物（见 partials/site-fonts.html） */}}
+{{ partialCached "site-fonts.html" . (printf "fonts:%s" .Site.Language.Lang) }}
 
-<!-- 动态注入排版变量 -->
-{{ $typo := .Site.Params.typography }}
-<style>
-    @font-face {
-        font-family: 'Glyph Correction';
-        src: url('{{ "/fonts/glyph-correction.woff2" | relURL }}') format('woff2');
-        font-weight: normal;
-        font-style: normal;
-        font-display: swap; /* 确保文本在字体加载期间依然可见 */
-    }
+{{/* 全站样式表：站点级配置产物（见 partials/site-style.html） */}}
+{{ partialCached "site-style.html" . (printf "style:%s" .Site.Language.Lang) }}
 
-    :root {
-        /* 基础字号 (纯数值，直接输出) */
-        --base-font-size: {{ $typo.baseFontSize | default "16px" }};
-        
-        /* 
-        字体族设置：
-        1. 使用 printf 自动为配置中的字体名加上单引号和 fallback (如 , serif)
-        2. 使用 safeCSS 告诉 Hugo 这是合法的 CSS，防止 ZgotmplZ 报错
-        */
-        {{/* 1. 处理 Heading 字体 */}}
-        {{ $hStack := "'Glyph Correction', 'Noto Serif TC', serif" }}
-        {{ with $typo.headingFont }}
-            {{ $q := slice }}{{ range split . "," }}{{ $q = $q | append (printf "'%s'" (trim . " ")) }}{{ end }}
-            {{ $hStack = printf "%s, serif" (delimit $q ", ") }}
-        {{ end }}
-        --font-heading: {{ $hStack | safeCSS }};
-
-        {{/* 2. 处理 Body 字体 */}}
-        {{ $bStack := "'Glyph Correction', 'Noto Serif TC', serif" }}
-        {{ with $typo.bodyFont }}
-            {{ $q := slice }}{{ range split . "," }}{{ $q = $q | append (printf "'%s'" (trim . " ")) }}{{ end }}
-            {{ $bStack = printf "%s, serif" (delimit $q ", ") }}
-        {{ end }}
-        --font-body: {{ $bStack | safeCSS }};
-
-        {{/* 3. 处理 Footer 字体 */}}
-        {{ $fStack := "'Glyph Correction', 'Noto Serif TC', serif" }}
-        {{ with $typo.footerFont }}
-            {{ $q := slice }}{{ range split . "," }}{{ $q = $q | append (printf "'%s'" (trim . " ")) }}{{ end }}
-            {{ $fStack = printf "%s, serif" (delimit $q ", ") }}
-        {{ end }}
-        --font-footer: {{ $fStack | safeCSS }};
-
-        {{/* 4. 处理 Meta 字体 (通常使用等宽或无衬线，这里以 sans-serif 结尾) */}}
-        {{ $mStack := "'Glyph Correction', 'Noto Serif TC', serif" }}
-        {{ with $typo.metaFont }}
-            {{ $q := slice }}{{ range split . "," }}{{ $q = $q | append (printf "'%s'" (trim . " ")) }}{{ end }}
-            {{ $mStack = printf "%s, serif" (delimit $q ", ") }}
-        {{ end }}
-        --font-meta: {{ $mStack | safeCSS }};
-
-        /* 字号比例 (纯数值，直接输出) */
-        --size-h1: {{ $typo.sizeH1 | default "2.5em" }};
-        --size-h2: {{ $typo.sizeH2 | default "2em" }};
-        --size-h3: {{ $typo.sizeH3 | default "1.5em" }};
-        --size-body: {{ $typo.sizeBody | default "1em" }};
-        --size-small: {{ $typo.sizeSmall | default "0.875em" }};
-        --size-meta: {{ $typo.sizeMeta | default "0.8em" }};
-        --size-footer: {{ $typo.sizeFooter | default "0.85em" }};
-    }
-</style>
-
-<!-- 不显式声明 transpiler，使用 Hugo 默认转译器（显式声明 libsass 会触发弃用警告，dartsass 需额外安装） -->
-{{ $opts := dict "targetPath" "css/style.css" }}
-{{ if hugo.IsProduction }}
-    {{/* 生产环境下开启压缩 */}}
-    {{ $opts = merge $opts (dict "outputStyle" "compressed") }}
-{{ end }}
-
-{{ $css := resources.Get "scss/main.scss" | css.Sass $opts }}
-
-{{ if hugo.IsProduction }}
-    {{/* 生产环境下添加指纹哈希防缓存 */}}
-    {{ $css = $css | resources.Fingerprint }}
-{{ end }}
-
-<link rel="stylesheet" href="{{ $css.RelPermalink }}" {{ with $css.Data.Integrity }}integrity="{{ . }}"{{ end }}>
-
-<!-- Favicon, Icons, Web App -->
-{{- $icoFavicon := "favicon.ico" -}}
-{{- $svgFavicon := "icons/favicon.svg" -}}
-{{- $pngFavicon := "icons/favicon-96x96.png" -}}
-{{- $appleTouchIcon := "icons/apple-touch-icon.png" -}}
-{{- $manifest := "manifest.json" -}}
-<link rel="shortcut icon" type="image/x-icon" href="{{ $icoFavicon | relURL }}" />
-<link rel="icon" type="image/svg+xml" href="{{ $svgFavicon | relURL }}" />
-<link rel="icon" type="image/png" href="{{ $pngFavicon | relURL }}" sizes="96x96" />
-<link rel="apple-touch-icon" href="{{ $appleTouchIcon | relURL }}" sizes="180x180" />
-{{/* 不声明 Apple web-app meta（apple-mobile-web-app-capable 等）：会让 Safari
-   在浏览器模式下也按 Web App 候选处理、旋转后视口簿记不更新（iPad 横屏转竖屏
-   样式不切换的可疑根因，参考站无此声明、旋转正常）；独立模式由 manifest 接管 */}}
-<meta name="application-name" content="{{ .Site.Title }}" />
-<link rel="manifest" href="{{ $manifest | relURL }}" />
+{{/* Favicon / Web App meta：站点级（见 partials/site-meta.html） */}}
+{{ partialCached "site-meta.html" . "site-meta" }}

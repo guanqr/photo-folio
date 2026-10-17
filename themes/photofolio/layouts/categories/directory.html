@@ -1,5 +1,5 @@
 {{ define "main" }}
-{{ $sortedPhotos := partial "photo-sorted.html" . }}
+{{ $sortedPhotos := partialCached "utils/photo-sorted.html" . "desc" }}
 {{ $coverMode := .Site.Params.categoryCover | default "latest-landscape" }}
 
 <section class="gallery-page">
@@ -16,7 +16,7 @@
     <div class="container section-list-grid">
         {{ if gt (len .Sections) 0 }}
             {{/* 分类目录：与首页分类区块同款卡片（封面图 + 分类名 + 作品数） */}}
-            {{ partial "categories-cards.html" (dict "sections" .Sections.ByWeight "allPhotos" $sortedPhotos "coverMode" $coverMode) }}
+            {{ partial "components/categories-cards.html" (dict "sections" .Sections.ByWeight "allPhotos" $sortedPhotos "coverMode" $coverMode) }}
         {{ else }}
         <div class="empty-state">
             <div class="empty-icon">{{ hugo.Data.svg.camera | safeHTML }}</div>
@@ -43,6 +43,6 @@
             {{ end }}
         {{ end }}
     {{ end }}
-    {{ partial "jsonld-photos.html" (dict "photos" $coverImgs "title" .Title "url" .Permalink) }}
+    {{ partial "utils/jsonld-photos.html" (dict "photos" $coverImgs "title" .Title "url" .Permalink) }}
 </section>
 {{ end }}

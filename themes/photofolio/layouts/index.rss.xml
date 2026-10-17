@@ -3,7 +3,7 @@
        正文以纯文字列出每张作品的作品名 / 拍摄地点 / 拍摄日期（不放图片）；
        只输出最近 feedCount 组（hugo.toml [params].feedCount，默认 20）。 */ -}}
 {{- $feedCount := site.Params.feedCount | default 20 -}}
-{{- $sorted := partial "photo-sorted.html" . -}}
+{{- $sorted := partialCached "utils/photo-sorted.html" . "desc" -}}
 {{- /* 按拍摄日期分组（sorted 已按时间倒序，$days 保持倒序） */ -}}
 {{- $byDay := dict -}}
 {{- $days := slice -}}

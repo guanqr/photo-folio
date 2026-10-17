@@ -1,0 +1,17 @@
+{{/* 全站样式表：站点级配置产物、与页面无关——调用点用 partialCached，
+     variant 含语言（多语言下固定 variant 会跨语言复用首个语言的样式表） */}}
+<!-- 不显式声明 transpiler，使用 Hugo 默认转译器（显式声明 libsass 会触发弃用警告，dartsass 需额外安装） -->
+{{ $opts := dict "targetPath" "css/style.css" }}
+{{ if hugo.IsProduction }}
+    {{/* 生产环境下开启压缩 */}}
+    {{ $opts = merge $opts (dict "outputStyle" "compressed") }}
+{{ end }}
+
+{{ $css := resources.Get "scss/main.scss" | css.Sass $opts }}
+
+{{ if hugo.IsProduction }}
+    {{/* 生产环境下添加指纹哈希防缓存 */}}
+    {{ $css = $css | resources.Fingerprint }}
+{{ end }}
+
+<link rel="stylesheet" href="{{ $css.RelPermalink }}" {{ with $css.Data.Integrity }}integrity="{{ . }}"{{ end }}>

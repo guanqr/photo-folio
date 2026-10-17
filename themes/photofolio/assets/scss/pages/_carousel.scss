@@ -17,7 +17,7 @@
 /* 轮播区域始终为暗色视觉（暗色渐变遮罩/暗化层不随主题切换）：
    进度条/当前圆点强调色取 :root 固定暗色分量，明暗切换保持不变 */
 [data-theme="light"] .carousel {
-    --color-accent: rgb(var(--dark-rgb-accent));
+    --color-accent: var(--dark-accent);
 }
 
 /* 底部渐变压暗，保证左下角标题可读 */
@@ -26,7 +26,7 @@
     position: absolute;
     inset: 0;
     z-index: 1;
-    background: linear-gradient(to top, rgba(var(--rgb-black), 0.55), rgba(var(--rgb-black), 0) 35%);
+    background: linear-gradient(to top, hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.55), hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0) 35%);
     pointer-events: none;
 }
 
@@ -48,7 +48,7 @@
     position: absolute;
     inset: 0;
     z-index: 1;
-    background: rgba(var(--rgb-black), 0.25);
+    background: hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.25);
     pointer-events: none;
 }
 
@@ -83,7 +83,7 @@
     /* 窄屏字号稍小，跨断点平滑过渡 */
     font-size: 2.6em;
     font-weight: 700;
-    color: rgba(var(--rgb-white), 0.95);
+    color: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.95);
     text-shadow: var(--carousel-text-shadow);
     transition: font-size 0.35s ease;
 
@@ -97,7 +97,7 @@
     font-size: 1.1em;
     font-weight: 300;
     letter-spacing: 0.08em;
-    color: rgba(var(--rgb-white), 0.9);
+    color: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.9);
     text-shadow: var(--carousel-text-shadow);
     transition: font-size 0.35s ease;
 
@@ -118,11 +118,11 @@
     @extend %pill;
     display: inline-block;
     padding: 0.55em 1.6em;
-    border-color: rgba(var(--rgb-white), 0.65);
-    background: rgba(var(--rgb-black), 0.2);
+    border-color: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.65);
+    background: hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.2);
     backdrop-filter: blur(0.375em);
     -webkit-backdrop-filter: blur(0.375em);
-    color: rgba(var(--rgb-white), 0.95);
+    color: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.95);
     font-family: var(--font-body);
     font-size: 1em;
     letter-spacing: 0.08em;
@@ -132,7 +132,7 @@
     &:hover,
     &:focus-visible {
         /* 仅轮廓变白，背景与文字保持不变 */
-        border-color: rgba(var(--rgb-white), 1);
+        border-color: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 1);
         outline: none;
     }
 }
@@ -148,14 +148,14 @@
     padding: 0;
     border: none;
     background: none;
-    color: rgba(var(--rgb-white), 0.85);
+    color: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.85);
     cursor: pointer;
     animation: bounce-down 1.6s linear infinite;
     transition: color 0.2s ease;
 
     &:hover,
     &:focus-visible {
-        color: rgba(var(--rgb-white), 1);
+        color: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 1);
         outline: none;
     }
 
@@ -247,10 +247,10 @@
     margin: -0.7em 0;
     border: none;
     background: transparent;
-    color: rgba(var(--rgb-white), 0.9);
+    color: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.9);
     font-family: var(--font-meta);
     font-size: 0.7em;
-    text-shadow: 0 0.1em 0.5em rgba(var(--rgb-black), 0.5);
+    text-shadow: 0 0.1em 0.5em hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.5);
     text-align: right;
     cursor: pointer;
     /* 跨断点切换时内边距与间距平滑过渡 */
@@ -270,7 +270,7 @@
         &:not(.active):focus-visible {
             .carousel-dot-bar {
                 width: 2.5em;
-                background: rgba(var(--rgb-white), 0.6);
+                background: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.6);
             }
 
             .carousel-dot-title {
@@ -294,7 +294,7 @@
 .carousel-dot.active .carousel-dot-title {
     max-width: 10em;
     opacity: 1;
-    color: rgba(var(--rgb-white), 0.95);
+    color: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.95);
 
     @media (min-width: 768px) {
         max-width: 18em;
@@ -304,7 +304,7 @@
 /* 未播放项 hover 出现的标题：更暗/更透明，与播放中区分 */
 .carousel-dot:not(.active):hover .carousel-dot-title,
 .carousel-dot:not(.active):focus-visible .carousel-dot-title {
-    color: rgba(var(--rgb-white), 0.65);
+    color: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.65);
 }
 
 /* 窄屏：小圆点指示器，正在播放的圆点为绿色并以弹簧曲线弹入放大，切换动画更明显 */
@@ -312,7 +312,7 @@
     width: 0.4em;
     height: 0.4em;
     border-radius: 50%;
-    background: rgba(var(--rgb-white), 0.4);
+    background: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.4);
     flex-shrink: 0;
     /* 圆点↔横条跨断点丝滑变形（宽/高/圆角同缓动），外加颜色与弹入放大 */
     transition:
@@ -339,7 +339,7 @@
         width: 2em;
         height: 0.2em;
         border-radius: 0.1em; /* 细条端点不在圆角梯度内（--radius-xs 大于条高会成全圆头胶囊） */
-        background: rgba(var(--rgb-white), 0.35);
+        background: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.35);
         overflow: hidden;
         /* 同样覆盖变形属性，保证两个方向的断点切换都能丝滑过渡 */
         transition:
@@ -353,7 +353,7 @@
     /* 正在播放的项：进度条最长，hover 无样式变化 */
     .carousel-dot.active .carousel-dot-bar {
         width: 4em;
-        background: rgba(var(--rgb-white), 0.35);
+        background: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.35);
         transform: none;
     }
 

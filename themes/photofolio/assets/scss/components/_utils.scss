@@ -51,7 +51,7 @@
     background-color: var(--color-bg-card);
     color: var(--color-text);
     border: 0.0625em solid var(--color-border);
-    box-shadow: 0 0.25em 1em rgba(var(--rgb-black), 0.3);
+    box-shadow: 0 0.25em 1em hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.3);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -65,7 +65,7 @@
 
     &:hover {
         background-color: var(--color-accent);
-        color: rgba(var(--rgb-white), 1);
+        color: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 1);
         border-color: var(--color-accent);
     }
 

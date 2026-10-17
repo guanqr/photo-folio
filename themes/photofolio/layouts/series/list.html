@@ -1,8 +1,8 @@
 {{ define "main" }}
-{{ $sortedPhotos := partial "photo-sorted.html" . }}
+{{ $sortedPhotos := partialCached "utils/photo-sorted.html" . "desc" }}
 
 {{/* 只过滤出所有的“系列封面” */}}
-{{ $coverPhotos := partial "series-covers.html" (dict "photos" $sortedPhotos) }}
+{{ $coverPhotos := partial "components/series-covers.html" (dict "photos" $sortedPhotos) }}
 
 <section class="gallery-page">
     <div class="gallery-header">
@@ -18,7 +18,7 @@
     <div class="container section-list-grid">
         {{ if gt (len $coverPhotos) 0 }}
             {{/* 系列目录：与首页系列区块同款卡片（封面图 + 系列名 + 总张数） */}}
-            {{ partial "series-cards.html" (dict "covers" $coverPhotos "allPhotos" $sortedPhotos) }}
+            {{ partial "components/series-cards.html" (dict "covers" $coverPhotos "allPhotos" $sortedPhotos) }}
         {{ else }}
         <div class="empty-state">
             <div class="empty-icon">{{ hugo.Data.svg.camera | safeHTML }}</div>
@@ -31,6 +31,6 @@
     </div>
 
     {{/* 结构化数据：目录封面照片（仅元信息、不含图片 URL——OSS 额度保护） */}}
-    {{ partial "jsonld-photos.html" (dict "photos" $coverPhotos "title" .Title "url" .Permalink) }}
+    {{ partial "utils/jsonld-photos.html" (dict "photos" $coverPhotos "title" .Title "url" .Permalink) }}
 </section>
 {{ end }}

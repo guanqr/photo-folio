@@ -9,9 +9,9 @@
 {{- $cfg := site.Params.imageSizes | default dict -}}
 <div class="grid">
     {{- range .covers -}}
-        <a href="{{ partial "series-url.html" .series }}" class="category-card">
+        <a href="{{ partial "utils/series-url.html" .series }}" class="category-card">
             <div class="category-image">
-                {{ $coverUrl := partial "img-url.html" (dict "src" .src "site" site "width" ($cfg.category | default 1000) "mode" "lfit" "format" "avif" "quality" ($cfg.quality | default 80)) }}
+                {{ $coverUrl := partial "utils/img-url-cached.html" (dict "src" .src "site" site "width" ($cfg.category | default 1000) "mode" "lfit" "format" "avif" "quality" ($cfg.quality | default 80)) }}
                 <img src="{{ $coverUrl }}" alt="{{ .series }}" loading="lazy">
             </div>
             <div class="category-info">

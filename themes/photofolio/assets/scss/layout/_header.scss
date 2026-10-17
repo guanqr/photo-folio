@@ -50,9 +50,9 @@
        过程受滚动位置控制、不受时间过渡控制；Sass 无法在普通属性里求值
        含 var() 的颜色函数，中转成局部语义变量 */
     --header-progress: 0;
-    --header-bg: rgba(var(--rgb-bg), var(--header-progress));
-    --header-border: rgba(var(--rgb-border), var(--header-progress));
-    --header-shadow: rgba(var(--rgb-black), calc(var(--header-progress) * 0.06));
+    --header-bg: hsla(var(--color-bg-h), var(--color-bg-s), var(--color-bg-l), var(--header-progress));
+    --header-border: hsla(var(--color-border-h), var(--color-border-s), var(--color-border-l), var(--header-progress));
+    --header-shadow: hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), calc(var(--header-progress) * 0.06));
     background: var(--header-bg);
     backdrop-filter: none;
     border-bottom: 0.0625em solid var(--header-border);
@@ -329,15 +329,15 @@ html.theme-switching .site-header {
 [data-theme="light"] .is-home .site-header:not(.is-scrolled):not(.menu-open) {
     /* 文字/强调色全部取 :root 固定暗色分量——与暗色主题逐值一致：
        纯白反而比暗色主题文字更亮，切主题瞬间会有提亮跳变 */
-    --color-text: rgb(var(--dark-rgb-text));
-    --color-text-secondary: rgb(var(--dark-rgb-text-secondary));
+    --color-text: var(--dark-text);
+    --color-text-secondary: var(--dark-text-secondary);
     /* 下划线、主题切换按钮悬停色同取固定暗色分量（亮色深墨绿在暗色轮播上不可见） */
-    --color-accent: rgb(var(--dark-rgb-accent));
+    --color-accent: var(--dark-accent);
 
     .nav-dropdown {
-        --color-text: rgb(var(--rgb-text));
-        --color-text-secondary: rgb(var(--rgb-text-secondary));
-        --color-accent: rgb(var(--rgb-accent));
+        --color-text: var(--color-text);
+        --color-text-secondary: var(--color-text-secondary);
+        --color-accent: var(--color-accent);
     }
 }
 
