@@ -56,6 +56,8 @@ function flipColumns(grid, entry, nextCols) {
         clearTimeout(entry.finishTimer);
         entry.finishTimer = null;
     }
+    // 兜底摘裁剪类（减弱动态路径不挂类、上轮动画中断残留一并清理）
+    grid.classList.remove('is-flipping');
     const cards = [...grid.querySelectorAll('.category-card')];
     if (prefersReducedMotion()) {
         applyCols(grid, nextCols); // 减弱动态：直接切换，不播放动画
@@ -70,6 +72,10 @@ function flipColumns(grid, entry, nextCols) {
     applyCols(grid, nextCols);
     void grid.offsetWidth;
     const lasts = recordRects(grid);
+    // FLIP 窗口挂裁剪类：Invert 的 transform 溢出只在动画期间存在，
+    // 裁剪随收尾定时器摘除（静态裁剪会把左右列卡片的悬停阴影切出硬边，
+    // 见 _categories.scss .grid.is-flipping 注释）
+    grid.classList.add('is-flipping');
     // Invert：把卡片摆回旧位置与旧尺寸（位移 + 缩放，左上角同一起点复合）
     cards.forEach((card, i) => {
         const dx = first[i].left - lasts[i].left;
@@ -90,10 +96,11 @@ function flipColumns(grid, entry, nextCols) {
         }
     });
     entry.cols = nextCols;
-    // 动画结束后清理内联样式（恢复卡片自身的 hover 过渡）；定时器入槽位，
-    // 二次翻转时在 flipColumns 入口作废旧收尾（见上）
+    // 动画结束后清理内联样式（恢复卡片自身的 hover 过渡）并摘裁剪类；
+    // 定时器入槽位，二次翻转时在 flipColumns 入口作废旧收尾（见上）
     entry.finishTimer = setTimeout(() => {
         entry.finishTimer = null;
+        grid.classList.remove('is-flipping');
         clearInline(cards);
     }, 400);
 }
