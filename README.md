@@ -17,7 +17,7 @@
 
 ### 灯箱与图像分析
 
-- **Lightbox 灯箱** — 点击缩略图，灯箱从缩略图位置**放大浮现**（FLIP 缩放，与全站动画同曲线同时长；先用已缓存缩略图即时呈现、后台预载全尺寸换源——全程无转圈、仅变清晰）；左右箭头+键盘切换、触屏水平滑动切图（跟随手指、阈值提交、与抽屉展开方向仲裁）；桌面端右侧元信息面板（機身/鏡頭/EXIF 分行 / Camera Raw 风格直方图 / 影调分析 / 六色色卡 / 背後的故事，缺失信息以删除线展示），窄屏为可拖动的底部抽屉（滚动条按需显示、预留空间不挤动文字）；每张照片独立 URL `?p=照片名`（地址栏实时更新、**返回键关闭灯箱**——灯箱只占一个历史条目；带参直达自动恢复，与筛选 URL 参数互不干扰）
+- **Lightbox 灯箱** — 点击缩略图，灯箱从缩略图位置**放大浮现**（FLIP 缩放，与全站动画同曲线同时长；先用已缓存缩略图即时呈现、后台预载全尺寸换源——全程无转圈、仅变清晰）；左右箭头+键盘切换、触屏水平滑动切图（跟随手指、阈值提交、与抽屉展开方向仲裁）；桌面端右侧元信息面板（機身/鏡頭/EXIF 分行 / Camera Raw 风格直方图 / 影调分析 / 六色色卡 / 飽和度分布 / 色相分布 / 背後的故事，缺失信息以删除线展示；分析加载失败时显示提示卡而非静默空白），窄屏为可拖动的底部抽屉（滚动条按需显示、预留空间不挤动文字）；每张照片独立 URL `?p=照片名`（地址栏实时更新、**返回键关闭灯箱**——灯箱只占一个历史条目；带参直达自动恢复，与筛选 URL 参数互不干扰）
 - **图像分析** — 直方图/影调/色卡/飽和度/色相（摄影界标准口径、按需加载、按 src 缓存），详见下文「灯箱分析算法说明」
 
 ### 足迹与統計
@@ -42,7 +42,7 @@
 
 ## 🔬 灯箱分析算法说明
 
-灯箱的色卡、影调与色彩分析共用同一条采样管线：探测加载 w_800 缩略图 → 离屏 canvas 逐像素统计 → 按 src 缓存；OSS 未开启 CORS 时优雅降级为隐藏分析区块。分析采用**摄影界标准口径**，无外部黑盒算法。
+灯箱的色卡、影调与色彩分析共用同一条采样管线：探测加载 w_800 缩略图 → 离屏 canvas 逐像素统计 → 按 src 缓存；OSS 未开启 CORS 或采样异常时优雅降级——显示「無法載入分析結果」提示卡，不再静默隐藏分析区块。分析采用**摄影界标准口径**，无外部黑盒算法。
 
 分析区块默认收起（打开/切图不发探测请求），EXIF 下方「圖像分析」触发行点击后展开加载（不额外显示加载指示，区域底部「收起圖像分析」收起）；展开态跨作品保持，结果按 src 缓存——回看与再次展开直接命中。
 
@@ -105,7 +105,6 @@ hugo --gc --minify --cleanDestinationDir
 
 ```
 photo-folio/
-├── archetypes/          # 内容模板
 ├── assets/              # Hugo 资源（jsconfig.json）
 ├── content/
 │   ├── gallery/         # 全部作品页
@@ -124,10 +123,11 @@ photo-folio/
 │   ├── map-data/        # 足迹地图几何生成管线（generate-maps.py，陆地 10m + 省界）
 │   ├── geocode/         # 照片地址地理编码（geocode-photos.py + config.json）
 │   └── backfill/        # 照片宽高回填（backfill-dimensions.py）
-├── static/              # 静态文件（CNAME、manifest、robots.txt 等）
+├── static/              # 静态文件（CNAME、robots.txt 等）
 ├── themes/
 │   └── photofolio/      # 自定义主题
-│       ├── assets/      # SCSS / JS 源文件
+│       ├── archetypes/  # 内容模板（站点根目录不设 archetypes，避免遮蔽主题模板）
+│       ├── assets/      # SCSS / JS 源文件（含 PWA manifest 模板）
 │       ├── layouts/     # 页面模板
 │       ├── i18n/        # 国际化
 │       └── static/      # 主题静态资源（maps/ 陆地几何数据）
@@ -153,7 +153,7 @@ shutter = "1/250"
 time = "2025-10-05"
 place = "雲南麗江"
 location = "雲南"
-width = "1920"            # 原始像素宽高（由预处理管线 tools/photo-pipeline/ 生成，横/竖构图据此推导）
+width = "1920"            # 宽高由预处理管线 tools/photo-pipeline/ 生成（取处理后输出图尺寸，横/竖构图据此推导）
 height = "1280"
 camera = "NIKON Z 5"      # 机身（灯箱「機身」行展示，缺失时以删除线占位）
 address = "浙江省杭州市西湖区曲院风荷"  # 详细地址（选填；相机无 GPS，由 geocode-photos.py 转经纬度）
@@ -179,7 +179,7 @@ lng = 100.23
 
 - 没有坐标的地点不出现在地图上（地点详情页不受影响）；新增地点后地图视图会自动适配到全部拍摄点
 - 地图陆地与省界几何为一次性生成的数据（`themes/photofolio/static/maps/land-10m.json` 世界陆地、`provinces.json` 中国省级边界线按省索引，含港澳台），如无特殊需要不必重新生成（管线：`python tools/map-data/generate-maps.py`）
-- **照片坐标字段**：为照片填 `address`（详细地址）后运行 `python tools/geocode/geocode-photos.py` 生成 `lat`/`lng`（需先申请高德开放平台「Web 服务」key，写在 `tools/geocode/config.json`（`{"amap_key": "..."}`，复制 config.example.json 填写，已 gitignore 不入库）或环境变量 `AMAP_KEY`；脚本按 350ms 间隔串行请求、可重复运行，坐标写入 address 行之后）；坐标字段当前保留备用、不参与展示
+- **照片坐标字段**：为照片填 `address`（详细地址）后运行 `python tools/geocode/geocode-photos.py` 生成 `lat`/`lng`（需先申请高德开放平台「Web 服务」key，写在 `tools/geocode/config.json`（`{"amap_key": "..."}`，复制 config.example.json 填写，已 gitignore 不入库）或环境变量 `AMAP_KEY`；脚本按 350ms 间隔串行请求、可重复运行，坐标写入 address 行之后；高德无结果/网络异常时经 OSM Nominatim 兜底（海外地址），key 无效/配额耗尽等错误直接中止、不会把境内地址误交给境外服务）；坐标字段当前保留备用、不参与展示
 
 ### 系列作品
 
@@ -199,13 +199,13 @@ is_cover = false
 # ... 其他字段
 ```
 
-同时在 `content/series/` 目录下创建对应的 Markdown 文件（`photos` 列表决定详情页的展示顺序）：
+同时在 `content/series/` 目录下创建对应的 Markdown 文件（`photos` 列表决定详情页的展示顺序；front matter 统一 TOML 格式）：
 
 ```markdown
----
-title: "割藺草"
-photos: ["割蔺草-1.jpg", "割蔺草-2.jpg", "割蔺草-3.jpg"]
----
++++
+title = "割藺草"
+photos = ["割蔺草-1.jpg", "割蔺草-2.jpg", "割蔺草-3.jpg"]
++++
 ```
 
 ### 精選（featured）
