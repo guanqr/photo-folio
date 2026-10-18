@@ -3,25 +3,14 @@
 {{ $coverMode := .Site.Params.categoryCover | default "latest-landscape" }}
 
 <section class="gallery-page">
-    <div class="gallery-header">
-        <div class="container">
-            <h1 class="page-title">{{ .Title }}</h1>
-            {{ with .Params.description }}
-                <p class="page-description">{{ . }}</p>
-            {{ end }}
-            <p class="photo-count">{{ i18n "category_count" (dict "Count" (len .Sections)) }}</p>
-        </div>
-    </div>
+    {{ partial "components/page-header.html" (dict "title" .Title "description" .Params.description "countKey" "category_count" "count" (len .Sections)) }}
 
     <div class="container section-list-grid">
         {{ if gt (len .Sections) 0 }}
             {{/* 分类目录：与首页分类区块同款卡片（封面图 + 分类名 + 作品数） */}}
             {{ partial "components/categories-cards.html" (dict "sections" .Sections.ByWeight "allPhotos" $sortedPhotos "coverMode" $coverMode) }}
         {{ else }}
-        <div class="empty-state">
-            <div class="empty-icon">{{ partial "utils/icon.html" (dict "name" "camera") }}</div>
-            <h3>{{ i18n "no_photos_under" (dict "Title" .Title) }}</h3>
-        </div>
+        {{ partial "components/empty-state.html" (dict "titleKey" "no_photos_under" "titleCtx" (dict "Title" .Title)) }}
         {{ end }}
     </div>
 

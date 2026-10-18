@@ -25,9 +25,12 @@ function markFinished(trigger) {
     trigger.querySelector('.load-more-text').textContent = trigger.dataset.finishedText;
 }
 
-/* 拆线：移除滚动监听并清空当前实例（换页清理 / 早退分支 / 完成收尾共用） */
-function detach() {
+/* 拆线：移除滚动监听并清空当前实例（换页清理 / 早退分支 / 完成收尾共用）。
+   inst 缺省无条件拆除（换页清理旧监听）；传实例时仅当 current 仍是该实例才拆——
+   旧页异步收尾迟到的拆线不得摘掉已换上的新页面监听（2026-10-18） */
+function detach(inst = null) {
     if (!current) return;
+    if (inst && current !== inst) return;
     window.removeEventListener('scroll', current.onScroll);
     current = null;
 }
@@ -98,6 +101,10 @@ export function initInfiniteScroll() {
             new Promise((resolve) => setTimeout(resolve, 700))
         ]).then(async () => {
             await revealBatch(grid, batch);
+            // 页面归属守卫：SPA 换页后 current 已指向新页实例，旧页续体的
+            // 收尾（finishLoading→detach）会摘掉新页面的滚动监听、
+            // 致新页剩余作品加载不出——已换页则静默放弃收尾（2026-10-18）
+            if (current !== me) return;
             isLoading = false;
             trigger.classList.remove('is-loading');
             if (grid._pendingItems.length === 0) {
@@ -112,7 +119,7 @@ export function initInfiniteScroll() {
     }
 
     function finishLoading() {
-        detach();
+        detach(me);
         markFinished(trigger);
     }
 
@@ -127,8 +134,10 @@ export function initInfiniteScroll() {
             if (distToBottom() <= TRIGGER_OFFSET) loadMore();
         });
     }
+    // 实例身份：异步续体与拆线据此判断「仍是本页」（换页后 current 被新实例覆盖）
+    const me = { trigger, grid, onScroll };
     window.addEventListener('scroll', onScroll, { passive: true });
-    current = { trigger, grid, onScroll };
+    current = me;
 
     if (grid._pendingItems.length === 0) {
         // 全部作品已在首屏：直接显示完成文案（保留在页面底部，不消失）

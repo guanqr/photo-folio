@@ -22,14 +22,17 @@ export function initThemeToggle() {
         // 主题切换是全页颜色突变的一次性巨大重绘（背景/卡片/文字/地图数万路径），
         // 低端机可能掉帧——支持 View Transitions 的浏览器（Chrome/Edge 111+、
         // Safari 18+）走整页快照交叉淡化（新旧态各光栅化一次、合成器淡化）；
-        // 不支持与减弱动态偏好降级为即时切换（导航栏 theme-switching 过渡不变）
+        // 不支持与减弱动态偏好降级为即时切换（切换窗口内元素过渡同样压制，
+        // 全站元素同刻换色）
         if (document.startViewTransition && !prefersReducedMotion()) {
             document.startViewTransition(() => applyTheme(newTheme));
         } else {
             applyTheme(newTheme);
         }
-        // 主题切换期间给导航栏临时恢复时间过渡（与全站 0.3s 渐隐同步），
-        // 结束后摘除，恢复滚动进度驱动的渐变；快速连切时重置计时——
+        // 主题切换窗口挂 html.theme-switching：期间全站元素级过渡统一压制
+        // （_base.scss），切换动作瞬时完成、动画由整页快照交叉淡化唯一提供——
+        // 元素自身颜色渐变与交叉淡化叠加成双重渐变、文字/标题滞后于瞬时
+        // 换色元素（不同步）；结束后摘除恢复；快速连切时重置计时——
         // 否则旧定时器会提前摘类、切断第二次切换的在途过渡
         clearTimeout(themeSwitchTimer);
         document.documentElement.classList.add('theme-switching');

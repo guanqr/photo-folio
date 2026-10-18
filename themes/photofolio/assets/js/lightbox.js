@@ -7,7 +7,7 @@ import { initLightboxGlow } from './lightbox-glow.js';
 import { initLightboxCollection } from './lightbox-collection.js';
 import { initLightboxSwitch } from './lightbox-switch.js';
 import { initLightboxAnalysisControl } from './lightbox-analysis-control.js';
-import { prefersReducedMotion } from './utils.js';
+import { prefersReducedMotion, BP_LIGHTBOX_NARROW } from './utils.js';
 import { revealUpToItem } from './masonry.js';
 
 let inited = false;
@@ -71,6 +71,7 @@ export function initLightbox() {
     const hueName = document.getElementById('lightbox-hue-name');
     const hueHist = document.getElementById('lightbox-hue-hist');
     const hueAxis = document.getElementById('lightbox-hue-axis');
+    const analysisErrorEl = document.getElementById('lightbox-analysis-error');
     // 图像分析按需加载：默认收起——打开/切图不再探测下载 w_1024 采样图，
     // 只有点击触发行才展开加载；收起不取消在途探测（结果入缓存，再展开直接命中）。
     // 展开/收起过渡：wrapper max-height + opacity——展开走 class 兜底大值
@@ -79,15 +80,15 @@ export function initLightbox() {
     const analysisTrigger = document.getElementById('lightbox-analysis-trigger');
     const analysisWrap = document.getElementById('lightbox-analysis');
     const analysisCollapse = document.getElementById('lightbox-analysis-collapse');
-    // 窄屏灯箱主图降档判定（≤1000px 用 w_1280）：与抽屉断点一致——
-    // 初始化时创建一次，不在每次 open() 重建 MQL
-    const narrowLightbox = window.matchMedia('(max-width: 1000px)');
+    // 窄屏灯箱主图降档判定（≤BP_LIGHTBOX_NARROW 用 w_1280）：与抽屉断点一致
+    //（单源见 utils.js）——初始化时创建一次，不在每次 open() 重建 MQL
+    const narrowLightbox = window.matchMedia(`(max-width: ${BP_LIGHTBOX_NARROW}px)`);
 
     // 随图片同步淡入的元信息元素：打开时全部隐藏，图片加载完成后统一揭示——
     // 标题 / 分类与系列胶囊 / 地点日期简行 / EXIF / 分析触发行 / 直方图与色卡 / 影调与色彩 / 故事
     const revealSynced = [
         lightboxCaption, tagsEl, lightboxMeta, exifList, analysisTrigger,
-        paletteWrap, tonalWrap, satWrap, hueWrap, storyWrap,
+        paletteWrap, tonalWrap, satWrap, hueWrap, storyWrap, analysisErrorEl,
     ].filter(Boolean);
 
     if (!lightbox || !lightboxImg) return;
@@ -105,7 +106,8 @@ export function initLightbox() {
         img: lightboxImg,
         area: lightboxImgArea,
         getGlow: () => switchModule.getActiveGlow(),
-        onSwitch: (dir, dx) => { if (dir > 0) switchModule.next(dx); else switchModule.prev(dx); }
+        onSwitch: (dir, dx) => { if (dir > 0) switchModule.next(dx); else switchModule.prev(dx); },
+        onTakeover: () => switchModule.cancelPendingSlides()
     });
 
     // 窄屏/中屏底部抽屉（≤1000px）：展开/收起、滚轮与拖动手势（独立模块，见 lightbox-drawer.js）；
@@ -118,7 +120,7 @@ export function initLightbox() {
     // 图片分析：色卡/影调与色彩（独立模块，见 lightbox-analysis.js；直方图
     // 已并入影调区块——RGB 通道曲线 + 三分区/P50/剪裁注释同图展示）
     const analysis = initLightboxAnalysis({
-        paletteWrap, paletteEl,
+        paletteWrap, paletteEl, errorEl: analysisErrorEl,
         tone: {
             wrap: tonalWrap, name: tonalName, histEl: histogramEl, legendEl: histLegendEl,
             zoneStripEl: tonalZoneStrip, zoneBracketEl: tonalZoneBracket,

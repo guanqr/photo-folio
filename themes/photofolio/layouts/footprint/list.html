@@ -65,14 +65,7 @@
 {{ end }}
 
 <section class="footprint-page">
-    <div class="gallery-header">
-        <div class="container">
-            <h1 class="page-title">{{ .Title }}</h1>
-            {{ with .Params.description }}
-                <p class="page-description">{{ . }}</p>
-            {{ end }}
-        </div>
-    </div>
+    {{ partial "components/page-header.html" (dict "title" .Title "description" .Params.description) }}
 
     {{/* 全宽地图 + 底部图例；无坐标照片时地图整块不渲染。
         点击省/国区块直接跳转地点详情页 */}}

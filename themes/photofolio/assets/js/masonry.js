@@ -23,6 +23,13 @@ let gridObserver = null; // 每页只有一个网格；SPA 换页时断开旧观
 
 export function initMasonry(skipInitialReveal = false) {
     const grid = document.getElementById('masonry-grid');
+    // 换页先断开旧观察（与 lazy-load 同款：清理先于一切早退——跳转无网格页
+    // （about/足迹列表/首页/404）时早退将不可达，观察器会持续持有已脱离
+    // 文档的整棵作品子树，2026-10-18）
+    if (gridObserver) {
+        gridObserver.disconnect();
+        gridObserver = null;
+    }
     if (!grid) return;
 
     const allItems = Array.from(grid.querySelectorAll('.masonry-item'));
@@ -56,7 +63,6 @@ export function initMasonry(skipInitialReveal = false) {
 
     // 观察网格自身尺寸变化（滚动条出现/消失等），自动重排行布局
     if (typeof ResizeObserver !== 'undefined') {
-        if (gridObserver) gridObserver.disconnect();
         gridObserver = new ResizeObserver(() => scheduleRelayout(grid));
         gridObserver.observe(grid);
     }
@@ -197,9 +203,14 @@ function measureRatios(grid, items) {
                 settle(img.naturalWidth / img.naturalHeight);
                 return;
             }
-            const done = () => settle(img.naturalWidth / img.naturalHeight || DEFAULT_RATIO);
-            img.addEventListener('load', done);
-            img.addEventListener('error', done);
+            img.addEventListener('load', () => {
+                settle(img.naturalWidth / img.naturalHeight || DEFAULT_RATIO);
+            });
+            // error 不写缓存也不结束测量：AVIF→webp 重试成功后的 load 仍可写入
+            // 真实比例；失败由 4s 超时兜底结束（与超时同款：兜底比例只影响本次
+            // 排布、不入缓存）——此前 NaN||1.5 经 settle 永久写入 _ratios、
+            // 竖构图整会话按错误比例排布（2026-10-18）
+            img.addEventListener('error', () => {});
         });
     }));
 }
@@ -263,7 +274,10 @@ function getRowGap(grid) {
     const rowEl = grid.querySelector('.masonry-row');
     let g = rowEl ? parseFloat(getComputedStyle(rowEl).columnGap) : 0;
     if (!g) g = parseFloat(getComputedStyle(grid).rowGap);
-    grid._gap = g || 8; // CSS gap: 0.5em × 根字号 16px 的兜底
+    // 只缓存真实读取值、不臆造兜底：CSS 恒声明 gap 0.5em，读取失败时按 0
+    // 参与本次排布且不缓存（下次调用重读）——此前 8px 兜底与样式表脱钩、
+    // 根字号/间距改动后行宽错档（2026-10-18）
+    grid._gap = g || 0;
     return grid._gap;
 }
 

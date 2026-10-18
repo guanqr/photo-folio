@@ -10,10 +10,10 @@
  * 详情内容仅在全开后可滚动，地点/日期随内容滚动（仅标题固定）。
  * 桌面端：不干预（reset 时清除窄屏残留的内联样式，恢复宽屏详情常显）。
  */
-import { prefersReducedMotion } from './utils.js';
+import { prefersReducedMotion, BP_LIGHTBOX_NARROW, BP_DESKTOP_MIN } from './utils.js';
 
 export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle, metaEl, dirVerdict }) {
-    const narrowMedia = window.matchMedia('(max-width: 1000px)');
+    const narrowMedia = window.matchMedia(`(max-width: ${BP_LIGHTBOX_NARROW}px)`);
 
     let level = 0;       // 展开程度 0..1
     let headHeight = 0;  // 面板头部高度（每次打开重测：面板总长恒为 50vh，不随标题行数漂移）
@@ -146,8 +146,9 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
     }
 
     // 窄屏抽屉内的双列↔单列转换（768px 边界）：面板轻量淡入滑动柔化内部重排跳变；
-    // 高度重测由 resize 处理器覆盖（媒体查询变化伴随 window resize）
-    const singleColMedia = window.matchMedia('(max-width: 768px)');
+    // 高度重测由 resize 处理器覆盖（媒体查询变化伴随 window resize）；
+    // 768 = BP_DESKTOP_MIN - 1（与全站窄屏上限严格互补，经单源推导不写死）
+    const singleColMedia = window.matchMedia(`(max-width: ${BP_DESKTOP_MIN - 1}px)`);
     singleColMedia.addEventListener('change', () => {
         if (!lightbox.classList.contains('active')) return;
         lightbox.classList.remove('is-layout-switching-inner');
@@ -340,6 +341,9 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
             const v = dirVerdict();
             if (v === 'horizontal') {
                 dragging = false;
+                // 与 dragging 成对摘除：endDrag 因 !dragging 早退不再执行，
+                // 类残留会让面板文字整场无法长按选择（2026-10-18）
+                lightbox.classList.remove('is-dragging');
                 return;
             }
             if (v === null) return;
@@ -360,6 +364,9 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
         // 内容回滚到顶部（供分析区收起时同步回顶）：与收起过渡同曲线同时长锁步——
         // 曲线/时长与抽屉收起动画共用，中断行为同样由滚轮/拖动接管（cancelScrollAnim）
         scrollToTop: (duration) => animateScrollTop(0, duration),
+        // 取消在途回滚动画（供分析区收起中途再展开调用：回滚仍在逐帧强制
+        // scrollTop 归零、会覆盖用户任何滚动输入，2026-10-18）
+        cancelScroll: cancelScrollAnim,
         // 设置/清除内容高度扣除函数并立即重判（分析区收起期间传入其当前高度：
         // 最终总高在整个过渡期间恒定，「放得下」点击瞬间即判定且不翻覆）；
         // 返回重判后的「放得下」状态（窄屏恒 false——is-fit 仅桌面生效）

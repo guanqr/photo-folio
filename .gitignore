@@ -1,6 +1,8 @@
 public/
 resources/
 .hugo_build.lock
+# 验证构建目录（hugo -d 独立输出，与 public/ 同类的高频再生临时产物）
+.verify-build/
 .claude/
 .DS_Store
 Thumbs.db

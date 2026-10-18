@@ -52,10 +52,12 @@
     transition: background-color var(--transition-fade), border-color var(--transition-fade), color var(--transition-fade);
 
     &:hover {
-        /* 填充绿色背景，文字换深色（与筛选按钮激活态一致） */
+        /* 填充绿色背景，文字换灯箱文字白（--color-text 在灯箱内固定为 91% 白）——
+           不能仿筛选按钮激活态用 --color-bg-card：灯箱组件把该变量固定重声明为
+           暗色卡片色，绿底上会呈深色文字 */
         background: var(--color-accent);
         border-color: var(--color-accent);
-        color: var(--color-bg-card);
+        color: var(--color-text);
     }
 }
 

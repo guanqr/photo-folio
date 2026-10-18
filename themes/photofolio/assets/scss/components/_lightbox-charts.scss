@@ -1,4 +1,36 @@
 /* ===== Lightbox 分析图表（影調 / 色卡 / 飽和度 / 色相）与故事 ===== */
+
+/* 分析加载失败提示：借用 .empty-state 的虚线框与图标/标题配色、无底色，
+   图标与文字上下居中排布（与全站空状态同构，面板内收紧）；
+   display 限定在 :not([hidden])——author 的 display 声明会压过 UA 的
+   [hidden] 规则，不限定则 hidden 失效、提示永远显示 */
+.lightbox-analysis-error:not([hidden]) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25em;
+    padding: 0.75em 1.25em;
+    /* 上边距与正常图表区块一致（1.1em、与 EXIF 保持同距）；下边距为 0——
+       底部收起按钮自带 1.1em 上边距，与图表加载态的间距完全同构 */
+    margin: 1.1em 0 0;
+    background: transparent;
+    /* 虚线框提亮：灯箱内 --color-border 固定为暗色边框（暗面板上不可见），
+       取与图标同调的 --color-text-muted */
+    border-color: var(--color-text-muted);
+    grid-column: 1 / -1; /* 中屏双列网格：提示占满整行 */
+
+    .empty-icon {
+        font-size: 3.2em;
+        margin-bottom: -0.25em;
+        color: var(--color-text-secondary); /* 与标题文字同色（基类为 text-muted 更暗一档） */
+    }
+
+    h3 {
+        font-size: 0.8em;
+        margin-bottom: 0;
+    }
+}
+
 /* 合并直方图（已并入影调区块）：JS 计算绘制（对数纵轴平滑曲线），
    CORS 未开启时整个影调区块隐藏（优雅降级） */
 .lightbox-histogram {
@@ -7,6 +39,12 @@
     height: 6em;
     border-radius: var(--radius-xs);
     background: var(--color-lightbox-ctrl-bg);
+
+    /* 明度曲线金色：2026-10-18 收编自 JS 字面量（固定暗色分量，图例
+       .is-lum 圆点同源） */
+    .hist-lum {
+        stroke: var(--dark-lum-curve);
+    }
 }
 
 /* 影调与色彩分析：区块标题与结论同处一行（同字号、仅颜色区分）；
@@ -72,6 +110,11 @@
         height: 0.7em;
         border-radius: 50%;
         flex: none;
+
+        /* 明度曲线圆点：与曲线同源的金色分量 */
+        &.is-lum {
+            background: var(--dark-lum-curve);
+        }
     }
 }
 
@@ -237,18 +280,20 @@
     .lightbox-charts {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        column-gap: 4.5rem;
+        column-gap: 4.5em;
         position: relative;
     }
 
-    .lightbox-charts > :nth-child(even)::before {
+    /* 失败提示除外：它跨整行，且图表开关配置变化会改变其 DOM 序号——
+       偶序时会被误当第二列项画分隔线（位置按第二列错位） */
+    .lightbox-charts > :nth-child(even):not(.lightbox-analysis-error)::before {
         content: '';
         position: absolute;
         top: 0;
         bottom: 0;
-        /* 列间距（4.5rem）的一半再左移半个线宽：竖线恰居两列正中 */
-        left: calc(-2.25rem - 0.03125rem);
-        width: 0.0625rem;
+        /* 列间距（4.5em）的一半再左移半个线宽：竖线恰居两列正中 */
+        left: calc(-2.25em - 0.03125em);
+        width: 0.0625em;
         background: var(--color-border);
     }
 

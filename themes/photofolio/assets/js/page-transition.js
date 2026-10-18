@@ -28,6 +28,11 @@ let progressTimer = null;
 let progressFadeTimer = null;
 let progressResetTimer = null;
 
+// 淡入收尾定时器入模块级槽位：新导航在窗口内启动时先作废旧收尾——
+// 否则旧定时器会清掉新导航刚写入的淡出过渡、内容瞬间消失而非淡出
+//（2026-10-18）
+let fadeFinishTimer = null;
+
 function startProgress() {
     if (!progressEl) {
         progressEl = document.createElement('div');
@@ -71,6 +76,9 @@ export function initPageTransition(reinit) {
 
     // 拦截站内链接点击
     document.addEventListener('click', e => {
+        // 修饰键点击放行浏览器默认行为：Ctrl/Cmd+点击开新标签、Shift+点击
+        // 开新窗口——拦截会把它们劫持为同标签 SPA 导航（2026-10-18）
+        if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
         const link = e.target.closest('a');
         if (!link || !shouldIntercept(link)) return;
         e.preventDefault();
@@ -104,6 +112,12 @@ async function navigateTo(url) {
 
 async function loadContent(url) {
     const seq = ++navSeq;
+
+    // 作废上次导航的淡入收尾定时器（见 fadeFinishTimer 声明注释）
+    if (fadeFinishTimer) {
+        clearTimeout(fadeFinishTimer);
+        fadeFinishTimer = null;
+    }
 
     // 导航即关灯箱：灯箱在壳层 DOM、不随内容替换——不关闭则旧照片悬在
     // 新页面上（popstate/返回键路径同样经此）
@@ -202,8 +216,14 @@ async function loadContent(url) {
     // 淡入
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
+            // 已被新导航取代：不得把新导航刚写入的淡出 opacity 回写为 1
+            //（旧 rAF 链残留覆盖新淡出，2026-10-18）
+            if (seq !== navSeq) return;
             main.style.opacity = '1';
-            setTimeout(() => { main.style.transition = ''; }, 200);
+            fadeFinishTimer = setTimeout(() => {
+                fadeFinishTimer = null;
+                main.style.transition = '';
+            }, 200);
         });
     });
 }
@@ -216,8 +236,12 @@ function updateActiveNav(url) {
     // 包含 .nav-parent（带子菜单的父项是 span，无 href）——跳转后要一并清除其高亮，
     // 否则从子页面跳到其他页面时父项的横线不消失
     const links = document.querySelectorAll('.site-nav a, .site-nav .nav-parent');
+    // 查询串不参与匹配：筛选（?y=/?l=/?c=）与灯箱（?p=）的 URL 经前进/后退
+    // 恢复时仍应保持所在页面的导航高亮——此前裸 URL 比较恒不匹配、高亮
+    //（含 aria-current）全部熄灭（2026-10-18）
+    const path = new URL(url).pathname;
     links.forEach(el => {
-        const match = el.tagName === 'A' && (el.href === url || el.href === url + '/');
+        const match = el.tagName === 'A' && el.pathname === path;
         el.classList.toggle('active', match);
         // aria-current 同步（读屏器当前页语义；父项是按钮不是链接、不设）
         if (match) el.setAttribute('aria-current', 'page');
@@ -228,8 +252,8 @@ function updateActiveNav(url) {
             if (parentLink) parentLink.classList.add('active');
         }
     });
-    // 首页特殊处理
-    if (url === location.origin + '/' || url === location.origin) {
+    // 首页特殊处理（与上方同法忽略查询串）
+    if (path === '/') {
         const homeLink = document.querySelector('.site-nav a[href="/"]');
         if (homeLink) {
             homeLink.classList.add('active');

@@ -1,10 +1,19 @@
-# i18n/zh-cn.toml
+# i18n/zh-hant.toml
 
 [photo_count]
 other = "{{ .Count }} 張作品"
 
 [total_photos]
 other = "共 {{ .Count }} 張作品"
+
+[photo_hover_meta_both]
+other = "{{ .Focus }}mm · f/{{ .Aperture }}"
+
+[photo_hover_meta_focus]
+other = "{{ .Focus }}mm"
+
+[photo_hover_meta_aperture]
+other = "f/{{ .Aperture }}"
 
 [no_photos_under]
 other = "{{ .Title }} 下暫無作品"
@@ -28,7 +37,7 @@ other = "返回頂部"
 other = "載入中..."
 
 [no_more_photos]
-other = "已加载全部作品"
+other = "已載入全部作品"
 
 [exif_device]
 other = "機身"
@@ -55,7 +64,7 @@ other = "地點"
 other = "日期"
 
 [lightbox_histogram]
-other = "直方圖（虚線為亮度中位數）"
+other = "直方圖（虛線為亮度中位數）"
 
 [hist_legend]
 other = "R|G|B|明度"
@@ -86,6 +95,9 @@ other = "圖像分析"
 
 [lightbox_analysis_collapse]
 other = "收起圖像分析"
+
+[lightbox_analysis_failed]
+other = "無法載入分析結果，請檢查網絡連線"
 
 [tonal_key_low]
 other = "低調"

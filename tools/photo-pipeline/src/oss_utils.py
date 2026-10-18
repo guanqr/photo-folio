@@ -24,10 +24,18 @@ def sync_new_photos(output_dir, bucket, oss_prefix="images/photos/", force_files
 
     force_set = set(force_files) if force_files else set()
 
-    # 获取 OSS 上已有文件集合
+    # 获取 OSS 上已有文件集合——分页拉取（oss2 默认单页 100 条）：对象超 100
+    # 时单页结果不完整、「已在 OSS」判定失效、未变化文件被重复上传（2026-10-18）
     existing = set()
-    for obj in bucket.list_objects(prefix=oss_prefix).object_list:
-        existing.add(obj.key)
+    next_marker = ""
+    while True:
+        result = bucket.list_objects(prefix=oss_prefix, marker=next_marker)
+        for obj in result.object_list:
+            existing.add(obj.key)
+        if result.is_truncated and result.next_marker:
+            next_marker = result.next_marker
+        else:
+            break
 
     uploaded = 0
     skipped = 0

@@ -192,7 +192,8 @@ function renderPalette(colors, paletteWrap, paletteEl) {
    连续变形而非跳变 */
 const HIST_H = 96;
 const HIST_SAMPLES = 256; // 每通道曲线采样点数：d 形变要求点数恒定
-const LUM_CURVE_COLOR = 'rgb(245, 197, 66)'; // 明度曲线：金色——与通道曲线区分
+// 明度曲线金色：2026-10-18 收编为 CSS 变量 --dark-lum-curve（样式表设定
+// .hist-lum stroke 与图例 .is-lum 圆点背景），JS 不再持有颜色字面量
 
 /* 通道曲线目标 y 数组（对数纵轴、同 logMax；通道桶已平滑） */
 function channelCurveYs(buckets, logMax) {
@@ -244,7 +245,7 @@ function paintHistogram(histYs, lumYs, histogramSvg, tone) {
     if (!histogramSvg._built) {
         histogramSvg.innerHTML = channelColors.map(([r, g, b], i) =>
             `<path class="hist-ch ch${i}" fill="none" stroke="rgb(${r},${g},${b})" stroke-width="1.5" vector-effect="non-scaling-stroke"></path>`).join('')
-            + `<path class="hist-lum" fill="none" stroke="${LUM_CURVE_COLOR}" stroke-width="1.5" vector-effect="non-scaling-stroke"></path>`;
+            + `<path class="hist-lum" fill="none" stroke-width="1.5" vector-effect="non-scaling-stroke"></path>`;
         const zones = [
             [0, TONAL_ZONE_SHADOW, 'var(--color-zone-shadow-bg)'],
             [TONAL_ZONE_SHADOW + 1, TONAL_ZONE_HIGH, 'var(--color-zone-mid-bg)'],
@@ -455,16 +456,21 @@ function tweenMulti(el, fromArrs, toArrs, apply) {
     el._raf = requestAnimationFrame(step);
 }
 
-/* 直方图图例：R/G/B 通道色与明度曲线色（一次性构建，名称来自模板的 i18n 数据属性） */
+/* 直方图图例：R/G/B 通道色与明度曲线色（一次性构建，名称来自模板的 i18n 数据属性）；
+   R/G/B 为通道身份色（数据可视化、rgb 计算值），明度曲线金色走 CSS 变量 */
 function renderHistLegend(legendEl, labels) {
     if (!legendEl || legendEl._built) return;
-    const colors = ['rgb(224, 90, 90)', 'rgb(110, 200, 140)', 'rgb(110, 150, 230)', LUM_CURVE_COLOR];
+    const colors = ['rgb(224, 90, 90)', 'rgb(110, 200, 140)', 'rgb(110, 150, 230)'];
     const names = labels.split('|');
     legendEl.textContent = '';
     names.forEach((name, i) => {
         const item = document.createElement('span');
         const dot = document.createElement('i');
-        dot.style.background = colors[i];
+        if (i < colors.length) {
+            dot.style.background = colors[i];
+        } else {
+            dot.className = 'is-lum'; // 明度曲线色：样式表设定（--dark-lum-curve）
+        }
         const text = document.createElement('span');
         text.textContent = name;
         item.append(dot, text);
@@ -602,7 +608,7 @@ function renderHue(hue, hueYs, labels, els) {
     paintHueHistogram(hue, hueYs, els.histEl);
 }
 
-export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, onDone }) {
+export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, onDone, errorEl }) {
     const toneEls = tone || {};
     const satEls = sat || {};
     const hueEls = hue || {};
@@ -642,8 +648,13 @@ export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, o
     function analyze(src) {
         if (!paletteEl && !toneEls.wrap && !satEls.wrap && !hueEls.wrap) return;
         const mySeq = ++analyzeSeq;
+        // 入口先收起上次的失败提示：提示代表的是上一张作品的失败态，切图后
+        // 探测在途期间不应继续显示——成功/失败路径各再置位（2026-10-18）
+        if (errorEl) errorEl.hidden = true;
         const cached = cache.get(src);
         if (cached) {
+            // 上次失败的提示随成功结果一并收起（重试命中缓存同样走此路径）
+            if (errorEl) errorEl.hidden = true;
             if (paletteEl) renderPalette(cached.palette, paletteWrap, paletteEl);
             if (toneEls.wrap) renderTone(cached.tone, cached.histYs, cached.lumYs, toneLabels, toneEls);
             if (satEls.wrap) renderSat(cached.sat, cached.satYs, satLabels, satEls);
@@ -721,6 +732,7 @@ export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, o
                     hue: hueEls.wrap ? satHue : null,
                 });
                 if (mySeq !== analyzeSeq) return; // 已切到别的作品：结果入缓存但不渲染过期内容
+                if (errorEl) errorEl.hidden = true; // 探测成功：收起上次的失败提示
                 if (paletteEl) renderPalette(palette, paletteWrap, paletteEl);
                 if (toneEls.wrap) renderTone(tone, histYs, lumYs, toneLabels, toneEls);
                 if (satEls.wrap) renderSat(satHue, satYs, satLabels, satEls);
@@ -731,6 +743,7 @@ export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, o
                 // 代次守卫与成功路径对称：迟到的过期失败不得隐藏当前已渲染的照片
                 if (mySeq === analyzeSeq) {
                     hideAll();
+                    if (errorEl) errorEl.hidden = false;
                     if (onDone) onDone(false);
                 }
             }
@@ -739,6 +752,7 @@ export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, o
             console.warn('[lightbox] histogram probe load failed (OSS CORS not enabled):', probeSrc);
             if (mySeq === analyzeSeq) {
                 hideAll();
+                if (errorEl) errorEl.hidden = false;
                 if (onDone) onDone(false);
             }
         };

@@ -85,6 +85,10 @@ export function initGalleryFilter() {
        replace=true 仅用于加载恢复的清理路径——不产生历史（返回键不留死循环） */
     const syncUrl = (replace = false) => {
         const updates = {};
+        // 全部维度键入 updates：未渲染（配置关闭）的维度显式清 null——只写已
+        // 渲染组会让带 ?l=/?c= 的旧链接参数永不清理、每次访问都重复一次
+        // 隐藏-重启-揭示的闪现（2026-10-18）；已渲染组随后按当前值覆盖
+        Object.values(PARAM_KEYS).forEach((key) => { updates[key] = null; });
         groups.forEach((g) => {
             updates[PARAM_KEYS[g.dataset.dim]] = valueOf(g.dataset.dim) || null;
         });

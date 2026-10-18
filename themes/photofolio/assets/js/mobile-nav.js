@@ -26,7 +26,18 @@ export function initMobileNav() {
     const TRANSITION_STYLE_NO_BG =
         TRANSITION_BASE + 'box-shadow 0.3s ease';
 
+    let pendingEnd = null; // 在途 transitionend 收尾槽位（开合前作废旧监听，防幽灵收尾）
+
     function toggleMenu() {
+        // 先作废旧收尾：主题切换窗口内全站过渡被压制（transitionend 不触发）、
+        // 上次开合的收尾监听残留，若不清除会在本次开合的首个 transitionend
+        // 拦腰清掉在途过渡（菜单中途瞬移）；残留的内联过渡一并清掉（2026-10-18）
+        if (pendingEnd) {
+            nav.removeEventListener('transitionend', pendingEnd);
+            pendingEnd = null;
+            nav.style.transition = '';
+        }
+
         // 页面未滚动（导航栏透明）时，面板从透明渐变到不透明；
         // 页面已滚动（导航栏本来就不透明）时，面板直接以不透明打开，不做背景渐变
         const scrolled = window.scrollY > 10;
@@ -35,11 +46,11 @@ export function initMobileNav() {
         // 仅在用户主动切换时启用过渡，断点跨越不触发
         nav.style.transition = scrolled ? TRANSITION_STYLE_NO_BG : TRANSITION_STYLE;
 
-        const onEnd = () => {
+        nav.addEventListener('transitionend', pendingEnd = () => {
             nav.style.transition = '';
-            nav.removeEventListener('transitionend', onEnd);
-        };
-        nav.addEventListener('transitionend', onEnd);
+            nav.removeEventListener('transitionend', pendingEnd);
+            pendingEnd = null;
+        });
 
         const closing = nav.classList.contains('active');
         nav.classList.toggle('active');

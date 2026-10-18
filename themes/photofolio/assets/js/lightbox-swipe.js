@@ -14,7 +14,7 @@
  */
 import { prefersReducedMotion } from './utils.js';
 
-export function initLightboxSwipe({ img, area, getGlow, onSwitch }) {
+export function initLightboxSwipe({ img, area, getGlow, onSwitch, onTakeover }) {
     if (!area) return { isGestureActive: () => false, getVerdict: () => null, reset: () => {} };
 
     const SWIPE_TAKE_OVER = 20; // 滑动接管阈值 px（|dx| 且 |dx| > |dy|）——阈值过小
@@ -100,6 +100,11 @@ export function initLightboxSwipe({ img, area, getGlow, onSwitch }) {
             verdict = 'horizontal';
             area.setPointerCapture(e.pointerId);
             img.style.transition = 'none';
+            // 接管即作废在途的滑出/滑入自动动画：transition 被取消后其
+            // transitionend 永不触发、收尾监听残留，会在回弹/下一次切图的
+            // transitionend 上重放收尾（幽灵换图/提前恢复裁剪）——经钩子
+            // 交 switch 模块摘除（2026-10-18）
+            if (onTakeover) onTakeover();
             setOverflowVisible(true); // 拖拽越过面板区域不裁剪（面板文字浮于图片之上）
             applyFollow(dx);
         } else if (Math.abs(dy) > SWIPE_ABANDON && Math.abs(dy) > Math.abs(dx)) {

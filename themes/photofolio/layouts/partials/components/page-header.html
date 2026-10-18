@@ -1,0 +1,22 @@
+{{/* 页面头（全站同款骨架单源：标题 + 可选描述 + 计数行；2026-10-18 自 6 处
+    复制收敛——此前计数行已漂移：仅全部作品页包 photo-count-num span）
+    参数：title、description（可选）、countKey（计数行 i18n 键，可选）、
+    count（计数行数字）、countId（可选：数字包 span 供筛选滚动动画，
+    见 gallery-filter.js） */}}
+{{ $ctx := . }}
+<div class="gallery-header">
+    <div class="container">
+        <h1 class="page-title">{{ $ctx.title }}</h1>
+        {{ with $ctx.description }}<p class="page-description">{{ . }}</p>{{ end }}
+        {{ with $ctx.countKey }}
+            {{ $count := $ctx.count | default 0 }}
+            <p class="photo-count">
+            {{- with $ctx.countId -}}
+                {{ i18n $ctx.countKey (dict "Count" (printf "<span class=\"photo-count-num\" id=\"%s\">%d</span>" . $count)) | safeHTML }}
+            {{- else -}}
+                {{ i18n $ctx.countKey (dict "Count" $count) }}
+            {{- end -}}
+            </p>
+        {{ end }}
+    </div>
+</div>

@@ -5,28 +5,14 @@
 {{ $coverPhotos := partial "components/series-covers.html" (dict "photos" $sortedPhotos) }}
 
 <section class="gallery-page">
-    <div class="gallery-header">
-        <div class="container">
-            <h1 class="page-title">{{ .Title }}</h1>
-            {{ with .Params.description }}
-                <p class="page-description">{{ . }}</p>
-            {{ end }}
-            <p class="photo-count">{{ i18n "series_count" (dict "Count" (len $coverPhotos)) }}</p>
-        </div>
-    </div>
+    {{ partial "components/page-header.html" (dict "title" .Title "description" .Params.description "countKey" "series_count" "count" (len $coverPhotos)) }}
 
     <div class="container section-list-grid">
         {{ if gt (len $coverPhotos) 0 }}
             {{/* 系列目录：与首页系列区块同款卡片（封面图 + 系列名 + 总张数） */}}
             {{ partial "components/series-cards.html" (dict "covers" $coverPhotos "allPhotos" $sortedPhotos) }}
         {{ else }}
-        <div class="empty-state">
-            <div class="empty-icon">{{ partial "utils/icon.html" (dict "name" "camera") }}</div>
-            <h3>{{ i18n "no_series" }}</h3>
-            <p class="empty-hint">
-                {{ i18n "no_series_hint" }}
-            </p>
-        </div>
+        {{ partial "components/empty-state.html" (dict "titleKey" "no_series" "hintKey" "no_series_hint") }}
         {{ end }}
     </div>
 

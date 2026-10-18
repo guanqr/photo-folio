@@ -3,7 +3,6 @@
 {{- $svgFavicon := "icons/favicon.svg" -}}
 {{- $pngFavicon := "icons/favicon-96x96.png" -}}
 {{- $appleTouchIcon := "icons/apple-touch-icon.png" -}}
-{{- $manifest := "manifest.json" -}}
 <link rel="shortcut icon" type="image/x-icon" href="{{ $icoFavicon | relURL }}" />
 <link rel="icon" type="image/svg+xml" href="{{ $svgFavicon | relURL }}" />
 <link rel="icon" type="image/png" href="{{ $pngFavicon | relURL }}" sizes="96x96" />
@@ -13,4 +12,3 @@
    在浏览器模式下也按 Web App 候选处理、旋转后视口簿记不更新（iPad 横屏转竖屏
    样式不切换的可疑根因，参考站无此声明、旋转正常）；独立模式由 manifest 接管 */}}
 <meta name="application-name" content="{{ .Site.Title }}" />
-<link rel="manifest" href="{{ $manifest | relURL }}" />

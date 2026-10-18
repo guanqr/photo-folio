@@ -35,7 +35,7 @@
 }
 
 /* 进入宽屏：导航文字从右侧向左滑回原位（类由 JS 在断点跨越时添加，时长与首页进度条标题切换一致） */
-@media (min-width: 768px) {
+@media (min-width: 769px) {
     .site-nav.nav-slide-in {
         animation: nav-slide-in 0.6s ease both;
     }
@@ -64,13 +64,6 @@
         border-bottom-color: transparent;
         box-shadow: none;
     }
-}
-
-/* 主题切换瞬间临时恢复时间过渡（theme-toggle.js 挂 html.theme-switching）：
-   页面其余区域 0.3s 渐隐时导航栏随同渐变；结束后摘除、恢复滚动进度驱动 */
-html.theme-switching .site-header {
-    transition: background var(--transition-fade), border-color var(--transition-fade),
-                box-shadow var(--transition-fade);
 }
 
 .header-inner {
@@ -335,9 +328,13 @@ html.theme-switching .site-header {
     --color-accent: var(--dark-accent);
 
     .nav-dropdown {
-        --color-text: var(--color-text);
-        --color-text-secondary: var(--color-text-secondary);
-        --color-accent: var(--color-accent);
+        /* 按主题分量（-h/-s/-l）重建还原——主值不能直接 var() 引用自身
+           （自定义属性自引用构成循环、判定 guaranteed-invalid，文字色会回退
+           继承上方强制白字、白字压浅白面板不可见，2026-10-18 诊断）；
+           上方强制规则只覆盖主值、分量仍指向亮色主题值 */
+        --color-text: hsl(var(--color-text-h), var(--color-text-s), var(--color-text-l));
+        --color-text-secondary: hsl(var(--color-text-secondary-h), var(--color-text-secondary-s), var(--color-text-secondary-l));
+        --color-accent: hsl(var(--color-accent-h), var(--color-accent-s), var(--color-accent-l));
     }
 }
 

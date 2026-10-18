@@ -42,7 +42,9 @@
 .masonry-item {
     @extend %reveal-entry;
     flex: 0 0 auto;
-    transition: transform 0.4s var(--transition-spring), opacity 0.4s ease;
+    /* 时长由变量自带（0.45s 弹簧）：此前前缀 0.4s 与变量时长并存，
+       按规范第二个时间值解析为 delay——两段式揭示（先淡入、停顿后上滑） */
+    transition: transform var(--transition-spring), opacity 0.4s ease;
 }
 
 .photo-card {
@@ -174,8 +176,8 @@ img.photo-img {
         &::-webkit-scrollbar { display: none; }
 
         &.can-scroll-r {
-            mask-image: linear-gradient(to right, #000 82%, transparent 100%);
-            -webkit-mask-image: linear-gradient(to right, #000 82%, transparent 100%);
+            mask-image: linear-gradient(to right, var(--color-black) 82%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to right, var(--color-black) 82%, transparent 100%);
         }
 
         button {

@@ -75,12 +75,18 @@ def process_image(input_path, output_path, exif_info, target_long_side=1920, max
         img_watermark = add_watermark(img_resized, photo_year=photo_year)
 
         quality = 95
-        while quality > 10:
+        while quality >= 10:
             buf = BytesIO()
             img_watermark.save(buf, "JPEG", quality=quality, optimize=True)
             if buf.tell() / 1024 <= max_size_kb:
                 break
             quality -= 5
+
+        # 终检：质量 10 仍超限时告警（此前循环在 15 处提前退出、无任何提示，
+        # 输出静默超过 400KB 上限，2026-10-18）
+        if buf.tell() / 1024 > max_size_kb:
+            print(f"⚠️  {os.path.basename(input_path)} 质量已降至 10 仍 "
+                  f"{buf.tell() / 1024:.0f}KB > {max_size_kb}KB 上限")
 
         with open(output_path, "wb") as f:
             f.write(buf.getvalue())

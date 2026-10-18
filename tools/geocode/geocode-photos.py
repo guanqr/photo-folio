@@ -57,11 +57,22 @@ def http_get_json(url, headers=None):
         return json.loads(resp.read().decode("utf-8"))
 
 
+class AmapKeyError(RuntimeError):
+    """高德 key/配额/权限类错误：对后续全部请求同样成立，不得落 Nominatim 兜底"""
+
+
 def geocode_amap(address, key):
     url = f"{API_URL}?{urllib.parse.urlencode({'address': address, 'key': key})}"
     data = http_get_json(url)
     if data.get("status") != "1":
-        raise RuntimeError(f"amap status {data.get('status')}: {data.get('info', '')}")
+        info = data.get("info", "")
+        infocode = str(data.get("infocode", ""))
+        # infocode 10001 key 无效 / 10003 配额耗尽 / 10004 限流等（1000 前缀）——
+        # 此类错误与地址无关、对后续全部请求同样成立，落 Nominatim 会把境内
+        # 中文地址交给境外服务、错误坐标静默写入（2026-10-18）
+        if infocode.startswith("1000"):
+            raise AmapKeyError(f"amap {infocode}: {info}")
+        raise RuntimeError(f"amap status {data.get('status')}: {info}")
     loc = (data.get("geocodes") or [{}])[0].get("location")
     if not loc:
         raise RuntimeError("no geocode result")
@@ -84,6 +95,8 @@ def geocode_nominatim(address):
 def geocode(address, key):
     try:
         return geocode_amap(address, key)
+    except AmapKeyError:
+        raise  # key/配额类：不落 Nominatim，由 main 捕获中止
     except Exception as e:
         try:
             lat, lng = geocode_nominatim(address)
@@ -111,6 +124,11 @@ def main():
             e["lng"] = str(lng)
             done += 1
             print(f"✓ {e.get('src')}  {e.get('address')} → {lat}, {lng}")
+        except AmapKeyError as err:
+            # key/配额类错误：剩余条目不落 Nominatim（境外服务解析境内中文地址
+            # 不可靠），中止循环——已成功的条目照常写回
+            print(f"⛔ 高德凭证/配额错误（{err}）：剩余 {len(todo) - done - failed} 条不兜底、中止")
+            break
         except Exception as err:
             failed += 1
             print(f"✗ {e.get('src')}  {e.get('address')}  {err}")

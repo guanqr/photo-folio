@@ -26,7 +26,7 @@ export function initLightboxZoom({ img, area, reducedMotion }) {
             img.removeEventListener('transitionend', pendingDone);
             pendingDone = null;
         }
-        img.style.transition = '';
+        img.style.removeProperty('transition');
         img.style.transform = '';
         img.style.transformOrigin = '';
         img.style.width = '';
@@ -106,13 +106,18 @@ export function initLightboxZoom({ img, area, reducedMotion }) {
         img.style.transition = 'none';
         img.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
         void img.offsetWidth; // 强制提交起点（FLIP First）
-        img.style.transition = FLIP_TRANSITION;
+        // 过渡以 important 写入：主题切换窗口内全站压制规则
+        //（html.theme-switching * transition:none !important）会压过普通内联
+        // 声明、取消本过渡致 transitionend 不触发、面板卡在隐藏态——同源
+        // 内联重要声明按级联压过样式表重要声明，缩放动画照常播放（2026-10-18）
+        img.style.setProperty('transition', FLIP_TRANSITION, 'important');
         img.style.transform = '';
         img.addEventListener('transitionend', pendingDone = function done(e) {
             if (e.propertyName !== 'transform') return;
             img.removeEventListener('transitionend', done);
             pendingDone = null;
-            img.style.transition = '';
+            // 清理须 removeProperty：普通赋值清不掉 important 声明
+            img.style.removeProperty('transition');
             img.style.transformOrigin = '';
             // width/height 锁保留：换源期间盒仍为 contain 拟合目标（见 start 注释），
             // 全尺寸元数据就绪后由调用方摘除
@@ -142,13 +147,14 @@ export function initLightboxZoom({ img, area, reducedMotion }) {
         const sy = targetRect.height / rect.height;
         area.style.overflow = 'visible';
         img.style.transformOrigin = '0 0';
-        img.style.transition = FLIP_TRANSITION;
+        // 同 start：important 写入防主题切换窗口的全局压制取消过渡（2026-10-18）
+        img.style.setProperty('transition', FLIP_TRANSITION, 'important');
         img.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
         img.addEventListener('transitionend', pendingDone = function done(e) {
             if (e.propertyName !== 'transform') return;
             img.removeEventListener('transitionend', done);
             pendingDone = null;
-            img.style.transition = '';
+            img.style.removeProperty('transition');
             img.style.transform = '';
             img.style.transformOrigin = '';
             area.style.overflow = '';

@@ -47,6 +47,10 @@ export function loadWithAvifFallback(img) {
 // @media (max-width: 768px)，两处改动必须同步
 export const BP_DESKTOP_MIN = 769;
 
+// 灯箱窄屏断点单源（lightbox.js 与 lightbox-drawer.js 共用）：≤1000px 抽屉模式、
+// 主图 w_1280 降档与抽屉同界——改断点两处同步生效（2026-10-18 自双份字面量收敛）
+export const BP_LIGHTBOX_NARROW = 1000;
+
 // URL 查询参数状态同步（灯箱 ?p= 与筛选 ?y=/?s=/?l=/?c= 共用）：
 // 克隆当前参数、按 updates 写/删（null/'' 删除），与当前 URL **规范化比较**
 // （键排序——location.search 原始串可能乱序/编码不同，字符串比较会误判）

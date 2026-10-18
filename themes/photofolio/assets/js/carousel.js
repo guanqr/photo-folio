@@ -36,7 +36,17 @@ function smoothScrollTo(targetY, duration = 700) {
 // 释放闭包与解码位图（往返首页多次不再叠加）
 let runningTimer = null;
 
+// 页面可见性监听（模块级、随 initCarousel 拆线重挂）：标签页隐藏时定时器
+// 被节流后仍会触发轮换与 Ken Burns 空转——隐藏即停、可见恢复
+//（对照系列页氛围粒子的停帧/续帧先例，2026-10-18）
+let onVisibility = null;
+
 export function initCarousel() {
+    // 拆线先于早退：换页后旧监听闭包持有已销毁轮播的整组 slide img（解码位图）
+    if (onVisibility) {
+        document.removeEventListener('visibilitychange', onVisibility);
+        onVisibility = null;
+    }
     const carousel = document.getElementById('home-carousel');
     if (!carousel) {
         if (runningTimer) {
@@ -73,7 +83,9 @@ export function initCarousel() {
 
     function startAutoplay() {
         stopAutoplay();
-        if (AUTOPLAY_MS > 0 && slides.length > 1) {
+        // 标签页隐藏时不启动（后台加载/恢复场景）：可见性恢复时经
+        // visibilitychange 续播
+        if (AUTOPLAY_MS > 0 && slides.length > 1 && !document.hidden) {
             runningTimer = setInterval(next, AUTOPLAY_MS);
         }
     }
@@ -84,6 +96,16 @@ export function initCarousel() {
             runningTimer = null;
         }
     }
+
+    // 标签页隐藏即停、可见且轮播仍挂载即恢复自动播放
+    onVisibility = () => {
+        if (document.hidden) {
+            stopAutoplay();
+        } else if (carousel.isConnected) {
+            startAutoplay();
+        }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
 
     // Ken Burns 微缩放（WAAPI）：激活 slide 在自动播放时长内 1→1.05 极缓推近
     //（fill forwards 保持末端态）；切换时旧 slide 不做缩回——保持放大态随

@@ -1,4 +1,6 @@
 let scrollHandler = null;
+let clickHandler = null;
+let clickBtn = null;
 
 export function initBackToTop() {
     // 拆线先于早退：SPA 跳到无按钮页面后，旧滚动监听仍挂在 window、
@@ -6,6 +8,13 @@ export function initBackToTop() {
     if (scrollHandler) {
         window.removeEventListener('scroll', scrollHandler);
         scrollHandler = null;
+    }
+    // click 监听同款拆线：按钮在壳层不重建、每次 SPA 换页重复挂载会
+    // 随导航无限累积（2026-10-18）
+    if (clickHandler && clickBtn) {
+        clickBtn.removeEventListener('click', clickHandler);
+        clickHandler = null;
+        clickBtn = null;
     }
 
     const btn = document.getElementById('back-to-top');
@@ -21,7 +30,9 @@ export function initBackToTop() {
 
     window.addEventListener('scroll', scrollHandler, { passive: true });
 
-    btn.addEventListener('click', () => {
+    clickHandler = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
+    };
+    clickBtn = btn;
+    btn.addEventListener('click', clickHandler);
 }

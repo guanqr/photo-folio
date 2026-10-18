@@ -74,7 +74,12 @@ def keep_feature(f):
 def load_source(cfg):
     cache_file = VENDOR_DIR / cfg["cache"]
     if cache_file.exists():
-        return json.loads(cache_file.read_text(encoding="utf-8"))
+        try:
+            return json.loads(cache_file.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as e:
+            # 缓存损坏（下载中断留下的截断文件等）：重新下载——此前 json.loads
+            # 在 try 外、损坏缓存会让每次运行都同样崩溃且无重下载兜底（2026-10-18）
+            print(f"vendor cache 损坏（{cfg['cache']}：{e}），重新下载...")
     last_err = None
     for url in cfg["urls"]:
         try:
@@ -83,7 +88,10 @@ def load_source(cfg):
             with urllib.request.urlopen(req, timeout=60) as resp:
                 text = resp.read().decode("utf-8")
             VENDOR_DIR.mkdir(parents=True, exist_ok=True)
-            cache_file.write_text(text, encoding="utf-8")
+            # 原子写：临时文件 + replace——下载中断不留下截断缓存（2026-10-18）
+            tmp = cache_file.with_suffix(cache_file.suffix + ".tmp")
+            tmp.write_text(text, encoding="utf-8")
+            tmp.replace(cache_file)
             return json.loads(text)
         except Exception as e:
             last_err = e

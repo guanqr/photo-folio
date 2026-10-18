@@ -4,11 +4,25 @@ import os
 import re
 
 _CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+# 字符串行正则：支持 \" 与 \\ 转义（写侧 _tostr 只产生这两种转义）
+_STR_RE = re.compile(r'^(\w+)\s*=\s*"((?:[^"\\]|\\.)*)"')
 
 
 def _clean(value):
     """写 TOML 前去除字符串中的控制字符（EXIF 可能携带末尾 NUL 等，否则 TOML 解析失败）"""
     return _CONTROL_RE.sub("", value)
+
+
+def _tostr(value):
+    """写 TOML 前的统一清洗：去控制字符 + 转义反斜杠与双引号（TOML 基本字符串）。
+    此前原样拼接会让值含引号/反斜杠时生成非法 TOML、全量重写损坏字段（2026-10-18）"""
+    return _clean(value).replace("\\", "\\\\").replace('"', '\\"')
+
+
+def _fromstr(value):
+    """_tostr 的逆操作：先还原转义引号、再还原转义反斜杠——顺序不可颠倒，
+    反了会把 `\\\"`（转义反斜杠 + 转义引号）吞掉一层反斜杠"""
+    return value.replace('\\"', '"').replace("\\\\", "\\")
 
 
 def parse_toml_entries(toml_path):
@@ -26,9 +40,9 @@ def parse_toml_entries(toml_path):
             continue
         entry = {}
         for line in block.split("\n"):
-            m = re.match(r'^(\w+)\s*=\s*"([^"]*)"', line)
+            m = _STR_RE.match(line)
             if m:
-                entry[m.group(1)] = m.group(2)
+                entry[m.group(1)] = _fromstr(m.group(2))
             else:
                 # 匹配非引号值：布尔值（true/false）或数字
                 m = re.match(r'^(\w+)\s*=\s*(true|false|\d+(?:\.\d+)?)', line)
@@ -64,11 +78,11 @@ def write_toml(toml_path, entries):
             lines.append("")
         lines.append("[[photo]]")
         for f in FIELDS:
-            lines.append(f'{f} = "{_clean(entry.get(f, ""))}"')
+            lines.append(f'{f} = "{_tostr(entry.get(f, ""))}"')
         if entry.get("description"):
-            lines.append(f'description = "{_clean(entry["description"])}"')
+            lines.append(f'description = "{_tostr(entry["description"])}"')
         if entry.get("series"):
-            lines.append(f'series = "{_clean(entry["series"])}"')
+            lines.append(f'series = "{_tostr(entry["series"])}"')
         if entry.get("is_cover") == "true":
             lines.append(f'is_cover = {entry["is_cover"]}')
         if entry.get("featured") == "true":

@@ -20,7 +20,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent  # tools/backfill/ → 仓库根（对照 generate-maps.py 同法；少一级会解析到不存在的 tools/hugo.toml 与 tools/data）
 PHOTO_PATH = ROOT / "data" / "photo.toml"
 TIMEOUT_SEC = 15
 

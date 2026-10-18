@@ -74,6 +74,7 @@ export function initLightboxAnalysisControl({
             // 触发行随开合平滑收拢（纯 CSS），展开方向无 t=0 布局跳变、无需补偿
             drawer.setFitAdjuster(null); // 清除收起期间的高度扣除，按实际高度逐帧重判
             cancelCenterComp(); // 收起中途再展开：停止收起补偿、摘除 transform
+            drawer.cancelScroll(); // 取消收起启动的回滚动画（2026-10-18：不取消则展开期间仍逐帧强制 scrollTop 归零、覆盖用户滚动）
             wrap.style.maxHeight = '';
             wrap.classList.add('is-open');
             analyze(); // 展开即分析当前照片（调用方注入：展开态发探测、结果入缓存）

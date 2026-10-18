@@ -75,15 +75,7 @@ export function initLightboxBackdrop({ container, insertBefore, reducedMotion })
         if (isImageReady(el)) {
             show();
         } else {
-            el.addEventListener('load', show, { once: true });
-            el.addEventListener('error', () => {
-                // AVIF 兜底重试在途（avif-fallback 捕获阶段已换 webp、新加载
-                // 已开始）：不删层、不处理——重试成功后其 load 监听照常走 show
-                // 淡入；若在此删层，在途的 webp 加载将落空、背景回退旧图
-                if (el.dataset.avifRetry) {
-                    delete el.dataset.avifRetry;
-                    return;
-                }
+            const fail = () => {
                 const idx = backdropLayers.indexOf(el);
                 if (idx < 0) return;
                 backdropLayers.splice(idx, 1);
@@ -100,6 +92,20 @@ export function initLightboxBackdrop({ container, insertBefore, reducedMotion })
                         backdropStack.schedulePrune();
                     }
                 }
+            };
+            el.addEventListener('load', show, { once: true });
+            el.addEventListener('error', function onError() {
+                // AVIF 兜底重试在途（avif-fallback 捕获阶段已换 webp、新加载已开始）：
+                // 本次 error 属旧 AVIF 请求、不删层（删层会让在途的 webp 落空、
+                // 背景错误回退旧图）——重挂监听等待重试结果：成功由 load 走 show
+                // 淡入，再失败由重挂的监听走恢复路径（2026-10-18：此前 return
+                // 消费掉 once 监听、webp 再失败时死层永驻背景纯黑）
+                if (el.dataset.avifRetry) {
+                    delete el.dataset.avifRetry;
+                    el.addEventListener('error', onError, { once: true });
+                    return;
+                }
+                fail();
             }, { once: true });
         }
     }

@@ -15,27 +15,7 @@ import { initPageTransition } from './page-transition.js';
 import { initCarousel } from './carousel.js';
 import { initAboutStats } from './about-stats.js';
 import { initAvifFallback } from './avif-fallback.js';
-
-// 首页分类卡片：滚动进入视口时交错渐入
-let categoryObserver = null;
-function revealCategoryCards() {
-    const cards = document.querySelectorAll('.category-card:not(.is-revealed)');
-    if (!cards.length) return;
-    // 换页断开旧观察（与 lazy-load 同因：观察器对未揭示目标持强引用，
-    // 换页后永不 intersect、累积持有已脱离文档的卡片子树）
-    if (categoryObserver) categoryObserver.disconnect();
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-            if (!entry.isIntersecting) return;
-            const card = entry.target;
-            const index = Array.prototype.indexOf.call(cards, card);
-            setTimeout(() => card.classList.add('is-revealed'), index * 60);
-            observer.unobserve(card);
-        });
-    }, { rootMargin: '0px 0px -40px 0px' });
-    categoryObserver = observer;
-    cards.forEach((card) => observer.observe(card));
-}
+import { initCategoryReveal } from './category-reveal.js';
 
 // 页面相关模块（每次页面切换需重新初始化）
 function initPageModules() {
@@ -55,7 +35,7 @@ function initPageModules() {
     initBackToTop();
     initCarousel();
     initAboutStats();
-    revealCategoryCards();
+    initCategoryReveal();
     initCardsFlip();
     openLightboxFromUrl(); // URL 带 ?p= 时恢复灯箱（首次加载与 SPA 跳转均会执行）
 }

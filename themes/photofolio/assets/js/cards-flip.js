@@ -49,6 +49,13 @@ function clearInline(cards) {
 }
 
 function flipColumns(grid, entry, nextCols) {
+    // 作废旧收尾（槽位在 entry 上、按网格隔离）：快速二次翻转时旧定时器
+    // 会把第二次动画仍在途的内联样式（transition/transform）拦腰清掉、
+    // 卡片中途急停（2026-10-18）
+    if (entry.finishTimer) {
+        clearTimeout(entry.finishTimer);
+        entry.finishTimer = null;
+    }
     const cards = [...grid.querySelectorAll('.category-card')];
     if (prefersReducedMotion()) {
         applyCols(grid, nextCols); // 减弱动态：直接切换，不播放动画
@@ -83,8 +90,12 @@ function flipColumns(grid, entry, nextCols) {
         }
     });
     entry.cols = nextCols;
-    // 动画结束后清理内联样式（恢复卡片自身的 hover 过渡）
-    setTimeout(() => clearInline(cards), 400);
+    // 动画结束后清理内联样式（恢复卡片自身的 hover 过渡）；定时器入槽位，
+    // 二次翻转时在 flipColumns 入口作废旧收尾（见上）
+    entry.finishTimer = setTimeout(() => {
+        entry.finishTimer = null;
+        clearInline(cards);
+    }, 400);
 }
 
 export function initCardsFlip() {
@@ -98,7 +109,7 @@ export function initCardsFlip() {
 
     document.querySelectorAll('.grid').forEach((grid) => {
         if (observed.has(grid)) return;
-        const entry = { ro: null, cols: null };
+        const entry = { ro: null, cols: null, finishTimer: null };
         entry.cols = initialCols(grid.getBoundingClientRect().width);
         applyCols(grid, entry.cols); // 立即接管列数（内联样式覆盖 CSS 媒体查询降级）
         if ('ResizeObserver' in window) {

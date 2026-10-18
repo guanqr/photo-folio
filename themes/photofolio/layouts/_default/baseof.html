@@ -189,6 +189,9 @@
                         </div>
                         {{ end }}
                         {{ if $chartsAny }}
+                            {{/* 分析加载失败提示：构建期预渲染、lightbox-analysis.js 切换 hidden
+                                （成功路径隐藏、探测失败路径显示） */}}
+                            {{ partial "components/empty-state.html" (dict "class" "lightbox-analysis-error" "id" "lightbox-analysis-error" "hidden" true "icon" "alert" "titleKey" "lightbox_analysis_failed") }}
                             </div>
                             <button class="lightbox-analysis-collapse" id="lightbox-analysis-collapse" type="button">
                                 <span>{{ i18n "lightbox_analysis_collapse" }}</span>
@@ -237,7 +240,7 @@
     <!-- defer 确保在 DOM 解析完成后执行，不会阻塞渲染 -->
     <script src="{{ $js.RelPermalink }}" {{ with $js.Data.Integrity }}integrity="{{ . }}"{{ end }} defer></script>
 
-    <!-- Instant.page 预加载加速 (使用 jsDelivr CDN) -->
+    {{/* Instant.page 预加载加速（自托管，见下方脚本） */}}
     {{ if .Site.Params.enableInstantPage }}
     {{/* instant.page 自托管（static/js，含 MIT 许可证头）：消除唯一无 SRI 的第三方
        同源脚本依赖——CDN 被投毒即获得整站同源脚本执行能力（供应链风险） */}}

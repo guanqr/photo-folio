@@ -82,8 +82,11 @@ body {
     @include defineColorHSL(--dark-text-muted, 0, 0%, 40%);
     @include defineColorHSL(--dark-accent, 168.9, 25.2%, 58%);
     @include defineColorHSL(--dark-border, 210, 16.3%, 16.9%);
+    @include defineColorHSL(--dark-lum-curve, 43.9, 89.9%, 61%); /* 直方图明度曲线金色（灯箱组件引用） */
 
-    /* 主题色（暗色主题底色为蓝灰色调、非纯黑；亮色值见 [data-theme="light"]） */
+    /* 主题色（暗色主题底色为蓝灰色调、非纯黑；亮色值见 [data-theme="light"]）；
+       --color-bg 暗色值与 assets/manifest.tmpl 的 theme_color/background_color 同源，
+       改色须两处同步（Hugo 无法解析 SCSS 变量，manifest 侧注释互指） */
     @include defineColorHSL(--color-bg, 202.5, 22.2%, 7.1%);
     @include defineColorHSL(--color-bg-secondary, 206.7, 18.4%, 9.6%);
     @include defineColorHSL(--color-bg-card, 207.3, 18.6%, 11.6%);
@@ -196,6 +199,18 @@ body {
     animation-timing-function: ease;
 }
 
+/* ===== 主题切换窗口统一压制元素级过渡 =====
+   H2 标题（%section-heading）/导航文字/body 自 0.17.0 起带 0.3s 颜色过渡，
+   与上方的整页快照交叉淡化叠加成双重渐变、有效进度约为两者乘积，切换时
+   明显滞后于卡片等瞬时换色元素（不同步）——切换窗口（html.theme-switching）
+   内全站过渡归零，切换动作瞬时完成，动画由 VT 交叉淡化唯一提供；
+   无 VT 的浏览器退回瞬时切换，全站元素同刻换色、恢复同步 */
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+    transition: none !important;
+}
+
 /* ===== 全局减弱动态兜底（CSS 侧一刀切）=====
    此前 prefers-reduced-motion 处理逐模块分散、多处遗漏（跨断点导航滑入滑出、
    首页向下箭头无限弹跳、轮播进度条无限填充、入场 fadeIn 等无任何降级）——
@@ -230,7 +245,7 @@ body {
     position: fixed;
     top: 0;
     left: 0;
-    height: 2px;
+    height: 0.125em;
     background: var(--color-accent);
     z-index: var(--z-progress);
     pointer-events: none;
@@ -268,7 +283,7 @@ body {
     --color-overlay-subtle: hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.05);
 
     --color-map-fill: hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.09); /* 亮色：陆地/区块填充加深一档 */
-    --color-map-border: hsl(217.5, 9.6%, 67.5%); /* 亮色：省/国分界线加深一档（冷灰与色板同调） */
+    @include defineColorHSL(--color-map-border, 217.5, 9.6%, 67.5%); /* 亮色：省/国分界线加深一档（冷灰与色板同调，经四元组定义） */
 }
 
 img { max-width: 100%; height: auto; display: block; }

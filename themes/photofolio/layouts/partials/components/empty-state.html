@@ -1,0 +1,13 @@
+{{/* 空状态卡片（全站同款骨架单源：圆角虚线框 + 图标 + 标题 + 可选提示；
+    2026-10-18 自 7 处复制收敛——此前各复制版本已漂移：hint 子段有无、
+    hidden 属性、图标名各异）
+    参数：icon（图标名，默认 camera）、titleKey、titleCtx（dict，可选）、
+    hintKey（可选）、hintCtx（可选）、id（可选）、hidden（可选 bool）、
+    class（可选附加类，如 lightbox-analysis-error） */}}
+{{ $ctx := . }}
+{{ $icon := $ctx.icon | default "camera" }}
+<div class="empty-state{{ with $ctx.class }} {{ . }}{{ end }}"{{ with $ctx.id }} id="{{ . }}"{{ end }}{{ if $ctx.hidden }} hidden{{ end }}>
+    <div class="empty-icon">{{ partial "utils/icon.html" (dict "name" $icon) }}</div>
+    <h3>{{ i18n $ctx.titleKey (default dict $ctx.titleCtx) }}</h3>
+    {{ with $ctx.hintKey }}<p class="empty-hint">{{ i18n . (default dict $ctx.hintCtx) }}</p>{{ end }}
+</div>

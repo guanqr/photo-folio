@@ -30,7 +30,8 @@
 
 {{/* 网格渲染集：全站一致——系列拆分为全部作品（封面+内页）展示；
     画廊与分类页均用 $realPhotos（分类页已按 category 过滤，同样含内页）；
-    $displayPhotos（仅封面）保留给画廊筛选选项推导 */}}
+    筛选选项与网格渲染集同源（内页独有年份/地点/类型同样有对应按钮，
+    与卡片 data 属性一致）；$displayPhotos（仅封面）仅用于空集合守卫 */}}
 {{ $gridPhotos := $realPhotos }}
 
 {{/* 全部作品页：筛选栏选项（年度 desc、地点/类别按作品数 desc） */}}
@@ -44,7 +45,7 @@
     {{ $catNames := slice }}
     {{ $locCount := dict }}
     {{ $catCount := dict }}
-    {{ range $displayPhotos }}
+    {{ range $gridPhotos }}
         {{ $y := .time | time.Format "2006" }}
         {{ if not (in $years $y) }}{{ $years = $years | append $y }}{{ end }}
         {{ with .location }}
@@ -76,16 +77,8 @@
 {{ end }}
 
 <section class="gallery-page">
-    <div class="gallery-header">
-        <div class="container">
-            <h1 class="page-title">{{ .Title }}</h1>
-            {{ with .Params.description }}
-                <p class="page-description">{{ . }}</p>
-            {{ end }}
-            <!-- 【修复 3】使用真实的作品总数进行统计；数字包在 span 中供筛选后滚动动画更新 -->
-            <p class="photo-count">{{ i18n "total_photos" (dict "Count" (printf "<span class=\"photo-count-num\" id=\"photo-count-num\">%d</span>" $totalRealCount)) | safeHTML }}</p>
-        </div>
-    </div>
+    {{/* 真实作品总数统计（含组照内页）；数字包 span 供筛选后滚动动画更新（countId） */}}
+    {{ partial "components/page-header.html" (dict "title" .Title "description" .Params.description "countKey" "total_photos" "count" $totalRealCount "countId" "photo-count-num") }}
 
     <div class="masonry-container">
         {{ if gt (len $displayPhotos) 0 }}
@@ -131,7 +124,9 @@
                 <div class="filter-options">
                     <button type="button" data-value="" aria-pressed="true" class="is-active">{{ i18n "filter_all" }}</button>
                     {{ range $catList }}
-                        {{ $catPage := site.GetPage .name }}
+                        {{/* 绝对路径取页：相对名会按当前页（/gallery/）解析恒为 nil、
+                            标题回退英文分类键（photo-card.html 同款先例） */}}
+                        {{ $catPage := site.GetPage (printf "/categories/%s" .name) }}
                         <button type="button" data-value="{{ .name }}" aria-pressed="false">{{ default .name $catPage.Title }}</button>
                     {{ end }}
                 </div>
@@ -146,13 +141,9 @@
             {{ end }}
         </div>
 
-        {{/* 筛选无结果提示：与分类空状态同款卡片（圆角虚线框 + 图标 + 标题），
-            构建期预渲染、筛选 JS 切换 hidden（hidden 默认收起） */}}
+        {{/* 筛选无结果提示：构建期预渲染、筛选 JS 切换 hidden（hidden 默认收起） */}}
         {{ if and (eq $sectionName "gallery") (or $filtersCfg.year $filtersCfg.location $filtersCfg.category $filtersCfg.scope) }}
-        <div class="empty-state" id="gallery-filter-empty" hidden>
-            <div class="empty-icon">{{ partial "utils/icon.html" (dict "name" "camera") }}</div>
-            <h3>{{ i18n "filter_empty" }}</h3>
-        </div>
+        {{ partial "components/empty-state.html" (dict "id" "gallery-filter-empty" "hidden" true "titleKey" "filter_empty") }}
         {{ end }}
 
         {{ if gt (len $gridPhotos) $pageSize }}
@@ -164,10 +155,7 @@
         {{ end }}
 
         {{ else }}
-        <div class="empty-state">
-            <div class="empty-icon">{{ partial "utils/icon.html" (dict "name" "camera") }}</div>
-            <h3>{{ i18n "no_photos_under" (dict "Title" .Title) }}</h3>
-        </div>
+        {{ partial "components/empty-state.html" (dict "titleKey" "no_photos_under" "titleCtx" (dict "Title" .Title)) }}
         {{ end }}
     </div>
 

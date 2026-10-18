@@ -83,7 +83,17 @@
             <div class="photo-hover-info" aria-hidden="true">
                 <span class="photo-hover-title">{{ $displayTitle }}</span>
                 {{ if or $focus $aperture }}
-                <span class="photo-hover-meta">{{ with $focus }}{{ . }}mm{{ end }}{{ if and $focus $aperture }} · {{ end }}{{ with $aperture }}f/{{ . }}{{ end }}</span>
+                {{/* 焦距/光圈格式经 i18n（与日期同口径；mm/f 为摄影通用记号、
+                    但文案格式串归语言文件管） */}}
+                <span class="photo-hover-meta">
+                {{- if and $focus $aperture -}}
+                    {{ i18n "photo_hover_meta_both" (dict "Focus" $focus "Aperture" $aperture) }}
+                {{- else if $focus -}}
+                    {{ i18n "photo_hover_meta_focus" (dict "Focus" $focus) }}
+                {{- else -}}
+                    {{ i18n "photo_hover_meta_aperture" (dict "Aperture" $aperture) }}
+                {{- end -}}
+                </span>
                 {{ end }}
             </div>
         </div>

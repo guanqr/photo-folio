@@ -514,13 +514,13 @@ export function initLightboxSwitch({
         })();
         if (collapseRect) {
             // 容器淡出与缩小同时长——样式表 0.3s 的 visibility 翻转须一并覆盖，
-            // 否则 visibility 瞬时翻转、缩小动画不可见
+            // 否则 visibility 提前翻转、缩小动画尾部被切断（此前同任务内即被
+            // 清空、覆盖从未生效——清除移入下方 collapse 收尾，2026-10-18）
             lightbox.style.transition = 'opacity 0.35s ease, visibility 0.35s';
         }
         lightbox.classList.remove('active');
         exitDialog(!keepUrl); // 恢复背景 inert 并还原焦点（SPA 导航关闭不还原，见 exitDialog 注释）
         zoom.cancel(); // 作废在途缩放动画（含容器直显内联残留）
-        lightbox.style.transition = '';
         zoomPending = false;
         openToken++; // 缩放浮现后的全尺寸换源作废
         clearPendingSlideIn(); // 作废在途滑入收尾监听
@@ -539,8 +539,12 @@ export function initLightboxSwitch({
         swipe.reset(); // 作废在途滑动手势与内联样式残留
         if (!keepUrl) collection.syncPhotoUrl('', true); // 关闭 replace 移除 ?p=（保留筛选参数）：历史回到打开前的页面状态，不残留过期照片 URL
         if (collapseRect) {
-            // 缩小回缩略图位置：容器淡出与图片缩小并行，收尾时隐藏主图
-            zoom.collapse(collapseRect, () => { lightboxImg.style.opacity = '0'; });
+            // 缩小回缩略图位置：容器淡出与图片缩小并行，收尾时隐藏主图——
+            // 容器内联过渡随缩小收尾一并清除（还原样式表 0.3s 口径）
+            zoom.collapse(collapseRect, () => {
+                lightboxImg.style.opacity = '0';
+                lightbox.style.transition = '';
+            });
         } else {
             lightboxImg.style.opacity = '0';
         }
@@ -621,6 +625,13 @@ export function initLightboxSwitch({
         open, close, prev, next, openByImg,
         getActiveGlow: () => activeGlow,
         current: () => (currentIndex >= 0 && currentIndex < currentPhotos.length)
-            ? currentPhotos[currentIndex] : null
+            ? currentPhotos[currentIndex] : null,
+        // 滑动接管钩子（swipe 模块 onTakeover 调用）：作废在途滑出/滑入收尾
+        // 监听——过渡被接管取消后其 transitionend 永不触发，残留监听会在
+        // 后续过渡结束时重放收尾（2026-10-18）
+        cancelPendingSlides: () => {
+            clearPendingSlideOut();
+            clearPendingSlideIn();
+        }
     };
 }

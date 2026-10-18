@@ -12,14 +12,20 @@
     {{ end }}
 {{ end }}
 
-{{/* 按 front matter 的 photos 列表（文件名，按展示顺序）解析作品 */}}
+{{/* 按 front matter 的 photos 列表（文件名，按展示顺序）解析作品；
+   未匹配条目构建期警告（与下方 theme 键校验同款——静默丢弃会少图零告警） */}}
 {{ $ordered := slice }}
 {{ range .Params.photos }}
     {{ $name := . }}
+    {{ $matched := false }}
     {{ range $photos }}
         {{ if or (eq .src $name) (eq (path.Base .src) $name) }}
             {{ $ordered = $ordered | append . }}
+            {{ $matched = true }}
         {{ end }}
+    {{ end }}
+    {{ if not $matched }}
+        {{ warnf "系列《%s》的 photos 条目「%s」未匹配 photo.toml 任何 src，已跳过" $seriesName $name }}
     {{ end }}
 {{ end }}
 
@@ -30,15 +36,7 @@
 {{ end }}
 <section class="gallery-page{{ with $ambientTheme }} series-themed{{ end }}"{{ with $ambientTheme }} data-ambient="{{ . }}"{{ end }}>
     {{ with $ambientTheme }}<svg class="series-ambient" aria-hidden="true"></svg>{{ end }}
-    <div class="gallery-header">
-        <div class="container">
-            <h1 class="page-title">{{ .Title }}</h1>
-            {{ with .Params.description }}
-                <p class="page-description">{{ . }}</p>
-            {{ end }}
-            <p class="photo-count">{{ i18n "total_photos" (dict "Count" (len $ordered)) }}</p>
-        </div>
-    </div>
+    {{ partial "components/page-header.html" (dict "title" .Title "description" .Params.description "countKey" "total_photos" "count" (len $ordered)) }}
 
     {{ if gt (len $ordered) 0 }}
     <div class="series-story">
@@ -57,13 +55,7 @@
     </div>
     {{ else }}
     <div class="masonry-container">
-        <div class="empty-state">
-            <div class="empty-icon">{{ partial "utils/icon.html" (dict "name" "camera") }}</div>
-            <h3>{{ i18n "no_photos_in_series" (dict "Title" $seriesName) }}</h3>
-            <p class="empty-hint">
-                {{ i18n "no_series_match_hint" }}
-            </p>
-        </div>
+        {{ partial "components/empty-state.html" (dict "titleKey" "no_photos_in_series" "titleCtx" (dict "Title" $seriesName) "hintKey" "no_series_match_hint") }}
     </div>
     {{ end }}
 

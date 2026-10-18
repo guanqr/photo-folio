@@ -10,11 +10,12 @@
 //   RO 回调在布局切换之后，First 基准须用「上一帧持续刷新的基准位置」回放
 //   （动画期间暂停刷新，避免把变换中的位置当基准——与足迹地图 flipLayout 同款经验）
 
-import { prefersReducedMotion, FLIP_TRANSITION } from './utils.js';
+import { prefersReducedMotion, FLIP_TRANSITION, BP_DESKTOP_MIN } from './utils.js';
 
 const HYSTERESIS = 20; // 斷點滯回寬度（px）
-const TIER = 769;      // ≥769 兩列 / <769 單列（與 CSS max-width:768px 互補）
-const MQ_NARROW = window.matchMedia('(max-width: 768px)'); // 頭部橫排↔豎排斷點（與 CSS 一致）
+const TIER = BP_DESKTOP_MIN; // ≥769 兩列 / <769 單列（與 CSS max-width:768px 互補；單源見 utils.js）
+// 頭部橫排↔豎排斷點：768 = BP_DESKTOP_MIN − 1（與全站窄屏上限嚴格互補，經單源推導不寫死）
+const MQ_NARROW = window.matchMedia(`(max-width: ${BP_DESKTOP_MIN - 1}px)`);
 
 const observed = new Map(); // grid → { ro, two, headerNarrow, headerRects, headerAnimating }
 
@@ -43,6 +44,13 @@ function clearInline(panels) {
 }
 
 function flipColumns(grid, entry, nextTwo) {
+    // 作废旧收尾（槽位在 entry 上）：快速二次翻转时旧定时器会把第二次动画
+    // 仍在途的内联样式（width/height/transition）拦腰清掉、卡片中途急停
+    //（2026-10-18）
+    if (entry.finishTimer) {
+        clearTimeout(entry.finishTimer);
+        entry.finishTimer = null;
+    }
     const panels = [...grid.querySelectorAll('.stats-panel')];
     if (prefersReducedMotion()) {
         applyCols(grid, nextTwo); // 减弱动态：直接切换，不播放动画
@@ -81,8 +89,12 @@ function flipColumns(grid, entry, nextTwo) {
         panel.style.height = lasts[i].height + 'px';
     });
     entry.two = nextTwo;
-    // 动画结束后清理内联样式（恢复卡片自身样式，不干扰后续 FLIP 的 First 量测）
-    setTimeout(() => clearInline(panels), 400);
+    // 动画结束后清理内联样式（恢复卡片自身样式，不干扰后续 FLIP 的 First 量测）；
+    // 定时器入槽位，二次翻转时在 flipColumns 入口作废旧收尾（见上）
+    entry.finishTimer = setTimeout(() => {
+        entry.finishTimer = null;
+        clearInline(panels);
+    }, 400);
 }
 
 /* ===== 顶部头像/信息的横排↔竖排 FLIP（CSS 已切换布局，用上一帧基准回放） =====
@@ -123,7 +135,14 @@ function flipHeader(container, entry, fromRects, els) {
         }
     });
     entry.headerAnimating = true;
-    setTimeout(() => {
+    // 收尾定时器入槽位：快速二次翻转时先作废旧收尾——否则旧定时器会在第二次
+    // 动画中途清掉在途内联样式、且 headerAnimating 提前复位（2026-10-18）
+    if (entry.headerFinishTimer) {
+        clearTimeout(entry.headerFinishTimer);
+        entry.headerFinishTimer = null;
+    }
+    entry.headerFinishTimer = setTimeout(() => {
+        entry.headerFinishTimer = null;
         entry.headerAnimating = false;
         clearInline(els.map((item) => item.el)); // 恢复头像自身的 hover 过渡
     }, 400);
@@ -146,6 +165,8 @@ export function initAboutStats() {
             headerNarrow: MQ_NARROW.matches,
             headerRects: null,   // 头部元素上一帧基准位置（回放用）
             headerAnimating: false,
+            finishTimer: null,       // 列翻转收尾定时器槽位
+            headerFinishTimer: null, // 头部翻转收尾定时器槽位
         };
         entry.two = grid.getBoundingClientRect().width >= TIER;
         applyCols(grid, entry.two); // 立即接管列数（内联样式覆盖 CSS 媒体查询降级）
