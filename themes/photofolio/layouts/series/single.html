@@ -58,7 +58,7 @@
     {{ else }}
     <div class="masonry-container">
         <div class="empty-state">
-            <div class="empty-icon">{{ hugo.Data.svg.camera | safeHTML }}</div>
+            <div class="empty-icon">{{ partial "utils/icon.html" (dict "name" "camera") }}</div>
             <h3>{{ i18n "no_photos_in_series" (dict "Title" $seriesName) }}</h3>
             <p class="empty-hint">
                 {{ i18n "no_series_match_hint" }}

@@ -54,7 +54,7 @@
 
             {{/* 向下滚动箭头：点击平滑滚动到分类卡片区域 */}}
             <button class="carousel-scroll-down" id="carousel-scroll-down" aria-label="{{ i18n "scroll_down" }}">
-                {{ hugo.Data.svg.arrow_down | safeHTML }}
+                {{ partial "utils/icon.html" (dict "name" "arrow_down" "variant" "thick") }}
             </button>
         </div>
         {{ end }}

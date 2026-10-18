@@ -43,14 +43,14 @@
         <!-- 毛玻璃背景层由 JS 动态创建（每张作品一层） -->
         <div class="lightbox-topbar">
             <button class="lightbox-close" id="lightbox-close" aria-label="{{ i18n "close" }}">
-                {{ hugo.Data.svg.x | safeHTML }}
+                {{ partial "utils/icon.html" (dict "name" "x") }}
             </button>
         </div>
         <button class="lightbox-arrow lightbox-prev" id="lightbox-prev" aria-label="{{ i18n "prev_photo" }}">
-            {{ hugo.Data.svg.chevron_left | safeHTML }}
+            {{ partial "utils/icon.html" (dict "name" "chevron_left") }}
         </button>
         <button class="lightbox-arrow lightbox-next" id="lightbox-next" aria-label="{{ i18n "next_photo" }}">
-            {{ hugo.Data.svg.chevron_right | safeHTML }}
+            {{ partial "utils/icon.html" (dict "name" "chevron_right") }}
         </button>
         <div class="lightbox-content">
             <div class="lightbox-main">
@@ -68,12 +68,12 @@
                         {{ if $lbCfg.meta }}
                         <div class="lightbox-meta" id="lightbox-meta">
                             <div class="lightbox-meta-group" id="lightbox-meta-place">
-                                <span class="icon">{{ hugo.Data.svg.location | safeHTML }}</span>
+                                <span class="icon">{{ partial "utils/icon.html" (dict "name" "location") }}</span>
                                 <span class="lightbox-meta-label">{{ i18n "lightbox_place" }}</span>
                                 <span class="lightbox-meta-text"></span>
                             </div>
                             <div class="lightbox-meta-group" id="lightbox-meta-date">
-                                <span class="icon">{{ hugo.Data.svg.calendar | safeHTML }}</span>
+                                <span class="icon">{{ partial "utils/icon.html" (dict "name" "calendar") }}</span>
                                 <span class="lightbox-meta-label">{{ i18n "lightbox_date" }}</span>
                                 <span class="lightbox-meta-text"></span>
                             </div>
@@ -82,32 +82,32 @@
                         {{ if $lbCfg.exif }}
                         <ul class="lightbox-exif" id="lightbox-exif">
                             <li data-exif-key="camera">
-                                <span class="exif-icon">{{ hugo.Data.svg.camera | safeHTML }}</span>
+                                <span class="exif-icon">{{ partial "utils/icon.html" (dict "name" "camera") }}</span>
                                 <span class="exif-label">{{ i18n "exif_device" }}</span>
                                 <span class="exif-value"></span>
                             </li>
                             <li data-exif-key="lens">
-                                <span class="exif-icon">{{ hugo.Data.svg.lens | safeHTML }}</span>
+                                <span class="exif-icon">{{ partial "utils/icon.html" (dict "name" "lens") }}</span>
                                 <span class="exif-label">{{ i18n "exif_lens" }}</span>
                                 <span class="exif-value"></span>
                             </li>
                             <li data-exif-key="focus">
-                                <span class="exif-icon">{{ hugo.Data.svg.focal | safeHTML }}</span>
+                                <span class="exif-icon">{{ partial "utils/icon.html" (dict "name" "focal") }}</span>
                                 <span class="exif-label">{{ i18n "exif_focus" }}</span>
                                 <span class="exif-value"></span>
                             </li>
                             <li data-exif-key="aperture">
-                                <span class="exif-icon">{{ hugo.Data.svg.aperture | safeHTML }}</span>
+                                <span class="exif-icon">{{ partial "utils/icon.html" (dict "name" "aperture") }}</span>
                                 <span class="exif-label">{{ i18n "exif_aperture" }}</span>
                                 <span class="exif-value"></span>
                             </li>
                             <li data-exif-key="shutter">
-                                <span class="exif-icon">{{ hugo.Data.svg.shutter | safeHTML }}</span>
+                                <span class="exif-icon">{{ partial "utils/icon.html" (dict "name" "shutter") }}</span>
                                 <span class="exif-label">{{ i18n "exif_shutter" }}</span>
                                 <span class="exif-value"></span>
                             </li>
                             <li data-exif-key="iso">
-                                <span class="exif-icon">{{ hugo.Data.svg.iso | safeHTML }}</span>
+                                <span class="exif-icon">{{ partial "utils/icon.html" (dict "name" "iso") }}</span>
                                 <span class="exif-label">{{ i18n "exif_iso" }}</span>
                                 <span class="exif-value"></span>
                             </li>
@@ -120,7 +120,7 @@
                         <button class="lightbox-analysis-trigger" id="lightbox-analysis-trigger" type="button"
                             aria-expanded="false" aria-controls="lightbox-analysis">
                             <span>{{ i18n "lightbox_analysis" }}</span>
-                            {{ hugo.Data.svg.arrow_down | safeHTML }}
+                            {{ partial "utils/icon.html" (dict "name" "arrow_down" "variant" "thick") }}
                         </button>
                         <div class="lightbox-analysis" id="lightbox-analysis" aria-hidden="true">
                             <div class="lightbox-charts" id="lightbox-charts">
@@ -192,7 +192,7 @@
                             </div>
                             <button class="lightbox-analysis-collapse" id="lightbox-analysis-collapse" type="button">
                                 <span>{{ i18n "lightbox_analysis_collapse" }}</span>
-                                {{ hugo.Data.svg.arrow_up | safeHTML }}
+                                {{ partial "utils/icon.html" (dict "name" "arrow_up" "variant" "thick") }}
                             </button>
                         </div>
                         {{ end }}
@@ -204,7 +204,7 @@
                         {{ end }}
                     </div>
                     <button class="lightbox-panel-toggle" id="lightbox-panel-toggle" aria-label="{{ i18n "lightbox_expand" }}" aria-expanded="false" data-expand-label="{{ i18n "lightbox_expand" }}" data-collapse-label="{{ i18n "lightbox_collapse" }}" data-top-label="{{ i18n "back_to_top" }}">
-                        {{ hugo.Data.svg.arrow_down | safeHTML }}
+                        {{ partial "utils/icon.html" (dict "name" "arrow_down" "variant" "thick") }}
                     </button>
                 </aside>
             </div>
@@ -213,7 +213,7 @@
 
     <!-- 返回顶部按钮 -->
     <button id="back-to-top" class="back-to-top" aria-label="{{ i18n "back_to_top" }}">
-        {{ hugo.Data.svg.arrow_up | safeHTML }}
+        {{ partial "utils/icon.html" (dict "name" "arrow_up" "variant" "thick") }}
     </button>
 
     <!-- 【核心】使用 Hugo Extended 的 js.Build (esbuild) 编译所有 ES6 模块 -->

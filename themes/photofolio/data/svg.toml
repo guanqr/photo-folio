@@ -1,51 +1,54 @@
 # data/svg.toml
+# 每条只存 svg 标签的差异属性（width/height、fill 型图标的 fill="none"）与内容；
+# 公共属性（xmlns/viewBox/fill/stroke/stroke-width/stroke-linecap/stroke-linejoin）
+# 由 partials/utils/icon.html 渲染时注入（2026-10-18 收敛，消除重复前缀）
 
-location = '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>'
+location = '<svg width="1em" height="1em"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>'
 
-calendar = '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>'
+calendar = '<svg width="1em" height="1em"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>'
 
-camera = '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>'
-images = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg>'
+camera = '<svg width="1em" height="1em"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>'
 
+images = '<svg width="24" height="24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg>'
 
+arrow_up = '<svg width="24" height="24"><polyline points="18 15 12 9 6 15"></polyline></svg>'
 
-arrow_up = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>'
+arrow_down = '<svg width="24" height="24"><polyline points="6 9 12 15 18 9"></polyline></svg>'
 
-arrow_down = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>'
+sun = '<svg width="24" height="24"><circle class="sg-core" cx="12" cy="12" r="5"/><line class="sg-ray" x1="12" y1="1" x2="12" y2="3"/><line class="sg-ray" x1="12" y1="21" x2="12" y2="23"/><line class="sg-ray" x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line class="sg-ray" x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line class="sg-ray" x1="1" y1="12" x2="3" y2="12"/><line class="sg-ray" x1="21" y1="12" x2="23" y2="12"/><line class="sg-ray" x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line class="sg-ray" x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>'
 
-sun = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle class="sg-core" cx="12" cy="12" r="5"/><line class="sg-ray" x1="12" y1="1" x2="12" y2="3"/><line class="sg-ray" x1="12" y1="21" x2="12" y2="23"/><line class="sg-ray" x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line class="sg-ray" x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line class="sg-ray" x1="1" y1="12" x2="3" y2="12"/><line class="sg-ray" x1="21" y1="12" x2="23" y2="12"/><line class="sg-ray" x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line class="sg-ray" x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>'
+moon = '<svg width="24" height="24"><path class="sg-core" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
 
-moon = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="sg-core" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
+tag = '<svg width="24" height="24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>'
 
-tag = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>'
+layers = '<svg width="24" height="24"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>'
 
-layers = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>'
+mail = '<svg width="24" height="24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>'
 
-mail = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>'
+globe = '<svg width="24" height="24"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>'
 
-globe = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>'
+x = '<svg width="24" height="24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
 
-x = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+chevron_left = '<svg width="24" height="24"><polyline points="15 18 9 12 15 6"/></svg>'
 
-chevron_left = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>'
+chevron_right = '<svg width="24" height="24"><polyline points="9 18 15 12 9 6"/></svg>'
 
-chevron_right = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>'
+home = '<svg width="24" height="24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>'
 
-home = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>'
+grid = '<svg width="24" height="24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>'
 
-grid = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>'
+footprints = '<svg width="24" height="24"><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"></path><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"></path><path d="M16 17h4"></path><path d="M4 13h4"></path></svg>'
 
-footprints = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"></path><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"></path><path d="M16 17h4"></path><path d="M4 13h4"></path></svg>'
+user = '<svg width="24" height="24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'
 
-user = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'
+lens = '<svg width="24" height="24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>'
 
-lens = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>'
+focal = '<svg width="24" height="24" fill="none"><path d="M16.88,1.38Q16.88,1.38 17.75,1.50Q18.63,1.63 18.88,1.88Q19.13,2.13 19.13,2.63Q19.13,3.13 18.88,3.38Q18.63,3.63 18.13,3.63Q17.63,3.63 16.88,2.88Q16.13,2.13 15.50,2.75Q14.88,3.38 14.38,5.38Q13.88,7.38 15.13,7.50Q16.38,7.63 16.38,8.00Q16.38,8.38 15.13,8.38Q13.88,8.38 13.63,8.75Q13.38,9.13 12.75,12.50Q12.13,15.88 11.38,18.00Q10.63,20.13 9.25,21.25Q7.88,22.38 6.50,22.38Q5.13,22.38 4.88,22.13Q4.63,21.88 4.63,21.38Q4.63,20.88 4.88,20.63Q5.13,20.38 5.63,20.38Q6.13,20.38 6.88,21.13Q7.63,21.88 8.00,21.63Q8.38,21.38 9.00,20.13Q9.63,18.88 10.75,13.75Q11.88,8.63 10.75,8.50Q9.63,8.38 9.75,8.00Q9.88,7.63 11.00,7.50Q12.13,7.38 12.13,6.88Q12.13,6.38 12.75,5.00Q13.38,3.63 14.13,2.88Q14.88,2.13 15.75,1.75Q16.63,1.38 17.38,1.38Q18.13,1.38 18.63,1.75Q19.13,2.13 19.13,2.63Q19.13,3.13 18.88,3.38Q18.63,3.63 18.13,3.63Q17.63,3.63 16.88,2.88Q16.13,2.13 15.38,3.00Q14.63,3.88 14.25,5.63Q13.88,7.38 15.13,7.50Q16.38,7.63 16.38,8.00Q16.38,8.38 15.13,8.38Q13.88,8.38 13.63,8.75Q13.38,9.13 12.75,12.50Q12.13,15.88 11.38,18.00Q10.63,20.13 9.75,21.00Q8.88,21.88 8.00,22.25Q7.13,22.63 6.38,22.63Q5.63,22.63 5.13,22.25Q4.63,21.88 4.63,21.38Q4.63,20.88 4.88,20.63Q5.13,20.38 5.63,20.38Q6.13,20.38 6.75,21.13Q7.38,21.88 8.13,21.25Q8.88,20.63 9.25,19.75Q9.63,18.88 10.75,13.75Q11.88,8.63 10.75,8.50Q9.63,8.38 9.75,8.00Q9.88,7.63 10.88,7.63Q11.88,7.63 12.63,5.63Q13.38,3.63 14.13,2.88Q14.88,2.13 15.63,1.88Q16.38,1.63 16.63,1.50Z" fill="currentColor"/></svg>'
 
-focal = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M16.88,1.38Q16.88,1.38 17.75,1.50Q18.63,1.63 18.88,1.88Q19.13,2.13 19.13,2.63Q19.13,3.13 18.88,3.38Q18.63,3.63 18.13,3.63Q17.63,3.63 16.88,2.88Q16.13,2.13 15.50,2.75Q14.88,3.38 14.38,5.38Q13.88,7.38 15.13,7.50Q16.38,7.63 16.38,8.00Q16.38,8.38 15.13,8.38Q13.88,8.38 13.63,8.75Q13.38,9.13 12.75,12.50Q12.13,15.88 11.38,18.00Q10.63,20.13 9.25,21.25Q7.88,22.38 6.50,22.38Q5.13,22.38 4.88,22.13Q4.63,21.88 4.63,21.38Q4.63,20.88 4.88,20.63Q5.13,20.38 5.63,20.38Q6.13,20.38 6.88,21.13Q7.63,21.88 8.00,21.63Q8.38,21.38 9.00,20.13Q9.63,18.88 10.75,13.75Q11.88,8.63 10.75,8.50Q9.63,8.38 9.75,8.00Q9.88,7.63 11.00,7.50Q12.13,7.38 12.13,6.88Q12.13,6.38 12.75,5.00Q13.38,3.63 14.13,2.88Q14.88,2.13 15.75,1.75Q16.63,1.38 17.38,1.38Q18.13,1.38 18.63,1.75Q19.13,2.13 19.13,2.63Q19.13,3.13 18.88,3.38Q18.63,3.63 18.13,3.63Q17.63,3.63 16.88,2.88Q16.13,2.13 15.38,3.00Q14.63,3.88 14.25,5.63Q13.88,7.38 15.13,7.50Q16.38,7.63 16.38,8.00Q16.38,8.38 15.13,8.38Q13.88,8.38 13.63,8.75Q13.38,9.13 12.75,12.50Q12.13,15.88 11.38,18.00Q10.63,20.13 9.75,21.00Q8.88,21.88 8.00,22.25Q7.13,22.63 6.38,22.63Q5.63,22.63 5.13,22.25Q4.63,21.88 4.63,21.38Q4.63,20.88 4.88,20.63Q5.13,20.38 5.63,20.38Q6.13,20.38 6.75,21.13Q7.38,21.88 8.13,21.25Q8.88,20.63 9.25,19.75Q9.63,18.88 10.75,13.75Q11.88,8.63 10.75,8.50Q9.63,8.38 9.75,8.00Q9.88,7.63 10.88,7.63Q11.88,7.63 12.63,5.63Q13.38,3.63 14.13,2.88Q14.88,2.13 15.63,1.88Q16.38,1.63 16.63,1.50Z" fill="currentColor"/></svg>'
-aperture = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M14.31 8l5.74 9.94M9.69 8h11.48M7.38 12l5.74-9.94M9.69 16L3.95 6.06M14.31 16H2.83M16.62 12l-5.74 9.94"/></svg>'
+aperture = '<svg width="24" height="24"><circle cx="12" cy="12" r="10"/><path d="M14.31 8l5.74 9.94M9.69 8h11.48M7.38 12l5.74-9.94M9.69 16L3.95 6.06M14.31 16H2.83M16.62 12l-5.74 9.94"/></svg>'
 
-shutter = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/></svg>'
+shutter = '<svg width="24" height="24"><line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/></svg>'
 
-iso = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>'
+iso = '<svg width="24" height="24"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>'
 
-trend_up = '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/></svg>'
+trend_up = '<svg width="1em" height="1em"><path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/></svg>'

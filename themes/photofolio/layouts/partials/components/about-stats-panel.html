@@ -7,7 +7,7 @@
 {{ $visible := first 8 .rows }}
 {{ $rest := after 8 .rows }}
 <div class="stats-panel">
-    <h3 class="stats-panel-title"><span class="stats-panel-icon">{{ index hugo.Data.svg .icon | safeHTML }}</span>{{ .title }}</h3>
+    <h3 class="stats-panel-title"><span class="stats-panel-icon">{{ partial "utils/icon.html" (dict "name" .icon) }}</span>{{ .title }}</h3>
     {{ partial "components/about-stats-rows.html" (dict "rows" $visible "max" $max) }}
     {{ if $rest }}
     <div class="stats-fold">
@@ -16,8 +16,8 @@
         <label class="stats-fold-btn" for="stats-fold-{{ .foldId }}">
             <span class="stats-expand">{{ i18n "stats_expand" (dict "Count" (len $rest)) }}</span>
             <span class="stats-collapse">{{ i18n "stats_collapse" }}</span>
-            <span class="stats-icon">{{ hugo.Data.svg.arrow_down | safeHTML }}</span>
-            <span class="stats-icon-up">{{ hugo.Data.svg.arrow_up | safeHTML }}</span>
+            <span class="stats-icon">{{ partial "utils/icon.html" (dict "name" "arrow_down" "variant" "thick") }}</span>
+            <span class="stats-icon-up">{{ partial "utils/icon.html" (dict "name" "arrow_up" "variant" "thick") }}</span>
         </label>
     </div>
     {{ end }}

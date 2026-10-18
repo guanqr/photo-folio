@@ -1,0 +1,10 @@
+{{/*
+  PWA manifest 链接与生成：站点级 static/manifest.json 已移入主题（定制入主题约定），
+  改模板渲染发布（2026-10-18，与博客同款）——颜色值与 :root 的 --color-bg 暗色
+  四元组同源，启动画面与站点默认暗色背景衔接
+  上下文：页面
+*/}}
+{{- with resources.Get "manifest.tmpl" | resources.ExecuteAsTemplate "manifest.json" . -}}
+    {{- .Publish -}}
+{{- end -}}
+<link rel="manifest" href="{{ "manifest.json" | relURL }}" />

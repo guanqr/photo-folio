@@ -18,6 +18,12 @@
     display: grid;
     grid-template-columns: repeat(1, 1fr);
     gap: 1em;
+    /* 裁剪列数切换 FLIP 的瞬态 transform 溢出（2026-10-18 诊断）：cards-flip 的
+       Invert 阶段把卡片经 translate/scale 摆回旧列位置，宽→窄切换时旧位置超出
+       新视口宽度，transform 视觉溢出进入 body 的 scrollable overflow——
+       浏览器据此启用适配缩放且不回退（「页面放大」的触发源之一）。用 clip
+       而非 hidden：不创建滚动容器、不参与视口传播规则 */
+    overflow-x: clip;
 }
 
 @media (min-width: 769px) {

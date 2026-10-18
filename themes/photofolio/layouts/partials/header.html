@@ -10,8 +10,8 @@
         
         <div class="header-actions">
             <button id="theme-toggle" class="theme-toggle" aria-label="{{ i18n "theme_toggle" }}">
-                <span class="icon-sun">{{ hugo.Data.svg.sun | safeHTML }}</span>
-                <span class="icon-moon">{{ hugo.Data.svg.moon | safeHTML }}</span>
+                <span class="icon-sun">{{ partial "utils/icon.html" (dict "name" "sun") }}</span>
+                <span class="icon-moon">{{ partial "utils/icon.html" (dict "name" "moon") }}</span>
             </button>
 
             <nav class="site-nav" id="site-nav">
@@ -29,15 +29,15 @@
                            Enter/Space/Escape 由 nav-dropdown.js 处理 */}}
                         <span class="nav-parent {{ if $parentActive }}active{{ end }}" tabindex="0" role="button" aria-haspopup="true" aria-expanded="false">
                             {{ with .Params.icon }}
-                                <span class="nav-icon">{{ index hugo.Data.svg . | safeHTML }}</span>
+                                <span class="nav-icon">{{ partial "utils/icon.html" (dict "name" .) }}</span>
                             {{ end }}
                             <span class="nav-text">{{ .Name }}</span>
-                            <span class="nav-caret">{{ hugo.Data.svg.arrow_down | safeHTML }}</span>
+                            <span class="nav-caret">{{ partial "utils/icon.html" (dict "name" "arrow_down" "variant" "thick") }}</span>
                         </span>
                         {{ else }}
                         <a href="{{ .URL }}" {{ if eq $.RelPermalink .URL }}class="active" aria-current="page"{{ end }}>
                             {{ with .Params.icon }}
-                                <span class="nav-icon">{{ index hugo.Data.svg . | safeHTML }}</span>
+                                <span class="nav-icon">{{ partial "utils/icon.html" (dict "name" .) }}</span>
                             {{ end }}
                             <span class="nav-text">{{ .Name }}</span>
                         </a>
@@ -48,7 +48,7 @@
                                 {{ range .Children }}
                                 <a href="{{ .URL }}" {{ if strings.HasPrefix $.RelPermalink .URL }}class="active"{{ end }}>
                                     {{ with .Params.icon }}
-                                        <span class="nav-icon">{{ index hugo.Data.svg . | safeHTML }}</span>
+                                        <span class="nav-icon">{{ partial "utils/icon.html" (dict "name" .) }}</span>
                                     {{ end }}
                                     <span class="nav-text">{{ .Name }}</span>
                                 </a>

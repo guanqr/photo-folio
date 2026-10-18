@@ -1,0 +1,21 @@
+{{/*
+  按名称渲染 data/svg.toml 图标：公共属性（xmlns/viewBox/fill/stroke 描边集）在此
+  单点注入，数据只存 svg 标签的差异属性（width/height、fill 型图标的 fill="none"）
+  与内容——2026-10-18 自「数据存完整 <svg>」迁移，消除重复前缀
+  注入位置在数据自身属性之后：HTML 解析对重复属性取首个，数据内的属性优先生效
+  填充型图标由数据自动识别（svg 标签含 fill="none" 即不注入描边属性），
+  调用点无需传 variant；描边粗细覆盖用 variant "thick"
+  参数：name（图标名）、variant（可选 "thick"：stroke-width 2.5）
+  Usage:
+    {{ partial "utils/icon.html" (dict "name" "camera") }}
+*/}}
+{{- $name := .name -}}
+{{- $svg := index hugo.Data.svg $name -}}
+{{- $prefix := ` xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"` -}}
+{{- if in $svg `fill="none"` -}}
+    {{- $prefix = ` xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"` -}}
+{{- else if eq .variant "thick" -}}
+    {{- $prefix = ` xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"` -}}
+{{- end -}}
+{{- $open := replaceRE `^<svg([^>]*)>` (printf "<svg$1%s>" $prefix) $svg -}}
+{{- return ($open | safeHTML) -}}

@@ -1,0 +1,26 @@
+{{/* PWA manifest 模板（2026-10-18 自站点级 static/manifest.json 移入主题并转模板生成，
+    与博客同款）：theme_color/background_color 与 :root 的 --color-bg 暗色四元组同源
+    （站点默认暗色主题，启动画面与页面背景衔接）；原值 #fff 与暗色站点不符 */}}
+{
+    "name": "{{ .Site.Title }}",
+    "short_name": "{{ .Site.Title }}",
+    "icons": [
+        {
+            "src": "./icons/web-app-manifest-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "./icons/web-app-manifest-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        }
+    ],
+    "theme_color": "hsl(202.5, 22.2%, 7.1%)",
+    "background_color": "hsl(202.5, 22.2%, 7.1%)",
+    "display": "standalone",
+    "orientation": "portrait-primary",
+    "start_url": "/"
+}

@@ -21,7 +21,7 @@
             {{ partial "components/series-cards.html" (dict "covers" $coverPhotos "allPhotos" $sortedPhotos) }}
         {{ else }}
         <div class="empty-state">
-            <div class="empty-icon">{{ hugo.Data.svg.camera | safeHTML }}</div>
+            <div class="empty-icon">{{ partial "utils/icon.html" (dict "name" "camera") }}</div>
             <h3>{{ i18n "no_series" }}</h3>
             <p class="empty-hint">
                 {{ i18n "no_series_hint" }}

@@ -9,6 +9,13 @@ html {
     height: 100%;
     /* 默认暗色主题：UA 原生件（滚动条/表单控件/取色器）同步暗色观感 */
     color-scheme: dark;
+    /* 根级横向裁剪（2026-10-18 诊断）：瀑布流/轮播在宽窄切换、快速来回切换的
+       重排间隙会短暂横向溢出——浏览器（Chrome 模拟器与真机同款行为）据此启用
+       适配缩放且不回退，页面「放大」直到人工缩小。用 overflow-x: clip 而非
+       hidden：hidden 参与视口传播规则（html/body 同设时 body 的 used 值会被
+       置回 visible、body 自身不裁剪、body.scrollWidth 仍可瞬时超宽），clip
+       不创建滚动容器、不参与传播，html 与 body 各自真正裁剪 */
+    overflow-x: clip;
 }
 
 body {
@@ -22,6 +29,7 @@ body {
     flex-direction: column;
     min-height: 100vh;
     transition: background-color var(--transition-fade), color var(--transition-fade);
+    overflow-x: clip;
 }
 
 /* ===== Skip-to-content 无障碍跳转 ===== */
@@ -62,8 +70,8 @@ body {
 
 :root {
     /* ═══ 颜色体系（HSL 四元组，唯一颜色定义，2026-10-17 自 --rgb-* 分量迁移）═══
-       所有颜色值仅在本文件定义；--rgb-white/--rgb-particle 为
-       series-ambient.js 的 canvas 数据（非 CSS 颜色），例外保留 */
+       所有颜色值仅在本文件定义；粒子背景色见 pages/_series-ambient.scss 的
+       --color-particle 四元组（2026-10-18 canvas 及其数据变量已删除，无例外） */
 
     /* 固定暗色分量（单源，不随明暗主题切换，仅 :root 定义）：
        灯箱组件、亮色首页顶部强制暗色导航与首页轮播背景/进度条内
@@ -164,8 +172,8 @@ body {
     --space-page-top: 4.5em;
 
     /* 阴影梯度（与圆角梯度同法）：卡片悬停 / 浮层弹层 */
-    --shadow-card: 0 0.25em 0.75em rgba(var(--rgb-black), 0.15);
-    --shadow-pop: 0 0.75em 2em rgba(var(--rgb-black), 0.15);
+    --shadow-card: 0 0.25em 0.75em hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.15);
+    --shadow-pop: 0 0.75em 2em hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.15);
 
     /* ═══ 圆角梯度（:root 单源，全站引用）═══
        --radius-xs 为瀑布流作品卡锁定值（永不改）；
