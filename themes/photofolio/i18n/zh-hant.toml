@@ -64,7 +64,7 @@ other = "地點"
 other = "日期"
 
 [lightbox_histogram]
-other = "直方圖（虛線為亮度中位數）"
+other = "直方圖（虛線為明度中位數）"
 
 [hist_legend]
 other = "R|G|B|明度"
@@ -97,7 +97,7 @@ other = "圖像分析"
 other = "收起圖像分析"
 
 [lightbox_analysis_failed]
-other = "無法載入分析結果，請檢查網絡連線"
+other = "無法載入分析結果"
 
 [tonal_key_low]
 other = "低調"
@@ -142,10 +142,10 @@ other = "動態範圍"
 other = "檔"
 
 [tonal_median]
-other = "亮度中位數"
+other = "明度中位數"
 
 [tonal_zone_system]
-other = "曝光灰階（0 純黑 → X 純白）"
+other = "曝光灰階"
 
 [sat_low]
 other = "低飽和"
@@ -155,6 +155,9 @@ other = "適中"
 
 [sat_high]
 other = "高飽和"
+
+[sat_caption]
+other = "飽和度分佈（虛線為均值）"
 
 [hue_names]
 other = "紅|橙|黃|綠|青|藍|紫|品紅"

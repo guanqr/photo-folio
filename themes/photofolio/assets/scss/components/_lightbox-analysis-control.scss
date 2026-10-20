@@ -21,7 +21,7 @@
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     transition: opacity var(--transition-fade), color var(--transition-fade),
-        max-height 0.4s ease, margin-top 0.4s ease, padding 0.4s ease;
+        max-height 0.6s ease, margin-top 0.6s ease, padding 0.6s ease;
 
     svg {
         width: 0.85em;
@@ -58,7 +58,7 @@
     /* 收起态不可见（visibility 离散过渡至时长末才翻转，内容淡出不被瞬间切断）；
        同时把容器内的收起按钮移出 Tab 序——aria-hidden 不阻止聚焦，可见性才阻止 */
     visibility: hidden;
-    transition: max-height 0.4s ease, opacity 0.3s ease, visibility 0.4s;
+    transition: max-height 0.6s ease, opacity 0.3s ease, visibility 0.6s;
 
     &.is-open {
         max-height: 80em;

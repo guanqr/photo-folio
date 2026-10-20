@@ -71,10 +71,13 @@ export function initLightboxCollection({ shortLens }) {
         wrappers.forEach(wrapper => {
             const img = wrapper.querySelector('img');
             if (!img || !img.getAttribute('src')) return; // 未揭示的作品还没有 src（无限滚动尚未加载），跳过——箭头仅停留在已加载的最后一张
-            const item = wrapper.closest('.masonry-item');
-            if (item && item.classList.contains('is-hidden')) return; // 被当前筛选隐藏的作品不进箭头集合
             // [data-title] 通用化：兼容 photo-card 与系列叙事块两种根元素
             const card = wrapper.closest('[data-title]');
+            // is-hidden 检查以 card 为起点爬向 .masonry-item（card 恒为其子级、
+            // 模板结构单源）——此前从 wrapper 各爬一次、重复走了 wrapper→card
+            // 一段路径，对调后每个 wrapper 省一次 matches/parentNode（2026-10-19）
+            const item = card ? card.closest('.masonry-item') : null;
+            if (item && item.classList.contains('is-hidden')) return; // 被当前筛选隐藏的作品不进箭头集合
             photos.push({
                 // 照片唯一标识（URL ?p= 用）：photo-card 恒带 data-slug（构建期写入）
                 slug: card ? (card.dataset.slug || '') : '',

@@ -381,6 +381,13 @@
         justify-content: center;
     }
 
+    /* VT 命名组（与文末 ::view-transition 组动画互指）：主题切换时图标
+       从 root 整页快照中排除、太阳/月亮各自成组独立过渡——压制规则
+       （_base.scss）把图标瞬切到终态供新快照捕获，形态动画由组动画重放；
+       无 VT 的浏览器该属性为未知属性、无副作用（SPA 换页不经 VT） */
+    .icon-sun { view-transition-name: theme-toggle-sun; }
+    .icon-moon { view-transition-name: theme-toggle-moon; }
+
     /* ===== 图标内部元素动画 ===== */
     .sg-core,
     .sg-ray {
@@ -411,6 +418,42 @@
         .icon-moon {
             .sg-core { opacity: 0; transform: scale(0.6); }
         }
+    }
+}
+
+/* ===== 主题切换图标 VT 组动画 =====
+   整页交叉淡化把图标区域从 root 快照排除后，太阳/月亮按各自命名组过渡：
+   旧态组缩放淡出、新态组缩放淡入——重现原元素级过渡的形态动画（组级近似：
+   光线与核心同一缩放节奏，8 条光线各自缩至 0 的逐条节奏无法在组级区分）；
+   透明侧（旧态的隐藏图标）组动画无可见内容、天然静默；时长/曲线与全站
+   --transition 同长、与 root 组 0.3s ease 同步（_base.scss 互指） */
+@keyframes theme-toggle-icon-out {
+    from { opacity: 1; transform: scale(1); }
+    to { opacity: 0; transform: scale(0.6); }
+}
+@keyframes theme-toggle-icon-in {
+    from { opacity: 0; transform: scale(0.6); }
+    to { opacity: 1; transform: scale(1); }
+}
+::view-transition-old(theme-toggle-sun),
+::view-transition-old(theme-toggle-moon) {
+    animation: theme-toggle-icon-out var(--transition) both;
+}
+::view-transition-new(theme-toggle-sun),
+::view-transition-new(theme-toggle-moon) {
+    animation: theme-toggle-icon-in var(--transition) both;
+}
+
+/* ===== 无 VT 降级：豁免全站压制、恢复图标元素级过渡 =====
+   theme-toggle.js 降级分支挂 html.theme-switching-no-vt——全站压制
+   （_base.scss，!important）对图标放行，太阳/月亮形态动画走原过渡；
+   豁免同为 important 声明、以更高选择器特异性压过压制规则；
+   包在 no-preference 内：减弱动态用户仍由全局兜底（_base.scss）归零 */
+@media (prefers-reduced-motion: no-preference) {
+    html.theme-switching-no-vt .theme-toggle .sg-core,
+    html.theme-switching-no-vt .theme-toggle .sg-ray {
+        transition: transform var(--transition),
+                    opacity var(--transition) !important;
     }
 }
 

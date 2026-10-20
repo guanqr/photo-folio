@@ -215,15 +215,18 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
     // 桌面端「放得下整体居中、放不下标题固定数据滚动」：
     // 全部内容天然高度 ≤ 面板高度 → is-fit（面板居中整组含标题胶囊，详情区不滚动）；
     // 否则标题/胶囊固定在顶部，仅数据区滚动。
-    // fitAdjuster：分析区收起期间从其当前高度扣除——总高与正在收缩的分析区
-    // 同步缩小，扣除后恒等于收起后的最终总高：「放得下」在点击瞬间即可判定、
-    // 过渡全程保持稳定（否则阈值在过渡末段才越过，居中总晚于回顶一步）。
+    // fitAdjuster（分析区收起期间非空）：**冻结** is-fit 翻转——收起改「滚动
+    // 先行、翻转押后」（2026-10-20 用户确认方案）：收起窗口内详情区保持
+    // 可滚动、scrollToTop 回滚动画真实生效，过渡结束由调用方置 null 并经
+    // flipFitNow 翻转（翻转位移由调用方做位置补偿平滑滑入居中）。
     // force：跳过 active 守卫强制重判（灯箱刚激活/关闭重置时调用）
     let fitAdjuster = null;
     function updateFit(force) {
         if (narrowMedia.matches || (!force && !lightbox.classList.contains('active'))) return;
-        const totalH = panel.scrollHeight - panelDetails.clientHeight + panelDetails.scrollHeight
-            - (fitAdjuster ? fitAdjuster() : 0);
+        // 收起窗口冻结：判定押后，避免收缩中段翻转截断滚动——force 豁免
+        // （强制重判不因冻结被静默吞掉，2026-10-21 审查修复 #14）
+        if (fitAdjuster && !force) return;
+        const totalH = panel.scrollHeight - panelDetails.clientHeight + panelDetails.scrollHeight;
         panel.classList.toggle('is-fit', totalH <= panel.clientHeight);
     }
 
@@ -367,10 +370,17 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
         // 取消在途回滚动画（供分析区收起中途再展开调用：回滚仍在逐帧强制
         // scrollTop 归零、会覆盖用户任何滚动输入，2026-10-18）
         cancelScroll: cancelScrollAnim,
-        // 设置/清除内容高度扣除函数并立即重判（分析区收起期间传入其当前高度：
-        // 最终总高在整个过渡期间恒定，「放得下」点击瞬间即判定且不翻覆）；
-        // 返回重判后的「放得下」状态（窄屏恒 false——is-fit 仅桌面生效）
-        setFitAdjuster: (fn) => { fitAdjuster = fn; updateFit(); return panel.classList.contains('is-fit'); },
+        // 设置/清除 is-fit 冻结（布尔语义：分析区收起期间 true 冻结翻转、
+        // 滚动上下文保持；false 解除，翻转随内容增长自然发生——此前为
+        // 「高度扣除回调」但从不被调用、属死 API，2026-10-21 审查修复 #15）
+        setFitAdjuster: (frozen) => { fitAdjuster = frozen; },
+        // is-fit 是否适用于当前视口（窄屏抽屉模式恒 false——居中下滑与翻转
+        // 仅桌面生效，调用方以本函数门控（2026-10-21 审查修复：窄屏无门控
+        // 时收起出现「先下滑再弹回」伪动效））
+        fitApplicable: () => !narrowMedia.matches,
+        // 释放冻结后的显式翻转入口（收起过渡结束时由调用方在位置补偿前调用；
+        // 走 force：active 守卫此时必然通过、且强制重判语义与 refreshFit 一致）
+        flipFitNow: () => updateFit(true),
         // 强制重判「放得下」（跳过 active 守卫）：灯箱刚激活时调用——展开态
         // 关灯箱残留的 is-fit=false 若不再重判，再打开时详情区 auto 边距会把
         // 内容挤到中部、标题与 EXIF 之间出现大空隙

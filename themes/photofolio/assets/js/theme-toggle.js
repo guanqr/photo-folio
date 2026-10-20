@@ -23,11 +23,17 @@ export function initThemeToggle() {
         // 低端机可能掉帧——支持 View Transitions 的浏览器（Chrome/Edge 111+、
         // Safari 18+）走整页快照交叉淡化（新旧态各光栅化一次、合成器淡化）；
         // 不支持与减弱动态偏好降级为即时切换（切换窗口内元素过渡同样压制，
-        // 全站元素同刻换色）
-        if (document.startViewTransition && !prefersReducedMotion()) {
+        // 全站元素同刻换色，主题切换图标的形态动画经豁免类恢复——见下）
+        const useViewTransition = document.startViewTransition && !prefersReducedMotion();
+        if (useViewTransition) {
             document.startViewTransition(() => applyTheme(newTheme));
         } else {
             applyTheme(newTheme);
+            // 降级分支挂豁免标记类：_base.scss 的全站过渡压制对主题切换图标
+            // 放行，太阳/月亮缩放淡入的形态动画走原元素级过渡（_header.scss
+            // 互指）；VT 路径不挂此类——图标被压制瞬切到终态供新快照捕获，
+            // 形态动画由 ::view-transition 命名组动画重放
+            document.documentElement.classList.add('theme-switching-no-vt');
         }
         // 主题切换窗口挂 html.theme-switching：期间全站元素级过渡统一压制
         // （_base.scss），切换动作瞬时完成、动画由整页快照交叉淡化唯一提供——
@@ -37,7 +43,7 @@ export function initThemeToggle() {
         clearTimeout(themeSwitchTimer);
         document.documentElement.classList.add('theme-switching');
         themeSwitchTimer = setTimeout(() => {
-            document.documentElement.classList.remove('theme-switching');
+            document.documentElement.classList.remove('theme-switching', 'theme-switching-no-vt');
             themeSwitchTimer = null;
         }, 350);
     });

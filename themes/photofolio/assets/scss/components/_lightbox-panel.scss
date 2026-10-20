@@ -317,9 +317,27 @@
             margin-top: auto;
         }
 
-        > *:last-child {
+        /* 末**可见**子块接剩余空间：末子块被 hidden（无描述的故事块）时，
+           display:none 不参与边距分配、只剩首子块 margin-top:auto 把整块
+           内容推到详情区底部——顺延给其前一个兄弟 */
+        > *:last-child:not([hidden]) {
             margin-bottom: auto;
         }
+
+        > *:has(+ *[hidden]:last-child) {
+            margin-bottom: auto;
+        }
+    }
+
+    /* 收起滚动窗口（JS 挂 no-margin-center）：详情区内容保持顶对齐随滚动
+       上行——内部 auto 边距居中会让 EXIF 在滚动阶段先滑向盒内中心、翻转
+       补偿（以标题为锚的 transform 拉回）时再上跳，呈「EXIF 先居中、标题
+       后落下、EXIF 再上移」的三段运动（2026-10-20 实测）；居中统一交给
+       翻转后的整组滑入（标题/胶囊/EXIF 同步落定） */
+    .lightbox-panel-details.no-margin-center {
+        > *:first-child { margin-top: 0; }
+        > *:last-child:not([hidden]) { margin-bottom: 0; }
+        > *:has(+ *[hidden]:last-child) { margin-bottom: 0; }
     }
 
     /* 全部内容放得下（is-fit 由 JS 测量后挂上）：面板整体上下居中（含标题与胶囊），

@@ -126,9 +126,14 @@ export function initGalleryFilter() {
             (!locLabel || item.dataset.location === locLabel) &&
             (!category || item.dataset.category === category);
         const items = Array.from(grid.querySelectorAll('.masonry-item'));
-        const matching = items.filter(matches);
-        // 恢复原始时间顺序（DOM 顺序已被历次筛选拍平打乱）
-        matching.sort((a, b) => (grid._origOrder.get(a) ?? 0) - (grid._origOrder.get(b) ?? 0));
+        // 恢复原始时间顺序（DOM 顺序已被历次筛选拍平打乱）——装饰-排序-还原：
+        // 比较器逐次比较会对同一元素重复查 Map（约 2·n·log n 次），order 值
+        // 会话内不变、每个元素只取一次即可（2026-10-19）
+        const matching = items
+            .filter(matches)
+            .map((el) => ({ el, order: grid._origOrder.get(el) ?? 0 }))
+            .sort((a, b) => a.order - b.order)
+            .map(({ el }) => el);
 
         // 空状态：筛选激活且无匹配时显示，并隐藏触发器。
         // 卡片由模板预渲染（渲染条件与筛选栏相同——bar 存在则节点恒存在，

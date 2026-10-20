@@ -13,6 +13,7 @@ tools/photo-pipeline/
 │   ├── exif_utils.py        # EXIF 提取
 │   ├── toml_utils.py        # TOML 读写（保留 address/lat/lng 等站点扩展字段）
 │   ├── watermark.py         # 水印与处理
+│   ├── analysis.py          # 图像分析预计算（直方图/色卡/影调，输出 static/analysis/）
 │   └── oss_utils.py         # OSS 上传
 ├── scripts/
 │   └── download_font.py     # 字体下载（fonts/ 目录，gitignore）
@@ -32,7 +33,7 @@ pip install -r requirements.txt
 python scripts/download_font.py
 ```
 
-2. 复制 `pipeline_config.example.json` 为 `pipeline_config.json`，填写照片输入/输出目录（必填，照片目录在仓库外；toml_path 可省略，缺省直写 data/photo.toml）
+2. 复制 `pipeline_config.example.json` 为 `pipeline_config.json`，填写照片输入/输出目录（必填，照片目录在仓库外；toml_path 可省略，缺省直写 data/photo.toml；analysis_dir 可省略，缺省直写 static/analysis/）
 3. （可选）复制 `oss_config.example.json` 为 `oss_config.json` 并填写 OSS 凭证（文件已 gitignore，不会入库）
 4. 将需要处理的 `.jpg` / `.jpeg` 照片放入配置的输入目录
 
@@ -50,6 +51,7 @@ python run.py
 - **缩放**：长边缩放至 1920px
 - **水印**：`Guanqr Photography @ 年份` 底部居中（年份从 EXIF 读取，颜色按底部明暗自动选黑白）
 - **压缩**：JPEG 质量循环递减，控制在 400KB 以内
+- **图像分析**：对全分辨率原图（加水印前）预计算统计——RGB/明度/饱和度/色相直方图、6 主色色卡、影调定性（九调/动态范围/剪裁警告/区域系统），结果写 `static/analysis/{文件名}.json`（含 v 算法版本号），灯箱直接加载渲染、不再在线采样（每张约 2–3KB；全分辨率逐像素只付一次，见下「增量处理」）
 
 ## photo.toml 自动更新
 
@@ -76,4 +78,4 @@ python backfill_camera_lens.py <original_photos目录> <photo.toml路径>
 
 ## 增量处理
 
-只处理新增或发生变化的照片（比较输入/输出修改时间），未变化的自动跳过。OSS 同步同样增量：只上传本次实际处理过的照片（覆盖云端同名文件），其余跳过。
+只处理新增或发生变化的照片（比较输入/输出修改时间），未变化的自动跳过。OSS 同步同样增量：只上传本次实际处理过的照片（覆盖云端同名文件），其余跳过。**图像分析为独立惰性步骤**：结果缺失或算法版本（JSON 的 v 字段）过期才重算，首次接入自动全量回填（一次性逐像素成本），此后日常运行只分析新增照片。

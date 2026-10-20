@@ -399,7 +399,8 @@ function partitionRows(ratios, W, H, gap, border2, refine, tier) {
 }
 
 /* 应用行布局：每张盒子严格按自身比例（自然行高下恰好铺满，无裁切）
-   末张吸收取整误差并向下取整，保证整行宽度不超容器、不换行；
+   非末张四舍五入、末张吸收取整误差并向下取整——防换行不依赖逐项 floor，
+   末张 floor(remaining − border2) 已使行宽总和精确 ≤ W；
    ragged 行（未完成尾行 / 真正的最后一行）不吸收余量，按自然宽度排列、右侧留白 */
 function applyRows(items, rows, ratios, W, gap, border2) {
     rows.forEach((row) => {
@@ -417,7 +418,11 @@ function applyRows(items, rows, ratios, W, gap, border2) {
             if (!row.ragged && k === row.count - 1) {
                 imgW = Math.max(1, Math.floor(remaining - border2)); // 末张吸收余量，整行恰好铺满
             } else {
-                imgW = Math.floor(cellW - border2); // 只舍不入，保证整行绝不超宽换行
+                // 非末张取 round：误差 ±0.5px 正负分布（原 floor 单向为负、末张
+                // 系统性吸收 ~n/2 px 正偏差、总是宽于理想）；防换行不依赖逐项
+                // floor——末张 floor(remaining − border2) 已使行宽总和精确 ≤ W
+                // （2026-10-19）
+                imgW = Math.round(cellW - border2);
                 // 按「实际渲染宽度」扣减，避免误差累积导致行宽超过容器而换行留白
                 remaining -= (imgW + border2) + gap;
             }
@@ -489,8 +494,10 @@ function flipRebuild(grid, firstRects) {
         item.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
     });
 
-    // 强制重排，确保 Invert 立即生效后再启动过渡
-    shown.forEach((item) => item.offsetHeight);
+    // 强制重排：单次布局读取即触发整文档 flush（布局是文档级、逐项读取
+    // 不产生额外 reflow——其余读取只是干净布局上的廉价访问），确保 Invert
+    // 立即生效后再启动过渡；调用方 rebuildAll 已保证 shown 非空
+    void shown[0].offsetHeight;
 
     // Play：过渡到新位置
     shown.forEach((item) => {
@@ -574,17 +581,19 @@ function relayoutShown(grid) {
         return;
     }
 
-    // 先按比例缩放作品（行成员冻结不动），不做排布调整——彻底消除拖拽时的来回跳跃
+    // 先按比例缩放作品（行成员冻结不动），不做排布调整——彻底消除拖拽时的来回跳跃；
+    // 比例只查一次 _ratios 生成数组、行循环与 applyRows 共用（此前行循环逐项
+    // 再查一遍 Map——rAF 逐帧热路径上每帧重复数百次查找，2026-10-19 收敛）
+    const allRatios = shown.map((item) => grid._ratios.get(item) || DEFAULT_RATIO);
     const rows = grid._rows.map((row) => {
         let sum = 0;
         for (let k = 0; k < row.count; k++) {
-            sum += grid._ratios.get(shown[row.start + k]) || DEFAULT_RATIO;
+            sum += allRatios[row.start + k];
         }
         let h = rowHeight(W, row.count, sum, gap, border2);
         if (row.ragged) h = Math.min(h, H);
         return { start: row.start, count: row.count, h, ragged: row.ragged };
     });
-    const allRatios = shown.map((item) => grid._ratios.get(item) || DEFAULT_RATIO);
     applyRows(shown, rows, allRatios, W, gap, border2);
 }
 

@@ -162,12 +162,14 @@ export function initLightbox() {
     function renderPanel(p) {
         if (lightboxCaption) lightboxCaption.textContent = p.title;
         meta.render(p);
-        if (storyWrap) storyWrap.style.display = p.description ? '' : 'none';
+        // 故事块隐藏用 hidden 属性（而非 display:none）：详情区「末可见子块
+        // auto 边距」的居中判定依赖 [hidden] 选择器（见 _lightbox-panel.scss）
+        if (storyWrap) storyWrap.hidden = !p.description;
         if (storyEl) storyEl.textContent = p.description || '';
-        // 分析按需加载：仅在展开态触发（收起态不发探测请求、不占主线程）；
+        // 分析按需加载：仅在展开态触发（收起态不发拉取请求、不占主线程）；
         // 展开切图时旧图表保持显示，新数据就绪后按既有形变过渡替换
         if (analysisWrap && analysisWrap.classList.contains('is-open')) {
-            analysis.analyze(p.src);
+            analysis.analyze(p.slug);
         }
         // 切图保持信息栏滚动位置（不回到顶部）：内容高度变化时浏览器自动把
         // scrollTop 钳制到新范围，抽屉的虚拟位置模型（展开程度 × 行程 + scrollTop）
@@ -192,11 +194,11 @@ export function initLightbox() {
     // 收起位置补偿、关闭静默重置——展开时分析当前照片（由本文件注入）
     const analysisControl = initLightboxAnalysisControl({
         trigger: analysisTrigger, wrap: analysisWrap,
-        caption: lightboxCaption, tagsEl, panelDetails,
+        caption: lightboxCaption, tagsEl, panelDetails, panel,
         reducedMotion, drawer,
         analyze: () => {
             const p = switchModule.current();
-            if (p) analysis.analyze(p.src);
+            if (p) analysis.analyze(p.slug);
         }
     });
 

@@ -204,7 +204,9 @@ body {
    与上方的整页快照交叉淡化叠加成双重渐变、有效进度约为两者乘积，切换时
    明显滞后于卡片等瞬时换色元素（不同步）——切换窗口（html.theme-switching）
    内全站过渡归零，切换动作瞬时完成，动画由 VT 交叉淡化唯一提供；
-   无 VT 的浏览器退回瞬时切换，全站元素同刻换色、恢复同步 */
+   无 VT 的浏览器退回瞬时切换，全站元素同刻换色、恢复同步（主题切换图标
+   除外：VT 路径走命名组动画、无 VT 路径经豁免类恢复元素级过渡，
+   见 _header.scss 主题切换节） */
 html.theme-switching *,
 html.theme-switching *::before,
 html.theme-switching *::after {

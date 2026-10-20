@@ -16,6 +16,7 @@ from PIL import Image
 from exif_utils import get_exif_info
 from toml_utils import parse_toml_entries, write_toml
 from watermark import process_image
+from analysis import is_analysis_stale, analyze_and_store
 from oss_utils import create_bucket_from_config, sync_new_photos
 
 
@@ -28,7 +29,7 @@ def _get_image_size(path):
         return "", ""
 
 
-def batch_process(input_dir, output_dir, toml_path=None):
+def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
@@ -44,6 +45,7 @@ def batch_process(input_dir, output_dir, toml_path=None):
 
     skipped = 0
     processed = 0
+    analyzed = 0
     processed_files = []  # 记录本次实际处理的文件名
     for f in sorted(os.listdir(input_dir)):
         if not f.lower().endswith((".jpg", ".jpeg")):
@@ -71,6 +73,19 @@ def batch_process(input_dir, output_dir, toml_path=None):
         else:
             skipped += 1
 
+        # 图像分析：独立于重处理判定的惰性步骤——结果缺失、算法版本过期或
+        # 结果早于源图修改（同名换图）才加载原图分析（首次接入自动全量回填、
+        # 日常增量只付新增照片的成本，不重传图片）；分析对象为处理链上加水印
+        # 前的原图口径（见 analysis.py）
+        if analysis_dir:
+            analysis_path = os.path.join(analysis_dir, os.path.splitext(f)[0] + ".json")
+            if is_analysis_stale(analysis_path, os.path.getmtime(input_path)):
+                try:
+                    analyze_and_store(input_path, analysis_path)
+                    analyzed += 1
+                except Exception as e:
+                    print(f"❌ 分析失败：{f}  {e}")
+
         if toml_path:
             src = f"/images/photos/{f}"
             if src not in src_to_entry:
@@ -97,8 +112,27 @@ def batch_process(input_dir, output_dir, toml_path=None):
 
     if toml_path:
         write_toml(toml_path, list(src_to_entry.values()))
+        # 分析结果完整性检查：photo.toml 全部条目都应有对应 JSON——src 与
+        # 管线输入文件名不一致的照片（人工条目/历史改名）没有生成路径，站点
+        # 侧会永久显示失败提示卡；此处告警定位（2026-10-21 审查修复 #5）
+        if analysis_dir:
+            try:
+                missing = [
+                    os.path.basename(e["src"])
+                    for e in parse_toml_entries(toml_path)
+                    if not os.path.exists(os.path.join(
+                        analysis_dir, os.path.splitext(os.path.basename(e["src"]))[0] + ".json"))
+                ]
+                if missing:
+                    print(f"⚠️  以下照片缺少图像分析结果（src 与输入文件名不一致？请核对）：")
+                    for m in missing[:10]:
+                        print(f"    - {m}")
+                    if len(missing) > 10:
+                        print(f"    …共 {len(missing)} 张")
+            except Exception:
+                pass
 
-    print(f"📊 本次处理 {processed} 张，跳过 {skipped} 张（未变化）")
+    print(f"📊 本次处理 {processed} 张，跳过 {skipped} 张（未变化），分析 {analyzed} 张")
     return processed_files
 
 
@@ -113,6 +147,9 @@ def _load_config():
         "input_dir": "",
         "output_dir": "",
         "toml_path": os.path.abspath(os.path.join(BASE_DIR, "..", "..", "data", "photo.toml")),
+        # 图像分析结果输出目录：缺省直写站点 static/analysis/（入库随部署发布，
+        # 灯箱按 slug 拉取）；配置为空串时同样回退缺省值
+        "analysis_dir": os.path.abspath(os.path.join(BASE_DIR, "..", "..", "static", "analysis")),
     }
 
     config_path = os.path.join(BASE_DIR, "pipeline_config.json")
@@ -138,6 +175,7 @@ def _load_config():
     print(f"   输入目录: {config['input_dir']}")
     print(f"   输出目录: {config['output_dir']}")
     print(f"   TOML 路径: {config['toml_path']}")
+    print(f"   分析目录: {config['analysis_dir']}")
     return config
 
 
@@ -148,6 +186,7 @@ def run():
     INPUT_FOLDER = config["input_dir"]
     OUTPUT_FOLDER = config["output_dir"]
     TOML_PATH = config["toml_path"]
+    ANALYSIS_DIR = config["analysis_dir"]
 
     if not os.path.isdir(INPUT_FOLDER):
         print(f"❌ 输入目录不存在：{INPUT_FOLDER}")
@@ -155,7 +194,8 @@ def run():
         return
 
     print("===== 开始处理 =====")
-    processed_files = batch_process(INPUT_FOLDER, OUTPUT_FOLDER, toml_path=TOML_PATH)
+    processed_files = batch_process(INPUT_FOLDER, OUTPUT_FOLDER, toml_path=TOML_PATH,
+                                    analysis_dir=ANALYSIS_DIR)
     print("===== 全部完成 =====")
 
     # 同步新图片到 OSS

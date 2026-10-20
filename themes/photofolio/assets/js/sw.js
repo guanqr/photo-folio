@@ -2,8 +2,10 @@
  * Service Worker（策略参考站同款、按本站规模裁剪）：
  * - 页面导航（HTML）：NetworkFirst → 运行时缓存回退 → 缓存壳回退
  *   （离线打开任意链接至少看到站点首页，SPA 壳）
- * - /css/ /js/ 哈希产物、/fonts/ /icons/：Stale-While-Revalidate
- *   （缓存即用、后台更新——内容随 URL 哈希不可变，不会陈旧）
+ * - 指纹产物（文件名含 .hex. 段的生产 JS/CSS）：Stale-While-Revalidate
+ *   （缓存即用、后台更新——内容随 URL 哈希不可变，不会陈旧）；
+ *   无指纹的 JS/CSS 与 /fonts/ /icons/ 走 NetworkFirst（仍入运行时缓存、
+ *   离线照常回退——dev server 无指纹产物不得缓存即用，2026-10-20）
  * - 其余同源 GET：NetworkFirst 入运行时缓存
  * - 跨域（OSS 图片）与非 GET 不拦截；Range 请求直接放行网络
  * - 版本号由构建时间自动注入（baseof.html 的 ExecuteAsTemplate，
@@ -66,6 +68,10 @@ self.addEventListener('fetch', (event) => {
   if (request.headers.has('range')) return
   const isNavigation = request.mode === 'navigate'
   const isHashed = /^\/(css|js|fonts|icons)\//.test(url.pathname)
+  // 仅指纹文件走 SWR：dev server（hugo server）输出的 bundle.js/style.css 无哈希，
+  // SWR「缓存即用、后台更新」会把旧构建一直回给首访（本地调试被陈旧 JS/CSS 卡住，
+  // 2026-10-20 实测）；无指纹资源走下方 NetworkFirst（仍入运行时缓存、离线照常回退）
+  const isFingerprinted = /\.[a-f0-9]{8,}\./.test(url.pathname)
   // 缓存键去查询串：?y=/?p= 等客户端状态参数服务端返回同一份 HTML——
   // 导航与 SPA fetch（同源非导航 GET）同键复用，避免重复条目挤占运行时配额；
   // 旧版本按完整 URL 写入的条目不再命中（一次性离线回退损失，超限自动裁剪回收）
@@ -76,10 +82,10 @@ self.addEventListener('fetch', (event) => {
   event.respondWith((async () => {
     const cache = await runtimeCache
 
-    // 哈希产物/字体/图标：SWR——缓存即用、后台更新。
+    // 指纹产物（生产构建的哈希 JS/CSS）：SWR——缓存即用、后台更新。
     // 单次 fetch 共享：未命中时返回同一个 promise（后台写缓存与响应共用），
     // 避免冷缓存时同一 URL 并发两次请求
-    if (isHashed) {
+    if (isHashed && isFingerprinted) {
       const cachedResponse = await cache.match(request)
       const network = fetch(request)
         .then((res) => {

@@ -5,6 +5,19 @@ theme = "photofolio"
 
 defaultContentLanguage = "zh-hant"
 
+# dev server（hugo server）专用：JS/CSS 在 server 模式无哈希文件名（bundle.js），
+# 无 Cache-Control 时浏览器启发式缓存会把旧构建留在普通刷新里、本地调试被陈旧
+# 代码卡住（2026-10-20 实测）——强制 no-cache，生产构建不受影响
+[[server.headers]]
+    for = "/js/**"
+    [server.headers.values]
+        Cache-Control = "no-cache"
+
+[[server.headers]]
+    for = "/css/**"
+    [server.headers.values]
+        Cache-Control = "no-cache"
+
 # 清空 Hugo 内置分类法（默认 tag/categories 不用）——否则 content/categories/ 会被
 # 识别为「categories 分类法」而非普通 Section，子目录变成 term 页
 [taxonomies]

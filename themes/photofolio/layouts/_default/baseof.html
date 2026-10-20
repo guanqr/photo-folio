@@ -122,7 +122,11 @@
                             <span>{{ i18n "lightbox_analysis" }}</span>
                             {{ partial "utils/icon.html" (dict "name" "arrow_down" "variant" "thick") }}
                         </button>
-                        <div class="lightbox-analysis" id="lightbox-analysis" aria-hidden="true">
+                        {{/* inert 与 aria-hidden 并置：aria-hidden 是读屏语义、inert 阻止焦点——
+                            收起按钮点击后仍持焦点时若只挂 aria-hidden，焦点留在隐藏子树里
+                            （Chrome 报警告并阻断隐藏）；inert 使浏览器自动移出焦点。
+                            JS 开合时同步切换（setOpen/reset） */}}
+                        <div class="lightbox-analysis" id="lightbox-analysis" aria-hidden="true" inert>
                             <div class="lightbox-charts" id="lightbox-charts">
                         {{ end }}
                         {{ if $lbCfg.tonal }}
@@ -169,6 +173,8 @@
                                 <span>{{ i18n "lightbox_saturation" }}</span>
                                 <span class="lightbox-sat-name" id="lightbox-sat-name"></span>
                             </h4>
+                            {{/* 虚线说明（与直方图标注同款）：虚线为饱和度均值标记 */}}
+                            <p class="lightbox-chart-caption">{{ i18n "sat_caption" }}</p>
                             <svg class="lightbox-sat-hist" id="lightbox-sat-hist" viewBox="0 0 100 48" preserveAspectRatio="none" role="img" aria-label="{{ i18n "lightbox_saturation" }}"></svg>
                             <div class="lightbox-sat-axis">
                                 <span>{{ i18n "sat_low" }}</span>
@@ -190,7 +196,7 @@
                         {{ end }}
                         {{ if $chartsAny }}
                             {{/* 分析加载失败提示：构建期预渲染、lightbox-analysis.js 切换 hidden
-                                （成功路径隐藏、探测失败路径显示） */}}
+                                （成功路径隐藏、拉取失败路径显示） */}}
                             {{ partial "components/empty-state.html" (dict "class" "lightbox-analysis-error" "id" "lightbox-analysis-error" "hidden" true "icon" "alert" "titleKey" "lightbox_analysis_failed") }}
                             </div>
                             <button class="lightbox-analysis-collapse" id="lightbox-analysis-collapse" type="button">
