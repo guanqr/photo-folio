@@ -11,6 +11,9 @@
  *   整组以最终居中偏移 transform 下滑（与收缩同曲线同时长 0.6s）；过渡结束
  *   同帧交换为真实 is-fit 居中（先清 transform 再翻转、实测残余 0.3s 吸收，
  *   零瞬跳）；仅桌面生效且收起前未居中时下滑；放不下时不翻转不滑动
+ * - 收起期间经 drawer.setInputHold 挂起滚轮输入：点击收起后仍在到达的旧手势
+ *   惯性尾会瞬跳在途回滚/拉低抽屉 level，刻意编排不被旧手势接管；finish/
+ *   展开/重置解除
  * - 展开时分析当前照片由调用方注入 analyze 回调（本模块不认识切换管线；
  *   分析本体为管线预计算结果拉取与渲染，见 lightbox-analysis.js）
  */
@@ -69,6 +72,7 @@ export function initLightboxAnalysisControl({
             // 触发行随开合平滑收拢（纯 CSS），展开方向无 t=0 布局跳变
             teardownCollapseEnd(); // 收起中途再展开：作废在途收尾（否则在展开过渡结束时重放）
             drawer.setFitAdjuster(false); // 清除收起窗口的冻结，按实际高度逐帧重判
+            drawer.setInputHold(false); // 收起中途再展开：一并解除输入挂起
             cancelCenterComp(); // 停止滑入/补偿、摘除 transform
             if (panelDetails) panelDetails.classList.remove('no-margin-center'); // 展开清除收起窗口的顶对齐态
             drawer.cancelScroll(); // 取消收起启动的回滚动画（2026-10-18：不取消则展开期间仍逐帧强制 scrollTop 归零、覆盖用户滚动）
@@ -98,17 +102,25 @@ export function initLightboxAnalysisControl({
                 if (panelDetails) panelDetails.classList.add('no-margin-center');
                 // 冻结 is-fit 翻转（布尔语义，见 drawer.setFitAdjuster）
                 drawer.setFitAdjuster(true);
-                // 居中偏移按最终组高逐块实测（构造性精确）：头部（面板 − 详情区）
-                // + 详情区各子块最终高——meta/exif 高度稳定、story 当前即最终、
-                // wrap 收起归零、触发行取初始化缓存的完整足迹；预测仅作滑行
-                // 引导，终态由交换时刻的实测残余校正保证
+                // 挂起滚轮输入：收起编排期间 wheel 整链早退——点击收起后
+                // 仍在到达的旧手势惯性尾会经 cancelScrollAnim 把在途回滚瞬跳
+                // 归零（桌面）、并驱动抽屉 level 拉低（窄屏），刻意编排不被
+                // 旧手势接管（2026-10-21；finish/展开/reset 解除）
+                drawer.setInputHold(true);
+                // 居中偏移按最终组高推导（与 updateFit 翻转判定同口径，2026-10-21）：
+                // 当前详情区 scrollHeight（含边距）− wrap 当前高 + 触发行最终足迹 −
+                // 触发行当前盒（is-open 刚摘、过渡起点值 ≈ 0）——与翻转实测同一组量、
+                // 残余归零（原 offsetHeight 逐块求和漏外边距、整数取整，差值经 0.3s
+                // 补偿吸收呈「滑过头再上移」）；预测仅作滑行引导，终态由交换时刻的
+                // 实测残余校正兜底
                 if (panelDetails) {
-                    let finalDetailsH = 0;
-                    for (const child of panelDetails.children) {
-                        if (child === wrap) continue; // 收起后归零
-                        finalDetailsH += child === trigger ? triggerFootprint : child.offsetHeight;
-                    }
-                    const totalHFinal = panel.clientHeight - panelDetails.clientHeight + finalDetailsH;
+                    const cs = getComputedStyle(trigger);
+                    const finalDetailsH = panelDetails.scrollHeight
+                        - wrap.clientHeight
+                        + (triggerFootprint - trigger.offsetHeight
+                            - parseFloat(cs.marginTop)
+                            - parseFloat(cs.marginBottom));
+                    const totalHFinal = panel.scrollHeight - panelDetails.clientHeight + finalDetailsH;
                     const free = panel.clientHeight - totalHFinal;
                     const dy = free > 0 ? free / 2 : 0;
                     // 下滑仅桌面生效（窄屏 is-fit 永不翻转、下滑只会被残余补偿弹回）
@@ -129,6 +141,7 @@ export function initLightboxAnalysisControl({
                 const finish = () => {
                     teardownCollapseEnd();
                     wrap.style.maxHeight = ''; // 清除内联、恢复 class 的 0 基线
+                    drawer.setInputHold(false); // 解除输入挂起（与释放冻结同任务，无中途派发）
                     drawer.setFitAdjuster(false); // 释放冻结
                     // 交换：先清 transform（判定读干净布局）→ 翻转到居中；滑行
                     // 预测的残余经实测校正——翻转前记视觉位、翻转后以残余
@@ -182,6 +195,7 @@ export function initLightboxAnalysisControl({
         teardownCollapseEnd(); // 关闭中断在途收尾
         cancelCenterComp(); // 关闭中断在途的滑入/补偿
         if (panelDetails) panelDetails.classList.remove('no-margin-center'); // 关闭清除收起窗口的顶对齐态
+        drawer.setInputHold(false); // 关闭中断在途收起：解除输入挂起
         drawer.setFitAdjuster(false);
     }
 

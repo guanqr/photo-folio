@@ -304,22 +304,22 @@ other = "展開全部 {{ .Count }} 項"
 other = "收起"
 
 [stats_focus_uw]
-other = "超廣角 ≤16mm"
+other = "≤16mm"
 
 [stats_focus_wide]
-other = "廣角 17–28mm"
+other = "17–28mm"
 
 [stats_focus_std]
-other = "標準 29–50mm"
+other = "29–50mm"
 
 [stats_focus_mid]
-other = "中長焦 51–85mm"
+other = "51–85mm"
 
 [stats_focus_tele]
-other = "長焦 86–199mm"
+other = "86–199mm"
 
 [stats_focus_ut]
-other = "超長焦 ≥200mm"
+other = "≥200mm"
 
 [stats_aper_1]
 other = "≤f/4"
@@ -355,7 +355,7 @@ other = "1/60s"
 other = "1/30s–1s"
 
 [stats_shutter_7]
-other = "長曝 ≥1s"
+other = "≥1s"
 
 [stats_iso_1]
 other = "≤100"

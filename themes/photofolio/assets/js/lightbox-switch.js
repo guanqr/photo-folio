@@ -231,7 +231,7 @@ export function initLightboxSwitch({
         });
     }
 
-    function open(index, fromPx, zoomFrom) {
+    function open(index, fromPx, zoomFrom, dirHint) {
         if (!currentPhotos.length) currentPhotos = collection.collect();
         if (index < 0 || index >= currentPhotos.length) return;
         swipe.reset(); // 复位滑动内联残留（拖动中关闭后重开图片错位的根源）
@@ -243,10 +243,9 @@ export function initLightboxSwitch({
         zoomPending = false; // 缩放进行标志复位（切换/普通首开路径不置位）
         openToken++;
         const isSwitch = lightbox.classList.contains('active');
-        // 方向必须在更新 currentIndex 之前计算（与旧索引比较）
-        const dir = isSwitch
-            ? (index === (currentIndex + 1) % currentPhotos.length ? 1 : -1)
-            : 1;
+        // 方向由调用方显式给出（prev -1 / next +1）：恰好 2 张时 prev 与 next
+        // 的目标是同一张、索引反推恒判正向（2026-10-21）；首开 dir 恒 1
+        const dir = isSwitch ? dirHint : 1;
         currentIndex = index;
         const p = currentPhotos[index];
         // 照片 URL：?p=slug（保留筛选等其余参数）——首开 push、切图 replace：
@@ -561,7 +560,7 @@ export function initLightboxSwitch({
             return;
         }
         const idx = (currentIndex - 1 + currentPhotos.length) % currentPhotos.length;
-        open(idx, fromPx);
+        open(idx, fromPx, undefined, -1);
     }
 
     function next(fromPx) {
@@ -571,7 +570,7 @@ export function initLightboxSwitch({
             return;
         }
         const idx = (currentIndex + 1) % currentPhotos.length;
-        open(idx, fromPx);
+        open(idx, fromPx, undefined, 1);
     }
 
     function updateArrows() {

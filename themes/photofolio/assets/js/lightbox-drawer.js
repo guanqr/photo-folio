@@ -9,6 +9,8 @@
  * 视口高度变化时已展开的上限按新 50% 视口重夹（面板总长不随窗口缩小挤占图片区）；
  * 详情内容仅在全开后可滚动，地点/日期随内容滚动（仅标题固定）。
  * 桌面端：不干预（reset 时清除窄屏残留的内联样式，恢复宽屏详情常显）。
+ * 分析区收起期间输入挂起（setInputHold，由开合控制模块置位）：wheel 整链
+ * 早退，旧手势惯性尾不接管在途回滚/抽屉 level。
  */
 import { prefersReducedMotion, BP_LIGHTBOX_NARROW, BP_DESKTOP_MIN } from './utils.js';
 
@@ -221,6 +223,12 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
     // flipFitNow 翻转（翻转位移由调用方做位置补偿平滑滑入居中）。
     // force：跳过 active 守卫强制重判（灯箱刚激活/关闭重置时调用）
     let fitAdjuster = null;
+    // inputHold（分析区收起期间 true）：wheel 事件整链早退（含最顶部的
+    // cancelScrollAnim 接管）——点击收起后仍在到达的旧手势惯性尾会把在途
+    // 回滚瞬跳归零（桌面）、并驱动抽屉 level 拉低（窄屏）；收起编排是点击
+    // 发起的刻意动作，不应被旧手势接管（2026-10-21）。置位/清除见返回的
+    // setInputHold（调用方：分析区开合控制模块）
+    let inputHold = false;
     function updateFit(force) {
         if (narrowMedia.matches || (!force && !lightbox.classList.contains('active'))) return;
         // 收起窗口冻结：判定押后，避免收缩中段翻转截断滚动——force 豁免
@@ -246,6 +254,7 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
     // 全开后滚轮手动滚动内容（光标位置无关，与拖动一致）；内容到底后无操作（图片区域保持半页不回弹）；
     // 上滚时内容回滚，到顶后渐进收起（至少保留地点/日期简行）
     lightbox.addEventListener('wheel', (e) => {
+        if (inputHold) return; // 收起编排挂起：点击收起后的旧手势惯性尾不接管（见 setInputHold）
         // 新输入接管：中断回滚并完成到目标（桌面端分析区收起同样会启动回滚动画，
         // 用户中途滚轮时必须先摘除，否则动画逐帧覆盖滚动输入）
         cancelScrollAnim();
@@ -374,6 +383,9 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
         // 滚动上下文保持；false 解除，翻转随内容增长自然发生——此前为
         // 「高度扣除回调」但从不被调用、属死 API，2026-10-21 审查修复 #15）
         setFitAdjuster: (frozen) => { fitAdjuster = frozen; },
+        // 挂起/恢复滚轮输入（分析区收起期间置位、finish/展开/重置清除——
+        // 收起编排不被旧手势惯性尾接管，2026-10-21）
+        setInputHold: (held) => { inputHold = held; },
         // is-fit 是否适用于当前视口（窄屏抽屉模式恒 false——居中下滑与翻转
         // 仅桌面生效，调用方以本函数门控（2026-10-21 审查修复：窄屏无门控
         // 时收起出现「先下滑再弹回」伪动效））

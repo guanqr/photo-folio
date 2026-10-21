@@ -143,6 +143,7 @@ async function loadContent(url) {
         let html;
         try {
             res = await fetch(url, { signal: controller.signal });
+            if (!res.ok) throw new Error('HTTP ' + res.status); // 404/500 走下方兜底完整导航，不把错误页解析进正文
             html = await res.text();
         } finally {
             clearTimeout(timeoutTimer);

@@ -1,13 +1,39 @@
 # Changelog
 
-PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)。
+PhotoFolio 主题的版本更新记录。条目书写规范见工程约定的「CHANGELOG 约定」；段落分类与顺序参照 Keep a Changelog 标准（Added / Changed / Deprecated / Removed / Fixed / Security）。
 
-## [Unreleased]
+## [0.20.0] — 2026-10-21
+
+### Added
+- **灯箱图像分析改管线预计算（浏览端直读结果）**：图像分析原为浏览时在线采样——展开下载 w_800 采样图（约 200KB，CORS 依赖、离线不可用）再 canvas 逐像素统计（手机端 CPU 开销、与主图解码争抢带宽）——改为照片生成管线在加水印前对全分辨率原图预计算（`tools/photo-pipeline/src/analysis.py`：单趟逐像素融合 Rec.709 明度/HSV 饱和度/色相加权/色卡量化，RGB 直方图走 Pillow C 实现；统计口径自 JS 整体迁入、成为唯一实现），结果写 `static/analysis/{slug}.json`（v1 schema 含 v 算法版本号，约 2–3KB/张，入库随部署发布）；main.py 增独立惰性步骤（结果缺失或版本过期才重算，首次接入自动全量回填、日常增量只付新增照片，与重处理判定解耦）；灯箱 lightbox-analysis.js 删除探测/采样/统计，改按 slug 拉取结果（同源 fetch、SW 运行时缓存离线可回退）后纯数学派生曲线并渲染（图表/形变动画/失败提示卡保留，失败语义收敛为结果拉取失败）；分析对象由压缩衍生图升级为原图口径、统计更忠实；**動態範圍与三区档位边界按国际标准定义**（sRGB 值先经 IEC 61966-2-1 标准传递函数解码线性光、log2 直方图取 P5–P95 百分位得真档——原 gamma 域数值约为真档的 1/2.2；纯黑像素按 16 位精度下限 2^-16 计不产生无穷大；分档阈值 3.5/6.5 换算到真档 7.7/14.3 保持既有定性分档行为；三区边界 118 灰两侧改精确一档 85/162 取代原 √2 近似 83/167）；區域系統标注精简为「曝光灰階」（删除括号内灰阶范围说明）；饱和度图补「虛線為均值」标注（与直方图虚线说明同款）；「亮度中位數」文案统一为「明度中位數」；**双失败切图分析区塌缩闪烁修复**（失败提示卡入口不再提前收起、保持旧态直到结果到达——原入口即藏使提示卡成为唯一内容的分析区塌为 0 高、上方 EXIF 随 is-fit 重判两段式跳动）
+
+### Changed
+- **拍摄档案档位标签去描述词**：焦距分布（超廣角/廣角/標準/中長焦/長焦/超長焦）与快门分布（長曝）的中文描述词删除、只保留数值范围（如「廣角 17–28mm」→「17–28mm」），与光圈/ISO 档位的纯范围口径一致；标签列随描述词去除收紧（7.5em → 5.5em，最长档位仍完整显示）
+- **瀑布流 resize 重排比例查找去重**：relayoutShown 的行高求和与 applyRows 定尺寸各对全部已显示作品查一遍 `grid._ratios`（rAF 逐帧热路径上每帧重复数百次 Map 查找）——比例数组先构建一次、行循环与定尺寸共用，行为零变化
+- **FLIP 重建强制重排收敛单次读取**：flipRebuild 的 Invert 提交对每个作品读一遍 offsetHeight——布局是文档级、逐项读取不产生额外 reflow，收敛为单次读取（与全站其余 20 余处强制回流写法一致），行为零变化
+- **灯箱作品收集 closest 遍历收敛**：collect 对每个 wrapper 先爬 `.masonry-item` 再从 wrapper 重爬 `[data-title]`，重复走了 wrapper→card 一段路径——对调顺序、is-hidden 检查改以 card 为起点（card 恒在 item 内、模板结构单源，结果等价），每个 wrapper 省一次 matches/parentNode
+- **筛选恢复排序改装饰-排序-还原**：matching 的 sort 比较器每次比较对同一元素重复查 `_origOrder` Map（约 2·n·log n 次），order 值会话内不变——装饰阶段每元素只取一次、比较器退化为纯数字比较，行为零变化
+- **瀑布流行宽取整改四舍五入**：非末张宽度原只舍不入、误差单向为负，末张系统性吸收 ~n/2 px 正偏差、总是宽于理想——改 round 使误差 ±0.5px 正负分布、末张吸收量降至 O(√n)；防换行不依赖逐项 floor（末张向下取整已使行宽总和精确 ≤ 容器宽）
+
+### Fixed
+- **桌面收起图像分析无滚动动画（滚动与居中同窗并发）**：收起瞬间 is-fit 立即翻转——详情区滚动上下文当场消失、scrollToTop 回滚动画的写入被静默忽略、视口瞬跳居中——收起改「滚动 + 居中同窗并发」（打开动作的逆向）：收起窗口内经 fitAdjuster 冻结翻转（详情区保持可滚动、回滚动画真实生效）、详情区内容经 no-margin-center 保持顶对齐随滚动上行，同时以 transform 过渡驱动整组（标题/胶囊/EXIF）同步下滑至居中偏移（合成器驱动零逐帧重排；margin 版每帧整面板 reflow 与滚动叠加成重绘抖动、观感残影，弃用）；过渡结束同帧交换为真实 is-fit 居中（先清 transform 再翻转——同任务无绘制、视觉连续且判定读到不被撑大的干净布局）；无描述照片的故事块隐藏改 hidden 属性、详情区末可见子块经 :has 顺延接剩余空间（翻转瞬间无内部跳变）；**审查轮修复（并入本条）**：窄屏下滑门控（is-fit 不适用则不下滑）、已居中态不下滑、触发行足迹改初始化缓存（不再临时摘类测量掐死在途复现过渡）、收起收尾幂等化（transitionend/transitioncancel/超时三路兜底、槽位可拆）、分析结果缓存改渲染成功后写入且命中路径异常自愈、schema 版本与形状校验、空 slug 守卫；管线侧同名换图 mtime 判定、JSON 原子写、缺结果告警；is-fit 冻结对 force 豁免、fitAdjuster 改布尔语义
+- **dev server 陈旧资源（SW 对无指纹文件走 SWR）**：hugo server 输出的 bundle.js/style.css 无哈希，SW 的「缓存即用、后台更新」把旧构建持续回给首访、本地调试被陈旧 JS/CSS 卡住（实测：浏览器运行着 inert 修复前的旧代码、修复后症状依旧）——仅指纹文件（含 `.hex.` 段）走 SWR，无指纹资源走 NetworkFirst（仍入运行时缓存、离线照常回退）
+- **收起图像分析 aria-hidden 焦点警告**：点击收起按钮后按钮保留焦点、wrap 同步置 aria-hidden，焦点落在隐藏子树（Chrome 报警告并阻断隐藏）——wrap 补 `inert` 属性（模板初始态 + JS 开合/重置同步切换）：aria-hidden 保留读屏语义、inert 使浏览器自动移出焦点，警告消除（无头探针以 ?p= 直达场景复现验证）
+- **明暗主题切换图标动画被全站过渡压制压掉**：切换窗口的 `transition: none !important` 一刀切连图标的太阳/月亮形态动画（光线缩放 + 核心交叉淡入）一并压成瞬时快照——VT 路径给两个图标挂 `view-transition-name` 命名组（root 快照排除图标区域、旧态组缩放淡出/新态组缩放淡入重放原形态动画，透明侧组动画天然静默，时长/曲线与整页交叉淡化同步；SPA 换页不经 VT、命名组无副作用），无 VT 降级分支挂 `theme-switching-no-vt` 标记类、经 no-preference 媒体查询豁免压制恢复原元素级过渡（减弱动态用户仍由全局兜底归零）
+- **收起图像分析被滚动惯性尾打断**：滚到底立刻点击收起时，旧手势的惯性 wheel 事件仍在点击后逐批到达——处理器首行无条件的 cancelScrollAnim 把在途回滚动画瞬跳归零（桌面瞬跳、观感为反弹跳动），窄屏上同批事件还继续驱动抽屉 level 拉低（双重运动、落点随惯性尾幅度不定）——收起编排期间经 setInputHold 挂起滚轮输入（wheel 整链早退，旧手势不接管刻意编排），finish/再展开/关闭重置解除
+- **收起图像分析下滑过头再上移**：下滑偏移的预测按 offsetHeight 逐块求和（漏外边距、整数取整），与终态翻转的 scrollHeight 实测口径不一致，差值经 0.3s 残余补偿吸收呈「下滑过头再轻微上移」（带描述照片还漏故事块边距、过头量更大）——预测改与翻转判定同口径的 scrollHeight 推导（残余归零），下滑门槛与翻转终态判据一致（边界带反弹一并消除）
+- **两张照片灯箱上一张恒向前滑**：切换方向按目标索引反推（目标 == 当前+1 判正向），恰好 2 张时上一张与下一张的目标是同一张、反推恒判正向——方向改由调用方显式传入（prev -1 / next +1，滑动切图按方向分流的入口本就有方向信息），索引反推删除
+- **SPA 跳转不校验响应状态**：fetch 不检测 res.ok，404/500 响应体被解析后原样替换进正文——URL 已更新、内容却是错误页且无恢复提示——非 2xx 抛错走既有网络错误兜底（完整导航展示浏览器真实错误页）
+- **测量监听不摘除**：measureRatios 的 load 监听 settle 后永久留在图片上（settled 守卫下重复触发已无意义）、空 error 监听为死代码——load 改 once 触发即摘除（AVIF→webp 重试语义不变：重试的 load 即首个 load）、空监听删除
+- **灯箱对话框名称静态**：role=dialog 仅静态 aria-label、名称不随内容变化——加 aria-labelledby 指向照片标题（打开即填充；标题为空时按 accname 规则回落 aria-label）
 
 ## [0.19.0] — 2026-10-18
 
 ### Added
 - **灯箱图像分析加载失败提示**：探测图加载失败（网络/未开 CORS）或采样渲染异常时原为静默隐藏全部图表区、无任何反馈——改为与筛选空状态同款的提示卡片（虚线框 + 新增 alert 警告图标 + 文案「無法載入分析結果，請檢查網絡連線」），构建期预渲染于图表容器末尾、JS 按探测结果切换 hidden（失败显示、成功/缓存命中隐藏，收起再展开自动重试；切图时 analyze 入口先收起上次提示、成功/失败路径各再置位）；灯箱内无底色、图标与文字上下居中排布（图标 3.2em + 小号文字 0.8em、面板内收紧，display 限定 :not([hidden]) 防压过 UA 的 hidden 规则；虚线框取亮色 `--color-text-muted`——灯箱内 `--color-border` 固定为暗色不可见；上下边距与正常图表区块同构——上 1.1em 与 EXIF 同距、下 0 由收起按钮自带 1.1em）；中屏双列网格占满整行并自分隔线规则排除（图表开关配置变化会改变其 DOM 序号、偶序时被误当第二列项）；随图片切换与面板同步淡入
+
+### Changed
+- **灯箱分类/系列胶囊悬停文字改白色**：绿底填充态文字原取 `--color-bg-card`（仿筛选按钮激活态）——灯箱组件把该变量固定重声明为暗色卡片色，绿底上呈深色文字——改取灯箱文字白 `--color-text`（灯箱内固定 91% 白），与固定暗色面板观感一致
 
 ### Fixed
 - **明暗主题切换文字/标题滞后（不同步）**：H2 标题（%section-heading）/导航文字（.site-nav a/.nav-parent、.logo-text）与 body 自 0.17.0 起带 0.3s 元素级颜色过渡，0.18.0 又叠上 View Transitions 整页快照交叉淡化——切换时这些元素在交叉淡化下仍跑自身渐变、有效进度约为两者乘积，明显滞后于卡片等瞬时换色元素——主题切换窗口（html.theme-switching，既有挂类机制）内全站过渡统一压制，切换动作瞬时完成、动画由 VT 交叉淡化唯一提供（无 VT 浏览器退回瞬时切换，全站同刻换色）；header 既有的 theme-switching 临时过渡规则随压制成为死规则、一并删除
@@ -61,34 +87,17 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 - **关于页窄屏断点单源**：max-width:768px 字面量与全站窄屏上限互补却独立写死——经 BP_DESKTOP_MIN−1 推导（与灯箱抽屉同法）
 - **分类卡悬停阴影被网格裁剪出硬边**：.grid 静态 overflow-x:clip（防放大修复的裁剪）把左右两列卡片的悬停阴影在网格边界切出明显分界线——裁剪改挂 FLIP 窗口类 is-flipping（cards-flip.js 动画期间挂、收尾摘），正常态阴影完整、防放大裁剪语义不变
 
-### Changed
-- **灯箱分类/系列胶囊悬停文字改白色**：绿底填充态文字原取 `--color-bg-card`（仿筛选按钮激活态）——灯箱组件把该变量固定重声明为暗色卡片色，绿底上呈深色文字——改取灯箱文字白 `--color-text`（灯箱内固定 91% 白），与固定暗色面板观感一致
-
 ## [0.18.1] — 2026-10-18
 
 ### Changed
 - **PWA manifest 移入主题并转模板生成**（与博客同款）：站点级 static/manifest.json 删除，改 assets/manifest.tmpl 渲染发布（partials/manifest.html 输出 link + 发布）——theme_color/background_color 自 `#fff` 改为暗色背景 `hsl(202.5, 22.2%, 7.1%)`（与 :root 的 --color-bg 四元组同源，原白值与暗色默认主题不符、启动画面闪白），start_url 自 `./` 改 `/`；顺带补上备好未引用的 apple-touch-icon 链接
 - **front matter 统一 TOML 与 archetype 归位**：content 全部 front matter 自 YAML 转 TOML（+++，与博客一致）；站点级 archetypes/default.md 删除（此前遮蔽主题级的照片页模板、hugo new 实际生效简化版）——主题级 archetype 同步转 TOML 并恢复生效
 - **图标数据瘦身与渲染收敛**（对齐博客的 icon 体系）：data/svg.toml 每条自完整 `<svg>` 瘦身为「差异属性 + 内容」，公共属性（xmlns/viewBox/fill/stroke 描边集）收敛到新增的 `partials/utils/icon.html` 单点注入（约 -36%，9489 → 6063 字节）；填充型图标由数据自动识别（svg 标签含 `fill="none"` 即不注入描边属性）、描边粗细覆盖用 `variant "thick"`（箭头 2.5）；30 个调用点（含 4 个动态 `index hugo.Data.svg` 调用）迁移为 partial；验证：渲染属性集一致、无重复属性、箭头 2.5 与填充图标描边豁免均正确
-
-### Fixed
-- **「宽窄切换后页面放大」根因定位与修复**：宽窄切换/快速来回切换时，分类网格列数切换的 FLIP 动画（cards-flip 的 Invert 阶段 translate/scale 把卡片摆回旧列位置）产生 **transform 视觉溢出**——旧列位置超出新视口宽度，transform 溢出进入 body 的 scrollable overflow（scrollWidth > clientWidth），浏览器（Chrome 模拟器与真机同款行为）据此启用适配缩放且**不回退**，页面「放大」直到人工缩小——`.grid` 容器加 `overflow-x: clip` 裁剪 FLIP 瞬态溢出（不创建滚动容器、不参与视口传播规则）；`html`/`body` 另加根级 `overflow-x: clip` 兜底（hidden 参与视口传播规则、body 的 used 值会被置回 visible 而不裁剪）；无头高压验证（5 轮连续收窄 240-900px + 20 轮快速来回切换密集采样）全程无溢出无缩放偏移
-
-### Changed
 - **系列页氛围粒子 canvas 位图改 SVG 矢量**：叶子/纸屑自离屏 sprite 迁移为 path（坐标逐点换算）、闪光/火星/尘土径向渐变迁移为 SVG radialGradient defs（stop 色引用 CSS 变量）；每帧仅更新 transform 与 opacity 属性（运动模型原样复用），矢量天然适应高 DPI 与浏览器缩放；颜色改为 `--color-particle` 四元组（各主题 SCSS 声明、SVG 直接引用），canvas 时代的 `--rgb-particle`/`--rgb-white` 数据变量一并删除——颜色体系自此无例外；渐变 id 带实例序号防 SPA 过渡期同名串扰；模板/样式类名 series-canvas 改 series-ambient
 - **SCSS 目录分层与排版注入表驱动**（对齐博客）：assets/scss 平铺改为 base/layout/pages/components 四层（base/responsive 保持最后引入），main.scss @import 路径与分组注释同步更新，编译 CSS 指纹逐字节一致；site-fonts 的 4 段字体栈与 8 个字号变量收敛为 slice 表驱动注入（字体名拆分/加引号/fallback 只写一遍），输出逐字节不变
 - **partials 三层分组**（对齐博客结构）：layouts/partials 平铺改为三层——根目录放页面框架（head/header/footer/hero-preload/page-others/site-*），components/ 放 UI 部件（photo-card/categories-cards/series-cards/series-covers/about-stats*），utils/ 放纯函数（img-url*/photo-sorted/location-registry/series-url/jsonld*）；全部调用点路径同步更新，构建产物仅时间戳差异
 - **head 拆分与全站缓存策略**（对齐博客的缓存约定）：head 的页面无关部分拆为 site-style（CSS 管线）/ site-fonts（字体外链与排版变量）/ site-meta（favicon/manifest）三个 partial 并 partialCached（variant 含语言）；img-url 新增 img-url-cached 包装（variant 单点拼接，photo-card 等循环内高频调用跨页面共享）；photo-sorted / location-registry 按 order / 常量 variant 缓存（全站排序与地点注册表只计算一次）；构建产物仅空白与时间戳差异、渲染等价
 - **颜色体系迁移 HSL 四元组**：`--rgb-*` 分量体系（`rgb(var(--rgb-*))` / `rgba(var(--rgb-*), a)`）整体迁移为 `defineColorHSL` 四元组（`--x` 主值 + `--x-h/-s/-l` 分量，与博客机制一致，2026-10-17）——不透明色 `var(--x)`、带透明度 `hsla(var(--x-h), var(--x-s), var(--x-l), a)`；`:root` 固定暗色分量改 `--dark-*` 四元组（灯箱/轮播引用），主题色由 `:root`（暗色默认）与 `[data-theme="light"]`（亮色）各自 defineColorHSL 声明，原「RGB 分量 → 语义层间接引用」的两层结构消失；`--rgb-white`/`--rgb-particle` 为 series-ambient.js 的 canvas 数据（RGB 分量字符串、非 CSS 颜色）保留不动；全部颜色值逐一换算（1 位小数精度）并经 HEAD worktree 基线逐值验证一致
-
-### Fixed
-- **灯箱缩放浮现布局盒锁被幽灵监听提前摘除（打开显示小图、大图就绪后跳变）**：第二次及以后打开照片时，若全尺寸大图较慢，缩略图阶段的布局盒锁在缩略图 load 事件上被上次换源残留的 pendingUnlock 监听摘除——监听触发后只清槽位变量、未从 img 摘除（槽位为 null 后 clearPendingUnlock 再也摘不掉它），幽灵监听在后续每次打开/切图的 load 事件上重复执行摘锁，缩略图以自然尺寸（w_800）展示、远小于宽屏 contain 拟合目标，大图就绪换源后盒瞬间铺满（宽屏下从约 800px 跳到 1500px+，窄屏两者相近不可察觉；仅在大图较慢、等待期可见时发生）——pendingUnlock 注册改 `{ once: true }` 触发即自摘除；同槽位模式的 pendingFirstLoad（首开恢复监听、两处注册）同法加固（幽灵会提前恢复 opacity/揭示面板文字）；**同类第三处一并修复**：滑动回弹 snapBack 的收尾监听在回弹 0.2s 内被 reset（打开/关闭）清掉过渡后 transitionend 永不触发、收尾残留——在下次切图滑出的 transitionend 上提前恢复图片区裁剪并清空过渡——收尾监听入槽位、reset 摘除
-- **超宽屏缩放目标大于展示图自然尺寸（换源后图像缩水）**：contain 拟合目标（如 4K 上 2020×1349）大于展示图自然尺寸（w_1920 → 1920×1280）时，布局盒锁把缩略图放大过头、换源后自然尺寸接管盒瞬间缩回——缩放目标与布局盒锁改按展示图自然尺寸封顶（拟合盒先 clamp 到自然尺寸再 contain 拟合，与换源后 CSS 的 max-width/max-height contain 口径一致；目标宽高比优先取自然尺寸比例而非缩略图矩形比例——网格单元取整差在封顶边上残留的亚像素偏差一并消除），最大显示到自然尺寸、不再放大，换源后盒零跳变；自然尺寸由作品卡 width/height 属性（photo.toml 真实像素尺寸）与展示 URL 宽度档位（w_1920/w_1280）推导（OSS lfit 仅按宽度封顶），无尺寸属性的旧数据不封顶保持原行为；普通屏 contain 拟合小于自然尺寸、封顶不生效
-- **SPA 导航与 ?p= 灯箱 URL 语义修复（前进/后退不恢复灯箱、首批 ?p= 直达静默失败）**：① 导航关灯箱的 close 无条件执行「replace 移除 ?p=」——此时 location 已是导航目标地址，目标含 ?p= 时（按 Back 回到 ?p= 条目再 Forward）恢复条目的 p 被抹掉、历史被改写，灯箱按设计应恢复却不恢复——close 增加 keepUrl 选项、SPA 导航钩子保留目标 URL 的 p（按钮/Escape 关闭照常清理），随后 openLightboxFromUrl 恢复（URL 已一致时规范化比较自动跳过、不产生多余历史）；② 首批照片（未进待加载队列、仍在揭示布局链上）的 ?p= 恢复在揭示完成前点击、collect 因无 src 跳过——点击落空静默失败——目标仍隐藏且布局链在途时等链完成再打开，滚动入视口与缩放浮现与深位置路径一致
-- **SPA 并发导航守卫与瀑布流代次复检（两处竞态）**：① 快速连点/加载中按 Back 会启动并行 loadContent——各自 fetch、各自写主内容区，最后 resolve 者胜，地址栏与内容可错配（URL 是 B、内容是 A）——模块级导航代次在每次导航递增，各 await 恢复点校验，被取代的旧导航静默退出（失败路径同样守卫，不回退到陈旧 URL）；② revealBatch 的代次校验只在测量 await 前一次——800ms 测量窗口内点筛选，旧批次恢复执行后向新集合的 _rows/_shownItems 写入负 start 幽灵记录，旧作品随行容器在下次跨断点 rebuildAll 被整棵移除、永久丢失（直到刷新）——await 恢复点复检代次放弃本批
-- **SPA 换页观察器/监听泄漏与计数动画、测量缓存修正**：① 懒加载 imageObserver 与首页分类卡片 observer 换页不 disconnect——旧页面中未进入视口的图片永不 intersect、不被 unobserve，观察器对目标持强引用、随导航累积持有已脱离文档的 img/卡片子树（含已解码位图）——每次初始化先断开旧观察再重建；② 返回顶部按钮早退先于拆线——跳到无按钮页面后旧滚动监听仍挂 window、闭包持有已销毁按钮——拆线先于早退（与无限滚动同约定）；③ 筛选计数动画多实例并发——快速连点启动多个 rAF 循环交替写同一 textContent、数字闪烁——单槽位取消旧动画；④ 瀑布流比例测量 4s 超时把兜底比例永久写入缓存——后续 resize 重排与尾行合并永远沿用错误比例——超时不写缓存（兜底只影响本次排布）、图片就绪/失败后照常写入真实比例供慢速校正重排
-
-### Changed
 - **灯箱 dialog 语义与焦点管理**：容器补 `role="dialog" aria-modal="true"` 与 aria-label（i18n `lightbox_dialog`）——打开时焦点移入关闭按钮、背景页（头部/主内容/页脚）设 `inert`（读屏器不再穿透背景、Tab 不再游走页面后部），关闭时先恢复背景、再把焦点还原到触发作品卡（SPA 导航关闭不还原——页面内容即将替换）；打开焦点与关闭还原经 switch 模块 opener 槽位管理
 - **导航「作品」下拉键盘可达**：父项 span 补 `tabindex="0" role="button" aria-haspopup/aria-expanded`——聚焦即经既有 `:focus-within` 展开、Tab 进入子项链接；Enter/Space 与点击同管线切换展开（桌面鼠标模式下点击由悬停路径接管、键盘仍可用），Escape 收起并把焦点带回父项；aria-expanded 随 sub-open 切换与焦点进出同步（resetSubMenus 一并复位）；桌面点击下拉之外关闭不再限于触屏（键盘展开的 sub-open 同路径收起）
 - **足迹地图省/国区块键盘可达**：有照片区块补 `tabindex="0" role="link"` 与 aria-label（地点与作品数、与弹层同 countFormat）；Enter/Space 经根级 keydown 委托走与点击相同的跳转管线（此前区块 path 不可聚焦、focusin/out 弹层监听与 :focus-visible 样式均为死代码）；**开发期修复（并入本条）**：点击区块时焦点落到 path，Chromium UA 给 `:focus` 画 auto 5px outline（鼠标点击聚焦不命中 `:focus-visible`，只遮后者无效）——SVG 元素的 outline 按包围盒画矩形，省/国区块出现包住整块的矩形黑框——区块自身 `:focus`/`:focus-visible` 补 `outline: none`（沿区块形状的 accent 描边聚焦样式保留，键盘指示不受影响）
@@ -97,6 +106,14 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 - **第三方依赖与 SW 边界加固（安全审查轮）**：① instant.page 由 jsdelivr CDN 引用改**自托管**（static/js，附 MIT 许可证头）——原引用无 SRI、模块脚本以同源身份执行，CDN 被投毒即获得整站同源脚本执行能力（自有 JS/CSS 均有指纹+SRI，此前唯一缺口）；② Service Worker 同源判定由 `startsWith(origin)` 字符串前缀改 **origin 精确比较**——前缀匹配放行 photo.guanqr.com.evil.com 等域名、把跨域响应写入运行时缓存；③ RSS 条目 CDATA 内自由文本（作品名/地点）补 `]]>` 拆段转义——含该序列会提前闭合 CDATA 注入 XML（isPlainText 输出格式下 Hugo 不自动转义；当前数据无此字符，属防御性修复）
 - **轮播语义与加载反馈等无障碍细节（审查轮低严重度项）**：① 轮播激活圆点补 `aria-current="true"`、非激活 slide 补 `aria-hidden`（模板初始态 + 切换同步）；② 无限滚动触发器补 `role="status" aria-live="polite"`（自动加载与「已展示全部」通告读屏器）；③ 灯箱四张图表（直方图/区域标尺/饱和度/色相）`role="img"` 补 aria-label、主图转圈补 `role="status"`；④ 导航当前页链接补 `aria-current="page"`（模板初始态与 SPA 切换同步）；⑤ 首页向下滚动按钮 aria-label 改 i18n（`scroll_down`）；⑥ 减弱动态补三处遗漏：筛选计数动画直切、瀑布流逐张错峰直切（60ms/张 setTimeout 不受 CSS 兜底影响）、抽屉箭头回顶动画直切（与分析区收起回滚同法）；⑦ 轮播圆点点按区域纵向扩展（0.7em 内边距 + 负边距抵消——总高约 29px，原仅进度条高约 6px，视觉位置不变）
 - **动效反馈增强轮**：① 瀑布流卡片按压反馈——`:active` 抬起量收回到 -0.05em（按下瞬时响应、松开弹簧回弹，与灯箱打开衔接）；② **灯箱关闭逆向 FLIP**——关闭时主图缩小回当前照片的网格缩略图位置（打开动画逆过程，容器淡出同时长 0.35s 同步）；仅当当前照片卡片仍在视口内时执行（切图切到视口外照片、SPA 导航关闭、减弱动态退化为普通淡出——原路返回无意义的场景不缩小）；zoom 模块新增 collapse 方法（与 start 共用 pendingDone 槽位防幽灵收尾）；③ 首页轮播 **Ken Burns 微缩放**——激活 slide 在自动播放时长内 1.0→1.05 极缓推近（WAAPI fill forwards 保持末端态）；切换时旧 slide 保持放大态随交叉淡化淡出、不做缩回（展示期与切换均无缩小过程），重新激活时从 1 重新缓推（正值透明淡入、无可见跳变）；减弱动态跳过；④ 首页 hero 标题/副标题/胶囊按钮首载交错上浮入场；⑤ 导航下拉菜单入场补位移动画（margin 位移——absolute + transform 是 WebKit 旋转视口宽度取旧值 Bug 287042 的触发模式，刻意不用 transform）；⑥ 筛选切换旧网格整体快速淡出（0.12s）后重启、与揭示错峰淡入衔接（连点筛选旧定时器作废、网格保持淡出态直至最后一次切换）；**开发期修复（并入本条）**：无限滚动初始化在淡出完成前执行、读到重启前的旧待加载队列——上一轮筛选全部加载完（监听已摘除）时队列为空，误判「已展示全部」后重启，剩余作品（如组合结果 13 张、首批揭示 12 张剩 1 张待加载）无监听永远加载不出来、触发器卡「载入中」——restartMasonryGrid 增加重启完成回调（连点筛选旧回调随旧定时器作废），无限滚动初始化改在回调中执行、读到的已是首批揭示后的准确队列；**同源一并修复**：空匹配时重启无条件恢复触发器显示、apply 的 display:none 被淡出后的重启覆盖、触发器残留在空状态卡片下方——重启改按新集合是否为空决定显示；⑦ **足迹地图加载指示**——几何数据 fetch 与 SVG 构建期间地图框内居中转圈（与灯箱转圈同款、`role="status"` 读屏器通告；并入减弱动态白名单保持旋转），构建完成（含几何失败的网格+点迹降级）后移除——慢网下不再只有空白框
+
+### Fixed
+- **「宽窄切换后页面放大」根因定位与修复**：宽窄切换/快速来回切换时，分类网格列数切换的 FLIP 动画（cards-flip 的 Invert 阶段 translate/scale 把卡片摆回旧列位置）产生 **transform 视觉溢出**——旧列位置超出新视口宽度，transform 溢出进入 body 的 scrollable overflow（scrollWidth > clientWidth），浏览器（Chrome 模拟器与真机同款行为）据此启用适配缩放且**不回退**，页面「放大」直到人工缩小——`.grid` 容器加 `overflow-x: clip` 裁剪 FLIP 瞬态溢出（不创建滚动容器、不参与视口传播规则）；`html`/`body` 另加根级 `overflow-x: clip` 兜底（hidden 参与视口传播规则、body 的 used 值会被置回 visible 而不裁剪）；无头高压验证（5 轮连续收窄 240-900px + 20 轮快速来回切换密集采样）全程无溢出无缩放偏移
+- **灯箱缩放浮现布局盒锁被幽灵监听提前摘除（打开显示小图、大图就绪后跳变）**：第二次及以后打开照片时，若全尺寸大图较慢，缩略图阶段的布局盒锁在缩略图 load 事件上被上次换源残留的 pendingUnlock 监听摘除——监听触发后只清槽位变量、未从 img 摘除（槽位为 null 后 clearPendingUnlock 再也摘不掉它），幽灵监听在后续每次打开/切图的 load 事件上重复执行摘锁，缩略图以自然尺寸（w_800）展示、远小于宽屏 contain 拟合目标，大图就绪换源后盒瞬间铺满（宽屏下从约 800px 跳到 1500px+，窄屏两者相近不可察觉；仅在大图较慢、等待期可见时发生）——pendingUnlock 注册改 `{ once: true }` 触发即自摘除；同槽位模式的 pendingFirstLoad（首开恢复监听、两处注册）同法加固（幽灵会提前恢复 opacity/揭示面板文字）；**同类第三处一并修复**：滑动回弹 snapBack 的收尾监听在回弹 0.2s 内被 reset（打开/关闭）清掉过渡后 transitionend 永不触发、收尾残留——在下次切图滑出的 transitionend 上提前恢复图片区裁剪并清空过渡——收尾监听入槽位、reset 摘除
+- **超宽屏缩放目标大于展示图自然尺寸（换源后图像缩水）**：contain 拟合目标（如 4K 上 2020×1349）大于展示图自然尺寸（w_1920 → 1920×1280）时，布局盒锁把缩略图放大过头、换源后自然尺寸接管盒瞬间缩回——缩放目标与布局盒锁改按展示图自然尺寸封顶（拟合盒先 clamp 到自然尺寸再 contain 拟合，与换源后 CSS 的 max-width/max-height contain 口径一致；目标宽高比优先取自然尺寸比例而非缩略图矩形比例——网格单元取整差在封顶边上残留的亚像素偏差一并消除），最大显示到自然尺寸、不再放大，换源后盒零跳变；自然尺寸由作品卡 width/height 属性（photo.toml 真实像素尺寸）与展示 URL 宽度档位（w_1920/w_1280）推导（OSS lfit 仅按宽度封顶），无尺寸属性的旧数据不封顶保持原行为；普通屏 contain 拟合小于自然尺寸、封顶不生效
+- **SPA 导航与 ?p= 灯箱 URL 语义修复（前进/后退不恢复灯箱、首批 ?p= 直达静默失败）**：① 导航关灯箱的 close 无条件执行「replace 移除 ?p=」——此时 location 已是导航目标地址，目标含 ?p= 时（按 Back 回到 ?p= 条目再 Forward）恢复条目的 p 被抹掉、历史被改写，灯箱按设计应恢复却不恢复——close 增加 keepUrl 选项、SPA 导航钩子保留目标 URL 的 p（按钮/Escape 关闭照常清理），随后 openLightboxFromUrl 恢复（URL 已一致时规范化比较自动跳过、不产生多余历史）；② 首批照片（未进待加载队列、仍在揭示布局链上）的 ?p= 恢复在揭示完成前点击、collect 因无 src 跳过——点击落空静默失败——目标仍隐藏且布局链在途时等链完成再打开，滚动入视口与缩放浮现与深位置路径一致
+- **SPA 并发导航守卫与瀑布流代次复检（两处竞态）**：① 快速连点/加载中按 Back 会启动并行 loadContent——各自 fetch、各自写主内容区，最后 resolve 者胜，地址栏与内容可错配（URL 是 B、内容是 A）——模块级导航代次在每次导航递增，各 await 恢复点校验，被取代的旧导航静默退出（失败路径同样守卫，不回退到陈旧 URL）；② revealBatch 的代次校验只在测量 await 前一次——800ms 测量窗口内点筛选，旧批次恢复执行后向新集合的 _rows/_shownItems 写入负 start 幽灵记录，旧作品随行容器在下次跨断点 rebuildAll 被整棵移除、永久丢失（直到刷新）——await 恢复点复检代次放弃本批
+- **SPA 换页观察器/监听泄漏与计数动画、测量缓存修正**：① 懒加载 imageObserver 与首页分类卡片 observer 换页不 disconnect——旧页面中未进入视口的图片永不 intersect、不被 unobserve，观察器对目标持强引用、随导航累积持有已脱离文档的 img/卡片子树（含已解码位图）——每次初始化先断开旧观察再重建；② 返回顶部按钮早退先于拆线——跳到无按钮页面后旧滚动监听仍挂 window、闭包持有已销毁按钮——拆线先于早退（与无限滚动同约定）；③ 筛选计数动画多实例并发——快速连点启动多个 rAF 循环交替写同一 textContent、数字闪烁——单槽位取消旧动画；④ 瀑布流比例测量 4s 超时把兜底比例永久写入缓存——后续 resize 重排与尾行合并永远沿用错误比例——超时不写缓存（兜底只影响本次排布）、图片就绪/失败后照常写入真实比例供慢速校正重排
 
 ## [0.18.0] — 2026-10-14
 
@@ -308,8 +325,6 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 - **带筛选参数刷新页面照片闪现**：刷新带 `?y=` 等筛选参数的 URL 时，先揭示全量首屏照片、随后被筛选恢复流程隐藏再重新揭示，出现「显示→消失→再显示」跳变——带筛选参数且页面有筛选栏时跳过首屏全量揭示，交由筛选恢复流程直接揭示筛选结果
 - **筛选重置后照片顺序错乱**：按年份等维度筛选后再点「全部」，照片沿用筛选后的 DOM 顺序而非完整时间顺序——历次筛选的拍平行容器操作会把行内照片插到游离照片之前，打乱全局文档序；改为首次初始化时记录照片原始顺序（Map 缓存），每次应用筛选（含重置为全部）按原始时间序排序后再重启网格
 
----
-
 ## [0.10.2] — 2026-09-14
 
 ### Added
@@ -329,8 +344,6 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 - **窄屏菜单开合背景颜色堆叠**：顶部透明时打开汉堡菜单，导航栏主体与下拉面板各自渐变背景，面板上滑过程中顶部压在导航栏下方，交界处两片半透明背景叠加产生更深色带、填充过程断裂——改为面板从视口顶部（`top: 0`）开始，背景延伸覆盖整条导航栏并以负 `z-index` 垫在站名等导航栏内容之下（内容下移避开，`padding-top` 6.5em），`menu-open` 不再渐变导航栏背景、隐藏底边线（含滚动态），开合时整块背景由面板单一元素统一渐变，站名不被遮挡、交界处无缝无堆叠
 - **窄屏 SPA 返回首页后导航栏不透明**：移动端打开汉堡菜单后点击首页链接，SPA 切换页面时只移除了菜单面板的 `active` 状态，未清理 `.site-header` 上的 `menu-open` 类，导致返回首页后导航栏保持不透明背景；现在切换页面时同步移除 `menu-open`
 
----
-
 ## [0.10.1] — 2026-09-13
 
 ### Changed
@@ -347,29 +360,25 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 ### Fixed
 - **超窄屏（≤500px）行布局失效**：去冗余重构时 `getTargetRowHeight` 丢失档位 0 特例（基准张数 N 应映射为 1），档位 0 被按每行 2 张排布、末行照片高度被压至正常的一半——恢复「档位 0 = 单张 3:2 占满整行」后，横构图独占一行、竖构图与相邻横构图同行、末行高度正常
 
----
-
 ## [0.10.0] — 2026-09-13
 
 ### Added
 - **足跡世界地圖**：`/footprint/` 时间线顶部新增 SVG 世界地图（自绘等距圆柱投影，零外部库/瓦片；世界陆地几何为一次性生成的简化静态 JSON，同源 fetch 并记忆化已解析数据——SPA 返回重进本页照常渲染，失败降级为网格+光点且下次重试）——按省份/国家聚合金色光点（大小随照片数），悬停/键盘聚焦弹层显示地名、照片数与年份跨度，点击光点跳转对应足跡详情页（SPA 无缝切换）；视图自动适配到全部拍摄地点（fit-to-bounds + 纵横比锁定）；带边框圆角的长方形地图框架（内容裁剪到视图内不外溢），区块宽度与导航栏一致；IntersectionObserver 懒加载（rootMargin 600px）；交错弹入动画与多照片首点呼吸脉冲环；`prefers-reduced-motion` 完整降级；明暗主题全变量适配；坐标数据新增 `data/locations.toml`（无坐标地点自动跳过）
 - **全部作品筛选**：`/gallery/` 全部作品页新增筛选栏——拍攝年份 / 拍攝地點 / 作品類型三组胶囊按钮（参考站同款：行首文字标签 + 全部按钮 + 横向滚动胶囊、右侧渐隐遮罩、选中高亮，可组合，默认全部），选项从当前页照片推导（年份降序、地点/类别按照片数降序），切换后选中项自动滚入可视区；**筛选维度由 `hugo.toml` 的 `[params.galleryFilters]` 控制开关**（year/location/category，缺省仅开启年份）；筛选切换以「下拉加载更多」分页模式重启网格——集合外隐藏、集合内重新分页（首批 12 张、滚动加载后续批次，任何筛选状态都保持下拉加载更多）；筛选状态同步到 URL（`?y=` 年份、`?l=` 地点英文 slug（对应足迹页文件名，如 guangdong/japan）、`?c=` 类型，`history.replaceState` 不产生历史记录，默认值不写入），直接打开带参数链接或浏览器后退自动恢复筛选；无匹配显示空状态文案并隐藏触发器；照片卡片补 `data-year/location/category` 属性驱动匹配
 
+### Changed
+- **代码去冗余**：档位判定改为阈值数组驱动（原 4 段嵌套三元）、行高公式收敛为唯一 rowHeight 助手（原 3 处实现）、删除可推导的 _incompleteStart 状态与 partitionRows 无用参数；弹层数据改存光点 dataset（去掉点数组回查与投影坐标回写）；时间线圆点 SCSS 去重；全站照片时间排序管线提取为 `partials/photo-sorted.html`、足迹地点注册表提取为 `partials/location-registry.html`（slug/URL/坐标一次构建，6 个模板共用）；足迹聚合改单趟累积（原嵌套 where/in）；筛选开关解析一次成 dict
+- **轮播悬停不再暂停**：鼠标悬停不再暂停自动播放（仅键盘聚焦圆点时暂停）
+- **瀑布流照片间距增大**：0.25em → 0.5em（行宽/行高计算自动读取真实间距，无需改动引擎）
+- **移除全站面包屑**：分类/足迹/组照等所有页面去掉 breadcrumb 导航（多余元素），清理对应 CSS 与 i18n 键
+- **照片卡片悬浮上移**：瀑布流悬停效果由「图片放大 scale(1.03)」改为「整卡轻微上移 translateY(-0.15em)」（弹簧曲线），与首页分类卡片一致但幅度更小（分类卡片为 -0.35em）
+- **超窄屏照片行布局**：宽度 ≤500px 时照片网格每行 1–2 张——3:2 横构图独占一行（占满整行），竖构图绝不落单（与相邻横构图并排一行，尾行竖构图并入前一张横构图）；行基准档位新增超窄屏档（滞回回升 520px），与既有 768/1000 断点档位一致
+
 ### Fixed
 - **批次尾行合并不生效（行末空白、照片被挤到下一行）**：`_incompleteStart` 去状态化时用「当前待加载队列非空」推导尾行，但尾批到达时队列已被消费，导致上一批未完成尾行不再与下一批合并——卢村秋景右侧留白、黛瓦灯影另起一行即此症状；改为按「上一批最后一行是 ragged（左对齐尾行）」推导（有新批次到达时 ragged 尾行必为待补齐尾行），恢复尾行合并
 - **筛选切换后照片乱序**：行容器拍平（flattenRows）时照片被追加到网格末尾，多次切换筛选后游离照片与行内照片的相对顺序反转、不再按时间排序——改为插回第一个游离照片之前，保持文档序=时间序
 - **首屏行宽偏差隐患**：行容器出现前 getRowGap 回退硬编码 4px（间距已改为 0.5em/8px），导致首批行宽计算偏差——改为读网格自身 rowGap 并缓存
 - **SPA 换页监听器泄漏**：masonry 的 ResizeObserver 与无限滚动的 scroll 监听在换页后仍持有已脱离文档的网格子树——初始化时断开旧观察/旧监听（无限滚动清理提前到早退之前）；gallery-filter 的窗口 resize 监听改为模块级单例
-
-### Changed
-- **代码去冗余**：档位判定改为阈值数组驱动（原 4 段嵌套三元）、行高公式收敛为唯一 rowHeight 助手（原 3 处实现）、删除可推导的 _incompleteStart 状态与 partitionRows 无用参数；弹层数据改存光点 dataset（去掉点数组回查与投影坐标回写）；时间线圆点 SCSS 去重；全站照片时间排序管线提取为 `partials/photo-sorted.html`、足迹地点注册表提取为 `partials/location-registry.html`（slug/URL/坐标一次构建，6 个模板共用）；足迹聚合改单趟累积（原嵌套 where/in）；筛选开关解析一次成 dict
-- 轮播图：鼠标悬停不再暂停自动播放（仅键盘聚焦圆点时暂停）
-- 瀑布流照片间距增大：0.25em → 0.5em（行宽/行高计算自动读取真实间距，无需改动引擎）
-- **移除全站面包屑**：分类/足迹/组照等所有页面去掉 breadcrumb 导航（多余元素），清理对应 CSS 与 i18n 键
-- **照片卡片悬浮上移**：瀑布流悬停效果由「图片放大 scale(1.03)」改为「整卡轻微上移 translateY(-0.15em)」（弹簧曲线），与首页分类卡片一致但幅度更小（分类卡片为 -0.35em）
-- **超窄屏照片行布局**：宽度 ≤500px 时照片网格每行 1–2 张——3:2 横构图独占一行（占满整行），竖构图绝不落单（与相邻横构图并排一行，尾行竖构图并入前一张横构图）；行基准档位新增超窄屏档（滞回回升 520px），与既有 768/1000 断点档位一致
-
----
 
 ## [0.9.0] — 2026-07-01
 
@@ -394,16 +403,12 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 - **行末错位（引擎行与视觉行不一致）**：每个引擎行改为显式 `.masonry-row` 行容器，引擎行 = 视觉行，杜绝 flex 自动换行把相邻行合并导致的错位
 - **批次末尾行等待补齐**：每批末尾行按统一行高左对齐等待，下一批到达时合并重新组成完整行（尾行照片的最终大小由补齐后的行内容决定，不做单独裁满整行的处理）；全部照片加载完后真正的最后一行保持左对齐留白
 - **SPA 首跳瀑布流空白**：未揭示照片的 `is-hidden` 改为由 `initMasonry` 统一添加（baseof 内联脚本在 SPA 注入时不执行，此前未隐藏的照片以原始尺寸占据版面、把已排好的行顶到页面底部）；图片改为 `data-src` 按批显式加载（不依赖浏览器原生懒加载）；揭示等待测量最多 800ms——快速路径直接用真实比例（动画连贯），慢速路径先按兜底比例揭示、测量完成后等动画结束再校正（不打断动画）
-- 照片卡片圆角减小：0.5em → 0.25em；组照徽章整体缩小（高度 2em → 1.5em，图标与数字同步缩小）
+- **照片卡片圆角与组照徽章缩小**：0.5em → 0.25em；组照徽章整体缩小（高度 2em → 1.5em，图标与数字同步缩小）
 - **照片元信息悬浮显示**：瀑布流不再在照片下方单独展示元信息，改为透明渐变底悬浮覆盖在图片底部（仅标题，字号 1em→0.9em、字重 600→400），鼠标悬停/键盘聚焦时**纯淡入浮现（无上移动画）**；渐变阴影减弱（黑 0.8→0.6）；触屏设备（无悬停）元信息常显
-- `photo-wrapper` 统一改为 div 容器，组照封面链接缩为内层 `a.series-link`（避免 a 嵌套 a）；灯箱点击委托增加链接守卫；分类标签链接移除，清理相关 CSS/i18n 冗余条目
-
-### Fixed
-- 首页标题被导航栏遮挡：`categories-grid` 加 `margin-top: 4.5em`
-- 宽屏/窄屏切换时首页标题间距突变：删除移动端 `padding: 2em` 覆盖
-- 移动端导航遮挡正文：统一各页面 `margin-top: 4.5em` 避开固定 header
-
----
+- **作品卡结构收敛**：`photo-wrapper` 统一改为 div 容器，组照封面链接缩为内层 `a.series-link`（避免 a 嵌套 a）；灯箱点击委托增加链接守卫；分类标签链接移除，清理相关 CSS/i18n 冗余条目
+- **首页标题被导航栏遮挡**：`categories-grid` 加 `margin-top: 4.5em`
+- **宽窄切换首页标题间距突变**：删除移动端 `padding: 2em` 覆盖
+- **移动端导航遮挡正文**：统一各页面 `margin-top: 4.5em` 避开固定 header
 
 ## [0.8.0] — 2026-07-01
 
@@ -412,19 +417,17 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 - **无障碍支持**：skip-to-content 跳转链接、全局 `:focus-visible` 焦点样式、aria-label 全部走 i18n
 - **SEO**：meta description、canonical、Open Graph（含封面图）、Twitter Card
 
+### Changed
+- **内联样式收编 SCSS**：`index.html`、`404.html`、series 提示文字
+- **冗余样式清理**：删除重复 `:focus-visible` 规则；`fadeInUp` 重命名为 `fadeIn`；`revealCategoryCards` 加空守卫
+
 ### Fixed
 - **硬编码颜色**：`#fff` → `rgba(var(--rgb-white), 1)`，5 处阴影 `rgba(0,0,0,x)` → `rgba(var(--rgb-black), x)`
 - **过渡时长统一**：懒加载 `filter/opacity`、masonry-item `transform/opacity`、category-card `opacity` 全部统一到匹配时长
-- 足迹页面全部元素补齐黑白切换过渡（竖线、圆点、日期、标题、计数、+N 卡片、结束语）
-- 首页分类卡片补齐 `background-color` 过渡
-- `header-scroll.js` 废弃 API `pageYOffset` → `scrollY`
-- `.gitignore` 补充 `.DS_Store`/`Thumbs.db`/`*.log`/`.vscode/`/`.idea/`/`node_modules/`
-
-### Cleanup
-- HTML 内联样式全部移至 SCSS：`index.html`、`404.html`、series 提示文字
-- 删除冗余 `:focus-visible` 重复规则；`fadeInUp` 重命名为 `fadeIn`；`revealCategoryCards` 加空守卫
-
----
+- **足迹页面黑白切换过渡补齐**：竖线、圆点、日期、标题、计数、+N 卡片、结束语
+- **首页分类卡片背景色过渡**：补齐 `background-color` 过渡
+- **废弃 API 清理**：`header-scroll.js` 的 `pageYOffset` → `scrollY`
+- **.gitignore 补充忽略项**：`.DS_Store`/`Thumbs.db`/`*.log`/`.vscode/`/`.idea/`/`node_modules/`
 
 ## [0.7.1] — 2026-06-29
 
@@ -434,20 +437,17 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 - **首页分类卡片入场**：改为与瀑布流一致的 `translateY` 滑入动画（JS 60ms 交错），不再用 CSS animation（避免覆盖 hover）
 - **足迹结束语**：字体改为 `var(--font-meta)`，去掉斜体，与日期统一
 
+- **SCSS 清理**：合并重复 `fadeInDown`→`fadeInUp`，删除未用变量 `--color-accent-50`/`--color-dot-*`/`--size-h2`，删除未用选择器 `.debug-info`/`.photo-placeholder`
+- **JS 清理**：简化 `infinite-scroll` 冗余计时器；`lightbox` 守卫提前；`masonry`/`lazy-load` 去多余 export；`_allItems` 独立副本
+
 ### Fixed
-- 移动端导航点击菜单项后带动画收回（滑入顶部+淡出），不再直接消失
-- 足迹单页/系列详情页无无限滚动触发器，导致超过 12 张的照片永不加载
-- 无限滚动 `wasIntersecting` 状态追踪在短页面导致永远不会触发加载
-- 足迹卡片照片不足四张时，卡片宽度按比例收窄、缩略图保持原尺寸；取消缩略图 hover 放大双重动画
-- 主题切换/汉堡图标动画卡顿：`transform` 与 `opacity` 统一时长曲线（`0.3s cubic-bezier(0.4, 0, 0.2, 1)`）
-- SPA 页面切换后 `_allItems` 被 `shift` 破坏原始排序
-- 黑白切换补齐颜色过渡：header/footer 边框、网站名称、汉堡横线、照片卡片、gallery-header、关于页、首页分类卡片
-
-### Cleanup
-- SCSS：合并重复 `fadeInDown`→`fadeInUp`，删除未用变量 `--color-accent-50`/`--color-dot-*`/`--size-h2`，删除未用选择器 `.debug-info`/`.photo-placeholder`
-- JS：简化 `infinite-scroll` 冗余计时器；`lightbox` 守卫提前；`masonry`/`lazy-load` 去多余 export；`_allItems` 独立副本
-
----
+- **移动端导航菜单项点击收回动画**：滑入顶部+淡出，不再直接消失
+- **足迹单页/系列详情页补无限滚动**：无触发器导致超过 12 张的照片永不加载
+- **短页面无限滚动永不触发**：`wasIntersecting` 状态追踪在短页面失效
+- **足迹卡片不足四张等比收窄**：缩略图保持原尺寸；取消缩略图 hover 放大双重动画
+- **主题切换/汉堡图标动画卡顿**：`transform` 与 `opacity` 统一时长曲线（`0.3s cubic-bezier(0.4, 0, 0.2, 1)`）
+- **SPA 换页破坏作品排序**：`_allItems` 被 `shift` 破坏原始排序
+- **黑白切换颜色过渡补齐**：header/footer 边框、网站名称、汉堡横线、照片卡片、gallery-header、关于页、首页分类卡片
 
 ## [0.7.0] — 2026-06-29
 
@@ -470,29 +470,25 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 - **模块防重入**：masonry、lightbox、timeline、lazy-load、back-to-top 加守卫/清理，支持页面切换后安全重新初始化
 
 ### Fixed
-- 首页排除关于页卡片：`about` section 加入 `excludeSections`，避免关于页作为分类卡片出现在首页
-- 分类卡片 hover 上移不生效（CSS animation 覆盖 transform）
-- 页面切换后导航下划线不更新
-
----
+- **首页排除关于页卡片**：`about` section 加入 `excludeSections`，避免关于页作为分类卡片出现在首页
+- **分类卡片 hover 上移不生效**：CSS animation 覆盖 transform
+- **SPA 换页导航下划线不更新**：页面切换后高亮不跟随
 
 ## [0.6.0] — 2026-06-28
 
 ### Changed
 - **全部按需分配列**：首批照片也不再预分配，改为逐张揭示时实时测最矮列放入（`revealBatch`），确保加载过程中的列高始终均衡
 - **高度比较加容差**：列高差 0.5px 以内视为相等，此时选照片数量更少的列，避免浮点精度导致堆积
-- `initMasonry` 不再预分配，`infinite-scroll` 复用 `revealBatch`
+- **揭示批次复用**：`initMasonry` 不再预分配，`infinite-scroll` 复用 `revealBatch`
 - **Lightbox 升级**：新增左右箭头切换照片（半透明底+SVG 图标），支持键盘 ← → 导航；关闭按钮改用 SVG；手机端箭头缩小并叠加在图片上不占空间
 - **关于页面**：新增 `/about/` 页面，展示头像、个人简介、设备工具列表，配置集中在 `hugo.toml` 的 `[params.author]`
 - **SVG 统一管理**：所有 SVG 图标集中到 `data/svg.toml`，模板通过 `{{ $.Site.Data.svg.xxx | safeHTML }}` 引用，`baseof.html` 三处硬编码改为引用；新增 `x`、`chevron_left`、`chevron_right` 图标
-- 关于页去除大标题「設備與工具」，保留分类小标题；清理冗余 `.about-section` 包裹层及 SCSS、i18n 无用键值
+- **关于页结构精简**：去除大标题「設備與工具」，保留分类小标题；清理冗余 `.about-section` 包裹层及 SCSS、i18n 无用键值
 
 ### Fixed
-- 修复首批 12 张照片在列高相等时全部堆积到第一列
-- 修复两列模式下列高微差导致的不均衡
-- 修复组照详情页照片排序：改为 `asc`，按 photo.toml 原始顺序展示
-
----
+- **首批照片堆积第一列**：列高相等时 12 张全部堆积到第一列
+- **两列模式列高不均衡**：列高微差导致
+- **组照详情页照片排序**：改为 `asc`，按 photo.toml 原始顺序展示
 
 ## [0.5.4] — 2026-06-27
 
@@ -509,10 +505,8 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 - **首页轮播图**：删除 `hero-slider.js`、`_hero.scss`，首页直接进入分类卡片区域
 
 ### Fixed
-- 足迹时间线日期换行与竖线重叠
-- 窄屏圆点与竖线未对齐
-
----
+- **足迹时间线日期换行与竖线重叠**
+- **窄屏圆点与竖线未对齐**
 
 ## [0.5.3] — 2026-06-27
 
@@ -524,25 +518,19 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 - **SCSS 优化**：`transition: all` → 具体属性；合并重复淡入动画；移除未使用变量；颜色命名规范化；引入 RGB 分量变量
 
 ### Fixed
-- 修复同一天照片排序不稳定：Hugo `sort` 非稳定排序，改为构建 `time-索引` 复合键。`time` 先经 `time.Format` 标准化为 `YYYY-MM-DD HH:MM:SS`
-- 修复移动端首帧闪现三列：`column-count` 与 `display:flex` 冲突，改为 JS 就绪前后两套独立 CSS（`.masonry-ready` 切换）
-- 修复 resize 后加载更多时照片全挤入同一列
-
----
+- **同日照片排序不稳定**：Hugo `sort` 非稳定排序，改为构建 `time-索引` 复合键。`time` 先经 `time.Format` 标准化为 `YYYY-MM-DD HH:MM:SS`
+- **移动端首帧闪现三列**：`column-count` 与 `display:flex` 冲突，改为 JS 就绪前后两套独立 CSS（`.masonry-ready` 切换）
+- **resize 后加载更多挤入同列**
 
 ## [0.5.2] — 2026-06-27
 
 ### Fixed
-- 修复 resize 后行内照片顺序错乱：`rebuildAndDistribute` 从最短列优先改为 round-robin，保证每行始终按时间横排
-
----
+- **resize 后行内照片顺序错乱**：`rebuildAndDistribute` 从最短列优先改为 round-robin，保证每行始终按时间横排
 
 ## [0.5.1] — 2026-06-27
 
 ### Fixed
-- 修复移动端首帧闪现三列再跳一列的问题：`column-count` 和 `display:flex` 冲突导致 fallback 失效，改为 JS 就绪前后两套独立 CSS（`.masonry-ready` 切换）
-
----
+- **移动端首帧闪现三列再跳一列**：`column-count` 和 `display:flex` 冲突导致 fallback 失效，改为 JS 就绪前后两套独立 CSS（`.masonry-ready` 切换）
 
 ## [0.5.0] — 2026-06-27
 
@@ -554,24 +542,22 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 
 ### Changed
 - **首屏加载策略**：inline script → masonry 初始化 → infinite-scroll 分发的三阶段管线
-- `infinite-scroll.js` 基于 `grid._allItems` 原始时间序索引，不依赖 DOM 顺序；加载延迟 300ms → 800ms
+- **无限滚动基于时间序索引**：不依赖 DOM 顺序；加载延迟 300ms → 800ms
 - **移动端导航**：汉堡按钮 `display:none` → `visibility+opacity` 淡入淡出；菜单动画由 JS 动态注入 transition（`transitionend` 后清除）
 - **CSS 架构**：移除 `_responsive.scss` 中由 JS 接管的规则（`.masonry-grid` flex-direction、`.timeline-gallery` 列数、`.timeline-node` / `.timeline-date` 移动端布局）。竖线/圆点改用 CSS 自定义属性（`--tl-line-left` 等）
 - **全站内部链接**：`Permalink` → `RelPermalink`，`BaseURL` → `/`
-- `.masonry-item`、`.timeline-thumb`、`.series-badge`、`.timeline-content` 统一 `transition: transform 0.35s`
+- **FLIP 过渡时长统一**：`.masonry-item`、`.timeline-thumb`、`.series-badge`、`.timeline-content` 统一 `transition: transform 0.35s`
 
 ### Fixed
-- CSS columns 加载更多时已有照片位置跳变
-- resize 后 loadMore 隐藏项全部挤入同一列：`rebuildAndDistribute` 脱离 DOM 后测高为 0 → 引入虚拟 `colHeights[]` 跟踪 + 入参 `firstMap` 预测量高度
-- FLIP 元素索引错配：`allRendered.sort()` 原地排序导致 `firstRects[i]` / `lastRects[i]` 非同一元素 → `Map<Element, Rect>` 按元素查找
-- FLIP Play 阶段清除 `transformOrigin` 导致缩放原点从 `top left` 跳回 `center` → 保留不清除
-- `visibility:hidden` 阻止浏览器原生 lazy loading → 移除，用同步 inline script + round-robin 替代
-- `getBoundingClientRect()` 在初始分配时每轮强制同步 layout → round-robin 替代最短列
-- 足迹页面 `+N` 未计入组照内页数量
-- `.series-badge` FLIP 动画时长与卡片不一致（0.3s vs 0.35s）
-- mobile nav 跨越 768px 断点时从桌面可见态过渡造成闪烁
-
----
+- **CSS columns 加载更多位置跳变**
+- **resize 后隐藏项挤入同一列**：`rebuildAndDistribute` 脱离 DOM 后测高为 0 → 引入虚拟 `colHeights[]` 跟踪 + 入参 `firstMap` 预测量高度
+- **FLIP 元素索引错配**：`allRendered.sort()` 原地排序导致 `firstRects[i]` / `lastRects[i]` 非同一元素 → `Map<Element, Rect>` 按元素查找
+- **FLIP 缩放原点跳变**：Play 阶段清除 `transformOrigin` 导致缩放原点从 `top left` 跳回 `center` → 保留不清除
+- **visibility:hidden 阻断原生懒加载**：移除，用同步 inline script + round-robin 替代
+- **初始分配强制同步布局**：`getBoundingClientRect()` 每轮强制同步 layout → round-robin 替代最短列
+- **足迹 +N 未计组照内页**
+- **组照徽章 FLIP 时长不一致**：0.3s vs 0.35s，与卡片不一致
+- **移动导航跨断点闪烁**：跨越 768px 断点时从桌面可见态过渡造成闪烁
 
 ## [0.4.0] — 2026-06-16
 
@@ -586,8 +572,6 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
 ### Fixed
 - **修复组照照片数量统计**：各分类页、足迹页、地区详情页的照片总数现在正确计入组照内页照片，而非仅统计封面和单图
 
----
-
 ## [0.3.0] — 2026-06-15
 
 ### Added
@@ -596,62 +580,48 @@ PhotoFolio 主题的版本更新记录。格式遵循 [Keep a Changelog](https:/
   - 新增 `/series/` 组照合集列表页
   - 新增系列详情页，展示组内全部照片
   - 照片卡片根据上下文自动切换渲染模式（封面链接 / 普通预览）
-- 组照徽章 SVG 图标
+- **组照徽章 SVG 图标**
 - **Glyph Correction 本地字体注入**：通过 `@font-face` 加载 `glyph-correction.woff2`，修复中文引号等标点符号在不同字体下的显示不一致问题
-- 组照相关 i18n 文案：`view_series`、`series_collection`、`total_photos`、`series_count`、`no_series`、`no_series_hint`、`no_photos_in_series`、`no_series_match_hint`
+- **组照相关 i18n 文案**：`view_series`、`series_collection`、`total_photos`、`series_count`、`no_series`、`no_series_hint`、`no_photos_in_series`、`no_series_match_hint`
 
 ### Changed
-- 照片卡片 (`photo-card.html`) 重构：支持 `isInSeriesPage` 上下文，自动区分组照封面与普通照片的渲染逻辑
+- **照片卡片重构**：`photo-card.html` 支持 `isInSeriesPage` 上下文，自动区分组照封面与普通照片的渲染逻辑
 - **字体栈重构**：支持多字体逗号分隔配置，自动解析并生成带引号的 CSS `font-family` 回退栈
-- 标题字体与正文字体默认增加 `Glyph Correction` 作为首选字体
-- 组照列表页和详情页的空状态提示改用 i18n 字符串
-
----
-
-## [0.2.2] — 2026-06-11
-
-### Removed
-- `_footprint.scss` 独立样式文件，足迹样式合并至 `_responsive.scss`
-
----
-
-## [0.2.1] — 2026-06-10
-
-### Fixed
-- 修复文字显示异常
-
----
+- **Glyph Correction 纳入默认字体栈**：标题与正文字体默认增加 `Glyph Correction` 作为首选字体
+- **组照空状态提示 i18n 化**：列表页和详情页的空状态提示改用 i18n 字符串
 
 ## [0.2.0] — 2026-06-09
 
 ### Added
-- 首页 Hero 轮播图（`heroImages`、`heroInterval` 配置）
-- 作品合集页（`/gallery/`），按时间倒序展示全部照片
+- **首页 Hero 轮播图**：`heroImages`、`heroInterval` 配置
+- **作品合集页**：`/gallery/` 按时间倒序展示全部照片
 - **无限滚动加载**：照片超过 12 张时分批加载，滚动到底部自动触发
 - **足迹时间线页**（`/footprint/`），按地区整理拍摄足迹
 
 ### Changed
-- 首页分类封面图长宽比调整，优化视觉一致性
-- 明暗主题切换图标尺寸微调
+- **首页分类封面长宽比调整**：优化视觉一致性
+- **明暗主题切换图标尺寸微调**
 
 ### Removed
-- 首页不再显示汇总页面入口
+- **首页移除汇总页面入口**
+- **足迹独立样式文件**：`_footprint.scss` 删除，足迹样式合并至 `_responsive.scss`
 
----
+### Fixed
+- **修复文字显示异常**
 
 ## [0.1.0] — 2026-06-07
 
 ### Added
-- 项目初始化，PhotoFolio 主题诞生
+- **项目初始化**：PhotoFolio 主题诞生
 - **瀑布流布局**：CSS 多列瀑布流展示照片，宽屏三列，响应式适配
 - **Lightbox 灯箱**：点击照片全屏预览，展示 EXIF 信息
 - **EXIF 信息展示**：焦距、光圈、快门、ISO
 - **暗色/亮色主题切换**：自动检测系统偏好，支持手动切换，统一颜色变量控制
 - **PWA 支持**：Service Worker 离线缓存
 - **Instant.page 预加载**：链接悬停预加载，提升浏览体验
-- 照片描述字段，Lightbox 中展示
-- 返回顶部按钮
-- 中文排版优化：Noto Serif TC、I.MingCP、LXGW WenKai TC 字体
-- CSS / JS 资源模块化重构
-- 响应式窄屏适配
-- 首页分类卡片、照片信息区域边距优化
+- **照片描述字段**：Lightbox 中展示
+- **返回顶部按钮**
+- **中文排版优化**：Noto Serif TC、I.MingCP、LXGW WenKai TC 字体
+- **CSS / JS 资源模块化重构**
+- **响应式窄屏适配**
+- **首页分类卡片与信息区边距优化**

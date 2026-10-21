@@ -39,7 +39,9 @@
     {{- partial "footer.html" . -}}
 
     <!-- Lightbox 全局容器（dialog 语义：读屏器视作模态对话框、背景 inert 由 JS 管理） -->
-    <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="{{ i18n "lightbox_dialog" }}">
+    {{/* 对话框名称随照片变化：aria-labelledby 指向当前照片标题（打开即填充）；
+        标题为空时回落 aria-label 静态名（acccname 计算规则） */}}
+    <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-labelledby="lightbox-caption" aria-label="{{ i18n "lightbox_dialog" }}">
         <!-- 毛玻璃背景层由 JS 动态创建（每张作品一层） -->
         <div class="lightbox-topbar">
             <button class="lightbox-close" id="lightbox-close" aria-label="{{ i18n "close" }}">

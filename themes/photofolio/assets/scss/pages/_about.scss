@@ -114,7 +114,7 @@
 .stats-list {
     list-style: none;
     display: grid;
-    grid-template-columns: 7.5em 1fr 2.5em; /* 标签列与数字列均全站定宽：常显/折叠及各面板间条形轨道完全一致（auto 数字列会按各自最宽数字错位） */
+    grid-template-columns: 5.5em 1fr 2.5em; /* 标签列与数字列均全站定宽：常显/折叠及各面板间条形轨道完全一致（auto 数字列会按各自最宽数字错位）；标签列按最长档位（描述词去除后 ≤1/1000s 等）收紧 */
     column-gap: 0.875em; /* 标签与条形间隔一个文字大小 */
     row-gap: 0.5em;
     align-items: center;

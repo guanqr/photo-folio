@@ -205,12 +205,12 @@ function measureRatios(grid, items) {
             }
             img.addEventListener('load', () => {
                 settle(img.naturalWidth / img.naturalHeight || DEFAULT_RATIO);
-            });
-            // error 不写缓存也不结束测量：AVIF→webp 重试成功后的 load 仍可写入
-            // 真实比例；失败由 4s 超时兜底结束（与超时同款：兜底比例只影响本次
+            }, { once: true }); // settle 即摘除：settled 守卫下重复触发已无效，监听无再留意义
+            // error 不写缓存也不结束测量（不挂监听）：AVIF→webp 重试成功后的
+            // load 仍可写入真实比例（重试的 load 即首个 load、once 摘除前照常
+            // settle）；失败由 4s 超时兜底结束（与超时同款：兜底比例只影响本次
             // 排布、不入缓存）——此前 NaN||1.5 经 settle 永久写入 _ratios、
             // 竖构图整会话按错误比例排布（2026-10-18）
-            img.addEventListener('error', () => {});
         });
     }));
 }
