@@ -4,20 +4,24 @@
 统计口径与灯箱渲染端完全一致（原 JS 逐像素统计整体迁入本模块，灯箱只保留
 曲线派生与渲染；数值口径迁移对齐 2026-10-19 方案确认）：
 - 明度 = Rec.709 加权（0.2126·R + 0.7152·G + 0.0722·B）
-- 影调定性 = 亮度中位数 P50 相对中间灰（18% 灰 ≈ sRGB 118）
-- 對比度 = 動態範圍（P5–P95 的线性光亮度跨度换算为真「档」——sRGB 值先经
-  IEC 61966-2-1 标准传递函数解码到线性光，log2 直方图取百分位；纯黑像素按
-  16 位精度下限 2^-16 计，死黑照片不产生无穷大）
+- 影调定性 = 亮度中位数 P50 相对中间灰（18% 灰 ≈ sRGB 118）；長/中/短調
+  按灰階跨度（P5–P95 在 11 级等距灰階上的跨區數——短 ≤4、中 5–7、長 ≥8，
+  攝影標準的「直方圖灰階跨度」口径）
+- 動態範圍 = P5–P95 的线性光亮度跨度换算为真「档」——sRGB 值先经 IEC
+  61966-2-1 标准传递函数解码到线性光，log2 直方图取百分位；纯黑像素按
+  16 位精度下限 2^-16 计，死黑照片不产生无穷大——独立数值展示，不参与
+  長短判定（灰階跨度與線性光動態範圍衡量对象不同）
 - 剪裁 = ≥2% 像素落在 0–5（陰影）/ 250–255（高光）
 - 區域系統 = 安塞尔·亚当斯 11 级灰阶（P1–P99 映射占據區域）
-- 飽和度 = HSV 饱和度（(max−min)/max）0–100% 分布与均值；均值 <5% 判黑白
+- 飽和度 = HSV 饱和度（(max−min)/max）0–100% 分布与均值；低/中/高按
+  像素占比最大的一档判定（分段 <18% / 18–45% / ≥45%）；均值 <5% 判黑白
 - 色相 = HSV 色相 36 段（每段 10°），按饱和度加权（灰色无相不参与）
 - 色卡 = 16 级量化 + 贪心种子 + k-means 细化，6 主色（不足拆分补足）
 
 输入：全分辨率 RGB 原图（管线处理链上、加水印之前的原图口径——分析对象
 是照片本身而非压缩产物，也不含水印文字污染）。
-输出：static/analysis/{文件名}.json（schema v1，v 字段为算法版本——算法
-改动时递增 ANALYSIS_VERSION，旧结果由 main.py 的惰性判定自动重算）。
+输出：static/analysis/{文件名}.json（schema 版本由 v 字段标识，当前 v3——
+算法改动时递增 ANALYSIS_VERSION，旧结果由 main.py 的惰性判定自动重算）。
 """
 import json
 import math
@@ -25,9 +29,10 @@ import os
 
 from PIL import Image
 
-ANALYSIS_VERSION = 2  # v2：動態範圍改线性光域真档（IEC 61966-2-1 解码）、
-                      # 三区边界改精确一档 85/162（2026-10-19）——v1 JSON
-                      # 由惰性判定自动判过期、下次运行全量重算
+ANALYSIS_VERSION = 4  # v4：饱和度判定改按分段像素占比（<18 / 18–45 / ≥45），
+                      # 结果增 satFracs/satBounds（2026-10-25）——v3 JSON 由
+                      # 惰性判定自动判过期、下次运行全量重算（或由一次性回填
+                      # 脚本直写）
 
 # ===== 影调/色彩阈值（与灯箱渲染口径一致） =====
 TONAL_ZONE_SHADOW = 85   # 18% 灰（118）向下精确 1 档曝光：0.18/2 经 sRGB 标准
@@ -36,15 +41,18 @@ TONAL_ZONE_SHADOW = 85   # 18% 灰（118）向下精确 1 档曝光：0.18/2 经
 TONAL_ZONE_HIGH = 162    # 18% 灰向上精确 1 档曝光：0.18×2 编码 ≈ 162（同上）
 TONAL_KEY_LOW = 95       # P50 低于中间灰约 1/5 → 低調
 TONAL_KEY_HIGH = 150     # P50 高于中间灰约 1/4 → 高調
-TONAL_DR_LOW = 7.7       # 動態範圍（真档）：<7.7 低對比——gamma 域数值约为真档的
-                         # 1/2.2，原校准值 3.5 换算到真档（3.5×2.2），保持既有
-                         # 定性分档行为不变
-TONAL_DR_HIGH = 14.3     # >14.3 高對比（原 6.5 × 2.2 同法换算）
+TONAL_SPAN_SHORT_MAX = 4 # 灰階跨度（11 級等距灰階的跨區數）：≤4 短調
+TONAL_SPAN_MID_MAX = 7   # 5–7 中調；≥8 長調——按攝影標準的直方圖灰階跨度
+                         # （原為線性光真档 P5–P95 的 7.7/14.3 档阈值，
+                         # 14.3 档超出 11 級區域系統約 10 档的跨度，实际
+                         # 几乎判不出長調，2026-10-25 修正）
 TONAL_CLIP_FRAC = 0.02   # 剪裁判定：≥2% 像素
 TONAL_CLIP_DARK = 5      # 陰影剪裁上界
 TONAL_CLIP_BRIGHT = 250  # 高光剪裁下界
-TONAL_SAT_LOW = 0.18     # 饱和度均值定性
-TONAL_SAT_HIGH = 0.45
+TONAL_SAT_LOW = 0.18     # 饱和度分段：<18% 低、18–45% 中、≥45% 高——
+TONAL_SAT_HIGH = 0.45    # 按像素占比最大的分段判档，均值只作虚线展示
+SAT_LOW_BIN = int(round(TONAL_SAT_LOW * 100))   # 18：直方图 0–99 桶边界
+SAT_HIGH_BIN = int(round(TONAL_SAT_HIGH * 100)) # 45
 TONAL_ACHROMATIC = 0.05  # 黑白照判定：平均饱和度低于此视为无彩色
 HUE_WEIGHT_MIN = 0.02    # 色相加权下限：饱和度低于此的灰色像素不参与色相统计
 ZONE_COUNT = 11          # 區域系統 0–X
@@ -142,11 +150,15 @@ def _rgb_to_hsl(r, g, b):
 
 
 def _analyze_tone(lum_hist, total, dr_stops):
-    """影调统计与定性（九调判定、剪裁警告、区域系统、三区占比；動態範圍
-    dr_stops 由调用方在线性光域计算传入——真档口径见 _analyze_dr）"""
-    p1 = _percentile_of(lum_hist, total, 0.01)
+    """影调统计与定性（九调判定、剪裁警告、区域系统、三区占比）。
+
+    長短判定按灰階跨度：P5–P95 在 11 級等距灰階上的跨區數（≤4 短、5–7 中、
+    ≥8 長）；動態範圍 dr_stops 由调用方在线性光域计算传入，只作独立数值
+    展示，不参与長短判定。區域括號同步使用 P5–P95（原 P1–P99 会被极少数
+    极端像素拉宽，與標籤口径不一致）。"""
+    p5 = _percentile_of(lum_hist, total, 0.05)
     p50 = _percentile_of(lum_hist, total, 0.5)
-    p99 = _percentile_of(lum_hist, total, 0.99)
+    p95 = _percentile_of(lum_hist, total, 0.95)
     shadow = 0
     mid = 0
     high = 0
@@ -165,7 +177,11 @@ def _analyze_tone(lum_hist, total, dr_stops):
         if b >= TONAL_CLIP_BRIGHT:
             clip_high += n
     key = 0 if p50 < TONAL_KEY_LOW else (1 if p50 <= TONAL_KEY_HIGH else 2)
-    range_tier = 0 if dr_stops < TONAL_DR_LOW else (1 if dr_stops <= TONAL_DR_HIGH else 2)
+    zone_from = _zone_of(p5)
+    zone_to = _zone_of(p95)
+    span = zone_to - zone_from
+    range_tier = 0 if span <= TONAL_SPAN_SHORT_MAX else (
+        1 if span <= TONAL_SPAN_MID_MAX else 2)
     warnings = []
     if clip_shadow / total >= TONAL_CLIP_FRAC:
         warnings.append("shadow")
@@ -177,11 +193,28 @@ def _analyze_tone(lum_hist, total, dr_stops):
         "p50": p50,
         "drStops": _js_round(dr_stops * 10) / 10,
         "warnings": warnings,
-        "zoneFrom": _zone_of(p1),
-        "zoneTo": _zone_of(p99),
+        "zoneFrom": zone_from,
+        "zoneTo": zone_to,
         "fracs": [_js_round(shadow / total * 100), _js_round(mid / total * 100),
                   _js_round(high / total * 100)],
     }
+
+
+def _analyze_sat(sat_hist, total):
+    """饱和度分档与三段占比：按低/中/高像素占比最大的一档判定（并列取较低档）。
+    直方图桶 = int(satv×100)：低 0..17、中 18..44、高 45..99"""
+    sat_low = sum(sat_hist[:SAT_LOW_BIN])
+    sat_mid = sum(sat_hist[SAT_LOW_BIN:SAT_HIGH_BIN])
+    sat_high = sum(sat_hist[SAT_HIGH_BIN:])
+    tier = 0 if (sat_low >= sat_mid and sat_low >= sat_high) else (
+        1 if sat_mid >= sat_high else 2)
+    fracs = [_js_round(sat_low / total * 100), _js_round(sat_mid / total * 100),
+             _js_round(sat_high / total * 100)]
+    # 取整余数并入最大档，保证三段显示合计恒为 100%（判定仍用原始计数）
+    residual = 100 - sum(fracs)
+    if residual:
+        fracs[fracs.index(max(fracs))] += residual
+    return tier, fracs
 
 
 def _compute_palette(counts, total):
@@ -320,7 +353,8 @@ def analyze_image(img):
     sat_mean = sat_sum / total
     achromatic = sat_mean < TONAL_ACHROMATIC
     hue_seg = max(range(HUE_SEG_COUNT), key=lambda i: hue_hist[i])
-    sat_tier = 0 if sat_mean < TONAL_SAT_LOW else (1 if sat_mean < TONAL_SAT_HIGH else 2)
+    # 饱和度分档：三段像素占比最大的一档（均值只作展示）
+    sat_tier, sat_fracs = _analyze_sat(sat_hist, total)
 
     return {
         "v": ANALYSIS_VERSION,
@@ -331,6 +365,7 @@ def analyze_image(img):
         "hue": [round(x, 3) for x in hue_hist],  # 权重为像素级浮点累积，3 位小数足够图表渲染
         "tone": tone,
         "color": {"sat": sat_tier, "satMean": _js_round(sat_mean * 100),
+                  "satFracs": sat_fracs, "satBounds": [SAT_LOW_BIN, SAT_HIGH_BIN],
                   "achromatic": achromatic, "hueSeg": hue_seg},
         "palette": _compute_palette(counts, total),
     }

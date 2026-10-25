@@ -192,6 +192,8 @@
                                 <span>{{ i18n "lightbox_hue" }}</span>
                                 <span class="lightbox-hue-name" id="lightbox-hue-name"></span>
                             </h4>
+                            {{/* 与饱和度说明行同款——窄屏双列并排时补足高度、图表与区块底部对齐 */}}
+                            <p class="lightbox-chart-caption">{{ i18n "hue_caption" }}</p>
                             <svg class="lightbox-hue-hist" id="lightbox-hue-hist" viewBox="0 0 360 48" preserveAspectRatio="none" role="img" aria-label="{{ i18n "lightbox_hue" }}"></svg>
                             <div class="lightbox-hue-axis" id="lightbox-hue-axis"></div>
                         </div>

@@ -6,6 +6,9 @@
  *   （缓存即用、后台更新——内容随 URL 哈希不可变，不会陈旧）；
  *   无指纹的 JS/CSS 与 /fonts/ /icons/ 走 NetworkFirst（仍入运行时缓存、
  *   离线照常回退——dev server 无指纹产物不得缓存即用，2026-10-20）
+ * - 分析结果 JSON（/analysis/）：Stale-While-Revalidate——回看直接出缓存、
+ *   后台刷新；结果仅在照片重算后才变化（应用侧 schema v 校验兜住算法版本
+ *   变化后的陈旧视图，刷新完成后恢复），单张仅数 KB，缓存收益远大于陈旧风险
  * - 其余同源 GET：NetworkFirst 入运行时缓存
  * - 跨域（OSS 图片）与非 GET 不拦截；Range 请求直接放行网络
  * - 版本号由构建时间自动注入（baseof.html 的 ExecuteAsTemplate，
@@ -72,6 +75,9 @@ self.addEventListener('fetch', (event) => {
   // SWR「缓存即用、后台更新」会把旧构建一直回给首访（本地调试被陈旧 JS/CSS 卡住，
   // 2026-10-20 实测）；无指纹资源走下方 NetworkFirst（仍入运行时缓存、离线照常回退）
   const isFingerprinted = /\.[a-f0-9]{8,}\./.test(url.pathname)
+  // 分析结果按 slug 组织、无内容哈希：允许一次陈旧（后台刷新随后更新），
+  // 换取跨页面回看零等待（预取命中后展开即出图）
+  const isAnalysis = url.pathname.startsWith('/analysis/')
   // 缓存键去查询串：?y=/?p= 等客户端状态参数服务端返回同一份 HTML——
   // 导航与 SPA fetch（同源非导航 GET）同键复用，避免重复条目挤占运行时配额；
   // 旧版本按完整 URL 写入的条目不再命中（一次性离线回退损失，超限自动裁剪回收）
@@ -82,14 +88,14 @@ self.addEventListener('fetch', (event) => {
   event.respondWith((async () => {
     const cache = await runtimeCache
 
-    // 指纹产物（生产构建的哈希 JS/CSS）：SWR——缓存即用、后台更新。
-    // 单次 fetch 共享：未命中时返回同一个 promise（后台写缓存与响应共用），
-    // 避免冷缓存时同一 URL 并发两次请求
-    if (isHashed && isFingerprinted) {
-      const cachedResponse = await cache.match(request)
+    // 指纹产物（生产构建的哈希 JS/CSS）与分析结果 JSON：SWR——缓存即用、
+    // 后台更新。单次 fetch 共享：未命中时返回同一个 promise（后台写缓存与
+    // 响应共用），避免冷缓存时同一 URL 并发两次请求
+    if ((isHashed && isFingerprinted) || isAnalysis) {
+      const cachedResponse = await cache.match(cacheKey)
       const network = fetch(request)
         .then((res) => {
-          if (res && res.status === 200) cache.put(request, res.clone())
+          if (res && res.status === 200) cache.put(cacheKey, res.clone())
           return res
         })
         .catch(() => null)

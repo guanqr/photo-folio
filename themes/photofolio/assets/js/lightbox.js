@@ -72,8 +72,9 @@ export function initLightbox() {
     const hueHist = document.getElementById('lightbox-hue-hist');
     const hueAxis = document.getElementById('lightbox-hue-axis');
     const analysisErrorEl = document.getElementById('lightbox-analysis-error');
-    // 图像分析按需加载：默认收起——打开/切图不再探测下载 w_1024 采样图，
-    // 只有点击触发行才展开加载；收起不取消在途探测（结果入缓存，再展开直接命中）。
+    // 图像分析默认收起、只在点击触发行时展开渲染；分析结果 JSON（压缩后约
+    // 3.6KB）在打开/切图时预取当前 ±1 照片（见 lightbox-switch），展开时直接
+    // 命中缓存——不再探测下载 w_1024 采样图（旧版打开/切图即下载数百 KB）。
     // 展开/收起过渡：wrapper max-height + opacity——展开走 class 兜底大值
     // （内容高度未知、加载后增长），收起先按当前 clientHeight 内联定值再移除
     // is-open（从固定大值收起会在动画前段无可见变化、有停顿感）
@@ -166,8 +167,8 @@ export function initLightbox() {
         // auto 边距」的居中判定依赖 [hidden] 选择器（见 _lightbox-panel.scss）
         if (storyWrap) storyWrap.hidden = !p.description;
         if (storyEl) storyEl.textContent = p.description || '';
-        // 分析按需加载：仅在展开态触发（收起态不发拉取请求、不占主线程）；
-        // 展开切图时旧图表保持显示，新数据就绪后按既有形变过渡替换
+        // 分析只在展开态渲染（收起态只由切换管线预取数据、不绘制）；展开切图
+        // 时旧图表保持显示，新数据就绪后按既有形变过渡替换
         if (analysisWrap && analysisWrap.classList.contains('is-open')) {
             analysis.analyze(p.slug);
         }
@@ -184,6 +185,7 @@ export function initLightbox() {
         lightbox, lightboxImg, lightboxImgLoading, lightboxImgArea,
         btnPrev, btnNext, revealSynced, narrowLightbox, reducedMotion,
         collection, renderPanel,
+        prefetchAnalysis: (slugs) => slugs.forEach((slug) => analysis.prefetch(slug)),
         glow, backdrop, swipe, drawer,
         closeBtn: lightboxClose, pageRoots,
         onSwitchStart: () => analysisControl.cancelCenterComp(),
@@ -191,7 +193,8 @@ export function initLightbox() {
     });
 
     // 分析区开合控制（独立模块见 lightbox-analysis-control.js）：展开收起过渡、
-    // 收起位置补偿、关闭静默重置——展开时分析当前照片（由本文件注入）
+    // 收起位置补偿、关闭静默重置——展开时渲染当前照片分析（数据通常已由切换
+    // 管线预取就绪；缓存未命中时现场拉取，由本文件注入）
     const analysisControl = initLightboxAnalysisControl({
         trigger: analysisTrigger, wrap: analysisWrap,
         caption: lightboxCaption, tagsEl, panelDetails, panel,

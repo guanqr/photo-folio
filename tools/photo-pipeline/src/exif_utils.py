@@ -49,7 +49,10 @@ def get_exif_info(image_path):
                     if v >= 1:
                         info["shutter"] = str(int(v)) if v == int(v) else f"{v:.1f}"
                     else:
-                        frac = Fraction(v).limit_denominator(4000)
+                        # 分母上限须覆盖电子快门：1/8000、1/12800 等；原上限
+                        # 4000 会把 1/8000 压成 1/4000、1/12800 退化成 0/1
+                        # （2026-10-25 实测）——放到 1,000,000 可保留常见快门
+                        frac = Fraction(v).limit_denominator(1000000)
                         info["shutter"] = f"{frac.numerator}/{frac.denominator}"
                 elif tag == "DateTimeOriginal":
                     if value and len(str(value)) >= 10:

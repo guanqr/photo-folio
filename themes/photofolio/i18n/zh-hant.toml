@@ -159,6 +159,9 @@ other = "高飽和"
 [sat_caption]
 other = "飽和度分佈（虛線為均值）"
 
+[hue_caption]
+other = "色相分佈（按飽和度加權）"
+
 [hue_names]
 other = "紅|橙|黃|綠|青|藍|紫|品紅"
 

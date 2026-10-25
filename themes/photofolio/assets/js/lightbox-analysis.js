@@ -2,12 +2,14 @@
  * 灯箱图片分析（直方图 + 色卡 + 影调与色彩——只渲染，统计在管线预计算）
  *
  * 管线：拉取 /analysis/{slug}.json（管线在照片生成时以全分辨率原图预计算，
- * 同源 fetch、SW 运行时缓存离线可回退；单张约 2–3KB，展开即出、零逐像素
+ * 同源 fetch、SW 运行时缓存离线可回退；单张约 8KB、压缩后约 3.6KB，零逐像素
  * 客户端成本）；统计口径（Rec.709 明度/九调/剪裁/HSV 饱和度/色相加权/色卡
- * k-means）见 tools/photo-pipeline/src/analysis.py（唯一实现）。结果按 slug
- * 缓存——切换/回看作品时无需重复拉取。
+ * k-means）见 tools/photo-pipeline/src/analysis.py（唯一实现）。灯箱打开/切图
+ * 即预取当前照片与左右各一位（prefetch，只填缓存不渲染），展开时直接渲染——
+ * 避免展开后才发请求、空等一次网络往返；同 slug 在途请求去重，结果按 slug
+ * 缓存，切换/回看作品时无需重复拉取。
  *
- * 本端职责：直方图窗口 5 平滑、对数纵轴与目标 y 数组的纯数学派生（每通道
+ * 本端职责：直方图窗口 5 平滑、线性纵轴与目标 y 数组的纯数学派生（每通道
  * 256 点固定结构可形变），以及全部图表渲染（SVG 矢量：高 DPI / 缩放 / 窄屏
  * 下始终清晰，不随像素密度发糊）与切图形变动画（新旧曲线线性插值）。
  */
@@ -24,24 +26,23 @@ const HIST_SAMPLES = 256; // 每通道曲线采样点数：d 形变要求点数�
 // 明度曲线金色：2026-10-18 收编为 CSS 变量 --dark-lum-curve（样式表设定
 // .hist-lum stroke 与图例 .is-lum 圆点背景），JS 不再持有颜色字面量
 
-/* 通道曲线目标 y 数组（对数纵轴、同 logMax；通道桶已平滑） */
-function channelCurveYs(buckets, logMax) {
+/* 通道曲线目标 y 数组（线性纵轴、同 max；通道桶已平滑） */
+function channelCurveYs(buckets, max) {
     return buckets.map((arr) => Array.from({ length: HIST_SAMPLES }, (_, x) => {
         const lo = Math.floor((x / (HIST_SAMPLES - 1)) * 255);
-        return HIST_H - (Math.log1p(arr[Math.min(255, lo)]) / logMax) * (HIST_H - 1);
+        return HIST_H - (arr[Math.min(255, lo)] / max) * (HIST_H - 1);
     }));
 }
 
-/* 明度曲线目标 y 数组（窗口 5 平滑 + 对数纵轴、同 logMax） */
-function lumCurveYs(lumHist, logMax) {
-    const smooth = smooth5(lumHist);
+/* 明度曲线目标 y 数组（线性纵轴、同 max；入参已窗口 5 平滑） */
+function lumCurveYs(smoothLum, max) {
     return Array.from({ length: HIST_SAMPLES }, (_, i) => {
         const x = (i / (HIST_SAMPLES - 1)) * 255;
         const lo = Math.floor(x);
         const hi = Math.min(lo + 1, 255);
         const t = x - lo;
-        const v = (1 - t) * Math.log1p(smooth[lo]) + t * Math.log1p(smooth[hi]);
-        return HIST_H - (v / logMax) * (HIST_H - 1);
+        const v = (1 - t) * smoothLum[lo] + t * smoothLum[hi];
+        return HIST_H - (v / max) * (HIST_H - 1);
     });
 }
 
@@ -248,12 +249,14 @@ function renderHistLegend(legendEl, labels) {
     legendEl._built = true;
 }
 
-/* 區域系統标尺：11 级灰阶（0 纯黑 → X 纯白，感知均匀），括号标出照片占據區域 */
+/* 區域系統标尺：11 级等距灰阶（0 纯黑 → X 纯白；与管线 zoneOf 的
+   v/255×10 线性映射一致，色块灰度即该区对应的明度值），括号标出照片
+   P5–P95 占據區域——与長/中/短調的灰階跨度判定同源（2026-10-25） */
 function renderZoneStrip(tone, stripEl, bracketEl) {
     if (!stripEl) return;
     if (!stripEl._built) {
         stripEl.innerHTML = Array.from({ length: ZONE_COUNT }, (_, n) => {
-            const v = Math.round(255 * Math.pow(n / (ZONE_COUNT - 1), 2.2));
+            const v = Math.round((255 * n) / (ZONE_COUNT - 1));
             return `<span style="background:rgb(${v},${v},${v})"></span>`;
         }).join('');
         // innerHTML 重建会销毁原有的括号子元素：重新挂回再更新位置
@@ -266,14 +269,18 @@ function renderZoneStrip(tone, stripEl, bracketEl) {
     }
 }
 
-/* 饱和度直方图：0–100% 分布曲线（100 点固定结构，连续形变过渡）+ 均值标记。
+/* 饱和度直方图：0–100% 分布曲线（100 点固定结构，连续形变过渡）+ 均值标记
+   + 低/中/高分界线（数值来自 JSON satBounds，避免与管线阈值脱钩）。
    目标 y 数组在拉取后一次算好入缓存，此处只做骨架与过渡 */
 function paintSatHistogram(sat, satYs, svg) {
     if (!svg) return;
     const W = 100;
     const H = 48;
     if (!svg._built) {
-        svg.innerHTML = `<path class="sat-curve" fill="none" stroke="var(--color-sat-curve)" stroke-width="1.5" vector-effect="non-scaling-stroke"></path>`
+        const guides = (sat.satBounds || []).map((x) =>
+            `<line class="sat-threshold" x1="${x}" x2="${x}" y1="2" y2="${H - 2}" stroke="var(--color-text-muted)" stroke-width="1" stroke-dasharray="2 3" opacity="0.7" vector-effect="non-scaling-stroke"></line>`).join('');
+        svg.innerHTML = guides
+            + `<path class="sat-curve" fill="none" stroke="var(--color-sat-curve)" stroke-width="1.5" vector-effect="non-scaling-stroke"></path>`
             + `<line class="sat-mean" y1="2" y2="${H - 2}" stroke="var(--color-accent)" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"></line>`;
         svg._els = { curve: svg.querySelector('.sat-curve'), mean: svg.querySelector('.sat-mean') };
         svg._built = true;
@@ -317,7 +324,9 @@ function paintHueHistogram(hue, hueYs, svg) {
         svg._rects.forEach((rect, i) => {
             const y = ys[i];
             rect.setAttribute('y', y.toFixed(2));
-            rect.setAttribute('height', (H - 1 - y).toFixed(2));
+            // 切图 tween/浮点边缘可能把零值柱的 y 推到 47 以上，height 算成
+            // -0.01 触发 SVG 属性校验错误——柱高钳到 0（2026-10-25 实测）
+            rect.setAttribute('height', Math.max(0, H - 1 - y).toFixed(2));
         });
     };
     if (svg._prevYs) tweenMulti(svg, [svg._prevYs], [hueYs], (arrs) => apply(arrs[0]));
@@ -400,6 +409,11 @@ export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, o
     } : null;
 
     const cache = new Map(); // slug → { histYs, lumYs, satYs, hueYs, palette, tone, sat, hue }
+    // 在途拉取（slug → Promise）：预取与展开分析共用同一次请求——打开灯箱即
+    // 预取、用户点展开时通常已完成；若仍在途则等待同一 Promise，不重复下载
+    const inflight = new Map();
+    // 任一大类启用才拉取/渲染（配置全部关闭时连预取请求也不发）
+    const hasAnalysis = !!(paletteEl || toneEls.wrap || satEls.wrap || hueEls.wrap);
 
     function hideAll() {
         if (paletteWrap) paletteWrap.style.display = 'none';
@@ -408,8 +422,71 @@ export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, o
         if (hueEls.wrap) hueEls.wrap.style.display = 'none';
     }
 
-    /* 分析指定作品：缓存命中直接重绘；否则拉取管线预计算的结果 JSON
-       （/analysis/{slug}.json，同源、SW 运行时缓存离线可回退）——统计在
+    function renderEntry(entry) {
+        if (paletteEl) renderPalette(entry.palette, paletteWrap, paletteEl);
+        if (toneEls.wrap) renderTone(entry.tone, entry.histYs, entry.lumYs, toneLabels, toneEls);
+        if (satEls.wrap) renderSat(entry.sat, entry.satYs, satLabels, satEls);
+        if (hueEls.wrap) renderHue(entry.hue, entry.hueYs, hueLabels, hueEls);
+    }
+
+    /* 拉取并派生单张作品的分析结果：schema 校验后一次算好各图表目标 y 数组
+       （纯数学，缓存命中路径零重算）。 */
+    async function fetchAnalysis(slug) {
+        const res = await fetch('/analysis/' + encodeURIComponent(slug) + '.json');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        // schema 校验：版本与形状不符（SW 离线回退旧版 JSON、截断文件、
+        // 未来 v3 未同步）→ 明确失败而非静默错位渲染（2026-10-21 审查 #8；
+        // 版本号与管线 ANALYSIS_VERSION 对应、升级须两处同步）
+        if (data.v !== 4) throw new Error('unsupported analysis schema v' + data.v);
+        if (!Array.isArray(data.rgb) || data.rgb.length !== 3
+            || !data.rgb.every((a) => Array.isArray(a) && a.length === 256)
+            || !Array.isArray(data.lum) || data.lum.length !== 256
+            || !Array.isArray(data.sat) || data.sat.length !== 100
+            || !Array.isArray(data.hue) || data.hue.length !== 36
+            || !data.tone || !data.color
+            || !Array.isArray(data.color.satBounds) || data.color.satBounds.length !== 2
+            || !Array.isArray(data.palette)) {
+            throw new Error('malformed analysis schema');
+        }
+        // 曲线派生（纯数学）：通道桶窗口 5 平滑 + 线性纵轴 + 各图表目标
+        // y 数组——统一最大值同时覆盖 RGB 与明度峰值（明度分布可能比单通道
+        // 更集中，只按 RGB 峰值归一化会越过图表顶部）；一次算好随结果返回，
+        // 缓存命中路径零重算
+        const buckets = data.rgb.map((arr) => smooth5(arr));
+        const smoothLum = smooth5(data.lum);
+        let max = 1;
+        buckets.forEach((arr) => arr.forEach((v) => { if (v > max) max = v; }));
+        smoothLum.forEach((v) => { if (v > max) max = v; });
+        const histYs = toneEls.wrap ? channelCurveYs(buckets, max) : null;
+        const lumYs = toneEls.wrap ? lumCurveYs(smoothLum, max) : null;
+        const satYs = satEls.wrap ? satYArray(data.sat) : null;
+        const hueYs = hueEls.wrap ? hueYArray(data.hue) : null;
+        const palette = data.palette;
+        const tone = toneEls.wrap ? data.tone : null;
+        // 饱和度与色相共用同一份定性统计（schema 的 color 对象）
+        const satHue = (satEls.wrap || hueEls.wrap) ? {
+            sat: data.color.sat,
+            satMean: data.color.satMean,
+            satBounds: data.color.satBounds,
+            achromatic: data.color.achromatic,
+            hueSeg: data.color.hueSeg,
+        } : null;
+        return { histYs, lumYs, satYs, hueYs, palette, tone, sat: satHue, hue: satHue };
+    }
+
+    /* 同 slug 在途请求去重：槽位随成功/失败释放（失败后展开路径可重试） */
+    function load(slug) {
+        const pending = inflight.get(slug);
+        if (pending) return pending;
+        const p = fetchAnalysis(slug);
+        inflight.set(slug, p);
+        const release = () => { if (inflight.get(slug) === p) inflight.delete(slug); };
+        p.then(release, release);
+        return p;
+    }
+
+    /* 分析指定作品：缓存命中直接重绘；否则等待（或发起）结果拉取——统计在
        管线生成时以全分辨率原图完成（见 tools/photo-pipeline/src/analysis.py），
        本端只做曲线派生与渲染、零逐像素成本。
        请求代次（analyzeSeq）：快速切图时慢响应乱序完成，代次不符不渲染过期结果。
@@ -417,7 +494,7 @@ export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, o
        代次结束时触发——代次不符的过期响应已被新一次 analyze 取代 */
     let analyzeSeq = 0;
     async function analyze(slug) {
-        if (!paletteEl && !toneEls.wrap && !satEls.wrap && !hueEls.wrap) return;
+        if (!hasAnalysis) return;
         const mySeq = ++analyzeSeq;
         // 空 slug 守卫：无数据源的照片直接走失败语义（今日模板恒写 data-slug
         // 不可达；未来新增 [data-title] 根漏写 slug 时防 fetch /analysis/.json）
@@ -437,10 +514,7 @@ export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, o
             try {
                 // 上次失败的提示随成功结果一并收起（重试命中缓存同样走此路径）
                 if (errorEl) errorEl.hidden = true;
-                if (paletteEl) renderPalette(cached.palette, paletteWrap, paletteEl);
-                if (toneEls.wrap) renderTone(cached.tone, cached.histYs, cached.lumYs, toneLabels, toneEls);
-                if (satEls.wrap) renderSat(cached.sat, cached.satYs, satLabels, satEls);
-                if (hueEls.wrap) renderHue(cached.hue, cached.hueYs, hueLabels, hueEls);
+                renderEntry(cached);
                 if (onDone) onDone(true);
             } catch (err) {
                 // 坏缓存条目（此前版本可能已入缓存）：删除后走失败语义——下次
@@ -454,51 +528,17 @@ export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, o
             return;
         }
         try {
-            const res = await fetch('/analysis/' + encodeURIComponent(slug) + '.json');
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            const data = await res.json();
-            // schema 校验：版本与形状不符（SW 离线回退旧版 JSON、截断文件、
-            // 未来 v3 未同步）→ 明确失败而非静默错位渲染（2026-10-21 审查 #8；
-            // 版本号与管线 ANALYSIS_VERSION 对应、升级须两处同步）
-            if (data.v !== 2) throw new Error('unsupported analysis schema v' + data.v);
-            if (!Array.isArray(data.rgb) || data.rgb.length !== 3
-                || !data.rgb.every((a) => Array.isArray(a) && a.length === 256)
-                || !Array.isArray(data.lum) || data.lum.length !== 256
-                || !Array.isArray(data.sat) || data.sat.length !== 100
-                || !Array.isArray(data.hue) || data.hue.length !== 36
-                || !data.tone || !data.color || !Array.isArray(data.palette)) {
-                throw new Error('malformed analysis schema');
-            }
-            // 曲线派生（纯数学）：通道桶窗口 5 平滑 + 对数纵轴 + 各图表目标
-            // y 数组——一次算好入缓存，缓存命中路径零重算
-            const buckets = data.rgb.map((arr) => smooth5(arr));
-            let max = 1;
-            buckets.forEach((arr) => arr.forEach((v) => { if (v > max) max = v; }));
-            const logMax = Math.log1p(max);
-            const histYs = toneEls.wrap ? channelCurveYs(buckets, logMax) : null;
-            const lumYs = toneEls.wrap ? lumCurveYs(data.lum, logMax) : null;
-            const satYs = satEls.wrap ? satYArray(data.sat) : null;
-            const hueYs = hueEls.wrap ? hueYArray(data.hue) : null;
-            const palette = data.palette;
-            const tone = toneEls.wrap ? data.tone : null;
-            // 饱和度与色相共用同一份定性统计（schema 的 color 对象）
-            const satHue = (satEls.wrap || hueEls.wrap) ? {
-                sat: data.color.sat,
-                satMean: data.color.satMean,
-                achromatic: data.color.achromatic,
-                hueSeg: data.color.hueSeg,
-            } : null;
+            const entry = await load(slug);
             if (mySeq !== analyzeSeq) {
                 // 已切到别的作品：结果入缓存但不渲染过期内容
-                cache.set(slug, { histYs, lumYs, satYs, hueYs, palette, tone, sat: satHue, hue: satHue });
+                cache.set(slug, entry);
                 return;
             }
             if (errorEl) errorEl.hidden = true; // 拉取成功：收起上次的失败提示
-            if (paletteEl) renderPalette(palette, paletteWrap, paletteEl);
-            if (toneEls.wrap) renderTone(tone, histYs, lumYs, toneLabels, toneEls);
-            if (satEls.wrap) renderSat(satHue, satYs, satLabels, satEls);
-            if (hueEls.wrap) renderHue(satHue, hueYs, hueLabels, hueEls);
-            cache.set(slug, { histYs, lumYs, satYs, hueYs, palette, tone, sat: satHue, hue: satHue }); // 渲染成功后才入缓存（坏数据不污染，审查 #4）
+            renderEntry(entry);
+            // 幂等入缓存（预取可能已写入同一结果）；渲染异常由缓存命中路径
+            // 自愈清除，坏数据不长期污染（2026-10-21 审查 #4）
+            cache.set(slug, entry);
             if (onDone) onDone(true);
         } catch (err) {
             console.warn('[lightbox] analysis load failed:', slug, err);
@@ -511,5 +551,17 @@ export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, o
         }
     }
 
-    return { analyze };
+    /* 预取（不渲染）：灯箱打开/切图时由调用方触发，填充缓存供展开时直接渲染。
+       失败仅告警、不入缓存——展开路径 analyze 会重试并走失败提示；空 slug /
+       已缓存直接返回。 */
+    function prefetch(slug) {
+        if (!hasAnalysis) return;
+        if (!slug || cache.has(slug)) return;
+        load(slug).then(
+            (entry) => cache.set(slug, entry),
+            (err) => console.warn('[lightbox] analysis prefetch failed:', slug, err)
+        );
+    }
+
+    return { analyze, prefetch };
 }

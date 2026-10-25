@@ -8,8 +8,9 @@
  * - 辉光 activeGlow 编排（哪层随主图滑动/揭示、何时淡入）在本模块——
  *   层创建/就绪门控/淡入/剪枝仍在 lightbox-glow 模块
  * - 作品收集与邻居预载在 lightbox-collection 模块（无状态工具 + 预载缓存）；
- *   面板渲染 renderPanel 由调用方注入；分析区开合经 onSwitchStart/onClose
- *   钩子交给调用方接线（本模块不认识分析控制模块）
+ *   面板渲染 renderPanel 与分析数据预取 prefetchAnalysis 由调用方注入；
+ *   分析区开合经 onSwitchStart/onClose 钩子交给调用方接线（本模块不认识
+ *   分析控制模块）
  */
 import { isImageReady, loadWithAvifFallback } from './utils.js';
 import { initLightboxZoom } from './lightbox-zoom.js';
@@ -17,7 +18,7 @@ import { initLightboxZoom } from './lightbox-zoom.js';
 export function initLightboxSwitch({
     lightbox, lightboxImg, lightboxImgLoading, lightboxImgArea,
     btnPrev, btnNext, revealSynced, narrowLightbox, reducedMotion,
-    collection, renderPanel,
+    collection, renderPanel, prefetchAnalysis,
     glow, backdrop, swipe, drawer,
     closeBtn, pageRoots,
     onSwitchStart, onClose
@@ -269,6 +270,21 @@ export function initLightboxSwitch({
             const neighbors = [...new Set([nextSrc, next2Src, prevSrc, prev2Src])].filter((u) => u !== src);
             collection.pruneKeep([src, ...neighbors]);
             neighbors.forEach((url) => collection.preload(url));
+        }
+
+        // 分析数据预取（与图片邻居预载同窗）：当前照片 + 左右各一位（去重）。
+        // 分析 JSON 压缩后约 3.6KB、无解码成本；展开后现场拉取要空等一次往返
+        // （实测复用连接约 0.3s、冷连接更久），提前拉取让展开/切到相邻照片
+        // 直接命中缓存。±1 已覆盖连续翻看（翻一张时再下一张随本次预取），
+        // 无需跟随图片 ±2 的来回翻看窗口。失败只告警，展开时由 analyze 重试
+        if (prefetchAnalysis) {
+            const plen = currentPhotos.length;
+            const slugs = [...new Set([
+                currentIndex,
+                (currentIndex + 1) % plen,
+                (currentIndex - 1 + plen) % plen
+            ].map((i) => currentPhotos[i].slug))].filter(Boolean);
+            prefetchAnalysis(slugs);
         }
 
         if (isSwitch) {

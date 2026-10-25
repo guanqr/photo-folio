@@ -23,6 +23,16 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+# 修复 Windows 控制台编码：默认 GBK stdout 无法编码结果行里的 ✓/✗/⛔/↳
+# 等符号，直接 print 会抛 UnicodeEncodeError 并中断脚本——与照片管线同法
+# 将 stdout 重包 UTF-8（2026-10-25）
+if sys.platform.startswith("win"):
+    try:
+        import codecs
+        sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
+    except Exception:
+        pass
+
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 PHOTO_PATH = ROOT / "data" / "photo.toml"

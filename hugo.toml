@@ -18,6 +18,13 @@ defaultContentLanguage = "zh-hant"
     [server.headers.values]
         Cache-Control = "no-cache"
 
+# 分析 JSON 同理：URL 不随 schema 版本变化，启发式缓存会在 v3→v4 等升级后
+# 继续回旧结果，新代码校验失败、部分照片显示分析失败（2026-10-25 实测）
+[[server.headers]]
+    for = "/analysis/**"
+    [server.headers.values]
+        Cache-Control = "no-cache"
+
 # 清空 Hugo 内置分类法（默认 tag/categories 不用）——否则 content/categories/ 会被
 # 识别为「categories 分类法」而非普通 Section，子目录变成 term 页
 [taxonomies]

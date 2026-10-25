@@ -81,8 +81,12 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None):
             analysis_path = os.path.join(analysis_dir, os.path.splitext(f)[0] + ".json")
             if is_analysis_stale(analysis_path, os.path.getmtime(input_path)):
                 try:
+                    # 分析 JSON 生成是独立于图像处理的耗时步骤（全分辨率逐像素）：
+                    # 开始/完成各输出一行，避免处理完成后长时间静默、无法判断进度
+                    print(f"🔍 图像分析中：{f}")
                     analyze_and_store(input_path, analysis_path)
                     analyzed += 1
+                    print(f"✅ 图像分析完成：{f}")
                 except Exception as e:
                     print(f"❌ 分析失败：{f}  {e}")
 
