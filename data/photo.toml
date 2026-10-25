@@ -1565,8 +1565,8 @@ camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
 
 [[photo]]
-src = "/images/photos/苍鹭与白鹭.jpg"
-alt = "蒼鷺與白鷺"
+src = "/images/photos/苍鹭伫波.jpg"
+alt = "蒼鷺佇波"
 category = "animal"
 focus = "495"
 iso = "280"
