@@ -16,6 +16,7 @@ width = "1920"
 height = "1279"
 camera = "Panasonic DMC-FT5"
 lens = ""
+hash = "648921c7"
 description = "黃崖關長城位於天津市薊州區，是明代長城的重要關隘之一。夕陽下的長城顯得格外壯麗，金色的陽光灑在古老的城磚上，彷彿在訴說著歷史的滄桑。"
 featured = true
 
@@ -37,6 +38,7 @@ width = "1920"
 height = "1278"
 camera = "HUAWEI STF-AL10"
 lens = ""
+hash = "c0834a87"
 
 [[photo]]
 src = "/images/photos/东京铁路.jpg"
@@ -56,6 +58,7 @@ width = "1920"
 height = "1280"
 camera = "HUAWEI STF-AL10"
 lens = ""
+hash = "afa12ebc"
 featured = true
 
 [[photo]]
@@ -76,6 +79,7 @@ width = "1920"
 height = "1280"
 camera = "HUAWEI EBG-AN00"
 lens = ""
+hash = "5c745ba8"
 
 [[photo]]
 src = "/images/photos/鼓浪屿.jpg"
@@ -95,6 +99,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "95b10dbe"
 featured = true
 
 [[photo]]
@@ -115,6 +120,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "b3c1fc43"
 featured = true
 
 [[photo]]
@@ -135,6 +141,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "051dc9d0"
 
 [[photo]]
 src = "/images/photos/宏村月沼.jpg"
@@ -154,6 +161,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "34e9ae98"
 featured = true
 
 [[photo]]
@@ -174,6 +182,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "717ab47c"
 
 [[photo]]
 src = "/images/photos/家训.jpg"
@@ -193,6 +202,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "70c3d7b1"
 
 [[photo]]
 src = "/images/photos/卢村秋景.jpg"
@@ -212,6 +222,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "186a9dca"
 featured = true
 
 [[photo]]
@@ -232,6 +243,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "8f5e9004"
 
 [[photo]]
 src = "/images/photos/满觉陇汤屋.jpg"
@@ -251,6 +263,7 @@ width = "1920"
 height = "1279"
 camera = "HONOR REP-AN00"
 lens = ""
+hash = "36374d1e"
 
 [[photo]]
 src = "/images/photos/深秋绿叶.jpg"
@@ -270,6 +283,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "94db26d6"
 
 [[photo]]
 src = "/images/photos/德寿红梅.jpg"
@@ -289,6 +303,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "a9d4bcf2"
 
 [[photo]]
 src = "/images/photos/上海空山基展.jpg"
@@ -308,6 +323,7 @@ width = "1281"
 height = "1920"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "5572aa1a"
 
 [[photo]]
 src = "/images/photos/白纱下的凝视.jpg"
@@ -327,6 +343,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "2b3a0148"
 
 [[photo]]
 src = "/images/photos/老场坊.jpg"
@@ -346,6 +363,7 @@ width = "1920"
 height = "1079"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "a00404a3"
 
 [[photo]]
 src = "/images/photos/玉龙雪山.jpg"
@@ -365,6 +383,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "ce968387"
 featured = true
 
 [[photo]]
@@ -385,6 +404,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "183cc45b"
 
 [[photo]]
 src = "/images/photos/蓝月嬉水.jpg"
@@ -404,6 +424,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "c21ee1b8"
 
 [[photo]]
 src = "/images/photos/木窗瓷韵.jpg"
@@ -423,6 +444,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "e1b9c759"
 
 [[photo]]
 src = "/images/photos/镜中世界.jpg"
@@ -442,6 +464,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "d33a3c77"
 
 [[photo]]
 src = "/images/photos/荒野之国.jpg"
@@ -461,6 +484,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "cf2aade2"
 
 [[photo]]
 src = "/images/photos/转经.jpg"
@@ -480,6 +504,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "7d78b304"
 
 [[photo]]
 src = "/images/photos/金檐青霄.jpg"
@@ -499,6 +524,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "3e06ad6d"
 
 [[photo]]
 src = "/images/photos/独克宗古城.jpg"
@@ -518,6 +544,7 @@ width = "1281"
 height = "1920"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "86604618"
 
 [[photo]]
 src = "/images/photos/松赞一隅.jpg"
@@ -537,6 +564,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "533271bb"
 
 [[photo]]
 src = "/images/photos/松赞林寺.jpg"
@@ -556,6 +584,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "08e5b472"
 featured = true
 
 [[photo]]
@@ -576,6 +605,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "03cb4e08"
 
 [[photo]]
 src = "/images/photos/滕王阁.jpg"
@@ -595,6 +625,7 @@ width = "1281"
 height = "1920"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "eb5bbc86"
 
 [[photo]]
 src = "/images/photos/绳金塔.jpg"
@@ -614,6 +645,7 @@ width = "1281"
 height = "1920"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "be8ef9f2"
 
 [[photo]]
 src = "/images/photos/赣江两岸.jpg"
@@ -633,6 +665,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "c2057273"
 featured = true
 
 [[photo]]
@@ -653,6 +686,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "f437db50"
 featured = true
 
 [[photo]]
@@ -673,6 +707,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "7c7cab1d"
 featured = true
 
 [[photo]]
@@ -693,6 +728,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "0eea8cab"
 featured = true
 
 [[photo]]
@@ -713,6 +749,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "4c8fea4d"
 
 [[photo]]
 src = "/images/photos/半山铁骨.jpg"
@@ -732,6 +769,7 @@ width = "1920"
 height = "1280"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-70mm f/4 S"
+hash = "97ef0c1e"
 
 [[photo]]
 src = "/images/photos/金光穿洞.jpg"
@@ -751,6 +789,7 @@ width = "1920"
 height = "1280"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-70mm f/4 S"
+hash = "8c6bfc1c"
 featured = true
 
 [[photo]]
@@ -771,6 +810,7 @@ width = "1920"
 height = "1280"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "dc804cb2"
 featured = true
 
 [[photo]]
@@ -791,6 +831,7 @@ width = "1920"
 height = "1280"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "79ff4bab"
 series = "割藺草"
 is_cover = true
 featured = true
@@ -813,6 +854,7 @@ width = "1920"
 height = "1279"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "adc36d62"
 series = "割藺草"
 
 [[photo]]
@@ -833,6 +875,7 @@ width = "1280"
 height = "1920"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "519bd795"
 series = "割藺草"
 
 [[photo]]
@@ -853,6 +896,7 @@ width = "1280"
 height = "1920"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "5166099f"
 series = "割藺草"
 
 [[photo]]
@@ -873,6 +917,7 @@ width = "1279"
 height = "1920"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "5711804b"
 series = "割藺草"
 
 [[photo]]
@@ -893,6 +938,7 @@ width = "1280"
 height = "1920"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "90882066"
 series = "割藺草"
 
 [[photo]]
@@ -913,6 +959,7 @@ width = "1280"
 height = "1920"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "bf6e6fa4"
 series = "割藺草"
 
 [[photo]]
@@ -933,6 +980,7 @@ width = "1280"
 height = "1920"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "e8701d11"
 series = "割藺草"
 
 [[photo]]
@@ -953,6 +1001,7 @@ width = "1920"
 height = "1280"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "95ece2c6"
 
 [[photo]]
 src = "/images/photos/车门一瞬.jpg"
@@ -972,6 +1021,7 @@ width = "1920"
 height = "1280"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "4a9b5173"
 
 [[photo]]
 src = "/images/photos/骑楼拥圣心.jpg"
@@ -991,6 +1041,7 @@ width = "1920"
 height = "1279"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "87b06dfe"
 featured = true
 
 [[photo]]
@@ -1011,6 +1062,7 @@ width = "1920"
 height = "1280"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "af30723e"
 
 [[photo]]
 src = "/images/photos/冼村龙舟招景.jpg"
@@ -1030,6 +1082,7 @@ width = "1920"
 height = "1280"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "01f73fb2"
 series = "廣東的端午"
 is_cover = true
 
@@ -1051,6 +1104,7 @@ width = "1920"
 height = "1280"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "f1d44af6"
 
 [[photo]]
 src = "/images/photos/古檐贝影.jpg"
@@ -1070,6 +1124,7 @@ width = "1920"
 height = "1280"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "f86eba6a"
 
 [[photo]]
 src = "/images/photos/变色树蜥.jpg"
@@ -1089,6 +1144,7 @@ width = "1920"
 height = "1279"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "b1947b00"
 
 [[photo]]
 src = "/images/photos/曲框望塔.jpg"
@@ -1108,6 +1164,7 @@ width = "1280"
 height = "1920"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "f337f806"
 
 [[photo]]
 src = "/images/photos/花城中轴夜序.jpg"
@@ -1127,6 +1184,7 @@ width = "1920"
 height = "1280"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "cb4d9a83"
 
 [[photo]]
 src = "/images/photos/花城流动的脉络.jpg"
@@ -1146,6 +1204,7 @@ width = "1280"
 height = "1920"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "034554b5"
 
 [[photo]]
 src = "/images/photos/叠滘龙舟漂移-1.jpg"
@@ -1165,6 +1224,7 @@ width = "1920"
 height = "1279"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "46484827"
 series = "廣東的端午"
 
 [[photo]]
@@ -1185,6 +1245,7 @@ width = "1920"
 height = "1279"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "b78e11fc"
 series = "廣東的端午"
 
 [[photo]]
@@ -1205,6 +1266,7 @@ width = "1920"
 height = "1280"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "08cfe0df"
 series = "廣東的端午"
 
 [[photo]]
@@ -1225,6 +1287,7 @@ width = "1280"
 height = "1920"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "a2da4844"
 
 [[photo]]
 src = "/images/photos/舞狮.jpg"
@@ -1244,6 +1307,7 @@ width = "1279"
 height = "1920"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "fb19ce86"
 
 [[photo]]
 src = "/images/photos/龙潭龙母诞-1.jpg"
@@ -1263,6 +1327,7 @@ width = "1920"
 height = "1279"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "0d146bcf"
 series = "廣東的端午"
 
 [[photo]]
@@ -1283,6 +1348,7 @@ width = "1920"
 height = "1279"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "c2ed1768"
 series = "廣東的端午"
 
 [[photo]]
@@ -1303,6 +1369,7 @@ width = "1920"
 height = "1154"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "6ad04ecc"
 series = "烏蘭布統的秋"
 
 [[photo]]
@@ -1323,6 +1390,7 @@ width = "1920"
 height = "1279"
 camera = "NIKON Z 8"
 lens = "TAMRON 150-500mm F/5-6.7 Di III VC VXD A057Z"
+hash = "e4a17898"
 series = "烏蘭布統的秋"
 featured = true
 
@@ -1344,6 +1412,7 @@ width = "1920"
 height = "1279"
 camera = "NIKON Z 8"
 lens = "TAMRON 150-500mm F/5-6.7 Di III VC VXD A057Z"
+hash = "40c6d9a3"
 series = "烏蘭布統的秋"
 
 [[photo]]
@@ -1364,6 +1433,7 @@ width = "1920"
 height = "1280"
 camera = "NIKON Z 8"
 lens = "TAMRON 150-500mm F/5-6.7 Di III VC VXD A057Z"
+hash = "3b7cc8f7"
 series = "烏蘭布統的秋"
 
 [[photo]]
@@ -1384,6 +1454,7 @@ width = "1920"
 height = "1163"
 camera = "NIKON Z 8"
 lens = "TAMRON 150-500mm F/5-6.7 Di III VC VXD A057Z"
+hash = "daa578c4"
 series = "烏蘭布統的秋"
 
 [[photo]]
@@ -1404,6 +1475,7 @@ width = "1920"
 height = "1279"
 camera = "NIKON Z 8"
 lens = "TAMRON 150-500mm F/5-6.7 Di III VC VXD A057Z"
+hash = "4d723b12"
 series = "烏蘭布統的秋"
 
 [[photo]]
@@ -1424,6 +1496,7 @@ width = "1920"
 height = "1280"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "0084d648"
 series = "烏蘭布統的秋"
 is_cover = true
 
@@ -1445,6 +1518,7 @@ width = "1920"
 height = "1279"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "6f2e7f6f"
 series = "烏蘭布統的秋"
 
 [[photo]]
@@ -1465,6 +1539,7 @@ width = "1920"
 height = "1280"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "4a5c5e9c"
 series = "烏蘭布統的秋"
 
 [[photo]]
@@ -1485,6 +1560,7 @@ width = "1920"
 height = "1280"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "e4a31595"
 series = "烏蘭布統的秋"
 
 [[photo]]
@@ -1505,6 +1581,7 @@ width = "1920"
 height = "1059"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "df03a86e"
 series = "烏蘭布統的秋"
 
 [[photo]]
@@ -1525,6 +1602,7 @@ width = "1920"
 height = "1280"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "6ae97b6e"
 
 [[photo]]
 src = "/images/photos/石畔白鹅.jpg"
@@ -1544,6 +1622,7 @@ width = "1920"
 height = "1279"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "55b68b7b"
 
 [[photo]]
 src = "/images/photos/春笋.jpg"
@@ -1563,6 +1642,7 @@ width = "1280"
 height = "1920"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "c1d09b1b"
 
 [[photo]]
 src = "/images/photos/苍鹭伫波.jpg"
@@ -1578,10 +1658,31 @@ address = "廣東省深圳市南山區粵海街道深圳人才公園"
 lat = "22.511353"
 lng = "113.946958"
 location = "廣東"
-width = "1279"
+width = "1280"
 height = "1920"
 camera = "NIKON Z 8"
 lens = "TAMRON 150-500mm F/5-6.7 Di III VC VXD A057Z"
+hash = "b7fd0673"
+
+[[photo]]
+src = "/images/photos/茧与笋.jpg"
+alt = "繭與筍"
+category = "scenery"
+focus = "24"
+iso = "100"
+aperture = "9"
+shutter = "1/800"
+time = "2026-10-24"
+place = "深圳市南山區人才公園"
+address = "廣東省深圳市南山區粵海街道深圳人才公園"
+lat = "22.511353"
+lng = "113.946958"
+location = "廣東"
+width = "1279"
+height = "1920"
+camera = "NIKON Z 8"
+lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "3248cd75"
 
 [[photo]]
 src = "/images/photos/深中通道悬日.jpg"
@@ -1601,3 +1702,4 @@ width = "1280"
 height = "1920"
 camera = "NIKON Z 8"
 lens = "TAMRON 150-500mm F/5-6.7 Di III VC VXD A057Z"
+hash = "73ddadd5"
