@@ -1,0 +1,10 @@
+{{/* 按图片路径反查照片内容哈希（唯一实现）：分类封面等只有 front matter 的
+     src 字符串、拿不到照片对象，经此从照片数据取 hash；未收录或管线尚未回填
+     时返回空串，URL 不带 v 参数。Usage:
+       {{ partial "utils/photo-hash.html" (dict "src" $cover) }} */}}
+{{- $src := .src | default "" -}}
+{{- $hash := "" -}}
+{{- with where hugo.Data.photo.photo "src" $src -}}
+    {{- $hash = (index . 0).hash | default "" -}}
+{{- end -}}
+{{- return $hash -}}

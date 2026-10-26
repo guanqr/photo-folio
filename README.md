@@ -155,6 +155,7 @@ place = "雲南麗江"
 location = "雲南"
 width = "1920"            # 宽高由预处理管线 tools/photo-pipeline/ 生成（取处理后输出图尺寸，横/竖构图据此推导）
 height = "1280"
+hash = "a1b2c3d4"         # 输出图内容哈希（管线自动生成；图片 URL 以 ?v= 拼接，换图即刷新缓存）
 camera = "NIKON Z 5"      # 机身（灯箱「機身」行展示，缺失时以删除线占位）
 address = "浙江省杭州市西湖区曲院风荷"  # 详细地址（选填；相机无 GPS，由 geocode-photos.py 转经纬度）
 lat = "30.2534"           # 纬度（选填，脚本从 address 生成，坐标字段保留备用）

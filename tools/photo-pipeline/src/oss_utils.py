@@ -2,10 +2,15 @@
 """阿里云 OSS 上传工具"""
 import os
 
+# 照片 URL 带内容哈希（?v=，photo.toml 的 hash 字段）：对象内容不可变，可放心
+# 设一年 immutable 长缓存；同名换图会生成新 URL，不依赖短 TTL 兜底（2026-10-26）
+CACHE_CONTROL = "public, max-age=31536000, immutable"
+
 
 def upload_to_oss(local_path, object_name, bucket):
     """上传单个文件到 OSS"""
-    bucket.put_object_from_file(object_name, local_path)
+    bucket.put_object_from_file(
+        object_name, local_path, headers={"Cache-Control": CACHE_CONTROL})
     # 返回公开访问 URL
     return f"https://{bucket.bucket_name}.{bucket.endpoint.replace('https://', '')}/{object_name}"
 

@@ -63,13 +63,14 @@ def write_toml(toml_path, entries):
     entries.sort(key=sort_key)
 
     # 注意：address/lat/lng 是站点新增字段（详细地址与地理编码坐标，由
-    # tools/geocode/geocode-photos.py 生成）——必须列入白名单，否则管线重写会抹掉它们
+    # tools/geocode/geocode-photos.py 生成）、hash 是站点图片 URL 的缓存版本号
+    # （main.py 生成）——必须列入白名单，否则管线重写会抹掉它们
     # （featured 字段曾被丢过一次，同一类坑）
     FIELDS = [
         "src", "alt", "category", "focus", "iso",
         "aperture", "shutter", "time", "place", "address", "lat", "lng",
         "location", "width", "height",
-        "camera", "lens",
+        "camera", "lens", "hash",
     ]
 
     lines = []

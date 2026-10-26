@@ -1,6 +1,7 @@
 {{- $src := .src | default "" -}}
 {{- $site := .site -}}
 {{- $cdn := $site.Params.imageCDN | default "" -}}
+{{- $hash := .hash | default "" -}}
 
 {{- $width := .width | default 0 -}}
 {{- $height := .height | default 0 -}}
@@ -20,11 +21,22 @@
 
 {{- if and $cdn (not (strings.HasPrefix $src "http")) -}}
     {{- $cdn = strings.TrimSuffix "/" $cdn -}}
-    {{- $query := "" -}}
+    {{/* 照片内容哈希作缓存版本号（?v=）：同名换图后 src 不变、hash 变，
+       URL 随之变化以绕过浏览器/中间缓存的旧图；与 OSS 处理参数并列拼接 */}}
+    {{- $params := slice -}}
     {{- if gt (len $process) 0 -}}
-        {{- $query = printf "?x-oss-process=image/%s" (delimit $process "/") -}}
+        {{- $params = $params | append (printf "x-oss-process=image/%s" (delimit $process "/")) -}}
     {{- end -}}
-    {{- printf "%s%s%s" $cdn $src $query -}}
+    {{- with $hash -}}
+        {{- $params = $params | append (printf "v=%s" .) -}}
+    {{- end -}}
+    {{- $query := "" -}}
+    {{- if gt (len $params) 0 -}}
+        {{- $query = printf "?%s" (delimit $params "&") -}}
+    {{- end -}}
+    {{/* safeHTML：partial 输出先按 HTML 文本转义 &，调用点再转义一次会变成
+       &amp;amp;（OSS 收到错误参数）；标记 safe 后统一由调用点属性上下文转义一次 */}}
+    {{- printf "%s%s%s" $cdn $src $query | safeHTML -}}
 {{- else -}}
     {{- $src -}}
 {{- end -}}

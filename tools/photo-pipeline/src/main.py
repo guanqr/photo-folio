@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """摄影作品批量处理 — 入口与调度"""
+import hashlib
 import sys
 import os
 
@@ -27,6 +28,16 @@ def _get_image_size(path):
             return str(img.size[0]), str(img.size[1])
     except Exception:
         return "", ""
+
+
+def _file_hash(path):
+    """输出图内容哈希（MD5 前 8 位）：站点用它给图片 URL 拼 ?v= 缓存版本号。
+    同名换图后 src 不变、字节变，URL 随哈希变化即可绕过浏览器/缓存旧图（2026-10-26）"""
+    h = hashlib.md5()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()[:8]
 
 
 def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None):
@@ -115,6 +126,15 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None):
                 }
 
     if toml_path:
+        # 每次按输出图实际字节重算哈希：处理/跳过/新条目统一覆盖，避免增量运行
+        # 留下过期版本号（缺失输出文件的条目保留既有值，下次有文件时再补）
+        for src, entry in src_to_entry.items():
+            img_path = os.path.join(output_dir, os.path.basename(src))
+            if os.path.exists(img_path):
+                try:
+                    entry["hash"] = _file_hash(img_path)
+                except OSError as e:
+                    print(f"⚠️  哈希计算失败：{os.path.basename(src)}  {e}")
         write_toml(toml_path, list(src_to_entry.values()))
         # 分析结果完整性检查：photo.toml 全部条目都应有对应 JSON——src 与
         # 管线输入文件名不一致的照片（人工条目/历史改名）没有生成路径，站点

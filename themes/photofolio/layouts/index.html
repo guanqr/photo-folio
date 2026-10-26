@@ -22,7 +22,7 @@
         <div class="carousel" id="home-carousel" data-autoplay-ms="{{ .Site.Params.carouselInterval }}">
             <div class="carousel-track">
                 {{ range $i, $photo := $carouselPhotos }}
-                {{ $srcUrl := partial "utils/img-url-cached.html" (dict "src" $photo.src "site" $.Site "width" $carouselWidth "mode" "lfit" "format" "avif" "quality" $carouselQuality) }}
+                {{ $srcUrl := partial "utils/img-url-cached.html" (dict "src" $photo.src "hash" ($photo.hash | default "") "site" $.Site "width" $carouselWidth "mode" "lfit" "format" "avif" "quality" $carouselQuality) }}
                 {{/* 非激活 slide 对读屏器隐藏（aria-hidden 随切换由 carousel.js 同步） */}}
                 <div class="carousel-slide{{ if eq $i 0 }} active{{ end }}"{{ if ne $i 0 }} aria-hidden="true"{{ end }}>
                     <div class="carousel-photo">

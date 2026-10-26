@@ -10,7 +10,7 @@
     {{- $cfg := site.Params.imageSizes | default dict -}}
     {{- $carouselWidth := $cfg.carousel | default 1920 -}}
     {{- $carouselQuality := $cfg.ogQuality | default 85 -}}
-    {{- $srcUrl := partial "utils/img-url-cached.html" (dict "src" .src "site" site "width" $carouselWidth "mode" "lfit" "format" "avif" "quality" $carouselQuality) -}}
+    {{- $srcUrl := partial "utils/img-url-cached.html" (dict "src" .src "hash" (.hash | default "") "site" site "width" $carouselWidth "mode" "lfit" "format" "avif" "quality" $carouselQuality) -}}
     <link rel="preload" as="image" href="{{ $srcUrl }}" fetchpriority="high">
 {{- end -}}
 {{- end -}}

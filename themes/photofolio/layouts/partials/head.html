@@ -22,18 +22,24 @@
 <meta property="og:type" content="{{ if .IsHome }}website{{ else }}article{{ end }}">
 <meta property="og:url" content="{{ .Permalink }}">
 <meta property="og:site_name" content="{{ .Site.Title }}">
-{{ with .Params.cover }}
-    {{ $ogImg := partial "utils/img-url-cached.html" (dict "src" . "site" $.Site "width" $ogWidth "height" $ogHeight "mode" "fill" "format" "webp" "quality" $ogQuality) }}
-    <meta property="og:image" content="{{ $ogImg }}">
+{{/* 页面 cover 是 front matter 的路径字符串：经照片数据反查哈希，封面换图同样换 URL */}}
+{{ $cover := .Params.cover }}
+{{ $coverHash := "" }}
+{{ with $cover }}{{ $coverHash = partialCached "utils/photo-hash.html" (dict "src" .) . }}{{ end }}
+{{ with $cover }}
+    {{ $ogImg := partial "utils/img-url-cached.html" (dict "src" . "hash" ($coverHash | default "") "site" $.Site "width" $ogWidth "height" $ogHeight "mode" "fill" "format" "webp" "quality" $ogQuality) }}
+    {{/* string：content 属性不是 URL 上下文，template.HTML 会原样输出 &；
+       转回字符串后由属性转义成 &amp;，与其余图片 URL 一致 */}}
+    <meta property="og:image" content="{{ $ogImg | string }}">
 {{ end }}
 
 {{/* Twitter Card */}}
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }} - {{ .Site.Title }}{{ end }}">
 <meta name="twitter:description" content="{{ $desc }}">
-{{ with .Params.cover }}
-    {{ $twImg := partial "utils/img-url-cached.html" (dict "src" . "site" $.Site "width" $ogWidth "height" $ogHeight "mode" "fill" "format" "webp" "quality" $ogQuality) }}
-    <meta name="twitter:image" content="{{ $twImg }}">
+{{ with $cover }}
+    {{ $twImg := partial "utils/img-url-cached.html" (dict "src" . "hash" ($coverHash | default "") "site" $.Site "width" $ogWidth "height" $ogHeight "mode" "fill" "format" "webp" "quality" $ogQuality) }}
+    <meta name="twitter:image" content="{{ $twImg | string }}">
 {{ end }}
 
 {{/* 结构化数据 JSON-LD：站点（WebSite）与作者（Person），全站生效 */}}

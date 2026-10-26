@@ -12,8 +12,8 @@
 {{ $quality := $cfg.quality | default 80 }}
 {{ $fullQuality := $cfg.lightboxQuality | default 90 }}
 
-{{ $srcUrl := partial "utils/img-url-cached.html" (dict "src" $src "site" $site "width" $thumbWidth "mode" "lfit" "format" "avif" "quality" $quality) }}
-{{ $fullUrl := partial "utils/img-url-cached.html" (dict "src" $src "site" $site "width" $fullWidth "mode" "lfit" "format" "avif" "quality" $fullQuality) }}
+{{ $srcUrl := partial "utils/img-url-cached.html" (dict "src" $src "hash" ($photo.hash | default "") "site" $site "width" $thumbWidth "mode" "lfit" "format" "avif" "quality" $quality) }}
+{{ $fullUrl := partial "utils/img-url-cached.html" (dict "src" $src "hash" ($photo.hash | default "") "site" $site "width" $fullWidth "mode" "lfit" "format" "avif" "quality" $fullQuality) }}
 
 {{ $place := $photo.place }}
 {{ $time := $photo.time }}
