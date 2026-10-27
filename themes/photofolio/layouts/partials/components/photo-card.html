@@ -15,6 +15,17 @@
 {{ $srcUrl := partial "utils/img-url-cached.html" (dict "src" $src "hash" ($photo.hash | default "") "site" $site "width" $thumbWidth "mode" "lfit" "format" "avif" "quality" $quality) }}
 {{ $fullUrl := partial "utils/img-url-cached.html" (dict "src" $src "hash" ($photo.hash | default "") "site" $site "width" $fullWidth "mode" "lfit" "format" "avif" "quality" $fullQuality) }}
 
+{{/* 模糊占位图（LQIP）：OSS 端缩小并烘焙高斯模糊，主图未到前铺在卡片底层；
+   固定 WebP（同尺寸体积小于 AVIF，且不触发 AVIF→WebP 兜底分支）；
+   无 CDN 时留空——避免把原图当占位图请求 */}}
+{{ $blurWidth := $cfg.placeholder | default 64 }}
+{{ $blurQuality := $cfg.placeholderQuality | default 30 }}
+{{ $blurRadius := $cfg.placeholderBlur | default 3 }}
+{{ $blurUrl := "" }}
+{{ if $site.Params.imageCDN }}
+    {{ $blurUrl = partial "utils/img-url-cached.html" (dict "src" $src "hash" ($photo.hash | default "") "site" $site "width" $blurWidth "mode" "lfit" "format" "webp" "quality" $blurQuality "blur" $blurRadius) }}
+{{ end }}
+
 {{ $place := $photo.place }}
 {{ $time := $photo.time }}
 {{ $focus := $photo.focus }}
@@ -59,6 +70,7 @@
         role="button"
         aria-label="{{ $displayTitle }}"
         data-slug="{{ $slug }}"
+        {{ with $photo.hash }}data-hash="{{ . }}"{{ end }}
         data-title="{{ $displayTitle }}"
         {{ with $description }}data-description="{{ . }}"{{ end }}
         {{ with $place }}data-place="{{ . }}"{{ end }}
@@ -76,7 +88,8 @@
 
         {{/* 作品一律渲染普通 img（点击开灯箱）；卡片上仅悬停显示标题与焦距·光圈
             两行小字（触屏无悬停，详情由灯箱承担）；wrapper 统一用 div 避免 a 嵌套 a */}}
-        <div class="photo-wrapper">
+        {{/* style 经 safeCSS：URL 由仓库数据构造，避免 Hugo 对查询串的 CSS 值转义 */}}
+        <div class="photo-wrapper"{{ with $blurUrl }} style="{{ printf "--photo-blur: url('%s')" . | safeCSS }}"{{ end }}>
             <img data-src="{{ $srcUrl }}" data-full-src="{{ $fullUrl }}" alt="{{ $altText }}" loading="lazy" class="photo-img" {{ with $photo.width }}width="{{ . }}"{{ end }} {{ with $photo.height }}height="{{ . }}"{{ end }}>
             {{/* 悬停信息层：底部渐变遮罩 + 标题/焦距·光圈（aria-hidden——卡片
                 aria-label 已含标题，此处为视觉副本；格式与灯箱 EXIF 一致） */}}

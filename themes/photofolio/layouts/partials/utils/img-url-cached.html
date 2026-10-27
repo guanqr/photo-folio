@@ -1,9 +1,9 @@
 {{/*
   缓存版 CDN 图片 URL 拼装（img-url.html 的包装）：在此单点拼接显式 variant——
   调用点只需传参数，无需记忆缓存键规则（dict 输入依赖默认缓存键会跨调用串内容）
-  参数与 img-url.html 相同：src / site / hash / width / height / mode / format / quality
+  参数与 img-url.html 相同：src / site / hash / width / height / mode / format / quality / blur
   Usage:
     {{ partial "utils/img-url-cached.html" (dict "src" . "site" $ "width" 800) }}
 */}}
-{{- $key := printf "img:%s|%s|%d|%d|%s|%s|%d" (.src | default "") (.hash | default "") (int (.width | default 0)) (int (.height | default 0)) (.mode | default "lfit") (.format | default "avif") (int (.quality | default 85)) -}}
+{{- $key := printf "img:%s|%s|%d|%d|%s|%s|%d|%d" (.src | default "") (.hash | default "") (int (.width | default 0)) (int (.height | default 0)) (.mode | default "lfit") (.format | default "avif") (int (.quality | default 85)) (int (.blur | default 0)) -}}
 {{- return (partialCached "utils/img-url.html" . $key) -}}

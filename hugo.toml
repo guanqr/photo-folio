@@ -84,6 +84,10 @@ defaultContentLanguage = "zh-hant"
         quality = 80           # 默认质量
         lightboxQuality = 90   # 灯箱质量
         ogQuality = 85         # 社交媒体封面质量
+        # 瀑布流模糊占位图（LQIP）：OSS 端缩小并烘焙高斯模糊，主图未到前垫底
+        placeholder = 64       # 占位图宽度（px，按原比例）
+        placeholderQuality = 30
+        placeholderBlur = 3    # 模糊半径/标准差（OSS blur 的 r_/s_ 同值）
 
     # 全部作品页筛选栏：自行选择开启哪些筛选维度（true 开启 / false 关闭）
     [params.galleryFilters]

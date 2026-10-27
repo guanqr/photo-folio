@@ -8,6 +8,7 @@
 {{- $mode := .mode | default "lfit" -}}
 {{- $format := .format | default "avif" -}}
 {{- $quality := .quality | default 85 -}}
+{{- $blur := .blur | default 0 -}}
 
 {{- $process := slice -}}
 {{- if or (gt $width 0) (gt $height 0) -}}
@@ -16,6 +17,8 @@
     {{- if gt $height 0 }}{{ $resize = printf "%s,h_%d" $resize (int $height) }}{{ end -}}
     {{- $process = $process | append $resize -}}
 {{- end -}}
+{{/* 高斯模糊（瀑布流 LQIP 用）：服务端烘焙，浏览端不再叠 CSS filter */}}
+{{- if gt $blur 0 }}{{ $process = $process | append (printf "blur,r_%d,s_%d" (int $blur) (int $blur)) }}{{ end -}}
 {{- with $format }}{{ $process = $process | append (printf "format,%s" .) }}{{ end -}}
 {{- with $quality }}{{ $process = $process | append (printf "quality,q_%d" (int .)) }}{{ end -}}
 

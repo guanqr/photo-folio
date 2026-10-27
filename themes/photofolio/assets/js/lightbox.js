@@ -170,7 +170,7 @@ export function initLightbox() {
         // 分析只在展开态渲染（收起态只由切换管线预取数据、不绘制）；展开切图
         // 时旧图表保持显示，新数据就绪后按既有形变过渡替换
         if (analysisWrap && analysisWrap.classList.contains('is-open')) {
-            analysis.analyze(p.slug);
+            analysis.analyze(p.slug, p.hash);
         }
         // 切图保持信息栏滚动位置（不回到顶部）：内容高度变化时浏览器自动把
         // scrollTop 钳制到新范围，抽屉的虚拟位置模型（展开程度 × 行程 + scrollTop）
@@ -185,7 +185,7 @@ export function initLightbox() {
         lightbox, lightboxImg, lightboxImgLoading, lightboxImgArea,
         btnPrev, btnNext, revealSynced, narrowLightbox, reducedMotion,
         collection, renderPanel,
-        prefetchAnalysis: (slugs) => slugs.forEach((slug) => analysis.prefetch(slug)),
+        prefetchAnalysis: (photos) => photos.forEach((p) => analysis.prefetch(p.slug, p.hash)),
         glow, backdrop, swipe, drawer,
         closeBtn: lightboxClose, pageRoots,
         onSwitchStart: () => analysisControl.cancelCenterComp(),
@@ -201,7 +201,7 @@ export function initLightbox() {
         reducedMotion, drawer,
         analyze: () => {
             const p = switchModule.current();
-            if (p) analysis.analyze(p.slug);
+            if (p) analysis.analyze(p.slug, p.hash);
         }
     });
 

@@ -81,6 +81,8 @@ export function initLightboxCollection({ shortLens }) {
             photos.push({
                 // 照片唯一标识（URL ?p= 用）：photo-card 恒带 data-slug（构建期写入）
                 slug: card ? (card.dataset.slug || '') : '',
+                // 内容哈希（分析 JSON 的缓存版本号）：photo-card 由 photo.toml 的 hash 写入
+                hash: card ? (card.dataset.hash || '') : '',
                 src: img.dataset.fullSrc || img.src,
                 srcNarrow: (img.dataset.fullSrc || img.src).replace(/w_\d+/, 'w_1280'), // 窄屏灯箱主图（≤1000px 用）：首次光栅化成本约降 2.3×
                 thumb: img.src, // 网格缩略图（w_800）：背景毛玻璃与辉光层共用——与网格同 URL 保证灯箱打开即缓存命中，背景不会因新请求等待而黑屏

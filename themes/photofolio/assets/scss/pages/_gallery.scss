@@ -65,20 +65,34 @@
     }
 }
 
-/* 图片滤镜与过渡覆盖：img.photo-img 与 base 中 img[loading="lazy"] 同权重（0,1,1），
-   靠后导入的 gallery 覆盖——模糊渐清是分类/系列封面与轮播的加载语言（单批张数少、
-   无尖峰）；网格照片每批 12 张同时揭示，blur 使 GPU 为每张并发建模糊纹理、
-   栅格化尖峰叠在逐张淡入上（低端机掉帧），揭示已由 %reveal-entry 承担、此处整体关闭 */
+/* 主图淡入（模糊到清晰）：.photo-wrapper 底层铺 OSS 端生成并烘焙模糊的低清
+   占位图（--photo-blur，见 photo-card.html），主图加载完成（is-loaded）后以
+   0.6s 透明度淡入覆盖。占位图模糊在服务端完成、浏览端不叠 CSS filter——
+   网格每批 12 张同时揭示，滤镜会让 GPU 为每张并发建模糊纹理（低端机掉帧）。
+   img.photo-img 与 base 中 img[loading="lazy"] 同权重（0,1,1），靠后导入的
+   gallery 覆盖；is-loaded 变体与 base 的 img[loading="lazy"].is-loaded 同特异性、
+   同样靠后，压掉 blur(0) 的常驻滤镜层 */
 img.photo-img {
-    transition: filter 0.4s ease, opacity 0.4s ease;
+    transition: opacity 0.6s ease;
     filter: none;
-    opacity: 1;
+    opacity: 0;
+
+    &.is-loaded {
+        filter: none;
+        opacity: 1;
+    }
 }
 
 .photo-wrapper {
     position: relative;
     overflow: hidden;
     cursor: pointer;
+    /* 占位底色 + 低清模糊底图：主图未到前先显示照片自身的模糊版本；
+       --photo-blur 由 photo-card 按照片注入（无 CDN 时为空，回落底色） */
+    background-color: var(--color-bg-secondary);
+    background-image: var(--photo-blur);
+    background-size: cover;
+    background-position: center;
 }
 
 .photo-img {
@@ -86,9 +100,6 @@ img.photo-img {
     /* 宽高由 JS 按作品自身比例精确给定；cover 仅兜底取整误差，绝不拉伸 */
     object-fit: cover;
     max-width: none;
-    /* 解码前占位底色：宽高属性已使盒子形状正确，图片加载/解码期间
-       显示淡色占位而非空白块，明暗主题随变量自动切换 */
-    background: var(--color-bg-secondary);
 }
 
 /* 悬停信息层：底部渐变遮罩 + 标题/焦距·光圈两行小字——仅悬停显示

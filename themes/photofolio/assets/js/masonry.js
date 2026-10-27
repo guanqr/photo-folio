@@ -96,13 +96,23 @@ export function revealBatch(grid, count, instant = false) {
         grid._shownItems.push(...batch);
 
         // 解除隐藏并显式设置图片 src（不依赖浏览器原生懒加载——
-        // SPA 注入的 img 在某些浏览器中懒加载可能失效导致首跳空白；按批控制加载是确定性的）
+        // SPA 注入的 img 在某些浏览器中懒加载可能失效导致首跳空白；按批控制加载是确定性的）。
+        // is-loaded 驱动主图淡入（底下的模糊占位图见 photo-card 的 --photo-blur）：
+        // 缓存命中立即标记，否则挂一次性 load；先判就绪再挂监听，避免漏掉已完成的图片。
+        // AVIF→webp 兜底换源后触发的仍是首个 load，标记不会丢
         batch.forEach((item) => {
             item.classList.remove('is-hidden');
             const img = item.querySelector('img.photo-img');
-            if (img && img.dataset.src && !img.src) {
+            if (!img) return;
+            if (img.dataset.src && !img.src) {
                 img.src = img.dataset.src;
                 img.removeAttribute('data-src');
+            }
+            if (isImageReady(img)) {
+                img.classList.add('is-loaded');
+            } else if (!img._loadBound) {
+                img._loadBound = true;
+                img.addEventListener('load', () => img.classList.add('is-loaded'), { once: true });
             }
         });
 

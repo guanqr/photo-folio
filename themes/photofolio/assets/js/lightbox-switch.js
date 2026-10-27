@@ -279,12 +279,14 @@ export function initLightboxSwitch({
         // 无需跟随图片 ±2 的来回翻看窗口。失败只告警，展开时由 analyze 重试
         if (prefetchAnalysis) {
             const plen = currentPhotos.length;
-            const slugs = [...new Set([
-                currentIndex,
-                (currentIndex + 1) % plen,
-                (currentIndex - 1 + plen) % plen
-            ].map((i) => currentPhotos[i].slug))].filter(Boolean);
-            prefetchAnalysis(slugs);
+            // 传照片对象而非 slug：分析 URL 的版本号来自照片内容哈希（见
+            // lightbox-analysis.js）；Set 按对象身份去重，不足 3 张时不重复预取
+            const analysisPhotos = [...new Set([
+                currentPhotos[currentIndex],
+                currentPhotos[(currentIndex + 1) % plen],
+                currentPhotos[(currentIndex - 1 + plen) % plen]
+            ])].filter((p) => p.slug);
+            prefetchAnalysis(analysisPhotos);
         }
 
         if (isSwitch) {

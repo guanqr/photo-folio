@@ -1,13 +1,14 @@
 /**
  * 灯箱图片分析（直方图 + 色卡 + 影调与色彩——只渲染，统计在管线预计算）
  *
- * 管线：拉取 /analysis/{slug}.json（管线在照片生成时以全分辨率原图预计算，
- * 同源 fetch、SW 运行时缓存离线可回退；单张约 8KB、压缩后约 3.6KB，零逐像素
+ * 管线：拉取 /analysis/{slug}.json?v=<照片 hash>-<schema 版本>（管线在照片生成
+ * 时以全分辨率原图预计算，同源 fetch、SW 运行时缓存离线可回退；单张约 8KB、
+ * 压缩后约 3.6KB，零逐像素
  * 客户端成本）；统计口径（Rec.709 明度/九调/剪裁/HSV 饱和度/色相加权/色卡
  * k-means）见 tools/photo-pipeline/src/analysis.py（唯一实现）。灯箱打开/切图
  * 即预取当前照片与左右各一位（prefetch，只填缓存不渲染），展开时直接渲染——
- * 避免展开后才发请求、空等一次网络往返；同 slug 在途请求去重，结果按 slug
- * 缓存，切换/回看作品时无需重复拉取。
+ * 避免展开后才发请求、空等一次网络往返；同 slug + 内容版本的在途请求去重，
+ * 结果按 slug + 内容版本缓存，切换/回看作品时无需重复拉取。
  *
  * 本端职责：直方图窗口 5 平滑、线性纵轴与目标 y 数组的纯数学派生（每通道
  * 256 点固定结构可形变），以及全部图表渲染（SVG 矢量：高 DPI / 缩放 / 窄屏
@@ -23,6 +24,10 @@ import { prefersReducedMotion, easeOutCubic } from './utils.js';
    连续变形而非跳变 */
 const HIST_H = 96;
 const HIST_SAMPLES = 256; // 每通道曲线采样点数：d 形变要求点数恒定
+// 分析 JSON schema 版本：与 tools/photo-pipeline/src/analysis.py 的
+// ANALYSIS_VERSION 对应、升级须两处同步。也作为分析 URL 版本参数的一部分
+// （见 fetchAnalysis）——算法升级后旧缓存 URL 自然失效
+const ANALYSIS_VERSION = 4;
 // 明度曲线金色：2026-10-18 收编为 CSS 变量 --dark-lum-curve（样式表设定
 // .hist-lum stroke 与图例 .is-lum 圆点背景），JS 不再持有颜色字面量
 
@@ -408,9 +413,12 @@ export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, o
         gray: hueEls.wrap.dataset.hueGray,
     } : null;
 
-    const cache = new Map(); // slug → { histYs, lumYs, satYs, hueYs, palette, tone, sat, hue }
-    // 在途拉取（slug → Promise）：预取与展开分析共用同一次请求——打开灯箱即
-    // 预取、用户点展开时通常已完成；若仍在途则等待同一 Promise，不重复下载
+    // 缓存键 = slug@内容版本（照片 hash + schema 版本）：换图/算法升级后同一
+    // slug 不会命中旧结果；SPA 跨页面复用本模块也不会串版本
+    const analysisKey = (slug, hash) => slug + '@' + (hash || '') + '@' + ANALYSIS_VERSION;
+    const cache = new Map(); // analysisKey → { histYs, lumYs, satYs, hueYs, palette, tone, sat, hue }
+    // 在途拉取（analysisKey → Promise）：预取与展开分析共用同一次请求——打开
+    // 灯箱即预取、用户点展开时通常已完成；若仍在途则等待同一 Promise，不重复下载
     const inflight = new Map();
     // 任一大类启用才拉取/渲染（配置全部关闭时连预取请求也不发）
     const hasAnalysis = !!(paletteEl || toneEls.wrap || satEls.wrap || hueEls.wrap);
@@ -431,14 +439,17 @@ export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, o
 
     /* 拉取并派生单张作品的分析结果：schema 校验后一次算好各图表目标 y 数组
        （纯数学，缓存命中路径零重算）。 */
-    async function fetchAnalysis(slug) {
-        const res = await fetch('/analysis/' + encodeURIComponent(slug) + '.json');
+    async function fetchAnalysis(slug, hash) {
+        // URL 带内容版本：照片内容哈希（换图即变）+ schema 版本（算法升级即变）。
+        // SW 对 /analysis/ 的缓存键保留查询串，新版本不命中旧结果；同版本仍走
+        // SWR，回看零等待（缓存策略见 sw.js）
+        const version = (hash ? hash + '-' : '') + ANALYSIS_VERSION;
+        const res = await fetch('/analysis/' + encodeURIComponent(slug) + '.json?v=' + encodeURIComponent(version));
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
         // schema 校验：版本与形状不符（SW 离线回退旧版 JSON、截断文件、
-        // 未来 v3 未同步）→ 明确失败而非静默错位渲染（2026-10-21 审查 #8；
-        // 版本号与管线 ANALYSIS_VERSION 对应、升级须两处同步）
-        if (data.v !== 4) throw new Error('unsupported analysis schema v' + data.v);
+        // 未来版本未同步）→ 明确失败而非静默错位渲染（2026-10-21 审查 #8）
+        if (data.v !== ANALYSIS_VERSION) throw new Error('unsupported analysis schema v' + data.v);
         if (!Array.isArray(data.rgb) || data.rgb.length !== 3
             || !data.rgb.every((a) => Array.isArray(a) && a.length === 256)
             || !Array.isArray(data.lum) || data.lum.length !== 256
@@ -475,13 +486,14 @@ export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, o
         return { histYs, lumYs, satYs, hueYs, palette, tone, sat: satHue, hue: satHue };
     }
 
-    /* 同 slug 在途请求去重：槽位随成功/失败释放（失败后展开路径可重试） */
-    function load(slug) {
-        const pending = inflight.get(slug);
+    /* 同 slug + 版本在途请求去重：槽位随成功/失败释放（失败后展开路径可重试） */
+    function load(slug, hash) {
+        const key = analysisKey(slug, hash);
+        const pending = inflight.get(key);
         if (pending) return pending;
-        const p = fetchAnalysis(slug);
-        inflight.set(slug, p);
-        const release = () => { if (inflight.get(slug) === p) inflight.delete(slug); };
+        const p = fetchAnalysis(slug, hash);
+        inflight.set(key, p);
+        const release = () => { if (inflight.get(key) === p) inflight.delete(key); };
         p.then(release, release);
         return p;
     }
@@ -493,7 +505,7 @@ export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, o
        onDone 完成回调（图表内容高度变化后由调用方刷新抽屉箭头状态）：仅当前
        代次结束时触发——代次不符的过期响应已被新一次 analyze 取代 */
     let analyzeSeq = 0;
-    async function analyze(slug) {
+    async function analyze(slug, hash) {
         if (!hasAnalysis) return;
         const mySeq = ++analyzeSeq;
         // 空 slug 守卫：无数据源的照片直接走失败语义（今日模板恒写 data-slug
@@ -509,7 +521,8 @@ export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, o
         // 双失败切图时提示卡是分析区唯一内容，提前隐藏会让整区塌缩为 0 高、
         // 上方 EXIF 随 is-fit 重判两段式跳动（2026-10-19 修复）；结果到达后
         // 成功路径收起、失败路径幂等置位（恒显示则零视觉变化），状态恒定无跳动
-        const cached = cache.get(slug);
+        const key = analysisKey(slug, hash);
+        const cached = cache.get(key);
         if (cached) {
             try {
                 // 上次失败的提示随成功结果一并收起（重试命中缓存同样走此路径）
@@ -519,7 +532,7 @@ export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, o
             } catch (err) {
                 // 坏缓存条目（此前版本可能已入缓存）：删除后走失败语义——下次
                 // 展开重新拉取，不再重复抛 unhandled rejection（2026-10-21 审查 #4）
-                cache.delete(slug);
+                cache.delete(key);
                 console.warn('[lightbox] cached analysis render failed, purged:', slug, err);
                 hideAll();
                 if (errorEl) errorEl.hidden = false;
@@ -528,17 +541,17 @@ export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, o
             return;
         }
         try {
-            const entry = await load(slug);
+            const entry = await load(slug, hash);
             if (mySeq !== analyzeSeq) {
                 // 已切到别的作品：结果入缓存但不渲染过期内容
-                cache.set(slug, entry);
+                cache.set(key, entry);
                 return;
             }
             if (errorEl) errorEl.hidden = true; // 拉取成功：收起上次的失败提示
             renderEntry(entry);
             // 幂等入缓存（预取可能已写入同一结果）；渲染异常由缓存命中路径
             // 自愈清除，坏数据不长期污染（2026-10-21 审查 #4）
-            cache.set(slug, entry);
+            cache.set(key, entry);
             if (onDone) onDone(true);
         } catch (err) {
             console.warn('[lightbox] analysis load failed:', slug, err);
@@ -554,11 +567,13 @@ export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, o
     /* 预取（不渲染）：灯箱打开/切图时由调用方触发，填充缓存供展开时直接渲染。
        失败仅告警、不入缓存——展开路径 analyze 会重试并走失败提示；空 slug /
        已缓存直接返回。 */
-    function prefetch(slug) {
+    function prefetch(slug, hash) {
         if (!hasAnalysis) return;
-        if (!slug || cache.has(slug)) return;
-        load(slug).then(
-            (entry) => cache.set(slug, entry),
+        if (!slug) return;
+        const key = analysisKey(slug, hash);
+        if (cache.has(key)) return;
+        load(slug, hash).then(
+            (entry) => cache.set(key, entry),
             (err) => console.warn('[lightbox] analysis prefetch failed:', slug, err)
         );
     }
