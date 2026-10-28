@@ -36,8 +36,10 @@
 {{ $camList = $camKept }}
 {{ $camMax := 0 }}{{ range $camList }}{{ if gt .count $camMax }}{{ $camMax = .count }}{{ end }}{{ end }}
 
-{{/* —— 焦距分佈（六檔，空檔隱藏） —— */}}
-{{ $focusLabels := slice (i18n "stats_focus_uw") (i18n "stats_focus_wide") (i18n "stats_focus_std") (i18n "stats_focus_mid") (i18n "stats_focus_tele") (i18n "stats_focus_ut") }}
+{{/* —— 焦距分佈（七档，≤16 保留、空档隐藏）——
+     标签为相邻档共用的边界；代码按 ≤28/≤50/≤85/≤120/≤200/>200 归档：
+     28/50/85/120/200 归前一档（如 28 归 17–28mm、200 归 120–200mm）。 */}}
+{{ $focusLabels := slice (i18n "stats_focus_uw") (i18n "stats_focus_wide") (i18n "stats_focus_std") (i18n "stats_focus_mid") (i18n "stats_focus_tele") (i18n "stats_focus_long") (i18n "stats_focus_ut") }}
 {{ $focusCount := dict }}
 {{ range $photos }}
     {{ with .focus }}
@@ -47,7 +49,8 @@
         {{ else if le $f 28 }}{{ $label = i18n "stats_focus_wide" }}
         {{ else if le $f 50 }}{{ $label = i18n "stats_focus_std" }}
         {{ else if le $f 85 }}{{ $label = i18n "stats_focus_mid" }}
-        {{ else if lt $f 200 }}{{ $label = i18n "stats_focus_tele" }}
+        {{ else if le $f 120 }}{{ $label = i18n "stats_focus_tele" }}
+        {{ else if le $f 200 }}{{ $label = i18n "stats_focus_long" }}
         {{ else }}{{ $label = i18n "stats_focus_ut" }}{{ end }}
         {{ $focusCount = merge $focusCount (dict $label (add (default 0 (index $focusCount $label)) 1)) }}
     {{ end }}
@@ -56,7 +59,7 @@
 {{ range $focusLabels }}{{ $c := default 0 (index $focusCount .) }}{{ if gt $c 0 }}{{ $focusRows = $focusRows | append (dict "name" . "count" $c) }}{{ end }}{{ end }}
 {{ $focusMax := 0 }}{{ range $focusRows }}{{ if gt .count $focusMax }}{{ $focusMax = .count }}{{ end }}{{ end }}
 
-{{/* —— 光圈分佈（標準光圈檔區間五檔，固定順序、空檔隱藏） —— */}}
+{{/* —— 光圈分佈（標準光圈檔區間五檔，開放端 >f/11；f/11 歸 f/8–11 檔；空檔隱藏） —— */}}
 {{ $aperLabels := slice (i18n "stats_aper_1") (i18n "stats_aper_2") (i18n "stats_aper_3") (i18n "stats_aper_4") (i18n "stats_aper_5") }}
 {{ $aperCount := dict }}
 {{ range $photos }}
@@ -75,7 +78,10 @@
 {{ range $aperLabels }}{{ $c := default 0 (index $aperCount .) }}{{ if gt $c 0 }}{{ $aperRows = $aperRows | append (dict "name" . "count" $c) }}{{ end }}{{ end }}
 {{ $aperMax := 0 }}{{ range $aperRows }}{{ if gt .count $aperMax }}{{ $aperMax = .count }}{{ end }}{{ end }}
 
-{{/* —— 快門天梯（1/N 與裸秒數統一歸檔，七檔） —— */}}
+{{/* —— 快門天梯（1/N 與裸秒數統一歸檔，七檔）——
+     标签为档位边界区间（与焦距/光圈/ISO 的相邻档重叠写法一致）；边界值归入较快的一档
+     （如 1/1000 归 ≤1/1000s、1/60 归 1/125–1/60s、1s 归 1/60–1s），聚合阈值见下方 den 判断。
+     2026-10-29：原中间四档用单值代表（1/250s 等）且 1/30s–1s 与 <1/60s 不符，统一改为区间 —— */}}
 {{ $shutterLabels := slice (i18n "stats_shutter_1") (i18n "stats_shutter_2") (i18n "stats_shutter_3") (i18n "stats_shutter_4") (i18n "stats_shutter_5") (i18n "stats_shutter_6") (i18n "stats_shutter_7") }}
 {{ $shutterCount := dict }}
 {{ range $photos }}
@@ -91,7 +97,8 @@
             {{ else }}{{ $label = i18n "stats_shutter_6" }}{{ end }}
         {{ else }}
             {{ $sec := int . }}
-            {{ if ge $sec 1 }}{{ $label = i18n "stats_shutter_7" }}
+            {{ if gt $sec 1 }}{{ $label = i18n "stats_shutter_7" }}
+            {{ else if ge $sec 1 }}{{ $label = i18n "stats_shutter_6" }}
             {{ else }}{{ warnf "photo.toml 快門值無法歸檔（已忽略）：%s" . }}{{ end }}
         {{ end }}
         {{ with $label }}
@@ -103,7 +110,7 @@
 {{ range $shutterLabels }}{{ $c := default 0 (index $shutterCount .) }}{{ if gt $c 0 }}{{ $shutterRows = $shutterRows | append (dict "name" . "count" $c) }}{{ end }}{{ end }}
 {{ $shutterMax := 0 }}{{ range $shutterRows }}{{ if gt .count $shutterMax }}{{ $shutterMax = .count }}{{ end }}{{ end }}
 
-{{/* —— 感光度分佈（整百合併六檔：邊界全為整百，空檔隱藏） —— */}}
+{{/* —— 感光度分佈（整百合併六檔：開放端 >1600，1600 歸 800–1600；空檔隱藏） —— */}}
 {{ $isoLabels := slice (i18n "stats_iso_1") (i18n "stats_iso_2") (i18n "stats_iso_3") (i18n "stats_iso_4") (i18n "stats_iso_5") (i18n "stats_iso_6") }}
 {{ $isoCount := dict }}
 {{ range $photos }}

@@ -313,16 +313,19 @@ other = "≤16mm"
 other = "17–28mm"
 
 [stats_focus_std]
-other = "29–50mm"
+other = "28–50mm"
 
 [stats_focus_mid]
-other = "51–85mm"
+other = "50–85mm"
 
 [stats_focus_tele]
-other = "86–199mm"
+other = "85–120mm"
+
+[stats_focus_long]
+other = "120–200mm"
 
 [stats_focus_ut]
-other = "≥200mm"
+other = ">200mm"
 
 [stats_aper_1]
 other = "≤f/4"
@@ -337,28 +340,28 @@ other = "f/5.6–8"
 other = "f/8–11"
 
 [stats_aper_5]
-other = "≥f/11"
+other = ">f/11"
 
 [stats_shutter_1]
 other = "≤1/1000s"
 
 [stats_shutter_2]
-other = "1/500s"
+other = "1/1000–1/500s"
 
 [stats_shutter_3]
-other = "1/250s"
+other = "1/500–1/250s"
 
 [stats_shutter_4]
-other = "1/125s"
+other = "1/250–1/125s"
 
 [stats_shutter_5]
-other = "1/60s"
+other = "1/125–1/60s"
 
 [stats_shutter_6]
-other = "1/30s–1s"
+other = "1/60–1s"
 
 [stats_shutter_7]
-other = "≥1s"
+other = ">1s"
 
 [stats_iso_1]
 other = "≤100"
@@ -376,4 +379,4 @@ other = "400–800"
 other = "800–1600"
 
 [stats_iso_6]
-other = "≥1600"
+other = ">1600"
