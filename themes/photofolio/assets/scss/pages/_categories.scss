@@ -32,6 +32,8 @@
     }
 }
 
+/* 换列断点与 utils.js 的 BP_DESKTOP_MIN(769)/BP_CARD_GRID_3COL_MIN(1001) 同源；
+   JS 内联列数优先，本段保留为无 JS 降级 */
 @media (min-width: 769px) {
     .grid { grid-template-columns: repeat(2, 1fr); }
 }

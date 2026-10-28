@@ -7,11 +7,13 @@
 //   这正是瀑布流照片稳定的根本原因
 // - 档位内随意缩放：列数不变，网格自然伸缩，无重排无动画
 
-import { prefersReducedMotion, FLIP_TRANSITION } from './utils.js';
+import {
+    prefersReducedMotion, FLIP_TRANSITION, BP_DESKTOP_MIN, BP_CARD_GRID_3COL_MIN,
+    FLIP_HYSTERESIS, clearFlipInline, recordFlipRects, resetFlipFinish, scheduleFlipFinish
+} from './utils.js';
 
-const HYSTERESIS = 20; // 档位滞回宽度（px）
-const TIER_1_TO_2 = 769;  // 1→2 列阈值（与汉堡断点一致）
-const TIER_2_TO_3 = 1001; // 2→3 列阈值
+const TIER_1_TO_2 = BP_DESKTOP_MIN;       // 1→2 列阈值（与汉堡断点单源）
+const TIER_2_TO_3 = BP_CARD_GRID_3COL_MIN; // 2→3 列阈值（与 _categories.scss 同源）
 
 function initialCols(width) {
     if (width >= TIER_2_TO_3) return 3;
@@ -21,13 +23,13 @@ function initialCols(width) {
 
 // 带滞回的目标列数：从当前档位出发，升档需越过阈值 + 滞回、降档需低于阈值 − 滞回
 function desiredCols(width, current) {
-    if (current === 1) return width >= TIER_1_TO_2 + HYSTERESIS ? 2 : 1;
+    if (current === 1) return width >= TIER_1_TO_2 + FLIP_HYSTERESIS ? 2 : 1;
     if (current === 2) {
-        if (width >= TIER_2_TO_3 + HYSTERESIS) return 3;
-        if (width < TIER_1_TO_2 - HYSTERESIS) return 1;
+        if (width >= TIER_2_TO_3 + FLIP_HYSTERESIS) return 3;
+        if (width < TIER_1_TO_2 - FLIP_HYSTERESIS) return 1;
         return 2;
     }
-    return width < TIER_2_TO_3 - HYSTERESIS ? 2 : 3;
+    return width < TIER_2_TO_3 - FLIP_HYSTERESIS ? 2 : 3;
 }
 
 const observed = new Map(); // grid → { ro, cols }
@@ -36,26 +38,11 @@ function applyCols(grid, cols) {
     grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
 }
 
-function recordRects(grid) {
-    return [...grid.querySelectorAll('.category-card')].map((c) => c.getBoundingClientRect());
-}
-
-function clearInline(cards) {
-    cards.forEach((card) => {
-        card.style.transition = '';
-        card.style.transform = '';
-        card.style.transformOrigin = '';
-    });
-}
-
 function flipColumns(grid, entry, nextCols) {
     // 作废旧收尾（槽位在 entry 上、按网格隔离）：快速二次翻转时旧定时器
     // 会把第二次动画仍在途的内联样式（transition/transform）拦腰清掉、
     // 卡片中途急停（2026-10-18）
-    if (entry.finishTimer) {
-        clearTimeout(entry.finishTimer);
-        entry.finishTimer = null;
-    }
+    resetFlipFinish(entry);
     // 兜底摘裁剪类（减弱动态路径不挂类、上轮动画中断残留一并清理）
     grid.classList.remove('is-flipping');
     const cards = [...grid.querySelectorAll('.category-card')];
@@ -65,13 +52,13 @@ function flipColumns(grid, entry, nextCols) {
         return;
     }
     // First：当前（旧列数）真实位置——先清掉上一轮动画残留并强制回流
-    clearInline(cards);
+    clearFlipInline(cards);
     void grid.offsetWidth;
-    const first = recordRects(grid);
+    const first = recordFlipRects(grid, '.category-card');
     // 改列数并强制回流：受控重排（与 masonry 在同一同步任务内完成量测）
     applyCols(grid, nextCols);
     void grid.offsetWidth;
-    const lasts = recordRects(grid);
+    const lasts = recordFlipRects(grid, '.category-card');
     // FLIP 窗口挂裁剪类：Invert 的 transform 溢出只在动画期间存在，
     // 裁剪随收尾定时器摘除（静态裁剪会把左右列卡片的悬停阴影切出硬边，
     // 见 _categories.scss .grid.is-flipping 注释）
@@ -98,11 +85,10 @@ function flipColumns(grid, entry, nextCols) {
     entry.cols = nextCols;
     // 动画结束后清理内联样式（恢复卡片自身的 hover 过渡）并摘裁剪类；
     // 定时器入槽位，二次翻转时在 flipColumns 入口作废旧收尾（见上）
-    entry.finishTimer = setTimeout(() => {
-        entry.finishTimer = null;
+    scheduleFlipFinish(entry, () => {
         grid.classList.remove('is-flipping');
-        clearInline(cards);
-    }, 400);
+        clearFlipInline(cards);
+    });
 }
 
 export function initCardsFlip() {

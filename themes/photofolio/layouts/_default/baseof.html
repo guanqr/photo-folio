@@ -21,18 +21,33 @@
         {{- block "main" . }}{{- end }}
     </main>
 
-    <!-- 同步隐藏超出首屏的作品，阻止浏览器提前加载隐藏图片 -->
+    {{/* 解析阶段先隐藏全部作品：卡片带 width/height，未隐藏会在 JS 接管前
+         以原始尺寸撑高页面；initMasonry 按行计划揭示首屏，其余保持隐藏。
+         bundle 加载/初始化失败兜底：4s 后仍未 masonry-ready 则放出全部卡片并
+         补 src（浏览器 loading=lazy 仍只取近视口图片）——避免整页空白（2026-10-28） */}}
     <script>
     (function() {
-        var trigger = document.getElementById('load-more-trigger');
-        if (!trigger) return;
         var grid = document.getElementById('masonry-grid');
         if (!grid) return;
-        var pageSize = parseInt(trigger.dataset.pageSize, 10) || 12;
         var items = grid.querySelectorAll('.masonry-item');
-        for (var i = pageSize; i < items.length; i++) {
+        if (!items.length) return;
+        for (var i = 0; i < items.length; i++) {
             items[i].classList.add('is-hidden');
         }
+        setTimeout(function() {
+            if (!grid.isConnected || grid.classList.contains('masonry-ready')) return;
+            grid.classList.add('is-fallback');
+            for (var j = 0; j < items.length; j++) {
+                items[j].classList.remove('is-hidden');
+                items[j].classList.add('is-revealed');
+                var img = items[j].querySelector('img.photo-img');
+                if (img && img.dataset.src) {
+                    img.src = img.dataset.src;
+                    img.removeAttribute('data-src');
+                    img.classList.add('is-loaded');
+                }
+            }
+        }, 4000);
     })();
     </script>
 

@@ -46,11 +46,7 @@
         </div>
         {{/* 与全部作品页完全一致的瀑布流（两端对齐行、行内等高，复用 masonry 引擎） */}}
         <div class="series-masonry">
-            <div class="masonry-grid" id="masonry-grid">
-                {{ range $ordered }}
-                    {{ partial "components/photo-card.html" (dict "photo" . "site" $.Site) }}
-                {{ end }}
-            </div>
+            {{ partial "components/masonry-grid.html" (dict "photos" $ordered "site" $.Site "infinite" false) }}
         </div>
     </div>
     {{ else }}

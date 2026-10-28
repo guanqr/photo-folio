@@ -8,9 +8,6 @@
 
 {{ $sortedPhotos := partialCached "utils/photo-sorted.html" . "desc" }}
 
-{{/* 瀑布流每批加载数量：hugo.toml [params].pageSize（JS 兜底默认 12 同源） */}}
-{{ $pageSize := site.Params.pageSize | default 12 | int }}
-
 {{/* 【修复 1】先获取真实的作品集合（包含系列内页），用于准确统计总数 */}}
 {{ $realPhotos := slice }}
 {{ if eq $sectionName "gallery" }}
@@ -59,7 +56,7 @@
     {{ end }}
     {{ $years = sort $years "value" "desc" }}
     {{ range $locNames }}
-        {{/* nil 安全：photo.toml 的 location 未登记进 locations.toml 时回退 urlize，不触发构建错误 */}}
+        {{/* nil 安全：photo.toml 的 location 未登记进 locations.toml 时回退 urlize（此处不报错；足迹内容适配器会统一校验并 errorf） */}}
         {{ $slug := . | urlize }}
         {{ with index $locReg . }}{{ $slug = .slug }}{{ end }}
         {{ $locList = $locList | append (dict "name" . "slug" $slug "count" (index $locCount .)) }}
@@ -134,24 +131,11 @@
             {{ end }}
         </div>
         {{ end }}
-        <div class="masonry-grid" id="masonry-grid">
-            <!-- 渲染全部作品（系列拆分为封面+内页） -->
-            {{ range $gridPhotos }}
-                {{ partial "components/photo-card.html" (dict "photo" . "site" $.Site) }}
-            {{ end }}
-        </div>
+        {{ partial "components/masonry-grid.html" (dict "photos" $gridPhotos "site" .Site "infinite" true) }}
 
         {{/* 筛选无结果提示：构建期预渲染、筛选 JS 切换 hidden（hidden 默认收起） */}}
         {{ if and (eq $sectionName "gallery") (or $filtersCfg.year $filtersCfg.location $filtersCfg.category $filtersCfg.scope) }}
         {{ partial "components/empty-state.html" (dict "id" "gallery-filter-empty" "hidden" true "titleKey" "filter_empty") }}
-        {{ end }}
-
-        {{ if gt (len $gridPhotos) $pageSize }}
-        {{/* role=status：加载与「已展示全部」完成文案经 live 区域通告读屏器 */}}
-        <div class="load-more-trigger" id="load-more-trigger" role="status" aria-live="polite" data-page-size="{{ $pageSize }}" data-finished-text="{{ i18n "no_more_photos" }}">
-            <div class="loading-spinner"></div>
-            <span class="load-more-text">{{ i18n "loading" }}</span>
-        </div>
         {{ end }}
 
         {{ else }}

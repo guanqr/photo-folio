@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """摄影作品批量处理 — 入口与调度"""
-import hashlib
 import sys
 import os
 
@@ -15,9 +14,10 @@ if sys.platform.startswith("win"):
 from PIL import Image
 
 from exif_utils import get_exif_info
+from hash_utils import file_md5
 from toml_utils import parse_toml_entries, write_toml
 from watermark import process_image
-from analysis import is_analysis_stale, analyze_and_store
+from analysis import is_analysis_stale, analyze_and_store, write_js_meta
 from oss_utils import create_bucket_from_config, sync_new_photos
 
 
@@ -30,19 +30,20 @@ def _get_image_size(path):
         return "", ""
 
 
-def _file_hash(path):
-    """输出图内容哈希（MD5 前 8 位）：站点用它给图片 URL 拼 ?v= 缓存版本号。
-    同名换图后 src 不变、字节变，URL 随哈希变化即可绕过浏览器/缓存旧图（2026-10-26）"""
-    h = hashlib.md5()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()[:8]
-
-
 def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
+
+    # 分析常量单源：Python 常量 -> 主题 JS module（灯箱 import）。
+    # 以 photo.toml 所在仓库根定位主题资源；路径不存在时告警不中断。
+    if toml_path:
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(toml_path)))
+        js_meta = os.path.join(repo_root, "themes", "photofolio", "assets", "js", "analysis-meta.js")
+        if os.path.isdir(os.path.dirname(js_meta)):
+            try:
+                write_js_meta(js_meta)
+            except OSError as e:
+                print(f"⚠️  分析常量写入失败：{e}")
 
     src_to_entry = {}
     if toml_path:
@@ -64,17 +65,28 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None):
 
         input_path = os.path.join(input_dir, f)
         output_path = os.path.join(output_dir, f)
+        src = f"/images/photos/{f}" if toml_path else None
+        entry = src_to_entry.get(src) if src else None
+        # 输入图内容哈希（全 32 位）：同名换图保留旧 mtime 也能发现（2026-10-28）
+        input_hash = file_md5(input_path) if toml_path else None
 
         needs_reprocess = True
         if os.path.exists(output_path):
-            if os.path.getmtime(output_path) >= os.path.getmtime(input_path):
-                needs_reprocess = False
+            if entry is not None:
+                # source_hash 缺失（旧数据）按变化处理；可先用
+                # backfill_source_hash.py 一次性回填以跳过首轮全量重处理
+                needs_reprocess = entry.get("source_hash") != input_hash
+            else:
+                # 无 toml 条目/无 toml 模式：退回 mtime 判定
+                needs_reprocess = os.path.getmtime(output_path) < os.path.getmtime(input_path)
 
         exif_info = get_exif_info(input_path)
 
+        processed_ok = not needs_reprocess
         if needs_reprocess:
             try:
                 process_image(input_path, output_path, exif_info)
+                processed_ok = True
                 photo_year = exif_info.get("time", "")[:4]
                 print(f"✅ 处理完成：{f}  {photo_year if photo_year else ''}")
                 processed += 1
@@ -84,13 +96,15 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None):
         else:
             skipped += 1
 
-        # 图像分析：独立于重处理判定的惰性步骤——结果缺失、算法版本过期或
-        # 结果早于源图修改（同名换图）才加载原图分析（首次接入自动全量回填、
-        # 日常增量只付新增照片的成本，不重传图片）；分析对象为处理链上加水印
-        # 前的原图口径（见 analysis.py）
+        # 只有处理成功/跳过（输出图与输入一致）才记录源哈希；失败保留旧值，下次重试
+        if entry is not None and processed_ok and os.path.exists(output_path):
+            entry["source_hash"] = input_hash
+
+        # 图像分析：源图变化成功重处理时强制重算；跳过时仅按结果缺失/算法版本
+        # 惰性判定；处理失败不重算（避免分析结果与旧输出图版本错配）
         if analysis_dir:
             analysis_path = os.path.join(analysis_dir, os.path.splitext(f)[0] + ".json")
-            if is_analysis_stale(analysis_path, os.path.getmtime(input_path)):
+            if (needs_reprocess and processed_ok) or (not needs_reprocess and is_analysis_stale(analysis_path)):
                 try:
                     # 分析 JSON 生成是独立于图像处理的耗时步骤（全分辨率逐像素）：
                     # 开始/完成各输出一行，避免处理完成后长时间静默、无法判断进度
@@ -102,13 +116,12 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None):
                     print(f"❌ 分析失败：{f}  {e}")
 
         if toml_path:
-            src = f"/images/photos/{f}"
             if src not in src_to_entry:
                 # 宽高取处理后输出图的尺寸；处理失败输出不存在时留空，下次运行由回填逻辑补上
                 width, height = "", ""
                 if os.path.exists(output_path):
                     width, height = _get_image_size(output_path)
-                src_to_entry[src] = {
+                new_entry = {
                     "src": src,
                     "alt": "",
                     "category": "",
@@ -124,6 +137,9 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None):
                     "camera": exif_info.get("camera", ""),
                     "lens": exif_info.get("lens", ""),
                 }
+                if processed_ok and os.path.exists(output_path):
+                    new_entry["source_hash"] = input_hash
+                src_to_entry[src] = new_entry
 
     if toml_path:
         # 每次按输出图实际字节重算哈希：处理/跳过/新条目统一覆盖，避免增量运行
@@ -132,7 +148,7 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None):
             img_path = os.path.join(output_dir, os.path.basename(src))
             if os.path.exists(img_path):
                 try:
-                    entry["hash"] = _file_hash(img_path)
+                    entry["hash"] = file_md5(img_path, 8)
                 except OSError as e:
                     print(f"⚠️  哈希计算失败：{os.path.basename(src)}  {e}")
         write_toml(toml_path, list(src_to_entry.values()))

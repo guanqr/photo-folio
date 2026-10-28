@@ -34,7 +34,7 @@ other = "切換主題"
 other = "返回頂部"
 
 [loading]
-other = "載入中..."
+other = "載入中"
 
 [no_more_photos]
 other = "已載入全部作品"

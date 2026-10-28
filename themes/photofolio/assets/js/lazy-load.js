@@ -1,3 +1,5 @@
+import { markImageLoaded } from './utils.js';
+
 let imageObserver;
 
 export function initLazyLoad() {
@@ -15,14 +17,7 @@ export function initLazyLoad() {
                     img.src = img.dataset.src;
                     img.removeAttribute('data-src');
                 }
-                if (img.complete) {
-                    img.classList.add('is-loaded');
-                } else {
-                    img.addEventListener('load', function onLoad() {
-                        img.removeEventListener('load', onLoad);
-                        img.classList.add('is-loaded');
-                    });
-                }
+                markImageLoaded(img);
                 imageObserver.unobserve(img);
             }
         });

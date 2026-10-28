@@ -46,8 +46,6 @@ defaultContentLanguage = "zh-hant"
     carouselCount = 6
     # 首页轮播自动播放间隔（毫秒；0 禁用自动播放，其余最小 1200——与淡入淡出时长一致）
     carouselInterval = 5000
-    # 瀑布流每批加载作品数量（全部作品页与足迹单页）
-    pageSize = 12
     logo = ""
     # 自定义底部版权文字 (支持 HTML 标签，如 <a> 链接)
     copyrightText = ""
@@ -88,6 +86,12 @@ defaultContentLanguage = "zh-hant"
         placeholder = 64       # 占位图宽度（px，按原比例）
         placeholderQuality = 30
         placeholderBlur = 3    # 模糊半径/标准差（OSS blur 的 r_/s_ 同值）
+
+    # 瀑布流加载策略（模板写入网格 data 属性，masonry/infinite-scroll 读取）
+    [params.grid]
+        initialFillExtra = 200   # 首屏在可见区域之外多留的高度（px）
+        initialFillMaxItems = 24 # 首屏单批最多揭示张数
+        triggerOffset = 40       # 网格底边越过视口底部的触发距离（px）
 
     # 全部作品页筛选栏：自行选择开启哪些筛选维度（true 开启 / false 关闭）
     [params.galleryFilters]

@@ -17,12 +17,13 @@
 
 {{/* 模糊占位图（LQIP）：OSS 端缩小并烘焙高斯模糊，主图未到前铺在卡片底层；
    固定 WebP（同尺寸体积小于 AVIF，且不触发 AVIF→WebP 兜底分支）；
-   无 CDN 时留空——避免把原图当占位图请求 */}}
+   无 CDN 或 src 为绝对 URL 时留空——img-url 对绝对 URL 原样返回，
+   占位图会退化为全尺寸原图（无 resize/blur/?v=），不如不请求 */}}
 {{ $blurWidth := $cfg.placeholder | default 64 }}
 {{ $blurQuality := $cfg.placeholderQuality | default 30 }}
 {{ $blurRadius := $cfg.placeholderBlur | default 3 }}
 {{ $blurUrl := "" }}
-{{ if $site.Params.imageCDN }}
+{{ if and $site.Params.imageCDN (not (strings.HasPrefix $src "http")) }}
     {{ $blurUrl = partial "utils/img-url-cached.html" (dict "src" $src "hash" ($photo.hash | default "") "site" $site "width" $blurWidth "mode" "lfit" "format" "webp" "quality" $blurQuality "blur" $blurRadius) }}
 {{ end }}
 

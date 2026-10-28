@@ -9,21 +9,20 @@
     口径写入文件头 {quant, data} 由渲染端还原）→ 删除连续重复点 → 输出静态 JSON。
 
 用法：python tools/map-data/generate-maps.py
+      python tools/map-data/generate-maps.py --names-only  # 只刷新 map-names.js
 输出（提交入库）：
   themes/photofolio/static/maps/land-10m.json   —— 世界陆地（Natural Earth 10m，精细海岸线）
   themes/photofolio/static/maps/provinces.json  —— 中国省级边界线（含港澳台，剔除十段线等非省界要素）
+  themes/photofolio/assets/js/map-names.js      —— 省/国名映射（由 map_names.py 生成，渲染端 import）
 """
 import json
 import math
 import os
+import sys
 import urllib.request
 from pathlib import Path
 
-# 海外国家映射：站点地点名（locations.toml）→ Natural Earth admin-0 英文名；
-# 新增海外拍摄地时在此加一行即可
-COUNTRY_NAMES = {
-    "日本": "Japan",
-}
+from map_names import COUNTRY_NAMES, PROVINCE_NAMES
 
 SOURCES = {
     "land": {
@@ -61,7 +60,33 @@ SOURCES = {
 ROOT = Path(__file__).resolve().parent.parent.parent  # tools/map-data/ → 仓库根
 VENDOR_DIR = Path(__file__).resolve().parent / "vendor"
 OUT_DIR = ROOT / "themes" / "photofolio" / "static" / "maps"
+JS_NAMES_PATH = ROOT / "themes" / "photofolio" / "assets" / "js" / "map-names.js"
 MIN_RING_POINTS = 4  # 量化后点数不足的碎屑环丢弃（微小岛礁等）
+
+
+def _js_object(name, mapping):
+    lines = [f"export const {name} = {{"]
+    for key, value in mapping.items():
+        lines.append(f"    {json.dumps(key, ensure_ascii=False)}: {json.dumps(value, ensure_ascii=False)},")
+    lines.append("};")
+    return "\n".join(lines)
+
+
+def write_js_names():
+    """生成渲染端 map-names.js（单一源头：map_names.py）；原子替换"""
+    content = (
+        "// 由 tools/map-data/generate-maps.py 从 map_names.py 生成，请勿手改。\n"
+        "// 单一源头：省/国名映射在 tools/map-data/map_names.py。\n"
+        + _js_object("PROVINCE_NAMES", PROVINCE_NAMES)
+        + "\n\n"
+        + _js_object("COUNTRY_NAMES", COUNTRY_NAMES)
+        + "\n"
+    )
+    JS_NAMES_PATH.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = JS_NAMES_PATH.with_name(JS_NAMES_PATH.name + ".tmp")
+    tmp_path.write_text(content, encoding="utf-8")
+    os.replace(tmp_path, JS_NAMES_PATH)
+    print(f"written: {JS_NAMES_PATH}")
 
 
 def keep_feature(f):
@@ -196,6 +221,9 @@ def encode_provinces(features, tolerance, quant):
 
 
 def main():
+    write_js_names()
+    if "--names-only" in sys.argv:
+        return
     for name, cfg in SOURCES.items():
         src = load_source(cfg)
         print(f"\n[{name}] source features: {len(src['features'])}")

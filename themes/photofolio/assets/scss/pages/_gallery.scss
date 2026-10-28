@@ -34,6 +34,21 @@
     gap: 0.5em;
 }
 
+/* bundle 加载/初始化失败兜底（baseof 4s 看门狗）：无 JS 精确排版时以自适配
+   网格铺开全部卡片，图片按容器宽度缩放；正常初始化后由 masonry 移除
+   is-fallback、恢复行布局（2026-10-28） */
+.masonry-grid.is-fallback {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(14em, 1fr));
+    gap: 0.5em;
+}
+
+.masonry-grid.is-fallback .photo-img {
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+}
+
 .masonry-row {
     display: flex;
     gap: 0.5em;
@@ -68,10 +83,10 @@
 /* 主图淡入（模糊到清晰）：.photo-wrapper 底层铺 OSS 端生成并烘焙模糊的低清
    占位图（--photo-blur，见 photo-card.html），主图加载完成（is-loaded）后以
    0.6s 透明度淡入覆盖。占位图模糊在服务端完成、浏览端不叠 CSS filter——
-   网格每批 12 张同时揭示，滤镜会让 GPU 为每张并发建模糊纹理（低端机掉帧）。
-   img.photo-img 与 base 中 img[loading="lazy"] 同权重（0,1,1），靠后导入的
-   gallery 覆盖；is-loaded 变体与 base 的 img[loading="lazy"].is-loaded 同特异性、
-   同样靠后，压掉 blur(0) 的常驻滤镜层 */
+   网格逐行揭示（每行 1–6 张同时进入），滤镜会让 GPU 为每张并发建模糊纹理
+   （低端机掉帧）。img.photo-img 与 base 中 img[loading="lazy"] 同权重（0,1,1），
+   靠后导入的 gallery 覆盖；is-loaded 变体与 base 的 img[loading="lazy"].is-loaded
+   同特异性、同样靠后，压掉 blur(0) 的常驻滤镜层 */
 img.photo-img {
     transition: opacity 0.6s ease;
     filter: none;
@@ -223,46 +238,7 @@ img.photo-img {
     }
 }
 
-/* ===== Load More Trigger (无限滚动触发器) ===== */
-.load-more-trigger {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 1em;
-    padding: 3em 0;
-    color: var(--color-text-muted);
-    font-size: var(--size-small);
-    transition: opacity var(--transition-fade);
-
-    .loading-spinner {
-        width: 2em;
-        height: 2em;
-        border: 0.2em solid var(--color-border);
-        border-top-color: var(--color-accent);
-        border-radius: 50%;
-        opacity: 0;
-        transition: opacity 0.3s;
-    }
-
-    &.is-loading {
-        .loading-spinner {
-            opacity: 1;
-            animation: spin 0.8s linear infinite;
-        }
-        .load-more-text { display: none; }
-    }
-
-    &.is-finished {
-        .loading-spinner { display: none; }
-    }
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* 隐藏超出首屏批次的作品卡片 */
+/* 隐藏未揭示 / 筛选未命中的作品卡片（解析期内联脚本与 initMasonry 共用） */
 .masonry-item.is-hidden {
     display: none !important;
 }

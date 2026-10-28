@@ -20,7 +20,7 @@
 
 输入：全分辨率 RGB 原图（管线处理链上、加水印之前的原图口径——分析对象
 是照片本身而非压缩产物，也不含水印文字污染）。
-输出：static/analysis/{文件名}.json（schema 版本由 v 字段标识，当前 v3——
+输出：static/analysis/{文件名}.json（schema 版本由 v 字段标识，当前 v4——
 算法改动时递增 ANALYSIS_VERSION，旧结果由 main.py 的惰性判定自动重算）。
 """
 import json
@@ -371,20 +371,41 @@ def analyze_image(img):
     }
 
 
-def is_analysis_stale(analysis_path, source_mtime=None):
-    """结果缺失、算法版本过期（JSON 的 v 与当前版本不符）、或结果早于源图
-    修改（同名换图：LR 重新导出不改名时 v 不变但内容已变）才需重算——
-    惰性判定零成本：读 2KB 文件的一个字段 + mtime 比较，首次接入时全部判
-    stale 自动回填（source_mtime 比较 2026-10-21 审查修复 #6）"""
+def is_analysis_stale(analysis_path):
+    """结果缺失或算法版本过期（JSON 的 v 与当前版本不符）才需重算。
+    源图内容变化由 main.py 的 source_hash 判定并强制本次重算——不再用
+    mtime 比较（同名换图保留旧 mtime 时会漏判，2026-10-28 B6b）"""
     if not os.path.exists(analysis_path):
-        return True
-    if source_mtime is not None and os.path.getmtime(analysis_path) < source_mtime:
         return True
     try:
         with open(analysis_path, "r", encoding="utf-8") as f:
             return json.load(f).get("v") != ANALYSIS_VERSION
     except Exception:
         return True
+
+
+def write_js_meta(js_path):
+    """把灯箱渲染共用的分析常量写成 ES module（单一源头：本文件）。
+    main.py 在管线启动时调用；原子替换，避免站点构建读到半截文件。"""
+    lines = [
+        "// 由 tools/photo-pipeline/src/analysis.py 生成，请勿手改。",
+        "// 单一源头：分析算法常量在 Python；灯箱渲染从本文件 import。",
+        f"export const ANALYSIS_VERSION = {ANALYSIS_VERSION};",
+        f"export const TONAL_ZONE_SHADOW = {TONAL_ZONE_SHADOW};",
+        f"export const TONAL_ZONE_HIGH = {TONAL_ZONE_HIGH};",
+        f"export const TONAL_CLIP_DARK = {TONAL_CLIP_DARK};",
+        f"export const TONAL_CLIP_BRIGHT = {TONAL_CLIP_BRIGHT};",
+        f"export const ZONE_COUNT = {ZONE_COUNT};",
+        f"export const HUE_SEG_COUNT = {HUE_SEG_COUNT};",
+        "",
+    ]
+    parent = os.path.dirname(js_path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    tmp_path = js_path + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+    os.replace(tmp_path, js_path)
 
 
 def analyze_and_store(input_path, analysis_path):

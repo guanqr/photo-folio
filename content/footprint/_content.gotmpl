@@ -1,14 +1,29 @@
 {{- /* 地点页内容适配器（Hugo 0.126+）：构建期从 data/locations.toml 生成 /footprint/<slug>/ 虚拟页面，
        不再需要手工维护 content/footprint/<slug>.md；新增地点只需在 locations.toml 加一条（name/slug/lat/lng）。 */}}
 {{- $seen := dict }}
+{{- $registered := dict }}
 {{- range hugo.Data.locations.location }}
     {{- if not .slug }}{{ errorf "locations.toml 地点 %q 缺少 slug（地点页 URL 必填）" .name }}{{ end }}
     {{- if isset $seen .slug }}{{ errorf "locations.toml slug %q 重复（地点页 URL 冲突）" .slug }}{{ end }}
     {{- $seen = merge $seen (dict .slug true) }}
+    {{- $registered = merge $registered (dict .name true) }}
     {{- $page := dict
         "kind" "page"
         "path" .slug
         "title" .name
     }}
     {{- $.AddPage $page }}
+{{- end }}
+{{- /* 照片地点必须登记：未登记时足迹聚合仍收录并回退 urlize URL，但地点页不存在
+       （时间线/地图点击 404）——构建期报错，宁可失败也不发布死链 */}}
+{{- $missing := slice }}
+{{- range hugo.Data.photo.photo }}
+    {{- with .location }}
+        {{- if and (not (isset $registered .)) (not (in $missing .)) }}
+            {{- $missing = $missing | append . }}
+        {{- end }}
+    {{- end }}
+{{- end }}
+{{- with $missing }}
+    {{- errorf "photo.toml 的地点 %s 未登记进 locations.toml（地点页无法生成，时间线/地图会链接到 404）" (delimit . "、") }}
 {{- end }}

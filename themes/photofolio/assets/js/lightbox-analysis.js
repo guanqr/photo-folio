@@ -15,6 +15,7 @@
  * 下始终清晰，不随像素密度发糊）与切图形变动画（新旧曲线线性插值）。
  */
 import { prefersReducedMotion, easeOutCubic } from './utils.js';
+import { ANALYSIS_VERSION, TONAL_ZONE_SHADOW, TONAL_ZONE_HIGH, TONAL_CLIP_DARK, TONAL_CLIP_BRIGHT, ZONE_COUNT, HUE_SEG_COUNT } from './analysis-meta.js';
 
 /* 合并直方图（纯曲线 + 影调注释，连续形变过渡）：
    R/G/B 三通道曲线 + 金色明度曲线——全部为无填充曲线（每通道 256 点
@@ -24,10 +25,8 @@ import { prefersReducedMotion, easeOutCubic } from './utils.js';
    连续变形而非跳变 */
 const HIST_H = 96;
 const HIST_SAMPLES = 256; // 每通道曲线采样点数：d 形变要求点数恒定
-// 分析 JSON schema 版本：与 tools/photo-pipeline/src/analysis.py 的
-// ANALYSIS_VERSION 对应、升级须两处同步。也作为分析 URL 版本参数的一部分
-// （见 fetchAnalysis）——算法升级后旧缓存 URL 自然失效
-const ANALYSIS_VERSION = 4;
+// 分析常量（schema 版本 / 影调区界 / 剪裁）由 analysis-meta.js 提供——
+// 该文件由管线 analysis.py 生成，站点不再手写第二份
 // 明度曲线金色：2026-10-18 收编为 CSS 变量 --dark-lum-curve（样式表设定
 // .hist-lum stroke 与图例 .is-lum 圆点背景），JS 不再持有颜色字面量
 
@@ -164,15 +163,8 @@ function paintHistogram(histYs, lumYs, histogramSvg, tone) {
     }
 }
 
-/* 影调注释几何常量（分区界与剪裁三角位置；判定阈值本体在管线 analysis.py） */
-const TONAL_ZONE_SHADOW = 85; // 18% 灰（118）向下精确 1 档曝光：0.18/2 经 sRGB
-                              // 标准传递函数（IEC 61966-2-1）编码 ≈ 85（原 √2 近似 83 为约 1.1 档）
-const TONAL_ZONE_HIGH = 162; // 18% 灰向上精确 1 档曝光：0.18×2 编码 ≈ 162
-const TONAL_CLIP_DARK = 5; // 陰影剪裁上界
-const TONAL_CLIP_BRIGHT = 250; // 高光剪裁下界
-
-const ZONE_COUNT = 11; // 區域系統 0–X
-const HUE_SEG_COUNT = 36; // 色相直方图 36 段（每段 10°）
+/* 影调注释几何常量与區域/色相分段数来自 analysis-meta.js（管线单一源头）；
+   判定阈值本体在 tools/photo-pipeline/src/analysis.py */
 
 /* 窗口 5 滑动平均（明度曲线平滑共用） */
 function smooth5(arr) {

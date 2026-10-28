@@ -16,6 +16,44 @@ export function prefersReducedMotion() {
 // 布局重排 FLIP 过渡（与足迹时间线列数切换一致；档位内冻结缩放保持实时无动画）
 export const FLIP_TRANSITION = 'transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
 
+// 换列 FLIP 滞回宽度（卡片网格/关于页统计共用）
+export const FLIP_HYSTERESIS = 20;
+
+// 卡片网格 2→3 列断点（与 _categories.scss @media min-width:1001 同源）
+export const BP_CARD_GRID_3COL_MIN = 1001;
+
+/* 换列 FLIP 共用工具：清内联属性、记录矩形、收尾定时器槽位（列数判定各组件保留） */
+export function clearFlipInline(elements, { size = false } = {}) {
+    elements.forEach((el) => {
+        el.style.transition = '';
+        el.style.transform = '';
+        el.style.transformOrigin = '';
+        if (size) {
+            el.style.width = '';
+            el.style.height = '';
+        }
+    });
+}
+
+export function recordFlipRects(root, selector) {
+    return [...root.querySelectorAll(selector)].map((el) => el.getBoundingClientRect());
+}
+
+export function resetFlipFinish(entry) {
+    if (entry.finishTimer) {
+        clearTimeout(entry.finishTimer);
+        entry.finishTimer = null;
+    }
+}
+
+export function scheduleFlipFinish(entry, finish, delay = 400) {
+    resetFlipFinish(entry);
+    entry.finishTimer = setTimeout(() => {
+        entry.finishTimer = null;
+        finish();
+    }, delay);
+}
+
 // easeOutCubic 缓动：图表的连续形变、数字滚动等 rAF 动画共用
 export function easeOutCubic(t) {
     return 1 - Math.pow(1 - t, 3);
@@ -25,6 +63,20 @@ export function easeOutCubic(t) {
 // 与瀑布流比例测量共用同一口径
 export function isImageReady(img) {
     return !!(img && img.complete && img.naturalWidth > 0);
+}
+
+// 统一图片加载完成标记：自然宽高 > 0 才算就绪（complete 对失败图片也为 true，
+// 仅看 complete 会把破图标成已加载）；未就绪挂一次性 load。_loadBound 防止
+// masonry 显式赋 src 与 lazy-load 交集观察重复挂监听。两处共用同一口径。
+export function markImageLoaded(img) {
+    if (!img) return;
+    if (isImageReady(img)) {
+        img.classList.add('is-loaded');
+        return;
+    }
+    if (img._loadBound) return;
+    img._loadBound = true;
+    img.addEventListener('load', () => img.classList.add('is-loaded'), { once: true });
 }
 
 // AVIF 兜底（游离 Image 用）：脱离 DOM 的 Image 的 error 不传播到 document

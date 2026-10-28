@@ -1,9 +1,9 @@
 /**
  * 全部作品页筛选栏：作品範圍 / 拍攝年份 / 拍攝地點 / 作品類型（胶囊按钮组，可组合，默认「全部」）
  *
- * - 筛选切换：以「下拉加载更多」分页模式重启网格——集合外隐藏、集合内重新分页
- *   （首批 12 张揭示，其余滚动加载；无限滚动照常工作，触发器保持可见）
- * - 无匹配时显示空状态文案并隐藏触发器
+ * - 筛选切换：按行计划重启网格——集合外隐藏、集合内重新计算行计划，
+ *   首屏按一屏行数揭示、其余滚动逐行揭示（无独立触发器）
+ * - 无匹配时显示空状态文案
  * - 筛选状态同步到 URL（参考站同款）：?s=范围 &y=年份 &l=地点 &c=类型（pushState——
  *   iOS 地址栏实时更新、历史入栈返回键可逐步回退筛选，默认值不写入；
  *   加载恢复/过期参数清理走 replaceState 不产生历史）；直接打开带参数的 URL
@@ -135,7 +135,7 @@ export function initGalleryFilter() {
             .sort((a, b) => a.order - b.order)
             .map(({ el }) => el);
 
-        // 空状态：筛选激活且无匹配时显示，并隐藏触发器。
+        // 空状态：筛选激活且无匹配时显示。
         // 卡片由模板预渲染（渲染条件与筛选栏相同——bar 存在则节点恒存在，
         // 无需 JS 兜底创建），这里只切换 hidden
         const emptyEl = document.getElementById('gallery-filter-empty');
@@ -143,17 +143,13 @@ export function initGalleryFilter() {
 
         // 网格重启（0.12s 淡出后真正执行）完成的回调里再初始化无限滚动：
         // 立即调用会读到重启前的旧待加载队列——上一轮筛选全部加载完时队列为空、
-        // 误判「已展示全部」摘除滚动监听，重启后剩余作品（如 13 张组合结果
-        // 首批揭示 12 张、剩 1 张待加载）永远加载不出来、触发器卡「载入中」；
-        // 回调时刻 _pendingItems 已是首批揭示后的准确状态，挂载/幂等早退均基于真实队列
+        // 误判为已加载完全部、摘除滚动监听，重启后剩余作品（如 13 张组合结果
+        // 首屏只揭示一屏行数、剩几张待加载）永远加载不出来；
+        // 回调时刻 _pendingItems 已是新集合的准确状态，挂载/幂等早退均基于真实队列
         restartMasonryGrid(grid, matching, () => initInfiniteScroll());
         // 头部计数随筛选结果滚动动画（数字包在 #photo-count-num 中）
         const countNum = document.getElementById('photo-count-num');
         if (countNum) animateCount(countNum, matching.length);
-        if (active && matching.length === 0) {
-            const trigger = document.getElementById('load-more-trigger');
-            if (trigger) trigger.style.display = 'none';
-        }
         syncUrl(replace);
     };
 

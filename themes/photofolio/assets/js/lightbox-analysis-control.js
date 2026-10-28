@@ -21,6 +21,12 @@ export function initLightboxAnalysisControl({
     trigger, wrap, caption, tagsEl, panelDetails, panel,
     reducedMotion, drawer, analyze
 }) {
+    // 四项分析区块全关时模板不渲染 trigger/wrap：调用方仍会构造控制器，
+    // 这里返回空实现，避免 getComputedStyle(null) 抛错中断 initLightbox
+    // 后续的 masonry / 无限滚动 / 筛选等页面模块
+    if (!trigger || !wrap) {
+        return { setOpen() {}, reset() {}, cancelCenterComp() {} };
+    }
     // 同窗居中下滑载体：标题/标签/详情区的 transform 过渡（合成器驱动、零
     // 逐帧重排——margin 版每帧整面板 reflow，与滚动/收缩叠加成重绘抖动、
     // 观感残影）；transform 会扩展祖先 scrollable overflow，交换时刻必须

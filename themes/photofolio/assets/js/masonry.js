@@ -8,20 +8,30 @@
  * - 超窄屏 ≤500px：每行 1–2 张——3:2 横构图独占一行（行高基准 H = 行宽 × 2/3），
  *   竖构图（宽高比 < 1）绝不落单，与相邻作品同行
  * - 最后一行不强行对齐：行高封顶 H、左侧对齐、右侧留白
- * - 逐行加载：按 DOM 顺序逐张淡入（60ms/张）
+ * - 按行揭示：初始化时按 width/height 预计算整组行计划，首屏填满视口，
+ *   之后每次滚动只揭示下一行——行内张数随宽度/宽高比变化（2–6 张），不固定张数
+ * - 逐张淡入（60ms/张），图片未到时由 LQIP 模糊底图占位
  * - resize：先按比例缩放作品（行成员冻结，不做排布调整），仅跨窄屏断点（带滞回）才重新分行——
- *   拖拽变宽/变窄时布局稳定，不会来回跳跃
+ *   拖拽变宽/变窄时布局稳定，不会来回跳跃；跨档位重排时把待显示区前几张
+ *   补进已显示边界行（否则右端会永久留缺口），旧照片走 FLIP、新补入的淡入
  */
 
-import { prefersReducedMotion, FLIP_TRANSITION, isImageReady } from './utils.js';
+import { prefersReducedMotion, FLIP_TRANSITION, markImageLoaded } from './utils.js';
 
 const DEFAULT_RATIO = 1.5; // 图片宽高比读取失败时的兜底值（3:2）
 const REVEAL_STAGGER = 60; // 逐张揭示间隔 ms
+const DEFAULT_INITIAL_FILL_EXTRA = 200; // 首屏在可见区域之外多留的高度（px），config 缺省值
+const DEFAULT_INITIAL_FILL_MAX_ITEMS = 24; // 首屏单批最多揭示张数，config 缺省值
+const DEEP_LINK_ROWS_PER_CHUNK = 4; // ?p= 深链每次揭示行数，批间让出主线程
 
 let resizeBound = false;
 let gridObserver = null; // 每页只有一个网格；SPA 换页时断开旧观察，避免持有已脱离文档的整棵网格子树
+let restartFadeTimer = null;
+let restartFadeFinish = null; // 未执行筛选重启的收尾句柄（清 promise + 释放等待者）
 
 export function initMasonry(skipInitialReveal = false) {
+    // SPA 换页：上一页尚未执行的筛选重启作废（避免旧网格继续赋 src/启动监听）
+    cancelPendingRestart();
     const grid = document.getElementById('masonry-grid');
     // 换页先断开旧观察（与 lazy-load 同款：清理先于一切早退——跳转无网格页
     // （about/足迹列表/首页/404）时早退将不可达，观察器会持续持有已脱离
@@ -39,26 +49,25 @@ export function initMasonry(skipInitialReveal = false) {
     // 否则未揭示的作品会以原始尺寸占据版面，造成大片空白、已排好的行被顶到底部）
     allItems.forEach((item) => item.classList.add('is-hidden'));
 
-    const trigger = document.getElementById('load-more-trigger');
-    // 无触发器（系列详情页、作品数不足一批的页面）：一次性全部揭示——
-    // 若沿用固定 12，且模板按 pageSize 判定不渲染触发器时，13..pageSize 张会被永久隐藏
-    const pageSize = trigger ? (parseInt(trigger.dataset.pageSize, 10) || 12) : allItems.length;
+    // 增量加载由网格上的 data-infinite-scroll 显式标记（唯一写入点
+    // components/masonry-grid.html）：它同时决定首屏填充粒度与是否逐行揭示
+    // （二者同属增量加载策略）；系列详情页不加，一次性揭示全部行
+    grid._hasInfinite = grid.hasAttribute('data-infinite-scroll');
 
-    // 记忆触发器原始 HTML（筛选模式隐藏触发器，重置筛选时恢复）
-    if (trigger && !grid._triggerHtml) grid._triggerHtml = trigger.innerHTML;
-
-    grid._pendingItems = [...allItems];
+    grid._planItems = allItems; // 行计划覆盖的作品集合（筛选重启时替换为筛选结果）
+    grid._pendingItems = [...allItems]; // 尚未揭示的作品（既有模块读取此队列）
     grid._shownItems = [];
-    grid._ratios = new Map();
+    grid._ratios = new Map(allItems.map((item) => [item, ratioOf(grid, item)]));
     grid._cardBorder = 0;
     // 行基准档位（0=超窄屏 ≤500、1=窄屏 501-768 与汉堡断点一致、2=中屏 769-1000、3=宽屏 >1000）；
     // 带滞回，防止断点附近来回切换；按当前宽度初始化
     grid._tier = null;
     updateTier(grid);
-    grid._gridGen = 0; // 网格状态代次：筛选重启递增、作废在途揭示批次的布局与淡入计时器（见 revealBatch）
-    grid._pageSize = pageSize; // 深层 ?p= 恢复按常规分页大小连续揭示（见 revealUpToItem）
-    grid._rows = null; // 当前行划分（以全部已显示作品为坐标系；resize 时冻结复用，仅按比例缩放）
+    grid._gridGen = 0; // 网格状态代次：筛选重启递增、作废在途揭示的布局与淡入计时器（见 revealPlanRows）
+    grid._revealedRows = 0; // 已揭示的计划行数（已揭示集合恒为 _planItems 的前缀）
+    grid._plan = buildPlan(grid); // 整组行计划（按当前宽度/档位一次算好；已显示行即其前缀）
 
+    grid.classList.remove('is-fallback'); // 看门狗兜底后 bundle 迟到的自愈路径：恢复正常行布局
     grid.classList.add('masonry-ready');
 
     // 观察网格自身尺寸变化（滚动条出现/消失等），自动重排行布局
@@ -67,214 +76,272 @@ export function initMasonry(skipInitialReveal = false) {
         gridObserver.observe(grid);
     }
 
-    // 带筛选参数的 URL 刷新时跳过首屏全量揭示，交由筛选恢复流程统一揭示——
-    // 否则全量首屏作品会先闪现、再被筛选重启隐藏，出现「显示→消失→再显示」的跳变
+    // 带筛选参数的 URL 刷新时跳过首屏揭示，交由筛选恢复流程统一揭示——
+    // 否则首屏作品会先闪现、再被筛选重启隐藏，出现「显示→消失→再显示」的跳变
     if (!skipInitialReveal) {
-        revealBatch(grid, pageSize);
+        revealInitialRows(grid);
     }
 }
 
-/**
- * 揭示下一批作品：测量宽高比 → 计算行布局 → 逐张淡入
- * 返回 Promise，在全部揭示处理完成后 resolve（供无限滚动等待）。
- *
- * 批次串行化：布局读写 grid._rows/_shownItems 的当时状态，并发的 revealBatch
- * （筛选恢复 + ?p= 深层恢复 + 无限滚动）交错执行会互相污染尾行合并与行划分——
- * 链到上一批完成后再执行本批；批次成员在调用瞬间确定（同步 splice），
- * 串行的只是布局执行顺序。
- * instant（深层 ?p= 恢复用）：跳过逐张淡入与转圈，全批即时揭示。
- */
-export function revealBatch(grid, count, instant = false) {
-    const batch = grid._pendingItems.splice(0, Math.min(count, grid._pendingItems.length));
-    if (!batch.length) return Promise.resolve();
+/* ===== 行计划与揭示 ===== */
 
-    const gen = grid._gridGen || 0; // 调用瞬间的代次：筛选重启会递增、作废本批
+/* 每张作品的宽高比：优先取 photo.toml 回填的 width/height 属性（构建期写入，
+   管线保证恒有）——整组行计划在初始化时一次算好，不再等待图片测量。
+   属性缺失（数据地雷）不阻塞揭示：按 3:2 兜底并挂一次 load 校正——图片
+   就绪后以自然宽高重算比例并重建已显示行，不会整会话按 3:2 裁切竖构图
+   （2026-10-28） */
+function ratioOf(grid, item) {
+    const img = item._img || (item._img = item.querySelector('img.photo-img'));
+    if (!img) return DEFAULT_RATIO;
+    const w = parseFloat(img.getAttribute('width'));
+    const h = parseFloat(img.getAttribute('height'));
+    if (w > 0 && h > 0) return w / h;
 
-    const run = async () => {
-        if ((grid._gridGen || 0) !== gen) return; // 筛选重启已重置网格状态：放弃本批，防旧批次污染新集合
-
-        grid._shownItems.push(...batch);
-
-        // 解除隐藏并显式设置图片 src（不依赖浏览器原生懒加载——
-        // SPA 注入的 img 在某些浏览器中懒加载可能失效导致首跳空白；按批控制加载是确定性的）。
-        // is-loaded 驱动主图淡入（底下的模糊占位图见 photo-card 的 --photo-blur）：
-        // 缓存命中立即标记，否则挂一次性 load；先判就绪再挂监听，避免漏掉已完成的图片。
-        // AVIF→webp 兜底换源后触发的仍是首个 load，标记不会丢
-        batch.forEach((item) => {
-            item.classList.remove('is-hidden');
-            const img = item.querySelector('img.photo-img');
-            if (!img) return;
-            if (img.dataset.src && !img.src) {
-                img.src = img.dataset.src;
-                img.removeAttribute('data-src');
-            }
-            if (isImageReady(img)) {
-                img.classList.add('is-loaded');
-            } else if (!img._loadBound) {
-                img._loadBound = true;
-                img.addEventListener('load', () => img.classList.add('is-loaded'), { once: true });
-            }
-        });
-
-        // 等待测量，最多 800ms：
-        // 快速路径（缓存命中等）直接用真实比例排布揭示——动画连贯无校正；
-        // 慢速路径（如首次跳转 CDN 未缓存）先按兜底比例揭示让作品马上可见，
-        // 测量完成后等揭示动画全部结束再做校正，避免动画中途跳变
-        const measurePromise = measureRatios(grid, batch);
-        const measured = await Promise.race([
-            measurePromise.then(() => true),
-            new Promise((resolve) => setTimeout(() => resolve(false), 800))
-        ]);
-        if ((grid._gridGen || 0) !== gen) return; // 测量窗口内筛选重启：复检放弃——继续执行会向新集合的 _rows/_shownItems 写入幽灵记录（旧批次作品随行容器在下一次 rebuildAll 被整棵移除、永久丢失）
-
-        layoutRows(grid, batch);
-
-        if (instant || prefersReducedMotion()) {
-            // 减弱动态：逐张错峰同款直切（60ms/张的 setTimeout 不受 CSS 兜底影响）
-            batch.forEach((item) => item.classList.add('is-revealed'));
-        } else {
-            await new Promise((resolve) => {
-                batch.forEach((item, i) => {
-                    setTimeout(() => {
-                        if ((grid._gridGen || 0) !== gen) return; // 筛选重启后旧批次的淡入计时器作废（防提前揭示新队列作品）
-                        requestAnimationFrame(() => {
-                            requestAnimationFrame(() => item.classList.add('is-revealed'));
-                        });
-                    }, i * REVEAL_STAGGER);
-                });
-                setTimeout(resolve, batch.length * REVEAL_STAGGER + 50);
-            });
-        }
-
-        if (!measured) {
-            // 慢速路径校正：等揭示动画结束后用真实尺寸重排（仅尾部行变化）
-            measurePromise.then(async () => {
-                await new Promise((resolve) => setTimeout(resolve, 400));
-                if ((grid._gridGen || 0) !== gen) return; // 筛选重启后放弃校正
-                if (!grid._pendingItems || grid._shownItems.length === 0) return;
-                rebuildAll(grid, true);
-            });
-        }
-    };
-
-    const chained = (grid._layoutChain || Promise.resolve()).then(run);
-    grid._layoutChain = chained.catch(() => {});
-    return chained;
+    warnMissingDimensions(img);
+    // 已加载（如筛选重启时）直接用真实比例，无需等下一次 load
+    const loadedRatio = naturalRatio(img);
+    if (loadedRatio) return loadedRatio;
+    watchRatioOnLoad(grid, item, img);
+    return DEFAULT_RATIO;
 }
 
-/* 深层 ?p= 恢复：按常规分页大小连续揭示批次，直到目标作品进入已显示集合
-   （instant、无逐张动画无转圈）——目标随批自然就位，行划分与常规揭示同规则；
-   被筛选隐藏的目标不在待加载队列中，函数直接返回（调用方静默放弃） */
-export async function revealUpToItem(grid, item) {
-    if (!grid || !item || !grid._pendingItems || !grid._pendingItems.includes(item)) return;
-    const size = grid._pageSize || 12;
-    while (grid._pendingItems.length > 0 && grid._pendingItems.includes(item)) {
-        await revealBatch(grid, size, true);
-    }
+function naturalRatio(img) {
+    const w = img.naturalWidth;
+    const h = img.naturalHeight;
+    return (w > 0 && h > 0) ? w / h : 0;
 }
 
-/* 测量图片宽高比：直接等待真实 <img> 加载完成，读取 naturalWidth / naturalHeight。
-   不再使用独立 Image() 探针——每张图只请求一次 CDN；
-   单张超时（4s）按兜底比例处理，保证揭示绝不会因个别图片卡住而空白 */
-const MEASURE_TIMEOUT = 4000;
-
-function measureRatios(grid, items) {
-    return Promise.all(items.map((item) => {
-        const img = item.querySelector('img.photo-img');
-        if (!img || !img.src) return Promise.resolve();
-        return new Promise((resolve) => {
-            let settled = false;
-            let timer = null;
-            const settle = (ratio) => {
-                if (settled) return;
-                settled = true;
-                clearTimeout(timer);
-                grid._ratios.set(item, ratio);
-                resolve();
-            };
-            // 显式宽高属性（photo.toml 回填的真实像素尺寸）立即给出精确比例：
-            // 竖构图不再先按兜底横构图比例（1.5）排布、等图片加载完再校正闪现
-            const wAttr = parseFloat(img.getAttribute('width'));
-            const hAttr = parseFloat(img.getAttribute('height'));
-            if (wAttr > 0 && hAttr > 0) {
-                settle(wAttr / hAttr);
-                return;
-            }
-            // 无属性（新作品未回填）时沿用加载测量 + 超时兜底路径。
-            // 超时不写缓存：兜底比例只影响本次排布（applyRows 对缺失条目同样
-            // 回退 DEFAULT_RATIO）；不置 settled——图片之后就绪/失败仍经
-            // load/error 写入真实比例、供慢速校正重排使用（此前把错误比例
-            // 永久写入 _ratios，后续 resize 重排与尾行合并永远沿用）
-            timer = setTimeout(() => {
-                clearTimeout(timer);
-                resolve();
-            }, MEASURE_TIMEOUT);
-            if (isImageReady(img)) {
-                settle(img.naturalWidth / img.naturalHeight);
-                return;
-            }
-            img.addEventListener('load', () => {
-                settle(img.naturalWidth / img.naturalHeight || DEFAULT_RATIO);
-            }, { once: true }); // settle 即摘除：settled 守卫下重复触发已无效，监听无再留意义
-            // error 不写缓存也不结束测量（不挂监听）：AVIF→webp 重试成功后的
-            // load 仍可写入真实比例（重试的 load 即首个 load、once 摘除前照常
-            // settle）；失败由 4s 超时兜底结束（与超时同款：兜底比例只影响本次
-            // 排布、不入缓存）——此前 NaN||1.5 经 settle 永久写入 _ratios、
-            // 竖构图整会话按错误比例排布（2026-10-18）
-        });
-    }));
+function warnMissingDimensions(img) {
+    if (img._ratioWarned) return;
+    img._ratioWarned = true;
+    console.warn('[masonry] width/height missing, using 3:2 until load:',
+        img.getAttribute('data-src') || img.src || '(pending)');
 }
 
-/* 揭示新批次时：上一批未完成的尾行与本批作品合并，重新组成完整行——
-   尾行作品的最终大小/裁切由补齐后的行内容决定（其余已显示的行保持不动）；
-   为每个新行创建显式行容器（引擎行 = 视觉行），行起点换算到全部已显示作品的坐标系保存 */
-function layoutRows(grid, batch) {
+/* 缺尺寸图片加载完成：把自然比例写回 _ratios 并重建行计划——
+   行成员冻结重排依赖计划行的 sum，比例变化必须重算整组计划才能生效 */
+function watchRatioOnLoad(grid, item, img) {
+    if (img._ratioWatched) return;
+    img._ratioWatched = true;
+    img.addEventListener('load', () => {
+        if (!grid.isConnected || !grid._ratios) return;
+        const ratio = naturalRatio(img);
+        const old = grid._ratios.get(item);
+        if (!ratio || (old && Math.abs(old - ratio) < 0.001)) return;
+        grid._ratios.set(item, ratio);
+        rebuildPlanShown(grid, false);
+    }, { once: true });
+}
+
+/* 按当前宽度/档位为整组（筛选后）作品预计算行计划：
+   行 = 一段连续作品，start/count/sum 以 _planItems 为坐标系；
+   只有全局最后一行是 ragged（左对齐留白），其余行都恰好铺满 */
+function buildPlan(grid) {
     const W = getGridWidth(grid);
     const gap = getRowGap(grid);
     const border2 = getCardBorder(grid);
     updateTier(grid);
     const H = getTargetRowHeight(W, gap, border2, grid._tier);
+    const ratios = grid._planItems.map((item) => grid._ratios.get(item) || DEFAULT_RATIO);
+    const plan = partitionRows(ratios, W, H, gap, border2, true, grid._tier);
+    grid._lastW = W;
+    return plan;
+}
 
-    // 合并上一批的未完成尾行（若有）与本批作品；
-    // 尾行起点由「上一批最后一行是 ragged（左对齐尾行）」推导：
-    // 有新批次到达时，ragged 尾行必为待补齐的未完成尾行（真正的最后一行不会有后续批次）
-    const lastRow = grid._rows && grid._rows.length > 0 ? grid._rows[grid._rows.length - 1] : null;
-    const incompleteStart = lastRow && lastRow.ragged ? lastRow.start : -1;
-    let combined = batch;
-    let baseStart = grid._shownItems.length - batch.length;
-    if (incompleteStart >= 0) {
-        const tailItems = grid._shownItems.slice(incompleteStart, baseStart);
-        combined = tailItems.concat(batch);
-        baseStart = incompleteStart;
-        // 移除旧尾行的行容器与行记录，重建
-        const rowEls = grid.querySelectorAll('.masonry-row');
-        rowEls[rowEls.length - 1].remove();
-        grid._rows.pop();
-    }
+/* 行在给定宽度下的高度：普通行恰好铺满；真正的最后一行封顶 H、左对齐 */
+function planRowHeight(row, W, gap, border2, H) {
+    let h = rowHeight(W, row.count, row.sum, gap, border2);
+    if (row.ragged) h = Math.min(h, H);
+    return h;
+}
 
-    const combinedRatios = combined.map((item) => grid._ratios.get(item) || DEFAULT_RATIO);
-    const rows = partitionRows(combinedRatios, W, H, gap, border2, true, grid._tier);
-
-    // 创建行容器并把作品移入（行容器保证每行是独立 flex 行，绝不与相邻行合并；
-    // 行容器插入在未揭示作品之前，保持 DOM 顺序 = 展示顺序）
+/* 行容器渲染唯一实现：按计划行建 .masonry-row、放入 items、applyRows 定尺寸。
+   revealPlanRowsNow 与 rebuildPlanShown 共用；replace=true 时先移除旧行容器。 */
+function renderRows(grid, items, rows, W, gap, border2, H, replace = false) {
+    if (replace) grid.querySelectorAll('.masonry-row').forEach((el) => el.remove());
+    const localRows = [];
+    let localStart = 0;
     rows.forEach((row) => {
+        const h = planRowHeight(row, W, gap, border2, H);
+        localRows.push({ start: localStart, count: row.count, h, ragged: row.ragged });
         const rowEl = document.createElement('div');
         rowEl.className = 'masonry-row';
-        for (let k = 0; k < row.count; k++) {
-            rowEl.appendChild(combined[row.start + k]);
-        }
+        for (let k = 0; k < row.count; k++) rowEl.appendChild(items[localStart + k]);
         appendRowEl(grid, rowEl);
+        localStart += row.count;
     });
+    const ratios = items.map((item) => grid._ratios.get(item) || DEFAULT_RATIO);
+    applyRows(items, localRows, ratios, W, gap, border2);
+}
 
-    const globalRows = rows.map((row) => ({
-        start: row.start + baseStart,
-        count: row.count,
-        h: row.h,
-        ragged: row.ragged
-    }));
-    grid._rows = (grid._rows || []).concat(globalRows);
+/* 读取网格上的整数加载策略配置（[params.grid] 经模板写入 data 属性）：
+   缺失/非法时用 JS 缺省值 */
+function gridNumber(grid, key, fallback) {
+    const value = parseInt(grid.dataset[key], 10);
+    return Number.isFinite(value) ? value : fallback;
+}
 
-    applyRows(combined, rows, combinedRatios, W, gap, border2);
+/* 首屏揭示行数：按累计行高填到「当前可见区域 + initialFillExtra」（默认 200px）——
+   行内张数随宽度变化，不依赖照片总数；无 data-infinite-scroll 的页面由
+   revealInitialRows 一次揭示全部行。可见区域从网格顶部算起（页头/筛选栏
+   占掉的高度不计），避免首屏一次加载过多图片 */
+function initialRowCount(grid) {
+    const W = getGridWidth(grid);
+    const gap = getRowGap(grid);
+    const border2 = getCardBorder(grid);
+    const H = getTargetRowHeight(W, gap, border2, grid._tier);
+    const visible = Math.max(240, (window.innerHeight || 800) - Math.max(0, grid.getBoundingClientRect().top));
+    // 加载策略由 hugo.toml [params.grid] 经模板 data 属性注入，JS 常量仅作缺省回退
+    const target = visible + gridNumber(grid, 'initialFillExtra', DEFAULT_INITIAL_FILL_EXTRA);
+    const maxItems = gridNumber(grid, 'initialFillMaxItems', DEFAULT_INITIAL_FILL_MAX_ITEMS);
+    let acc = 0;
+    let n = 0;
+    let itemCount = 0;
+    while (n < grid._plan.length && acc < target) {
+        const row = grid._plan[n];
+        // 上限只约束首屏单批；至少保留一行。超出部分由无限滚动接着逐行补齐
+        if (n > 0 && itemCount + row.count > maxItems) break;
+        acc += planRowHeight(row, W, gap, border2, H) + gap;
+        itemCount += row.count;
+        n++;
+    }
+    return Math.max(1, n);
+}
+
+/* 解除隐藏、赋 src 并绑定主图淡入标记（底下的模糊占位图见 photo-card 的 --photo-blur）：
+   缓存命中立即标记，否则挂一次性 load；先判就绪再挂监听，避免漏掉已完成的图片。
+   AVIF→webp 兜底换源后触发的仍是首个 load，标记不会丢 */
+function prepareItemImage(item) {
+    item.classList.remove('is-hidden');
+    const img = item._img || (item._img = item.querySelector('img.photo-img'));
+    if (!img) return;
+    if (img.dataset.src && !img.src) {
+        img.src = img.dataset.src;
+        img.removeAttribute('data-src');
+    }
+    markImageLoaded(img);
+}
+
+/* 布局任务串行化：筛选恢复 / ?p= 恢复 / 无限滚动可能并发入队，
+   交错执行会互相污染行容器与 _shownItems 快照——
+   链到上一任务完成后再执行；gen 在入队瞬间捕获，筛选重启后旧任务直接放弃 */
+function queueLayout(grid, gen, fn) {
+    const run = () => {
+        if ((grid._gridGen || 0) !== gen) return Promise.resolve();
+        return fn();
+    };
+    const chained = (grid._layoutChain || Promise.resolve()).then(run);
+    grid._layoutChain = chained.catch(() => {});
+    return chained;
+}
+
+/* 揭示接下来的 rowCount 行：整行解除隐藏、赋 src、建行容器、逐张淡入。
+   已揭示集合恒为 _planItems 的前缀，故计划行的 start 可直接用于 _shownItems。
+   instant（?p= 恢复）：跳过淡入直接显示。 */
+async function revealPlanRowsNow(grid, rowCount, instant, gen) {
+    if ((grid._gridGen || 0) !== gen) return;
+    const startRow = grid._revealedRows;
+    const rows = grid._plan.slice(startRow, startRow + rowCount);
+    if (!rows.length) return;
+
+    const items = [];
+    rows.forEach((row) => {
+        for (let k = 0; k < row.count; k++) items.push(grid._planItems[row.start + k]);
+    });
+    grid._pendingItems.splice(0, items.length);
+    grid._shownItems.push(...items);
+    grid._revealedRows += rows.length;
+    items.forEach(prepareItemImage);
+
+    const W = getGridWidth(grid);
+    const gap = getRowGap(grid);
+    const border2 = getCardBorder(grid);
+    const H = getTargetRowHeight(W, gap, border2, grid._tier);
+    renderRows(grid, items, rows, W, gap, border2, H);
+
+    if (instant || prefersReducedMotion()) {
+        // 减弱动态：逐张错峰同款直切（60ms/张的 setTimeout 不受 CSS 兜底影响）
+        items.forEach((item) => item.classList.add('is-revealed'));
+        return;
+    }
+    await new Promise((resolve) => {
+        let settled = false;
+        const finish = () => {
+            if (settled) return;
+            settled = true;
+            if (grid._revealAbort === finish) grid._revealAbort = null;
+            resolve();
+        };
+        // 筛选重启会调用 grid._revealAbort：旧批次不再让布局链等满逐张计时器；
+        // 计时器本身仍按 gen 作废，不会给新集合提前加 is-revealed
+        grid._revealAbort = finish;
+        items.forEach((item, i) => {
+            setTimeout(() => {
+                if ((grid._gridGen || 0) !== gen) return; // 筛选重启后旧行的淡入计时器作废（防提前揭示新队列作品）
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => item.classList.add('is-revealed'));
+                });
+            }, i * REVEAL_STAGGER);
+        });
+        setTimeout(finish, items.length * REVEAL_STAGGER + 50);
+    });
+}
+
+/* 揭示接下来的 rowCount 行（公开入口：无限滚动 / 筛选 / 深链共用） */
+export function revealPlanRows(grid, rowCount, instant = false) {
+    if (!grid || !grid._plan) return Promise.resolve();
+    const gen = grid._gridGen || 0;
+    return queueLayout(grid, gen, () => revealPlanRowsNow(grid, rowCount, instant, gen));
+}
+
+/* 首屏揭示：需要无限滚动的网格填满视口 + 预备高度，否则（系列详情页等）一次揭示全部行 */
+function revealInitialRows(grid) {
+    const n = grid._hasInfinite ? initialRowCount(grid) : grid._plan.length;
+    if (n > 0) revealPlanRows(grid, n);
+}
+
+/* 深层 ?p= 恢复：揭示行直到目标作品所在行进入已显示集合（instant）。
+   目标可能在被筛选隐藏的集合里（不在行计划中），此时直接返回（调用方静默放弃）。
+   执行时等待当前筛选重启稳定；连续重启导致 gen 变化时重试（最多 3 次），
+   不在旧集合上继续揭示 */
+export async function revealUpToItem(grid, item) {
+    if (!grid || !item || !grid._planItems) return;
+    for (let attempt = 0; attempt < 3; attempt++) {
+        // 等筛选重启稳定；等待期间若又开始新重启，循环继续等最新的 promise
+        while (grid._restartPromise) {
+            await grid._restartPromise;
+            if (grid !== document.getElementById('masonry-grid')) return;
+        }
+        if (grid !== document.getElementById('masonry-grid')) return;
+        if (!grid._planItems.includes(item)) return; // 已被筛选隐藏
+
+        const gen = grid._gridGen || 0;
+        let settled = false;
+        await queueLayout(grid, gen, async () => {
+            if ((grid._gridGen || 0) !== gen) return;
+            const idx = grid._planItems.indexOf(item);
+            if (idx < 0) { settled = true; return; } // 已筛掉：不再重试
+            let rowIdx = -1;
+            for (let i = 0; i < grid._plan.length; i++) {
+                const row = grid._plan[i];
+                if (idx >= row.start && idx < row.start + row.count) { rowIdx = i; break; }
+            }
+            if (rowIdx < 0) { settled = true; return; }
+            let need = rowIdx + 1 - grid._revealedRows;
+            // 分批揭开到目标行：批间 setTimeout(0) 让出主线程，避免远处深链
+            // 在一个同步任务里建完所有中间行、同时排出全部图片请求
+            while (need > 0) {
+                if ((grid._gridGen || 0) !== gen) { settled = false; return; }
+                const take = Math.min(need, DEEP_LINK_ROWS_PER_CHUNK);
+                await revealPlanRowsNow(grid, take, true, gen);
+                need -= take;
+                if (need > 0) await new Promise((resolve) => setTimeout(resolve, 0));
+            }
+            // 揭示期间若被新一次筛选重启打断，则回到循环等待新集合
+            settled = (grid._gridGen || 0) === gen;
+        });
+        if (settled) return;
+    }
 }
 
 /* 行内水平间距（缓存）：优先读行容器 columnGap；行容器尚未创建（首批）时读网格自身 rowGap——
@@ -378,31 +445,25 @@ function partitionRows(ratios, W, H, gap, border2, refine, tier) {
             j++;
         }
 
-        let h;
         let ragged = false;
         if (j === n) {
-            // 末尾行：无论是否还有后续批次，都按统一行高左对齐（自然宽度、不吸收余量）——
-            // 有后续批次时该行是「未完成尾行」，等待下一批作品补齐后重新组成完整行；
-            // 全部作品加载完后的真正最后一行则保持左对齐留白
-            const hNatural = hOf(count, sum);
-            h = Math.min(hNatural, H);
+            // 行计划最后一行（作品耗尽）：按统一行高左对齐、不吸收余量；
+            // 只有全局最后一行是 ragged，其余行都恰好铺满（跨档位边界行由
+            // rebuildPlanShown 补齐，不存在“未完成尾行等下一批”的合并逻辑）
             ragged = true;
         } else if (refine && count < maxPhotos) {
             // 行边界微调：比较「停在此处 / 纳入下一张」，取行高最接近 H 者。
             // 注意：不交换作品顺序（JS 数组换序会与 DOM 顺序脱节，导致行划分错位）
-            h = hOf(count, sum);
+            const hCur = hOf(count, sum);
             const hNext = hOf(count + 1, sum + ratios[j]);
-            if (Math.abs(hNext - H) < Math.abs(h - H)) {
-                h = hNext;
+            if (Math.abs(hNext - H) < Math.abs(hCur - H)) {
                 sum += ratios[j];
                 count++;
             }
-        } else {
-            // 纯贪心：行高 = 当前自然行高
-            h = hOf(count, sum);
         }
 
-        rows.push({ start: i, count, h, ragged });
+        // 行高由 planRowHeight 按当前宽度计算，计划行不再保存会过期的 h
+        rows.push({ start: i, count, ragged, sum });
         i += count;
     }
     return rows;
@@ -411,7 +472,7 @@ function partitionRows(ratios, W, H, gap, border2, refine, tier) {
 /* 应用行布局：每张盒子严格按自身比例（自然行高下恰好铺满，无裁切）
    非末张四舍五入、末张吸收取整误差并向下取整——防换行不依赖逐项 floor，
    末张 floor(remaining − border2) 已使行宽总和精确 ≤ W；
-   ragged 行（未完成尾行 / 真正的最后一行）不吸收余量，按自然宽度排列、右侧留白 */
+   ragged 行（真正的最后一行）不吸收余量，按自然宽度排列、右侧留白 */
 function applyRows(items, rows, ratios, W, gap, border2) {
     rows.forEach((row) => {
         let remaining = W;
@@ -484,15 +545,18 @@ function bindFlipCleanup(grid) {
     });
 }
 
-/* 对重建后的行执行 FLIP：First 旧位置 → 重建（Last）→ Invert 回旧位 → Play 过渡到新位 */
-function flipRebuild(grid, firstRects) {
+/* 对重建后的行执行 FLIP：First 旧位置 → 重建（Last）→ Invert 回旧位 → Play 过渡到新位。
+   firstRectMap 只含重建前已显示的照片；跨档位补齐边界行时新补入的照片没有旧位置，
+   Invert/Play 跳过它们（由调用方淡入）。 */
+function flipRebuild(grid, firstRectMap) {
     const shown = grid._shownItems;
-    const lastRects = shown.map((item) => item.getBoundingClientRect());
+    const lastRects = new Map(shown.map((item) => [item, item.getBoundingClientRect()]));
 
     // Invert：回移到旧位置（无过渡）
-    shown.forEach((item, i) => {
-        const f = firstRects[i];
-        const l = lastRects[i];
+    shown.forEach((item) => {
+        const f = firstRectMap.get(item);
+        if (!f) return; // 边界行新补入的照片：无旧位置，稍后淡入
+        const l = lastRects.get(item);
         const dx = f.left - l.left;
         const dy = f.top - l.top;
         const sx = f.width / l.width;
@@ -506,7 +570,7 @@ function flipRebuild(grid, firstRects) {
 
     // 强制重排：单次布局读取即触发整文档 flush（布局是文档级、逐项读取
     // 不产生额外 reflow——其余读取只是干净布局上的廉价访问），确保 Invert
-    // 立即生效后再启动过渡；调用方 rebuildAll 已保证 shown 非空
+    // 立即生效后再启动过渡；调用方已保证 shown 非空
     void shown[0].offsetHeight;
 
     // Play：过渡到新位置
@@ -572,7 +636,7 @@ function scheduleRelayout(grid) {
 
 function relayoutShown(grid) {
     const shown = grid._shownItems;
-    if (!shown || shown.length === 0 || !grid._rows) return; // 首次揭示完成前不重排
+    if (!shown || shown.length === 0 || !grid._plan || grid._revealedRows === 0) return; // 首次揭示完成前不重排
 
     const W = getGridWidth(grid);
     const gap = getRowGap(grid);
@@ -585,71 +649,94 @@ function relayoutShown(grid) {
     const H = getTargetRowHeight(W, gap, border2, grid._tier);
 
     if (modeChanged) {
-        // 跨档位断点：重新分行——与揭示时同一规则（含边界微调），
-        // 保证档位切换后的布局与初次进入该档位的布局一致；带 FLIP 动画平滑移动
-        rebuildAll(grid, true, true);
+        // 跨档位断点：按新档位重新规划整组行，并用计划行重建已显示区域；
+        // 边界行里尚未显示的照片一并补入（否则右端永久缺口），旧照片 FLIP 平滑移动
+        rebuildPlanShown(grid, true);
         return;
     }
 
     // 先按比例缩放作品（行成员冻结不动），不做排布调整——彻底消除拖拽时的来回跳跃；
-    // 比例只查一次 _ratios 生成数组、行循环与 applyRows 共用（此前行循环逐项
-    // 再查一遍 Map——rAF 逐帧热路径上每帧重复数百次查找，2026-10-19 收敛）
+    // 已显示行直接取计划前缀，行高由 planRowHeight 按当前宽度算
     const allRatios = shown.map((item) => grid._ratios.get(item) || DEFAULT_RATIO);
-    const rows = grid._rows.map((row) => {
-        let sum = 0;
-        for (let k = 0; k < row.count; k++) {
-            sum += allRatios[row.start + k];
-        }
-        let h = rowHeight(W, row.count, sum, gap, border2);
-        if (row.ragged) h = Math.min(h, H);
-        return { start: row.start, count: row.count, h, ragged: row.ragged };
-    });
+    const rows = grid._plan.slice(0, grid._revealedRows).map((row) => ({
+        start: row.start,
+        count: row.count,
+        h: planRowHeight(row, W, gap, border2, H),
+        ragged: row.ragged
+    }));
     applyRows(shown, rows, allRatios, W, gap, border2);
 }
 
-/* 对全部已显示作品重新分行并重建行容器（跨断点切换 / 测量完成后的校正）；
-   已用真实比例排布过的行重新计算后结果不变，只有尾部（新批次所在行）会调整；
-   flip = true 时对重建后的位置变化执行 FLIP 动画（仅跨档位重排时使用） */
-function rebuildAll(grid, refine, flip) {
-    const shown = grid._shownItems;
-    if (!shown || shown.length === 0) return;
+/* 跨档位重建：按新宽度重新规划整组行计划，用计划行重建已显示区域。
+   已显示集合可能在某行中间结束——把该行剩余作品一并提升为已显示，
+   保持每行铺满（否则右端会永久留缺口）。旧照片走 FLIP，新补入的照片淡入。 */
+function rebuildPlanShown(grid, flip) {
+    const shownBefore = grid._shownItems;
+    if (!shownBefore || shownBefore.length === 0) {
+        grid._plan = buildPlan(grid);
+        grid._revealedRows = 0;
+        return;
+    }
 
     // FLIP：重建前记录旧位置（清除上一次动画残留，保证 First 测量干净）
     let firstRects = null;
     if (flip && !prefersReducedMotion()) {
         clearFlipTransforms(grid);
-        firstRects = shown.map((item) => item.getBoundingClientRect());
+        firstRects = new Map(shownBefore.map((item) => [item, item.getBoundingClientRect()]));
     }
+    const oldCount = shownBefore.length;
+
+    // 新宽度/档位下的完整行计划
+    grid._plan = buildPlan(grid);
+    const plan = grid._plan;
+
+    // 覆盖旧展示边界的计划行：已显示集合恒为 _planItems 前缀，start < oldCount
+    // 的行都属于已显示；最后一行若跨过 oldCount，其尾部作品需要一并提升
+    const shownRows = [];
+    for (const row of plan) {
+        if (row.start >= oldCount) break;
+        shownRows.push(row);
+    }
+    if (shownRows.length === 0) return; // 计划覆盖全部作品，不应发生；防御性早退
+    const lastShownRow = shownRows[shownRows.length - 1];
+    const newCount = lastShownRow.start + lastShownRow.count;
+
+    // 边界行新增的照片：从待揭示队列头部移出并赋 src（旧照片位置已在 First 记录）
+    const extra = grid._planItems.slice(oldCount, newCount);
+    if (extra.length) {
+        grid._pendingItems.splice(0, extra.length);
+        grid._shownItems.push(...extra);
+        extra.forEach(prepareItemImage);
+    }
+    const items = grid._planItems.slice(0, newCount);
 
     const W = getGridWidth(grid);
     const gap = getRowGap(grid);
     const border2 = getCardBorder(grid);
-    updateTier(grid);
     const H = getTargetRowHeight(W, gap, border2, grid._tier);
 
-    const allRatios = shown.map((item) => grid._ratios.get(item) || DEFAULT_RATIO);
-    const rows = partitionRows(allRatios, W, H, gap, border2, refine, grid._tier);
-    grid._rows = rows;
-
-    grid.querySelectorAll('.masonry-row').forEach((el) => el.remove());
-    rows.forEach((row) => {
-        const rowEl = document.createElement('div');
-        rowEl.className = 'masonry-row';
-        for (let k = 0; k < row.count; k++) {
-            rowEl.appendChild(shown[row.start + k]);
-        }
-        appendRowEl(grid, rowEl);
-    });
-
-    applyRows(shown, rows, allRatios, W, gap, border2);
+    renderRows(grid, items, shownRows, W, gap, border2, H, true);
+    grid._revealedRows = shownRows.length;
+    grid._lastW = W;
 
     if (firstRects) flipRebuild(grid, firstRects);
+
+    // 新补入边界行的照片没有旧位置：旧照片 FLIP 的同时，新照片原地淡入
+    if (extra.length) {
+        if (prefersReducedMotion()) {
+            extra.forEach((item) => item.classList.add('is-revealed'));
+        } else {
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                extra.forEach((item) => item.classList.add('is-revealed'));
+            }));
+        }
+    }
 }
 
 /* ===== 筛选模式（全部作品页） ===== */
 
 /* 将行容器拍平：所有作品（含隐藏的）回到网格直属子级——
-   后续 rebuildAll 只重排 _shownItems，隐藏项必须留在 DOM 里供再次筛选/重置。
+   后续重建只重排 _shownItems，隐藏项必须留在 DOM 里供再次筛选/重置。
    【顺序关键】行内作品必须插到第一个游离项之前（appendChild 到末尾会把
    行内作品挪到游离项之后，破坏时间顺序——筛选切换后作品乱序的根因） */
 function flattenRows(grid) {
@@ -661,32 +748,61 @@ function flattenRows(grid) {
         }
         row.remove();
     });
-    grid._rows = null;
 }
 
-/* 筛选切换 / 清空筛选：以「下拉加载更多」分页模式重启网格——
-   仅展示给定作品集合：全部重新隐藏，集合内进入分页队列（首批 12 张由 revealBatch
-   逐批解除隐藏，其余等待滚动加载；无限滚动照常工作，触发器保持可见）。
+/* 取消尚未执行的筛选重启：清定时器并收尾（清 grid._restartPromise、释放等待者）。
+   SPA 换页 / 连点筛选时旧重启不再执行；等待者会改等新一次重启 */
+function cancelPendingRestart() {
+    if (restartFadeTimer) {
+        clearTimeout(restartFadeTimer);
+        restartFadeTimer = null;
+    }
+    if (restartFadeFinish) {
+        const finish = restartFadeFinish;
+        restartFadeFinish = null;
+        finish();
+    }
+}
+
+/* 筛选切换 / 清空筛选：以「按行揭示」模式重启网格——
+   仅展示给定作品集合：全部重新隐藏，集合重新计算行计划；首屏按一屏行数揭示，
+   其余交给无限滚动逐行揭示。入口立即递增 gen 并解除旧批次淡入等待，
+   120ms 窗口内的滚动/深链不会按旧未筛选集继续揭示；
+   grid._restartPromise 供 ?p= 深链等待筛选结果稳定。
    重启前旧集合整体快速淡出（0.12s）：与揭示错峰淡入衔接、替代瞬间消失；
    连点筛选时旧定时器作废（网格保持淡出态直至最后一次切换执行）。
    onRestarted：重启真正执行后回调——调用方借此同步依赖 _pendingItems 的模块
    （如无限滚动初始化）；重启前调用会读到旧队列状态。连点筛选时旧回调随
    旧定时器一并作废，只有最后一次重启会触发 */
-let restartFadeTimer = null;
-
 export function restartMasonryGrid(grid, items, onRestarted) {
     if (!grid || !grid._shownItems) {
         if (onRestarted) onRestarted();
         return;
     }
 
-    if (restartFadeTimer) clearTimeout(restartFadeTimer);
+    cancelPendingRestart(); // 连点筛选：旧重启作废，旧等待者释放后改等新 promise
+    grid._gridGen = (grid._gridGen || 0) + 1; // 入口即作废 120ms 窗口内的旧揭示
+    if (grid._revealAbort) grid._revealAbort(); // 旧批次淡入不再占住布局链
+
+    let resolveDone;
+    const done = new Promise((resolve) => { resolveDone = resolve; });
+    const finish = () => {
+        if (grid._restartPromise === done) grid._restartPromise = null;
+        if (restartFadeFinish === finish) restartFadeFinish = null;
+        resolveDone();
+    };
+    grid._restartPromise = done;
+    restartFadeFinish = finish;
+
     const run = () => {
         restartFadeTimer = null;
+        restartFadeFinish = null;
         grid.style.transition = '';
         grid.style.opacity = '';
+        if (!grid.isConnected) { finish(); return; } // SPA 已换页：不再操作旧网格
         restartGrid(grid, items);
         if (onRestarted) onRestarted();
+        finish();
     };
     grid.style.transition = 'opacity 0.12s ease';
     grid.style.opacity = '0.4';
@@ -703,18 +819,12 @@ function restartGrid(grid, items) {
     });
 
     grid._shownItems = [];
+    grid._planItems = items;
     grid._pendingItems = [...items];
-    grid._gridGen = (grid._gridGen || 0) + 1; // 作废在途揭示批次（旧批次捕获的代次不再匹配）
+    grid._gridGen = (grid._gridGen || 0) + 1; // 作废在途揭示（旧任务捕获的代次不再匹配）
+    grid._revealedRows = 0;
+    grid._ratios = new Map(allItems.map((item) => [item, ratioOf(grid, item)]));
+    grid._plan = buildPlan(grid);
 
-    const trigger = document.getElementById('load-more-trigger');
-    if (trigger) {
-        // 按新集合是否为空决定显示：apply 的空匹配分支先 display:none 隐藏触发器，
-        // 重启无条件恢复显示会把触发器残留在空状态卡片下方
-        trigger.style.display = items.length ? '' : 'none';
-        trigger.classList.remove('is-finished', 'is-loading');
-        if (grid._triggerHtml) trigger.innerHTML = grid._triggerHtml;
-    }
-
-    const pageSize = trigger ? (parseInt(trigger.dataset.pageSize, 10) || 12) : items.length;
-    revealBatch(grid, pageSize);
+    revealInitialRows(grid);
 }

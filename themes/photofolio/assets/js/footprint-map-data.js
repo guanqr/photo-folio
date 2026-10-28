@@ -7,22 +7,11 @@
  *   切换复用、Service Worker 自动缓存）：失败后由 reset* 重置缓存允许下次重试，
  *   降级为网格 + 点迹
  * - 繁→简省名映射（locations.toml 地点名 → provinces.json 键，数据源为简体省名）：
- *   省份区块的 dataset 存站点地点名（繁），经此映射反向查省界数据
+ *   省份区块的 dataset 存站点地点名（繁），经此映射反向查省界数据；
+ *   映射来自生成的 map-names.js（唯一源 tools/map-data/map_names.py）
  */
+import { PROVINCE_NAMES } from './map-names.js';
 
-// 繁→简省名映射
-const PROVINCE_NAMES = {
-    '廣東': '广东省',
-    '浙江': '浙江省',
-    '雲南': '云南省',
-    '安徽': '安徽省',
-    '福建': '福建省',
-    '江西': '江西省',
-    '上海': '上海市',
-    '天津': '天津市',
-    '青海': '青海省',
-    '內蒙古': '内蒙古自治区',
-};
 const PROVINCE_NAMES_REV = Object.fromEntries(Object.entries(PROVINCE_NAMES).map(([k, v]) => [v, k]));
 
 // 省界数据键 → 站点地点名（无对应地点的省份返回 null，不并入视图范围）

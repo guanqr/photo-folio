@@ -3,9 +3,6 @@
 
 {{ $sortedPhotos := partialCached "utils/photo-sorted.html" . "desc" }}
 
-{{/* 瀑布流每批加载数量：hugo.toml [params].pageSize（JS 兜底默认 12 同源） */}}
-{{ $pageSize := site.Params.pageSize | default 12 | int }}
-
 {{/* 该地点全部作品（含系列内页——全站一致拆分展示） */}}
 {{ $realPhotos := where $sortedPhotos "location" $locationName }}
 {{ $totalRealCount := len $realPhotos }}
@@ -15,21 +12,7 @@
 
     <div class="masonry-container">
         {{ if gt (len $realPhotos) 0 }}
-        <div class="masonry-grid" id="masonry-grid">
-            <!-- 渲染全部作品（系列拆分为封面+内页） -->
-            {{ range $realPhotos }}
-                {{ partial "components/photo-card.html" (dict "photo" . "site" $.Site "isInSeriesPage" false) }}
-            {{ end }}
-        </div>
-        {{ if gt (len $realPhotos) $pageSize }}
-        {{/* role=status：加载与「已展示全部」完成文案经 live 区域通告读屏器
-           （与全部作品页同款标记；不足一批不渲染——此前无条件渲染的空 div
-           会在首屏全部揭示后凭空显示完成文案） */}}
-        <div class="load-more-trigger" id="load-more-trigger" role="status" aria-live="polite" data-page-size="{{ $pageSize }}" data-finished-text="{{ i18n "no_more_photos" }}">
-            <div class="loading-spinner"></div>
-            <span class="load-more-text">{{ i18n "loading" }}</span>
-        </div>
-        {{ end }}
+        {{ partial "components/masonry-grid.html" (dict "photos" $realPhotos "site" $.Site "infinite" true) }}
         {{ else }}
         {{ partial "components/empty-state.html" (dict "titleKey" "no_photos_under" "titleCtx" (dict "Title" .Title)) }}
         {{ end }}

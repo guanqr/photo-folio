@@ -10,9 +10,11 @@
 //   RO 回调在布局切换之后，First 基准须用「上一帧持续刷新的基准位置」回放
 //   （动画期间暂停刷新，避免把变换中的位置当基准——与足迹地图 flipLayout 同款经验）
 
-import { prefersReducedMotion, FLIP_TRANSITION, BP_DESKTOP_MIN } from './utils.js';
+import {
+    prefersReducedMotion, FLIP_TRANSITION, BP_DESKTOP_MIN, FLIP_HYSTERESIS,
+    clearFlipInline, recordFlipRects, resetFlipFinish, scheduleFlipFinish
+} from './utils.js';
 
-const HYSTERESIS = 20; // 斷點滯回寬度（px）
 const TIER = BP_DESKTOP_MIN; // ≥769 兩列 / <769 單列（與 CSS max-width:768px 互補；單源見 utils.js）
 // 頭部橫排↔豎排斷點：768 = BP_DESKTOP_MIN − 1（與全站窄屏上限嚴格互補，經單源推導不寫死）
 const MQ_NARROW = window.matchMedia(`(max-width: ${BP_DESKTOP_MIN - 1}px)`);
@@ -25,32 +27,15 @@ function applyCols(grid, two) {
 
 // 帶滯回的目標列數：從當前狀態出發，升檔需越過閾值 + 滯回、降檔需低於閾值 − 滯回
 function desiredTwo(width, current) {
-    if (current) return width >= TIER - HYSTERESIS;
-    return width >= TIER + HYSTERESIS;
-}
-
-function recordRects(grid) {
-    return [...grid.querySelectorAll('.stats-panel')].map((p) => p.getBoundingClientRect());
-}
-
-function clearInline(panels) {
-    panels.forEach((panel) => {
-        panel.style.transition = '';
-        panel.style.transform = '';
-        panel.style.transformOrigin = '';
-        panel.style.width = '';
-        panel.style.height = '';
-    });
+    if (current) return width >= TIER - FLIP_HYSTERESIS;
+    return width >= TIER + FLIP_HYSTERESIS;
 }
 
 function flipColumns(grid, entry, nextTwo) {
     // 作废旧收尾（槽位在 entry 上）：快速二次翻转时旧定时器会把第二次动画
     // 仍在途的内联样式（width/height/transition）拦腰清掉、卡片中途急停
     //（2026-10-18）
-    if (entry.finishTimer) {
-        clearTimeout(entry.finishTimer);
-        entry.finishTimer = null;
-    }
+    resetFlipFinish(entry);
     const panels = [...grid.querySelectorAll('.stats-panel')];
     if (prefersReducedMotion()) {
         applyCols(grid, nextTwo); // 减弱动态：直接切换，不播放动画
@@ -58,13 +43,13 @@ function flipColumns(grid, entry, nextTwo) {
         return;
     }
     // First：当前（旧列数）真实位置——先清掉上一轮动画残留并强制回流
-    clearInline(panels);
+    clearFlipInline(panels, { size: true });
     void grid.offsetWidth;
-    const first = recordRects(grid);
+    const first = recordFlipRects(grid, '.stats-panel');
     // 改列数并强制回流：受控重排（与分类/系列卡片同一同步任务量测流程）
     applyCols(grid, nextTwo);
     void grid.offsetWidth;
-    const lasts = recordRects(grid);
+    const lasts = recordFlipRects(grid, '.stats-panel');
     // Invert：只平移 + 把尺寸设回旧值（px 内联）——完全不做缩放，
     // 卡内文字绝不拉伸变形（宽高过渡每帧按真实布局重排内容）
     panels.forEach((panel, i) => {
@@ -91,10 +76,7 @@ function flipColumns(grid, entry, nextTwo) {
     entry.two = nextTwo;
     // 动画结束后清理内联样式（恢复卡片自身样式，不干扰后续 FLIP 的 First 量测）；
     // 定时器入槽位，二次翻转时在 flipColumns 入口作废旧收尾（见上）
-    entry.finishTimer = setTimeout(() => {
-        entry.finishTimer = null;
-        clearInline(panels);
-    }, 400);
+    scheduleFlipFinish(entry, () => clearFlipInline(panels, { size: true }));
 }
 
 /* ===== 顶部头像/信息的横排↔竖排 FLIP（CSS 已切换布局，用上一帧基准回放） =====
@@ -144,7 +126,7 @@ function flipHeader(container, entry, fromRects, els) {
     entry.headerFinishTimer = setTimeout(() => {
         entry.headerFinishTimer = null;
         entry.headerAnimating = false;
-        clearInline(els.map((item) => item.el)); // 恢复头像自身的 hover 过渡
+        clearFlipInline(els.map((item) => item.el)); // 恢复头像自身的 hover 过渡
     }, 400);
 }
 
