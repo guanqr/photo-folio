@@ -2,6 +2,48 @@
 
 PhotoFolio 主题的版本更新记录。条目书写规范见工程约定的「CHANGELOG 约定」；段落分类与顺序参照 Keep a Changelog 标准（Added / Changed / Deprecated / Removed / Fixed / Security）。
 
+## [0.21.0] — 2026-10-28
+
+### Added
+- **瀑布流照片模糊占位渐显（LQIP）**：慢网下卡片先显暗色空框、图片到位后直接弹出，缺少过渡——为每张卡片注入一张 OSS 端生成的低清占位图（`w_64` WebP、服务端烘焙高斯模糊、约 0.2KB，带照片内容哈希随换图更新），铺在 `.photo-wrapper` 底层；主图加载完成（`is-loaded`）后以 0.6s 透明度过渡淡入覆盖，形成模糊到清晰的渐显。占位图仅在行揭示、卡片进入渲染时请求（`display:none` 的隐藏作品不预取），浏览端不叠 CSS filter（每行仅 1–6 张并发，避免低端机栅格化尖峰）；`prefers-reduced-motion` 下过渡由全局兜底归零；尺寸/质量/模糊半径经 `[params.imageSizes]` 的 `placeholder` / `placeholderQuality` / `placeholderBlur` 调整；无 CDN 或照片 `src` 为绝对 URL 时不生成占位（`img-url` 对绝对 URL 原样返回，占位会退化成全尺寸原图）
+- **照片 URL 内容哈希（换图即失效缓存）**：
+  - 管线对输出图计算内容 MD5 前 8 位写入 `photo.toml` 的 `hash` 字段（`src` 与 OSS 对象路径不变，已有条目一次性回填）；`img-url` 在 `x-oss-process` 后追加 `v=<hash>` 查询参数，无处理参数时单独成查询串
+  - 瀑布流缩略图/灯箱大图、首页轮播与首图预载、分类/系列封面及 OG/Twitter 图全部带版本号；front matter 的封面路径经照片数据反查哈希；无 `hash` 的条目 URL 保持原样
+  - 灯箱分析结果 JSON 同样带内容版本（`?v=<照片 hash>-<schema 版本>`）：换图或分析算法升级立即换 URL；SW 对 `/analysis/` 的缓存键保留查询串、新版本不再命中旧条目，同版本回看仍走 SWR
+  - 新上传对象写入 `Cache-Control: public, max-age=31536000, immutable`——URL 随图片内容变化，可放心长缓存；解决同名换图后旧图长期驻留浏览器缓存的问题
+
+### Changed
+- **足迹地图省/国名映射单源**：`tools/map-data/map_names.py` 成为唯一源（繁→简省名 + Natural Earth 国名），`generate-maps.py` 直接 import 并生成 `themes/photofolio/assets/js/map-names.js`（文件头标注生成勿手改，`--names-only` 只刷新映射），`footprint-map-data.js` 改为 import；新增省/国拍摄地只改 Python 一处
+- **换列 FLIP 与地点注册表去冗余**：`utils.js` 新增 `BP_CARD_GRID_3COL_MIN`=1001、`FLIP_HYSTERESIS`=20 及清内联/记录矩形/收尾定时器共用工具，`cards-flip` / `about-stats` 改用（`cards-flip` 断点不再硬编码 769/1001）；`location-registry` 删除无人消费的 lat/lng 输出（`locations.toml` 坐标保留备用，地图点迹用照片坐标）
+- **分析常量单源**：影调区界/剪裁/区域与色相分段数、schema 版本由管线 `analysis.py` 生成 `themes/photofolio/assets/js/analysis-meta.js`（文件头标注生成勿手改），灯箱改为 import、删除 JS 本地副本；跑管线即同步，避免 Python/JS 双写漂移
+- **换图检测改输入内容哈希**：`photo.toml` 新增管线专用 `source_hash`（输入图 MD5 全 32 位，站点不消费），管线以它判断重处理；旧 mtime 换图也能发现并强制重算分析；新增 `backfill_source_hash.py` 一次性回填（本次已回填 83 条），`is_analysis_stale` 不再用源图 mtime
+- **瀑布流行状态去冗余**：已显示行改由 `_plan.slice(0, _revealedRows)` 派生，删除 `_rows` 副本；`revealPlanRowsNow` / `rebuildPlanShown` 的建行容器/`applyRows` 收敛为 `renderRows` 唯一实现；`partitionRows` 删除无人消费的 `row.h`。1400/800/420 与跨档/同档 resize 的行数/行高/行宽逐项对比一致
+- **瀑布流按行揭示**：加载单位由固定 12 张改为「一行」——初始化时按 `width/height` 预计算整组行计划，首屏揭示到「当前可见区域 + 约 200px」，之后每次滚动只揭示下一行；行内张数由宽高比与档位决定（1–6 张），不再固定。跨档位 resize 仍用 FLIP，并把待显示区前几张补进已显示边界行，保持每行铺满；同档位内行成员冻结缩放（行为不变）。图片未到时由 LQIP 模糊占位，揭示不再等待探测图与 700ms 转圈。加载策略（首屏额外高度、单批揭示上限、滚动触发距离）收编 `[params.grid]`，经新增 `components/masonry-grid.html`（网格标记/加载策略 data 属性/读屏状态/卡片循环的唯一实现）写入网格，masonry/infinite-scroll 读取并保留 JS 缺省回退；新增列表页只改一处 partial
+- **移除无限滚动触发器与 pageSize**：原触发器只承担滚动哨兵职责、已无文字/转圈内容——改用网格底部作为滚动参考（底边越过视口底部 40px 揭示下一行），删除 `#load-more-trigger`、`[params].pageSize`、`data-page-size`、模板阈值与相关样式；`baseof` 解析阶段改为隐藏全部卡片，初始揭示按行计划放出；需要无限滚动的网格由 `data-infinite-scroll` 标记（系列详情页不加，仍一次揭示全部）；`[loading]` 文案去掉省略号，仅保留给灯箱/地图的读屏 `aria-label`
+- **灯箱分析数据预取**：分析 JSON 原在点击展开后才拉取，展开后要空等一次网络往返（实测复用连接约 0.3s、冷连接更久）——灯箱打开/切图时改为预取当前照片与左右各一位（与图片邻居预载同窗），展开时直接命中缓存渲染；同 slug + 内容版本的在途请求去重（预取与展开共用同一 Promise，不重复下载），预取失败只告警、展开时 analyze 重试并走既有失败提示；每张打开过的照片多约 3.6KB 压缩请求，远小于旧版打开即探测的 w_800 采样图
+- **分析结果跨会话即时回看（SWR）**：Service Worker 对 `/analysis/` 的 JSON 由 NetworkFirst 改为 Stale-While-Revalidate——回看同一张照片直接出运行时缓存、后台刷新，跨页面加载不再空等一次网络往返；内容版本（`?v=`）变化时换 URL、不命中旧缓存；指纹产物沿用同一缓存分支
+- **RGB 直方图改线性纵轴**：原为 log1p 归一化纵轴（每张图按自身峰值缩放）——占峰值 0.1% 的尾部也会画到约一半高度，暗部/亮部尾端在所有图上都显得很高，与常规修图软件/手机相册的线性直方图观感不一致；改为线性像素计数，RGB 与明度曲线共用包含明度峰值的统一最大值（明度分布可能比单通道更集中，只按 RGB 峰值归一化会越过图表顶部）；三区占比条与 P50 保留，尾部细节改由占比与数值阅读
+- **管线分析进度输出**：图像处理完成后，分析 JSON 生成原本全程静默（仅失败时告警），长时间运行无法判断当前照片/进度——需要生成分析数据的照片输出「🔍 图像分析中：文件名」与「✅ 图像分析完成：文件名」两行，失败仍保留错误行；最终汇总不变
+- **灯箱切换状态机收敛**：`lightbox-switch` 的 `open()` 约 280 行拆为 `startSwitch` / `startFirstOpen` 两个分支函数与公共激活 `activateDialog()`（缩放浮现/普通首开重复的类、焦点/inert、抽屉重判、滚动锁收口）；五个在途监听槽（切图/滑出/滑入/换源/首开 load）经 `clearAllPending()` 在 open 入口与 close 统一作废，减少新增入口漏清导致的幽灵监听；行为不变
+- **规格/README 对齐现状**：筛选补四组（含 `?s=` 範圍）与 `pushState` 语义、瀑布流按行揭示/无触发器、地图说明改为照片坐标（`locations.toml` 坐标保留备用）、`carouselCount`/`[params.grid]` 配置、Hugo 版本与 JS 模块表——文档与当前实现一致
+
+### Fixed
+- **作品网格 bundle 失败兜底**：解析阶段先隐藏全部卡片，若 bundle 加载/初始化失败，作品页会永久空白——`baseof` 内联脚本挂 4s 看门狗（未见 `masonry-ready` 即放出全部卡片、补 `src`、挂自适配网格兜底样式）；正常初始化不受影响
+- **照片地点未登记构建期报错**：`photo.toml` 的 `location` 未登记进 `locations.toml` 时，足迹聚合仍收录并回退 urlize URL，但地点页不存在（点击 404、构建零警告）——内容适配器遍历照片地点，未登记直接 `errorf` 并列出名称，宁可失败不发布死链（当前 11/11 一致）
+- **缺宽高照片的布局自愈**：照片缺 `width/height` 属性时仍按 3:2 兜底排布并告警，图片就绪后按自然宽高重算比例、重建已显示行——不再整会话按 3:2 排布、竖构图被 `object-fit: cover` 裁切且无恢复路径（当前数据 83/83 尺寸齐全，防数据地雷）
+- **图片加载完成标记单源**：`utils` 新增 `markImageLoaded`（`isImageReady` + 一次性 `load`），masonry 显式赋 `src` 与 lazy-load 交集观察共用；失败图片不再被 `complete` 误标 `is-loaded`。同时把共享 `@keyframes spin` 从 `_gallery.scss` 移到 `_base.scss`，清理旧触发器/分批注释与 `isInSeriesPage` 死参数
+- **无限滚动加载状态读屏通告**：无限滚动页面新增视觉隐藏的 `#masonry-status`（`role=status` / `aria-live=polite`），首次开始加载写「載入中」、全部加载完写「已載入全部作品」，同一状态不重复写；筛选重启先清空、空结果不播报完成。新增 `.visually-hidden` 工具类（1px + clip-path，不占布局），`no_more_photos` 文案仅供读屏、不恢复可见文字/转圈
+- **首屏/深链揭示上限与视口变高补载**：首屏单批最多 24 张（1024×1366 从约 28–37 张降为 23 张，其余由无限滚动逐行补齐）；`?p=` 深链按 4 行/批揭示、批间让出主线程；无限滚动补 `resize` 监听（立即 + 900ms 延迟），窗口变大/全屏后不滚动也能补载；揭示链异常复位加载锁
+- **筛选重启与 ?p= 深链竞态**：筛选重启入口立即递增代次并解除旧批次淡入等待（120ms 窗口内的滚动/深链不再按旧集合揭示）；`grid._restartPromise` 供 `?p=` 深链等待筛选稳定，目标不在筛选集合时放弃、连续重启时重试（最多 3 次）；无限滚动按代次丢弃过期批次并复位加载锁；SPA 换页清理未执行的筛选重启定时器
+- **灯箱分析四项全关时初始化崩溃**：`[params.lightbox]` 的 palette/tonal/saturation/hue 全关时模板不渲染分析触发/容器节点，`initLightboxAnalysisControl` 仍对 null 调 `getComputedStyle`，抛错后 `initPageModules` 后续 masonry/infinite-scroll/filter 等模块全部不执行、作品页空白——控制模块在入口检测 trigger/wrap 缺失并返回空控制器，保证其余页面模块正常初始化
+- **影调长短判定口径修正（灰阶跨度）**：短/中/长原按 P5–P95 线性光真档判定、阈值 7.7/14.3 档（0.20.0 由旧 gamma 域 3.5/6.5 ×2.2 等值迁移）——14.3 档超出 11 级区域系统约 10 档的跨度，長調实际几乎不可达；灰阶括号又用 P1–P99，标签与图表口径不一致——改为按 P5–P95 在 11 级等距灰阶上的跨区数判定（≤4 短、5–7 中、≥8 长），括号同步改用 P5–P95；灰阶条色块由 `pow(…, 2.2)` 改为与 zone 映射一致的线性等距灰阶；動態範圍（真档）保留为独立数值展示、不再参与长短判定；分析算法版本升至 3、全部分析 JSON 重算
+- **饱和度判定改按分段占比**：原按全图平均 HSV 饱和度 + 18%/45% 阈值判定——均值易被小面积鲜艳色拉动（大部分像素低饱和的图仍判「適中」），图上又没有阈值线，45% 在轴中间却判「高飽和」——改为按低/中/高三段像素占比最大的一档判定（分段仍为 <18% / 18–45% / ≥45%），饱和直方图画出两条分界线，均值虚线保留为参考；分析版本升至 4、全部分析 JSON 重算
+- **窄屏双列饱和度/色相高度对齐**：饱和度区块有说明行、色相区块没有，769–1000px 双列并排时色相内容整体偏矮、两列图表与区块底部错位——色相标题下补一行「色相分佈（按飽和度加權）」说明（与饱和度说明同款样式），两列图表与区块高度对齐
+- **dev server 分析 JSON 陈旧缓存**：`/analysis/` 静态响应无 Cache-Control，浏览器启发式缓存会在 schema 升级（如 v3→v4）后继续回旧版 JSON，新代码校验失败、部分照片显示分析失败——dev server 配置对 `/analysis/**` 强制 `no-cache`（与 JS/CSS 同法），生产构建不受影响；已有缓存需强制刷新一次
+- **高速快门 EXIF 被压成 0/1**：曝光时间的分数近似分母上限原为 4000——1/8000 会被近似成 1/4000，1/12800 及以上会退化为 0/1——上限提高到 1,000,000，覆盖常见电子快门（1/8000、1/12800、1/32000 等）；受影响条目按原始 EXIF 核对
+- **geocode 脚本 GBK 控制台崩溃**：状态行使用 ✓/✗/⛔/↳ 等非 GBK 符号，Windows 默认 GBK stdout 打印失败结果时抛 UnicodeEncodeError、脚本中断——按照片管线同款方式将 Windows stdout 重包 UTF-8，输出恢复正常且脚本继续处理剩余条目
+- **色相直方图零柱高度为负**：切图 tween/浮点边缘在零值柱附近可能把柱高算成 -0.01，浏览器报 `<rect>` height 属性无效——渲染时把柱高钳到 ≥0，零值柱保持贴底；个别照片不再报错
+
 ## [0.20.0] — 2026-10-21
 
 ### Added
