@@ -1,3 +1,5 @@
+@use "../base/base" as *;
+
 /* ===== Series Page Ambient (系列页主题氛围背景) =====
    作用域仅限 series-themed 系列详情页（.gallery-page 为五个布局共用，不能全局改动）。
    结构：背景粒子 SVG（.series-ambient，fixed 铺满视口、垫在内容之下）——

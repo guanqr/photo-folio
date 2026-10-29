@@ -1,34 +1,35 @@
 // 约定：组件内部断点统一用 min-width（移动优先）；跨组件的全局窄屏覆盖收敛到 base/_responsive.scss
-// （max-width，最后引入保证优先级）。@import 为 libsass 语法（本机构建工具链无 dart-sass，
-// @use 不被支持——未来安装 dart-sass 后可将 @import 整体迁移为 @use 并加 `@use 'base' as *;`）。
+// （max-width，最后引入保证优先级）。当前由外部 Dart Sass（标准版 Hugo）编译，模块用 @use 组织：
+// 共享变量/占位符/mixin 在 base/_base.scss，使用方 `@use "../base/base" as *;`；unquote 已改为
+// string.unquote，无 LibSass 时代的 @import 弃用警告。
 // 目录分层（2026-10-17 对齐博客）：base 基础 / layout 布局 / pages 页面模块 /
 // components 交互部件；响应式覆盖虽在 base/ 但必须最后引入。
 
 // 1. 基础与变量 (必须最先引入；%pill / %reveal-entry 占位符也在此定义，供后续 @extend)
-@import "base/base";
-@import "base/scrollbar";
+@use "base/base";
+@use "base/scrollbar";
 
 // 2. 布局组件
-@import "layout/header";
-@import "layout/footer";
+@use "layout/header";
+@use "layout/footer";
 
 // 3. 页面模块
-@import "pages/carousel";
-@import "pages/categories";
-@import "pages/gallery";
-@import "pages/footprint";
-@import "pages/series";
-@import "pages/series-ambient";
-@import "pages/about";
+@use "pages/carousel";
+@use "pages/categories";
+@use "pages/gallery";
+@use "pages/footprint";
+@use "pages/series";
+@use "pages/series-ambient";
+@use "pages/about";
 
 // 4. 交互与工具（lightbox 按部件拆分：core 骨架 → 图片区 → 元信息面板 →
 //    分析区开合 → 分析图表，%lightbox-ctrl/%chart-note 占位符随各自 partial 自含）
-@import "components/lightbox-core";
-@import "components/lightbox-image";
-@import "components/lightbox-panel";
-@import "components/lightbox-analysis-control";
-@import "components/lightbox-charts";
-@import "components/utils";
+@use "components/lightbox-core";
+@use "components/lightbox-image";
+@use "components/lightbox-panel";
+@use "components/lightbox-analysis-control";
+@use "components/lightbox-charts";
+@use "components/utils";
 
 // 5. 响应式覆盖 (必须最后引入，确保优先级最高)
-@import "base/responsive";
+@use "base/responsive";

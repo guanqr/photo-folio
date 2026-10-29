@@ -1,3 +1,5 @@
+@use "sass:string";
+
 /* ===== Reset & Base ===== */
 *, *::before, *::after {
     margin: 0;
@@ -79,7 +81,7 @@ body {
 // 2026-10-17 自 --rgb-* 分量迁移，与博客机制一致）；
 // 透明/派生色用 hsla(var(--x-h), var(--x-s), var(--x-l), a) 引用分量
 @mixin defineColorHSL($color, $hue, $saturation, $lightness){
-    #{$color}: unquote("hsl(#{$hue}, #{$saturation}, #{$lightness})");#{$color}-h: #{$hue};#{$color}-s: #{$saturation};#{$color}-l: #{$lightness};
+    #{$color}: string.unquote("hsl(#{$hue}, #{$saturation}, #{$lightness})");#{$color}-h: #{$hue};#{$color}-s: #{$saturation};#{$color}-l: #{$lightness};
 }
 
 :root {

@@ -244,7 +244,7 @@
         {{ partial "utils/icon.html" (dict "name" "arrow_up" "variant" "thick") }}
     </button>
 
-    <!-- 【核心】使用 Hugo Extended 的 js.Build (esbuild) 编译所有 ES6 模块 -->
+    <!-- 【核心】使用 Hugo 内置 js.Build (esbuild) 编译所有 ES6 模块 -->
     {{ $js := resources.Get "js/main.js" }}
     {{ $opts := dict "targetPath" "js/bundle.js" }}
     <!-- 导航超时单源：经 js.Build params（主 bundle）与 ExecuteAsTemplate（sw.js）

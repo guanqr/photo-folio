@@ -77,7 +77,8 @@ HSV 饱和度 0–100% 直方图 + 均值虚线 + 18%/45% 分段线（低飽和 
 
 ### 环境要求
 
-- **Hugo** ≥ 0.128（Extended 版本，支持 Sass；CI 固定 0.164）
+- **Hugo** ≥ 0.139（标准版；CI 固定 0.164；`silenceDeprecations` 自 0.139 起支持）
+- **Dart Sass** 1.107.0 独立版（不要用 npm 版：纯 JS 构建缺少 Hugo dartsass 需要的 embedded 协议）
 - **Git**
 
 ### 本地开发
@@ -86,6 +87,10 @@ HSV 饱和度 0–100% 直方图 + 均值虚线 + 18%/45% 分段线（低飽和 
 # 克隆仓库（含子模块）
 git clone --recurse-submodules https://github.com/guanqr/photo-folio.git
 cd photo-folio
+
+# 安装 Dart Sass 独立版（不要用 npm 版）：下载官方 standalone 包，
+# 把含 sass / sass.bat 的目录加入 PATH，然后确认：
+sass --version
 
 # 启动开发服务器
 hugo server -D
@@ -238,7 +243,7 @@ photos = ["割蔺草-1.jpg", "割蔺草-2.jpg", "割蔺草-3.jpg"]
 Push 到 `main` 分支后，GitHub Actions 自动：
 
 1. 拉取源码 + 子模块
-2. 使用 Hugo Extended 构建
+2. 使用 Hugo 标准版 + Dart Sass 构建
 3. 推送到 `guanqr/photo-folio` 仓库的 `gh-pages` 分支
 
 CDN 图片通过阿里云 OSS（`guanqr.oss-cn-hangzhou.aliyuncs.com`）提供。

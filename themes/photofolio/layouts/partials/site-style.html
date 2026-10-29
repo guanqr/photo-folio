@@ -1,7 +1,10 @@
 {{/* 全站样式表：站点级配置产物、与页面无关——调用点用 partialCached，
-     variant 含语言（多语言下固定 variant 会跨语言复用首个语言的样式表） */}}
-<!-- 不显式声明 transpiler，使用 Hugo 默认转译器（显式声明 libsass 会触发弃用警告，dartsass 需额外安装） -->
-{{ $opts := dict "targetPath" "css/style.css" }}
+     variant 含语言（多语言下固定 variant 会跨语言复用首个语言的样式表）。
+     标准版 Hugo 不内置 Sass：显式使用外部 Dart Sass（CI/本地安装独立版）。
+     SCSS 已迁移 @use，unquote 改 string.unquote，构建无弃用警告。 */}}
+{{ $opts := dict
+    "targetPath" "css/style.css"
+    "transpiler" "dartsass" }}
 {{ if hugo.IsProduction }}
     {{/* 生产环境下开启压缩 */}}
     {{ $opts = merge $opts (dict "outputStyle" "compressed") }}
