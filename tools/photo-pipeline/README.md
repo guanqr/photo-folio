@@ -41,7 +41,8 @@ python scripts/download_font.py
 
 ```bash
 cd tools/photo-pipeline
-python run.py
+python run.py            # 增量处理（只处理新增/源图变化的照片）
+python run.py --force    # 全量重跑（忽略 source_hash 增量检测）
 ```
 
 处理完成并写入 `data/photo.toml` 后，站点侧如需补充地理坐标：为照片填 `address` 后运行 `python tools/geocode/geocode-photos.py`（站点根目录，详见站点 README）。
@@ -49,7 +50,7 @@ python run.py
 ## 处理内容
 
 - **缩放**：长边缩放至 1920px
-- **水印**：`Guanqr Photography @ 年份` 底部居中（年份从 EXIF 读取，颜色按底部明暗自动选黑白）
+- **水印**：`Guanqr Photography @ 年份` 底部居中（年份从 EXIF 读取，颜色按水印文字实际区域明暗自动选黑白）
 - **压缩**：JPEG 质量循环递减，控制在 400KB 以内
 - **图像分析**：对全分辨率原图（加水印前）预计算统计——RGB/明度/饱和度/色相直方图、6 主色色卡、影调定性（九调/动态范围/剪裁警告/区域系统），结果写 `static/analysis/{文件名}.json`（含 v 算法版本号），灯箱直接加载渲染、不再在线采样（每张约 2–3KB；全分辨率逐像素只付一次，见下「增量处理」）
 
@@ -79,4 +80,6 @@ python backfill_camera_lens.py <original_photos目录> <photo.toml路径>
 
 ## 增量处理
 
-只处理新增或发生变化的照片（比较输入/输出修改时间），未变化的自动跳过。OSS 同步同样增量：只上传本次实际处理过的照片（覆盖云端同名文件），其余跳过。**图像分析为独立惰性步骤**：结果缺失或算法版本（JSON 的 v 字段）过期才重算，首次接入自动全量回填（一次性逐像素成本），此后日常运行只分析新增照片。每次运行都会按输出图字节重算 `hash`（未变化时值相同），上传对象写入一年 `immutable` 长缓存——图片 URL 带内容哈希，可放心缓存，同名换图会生成新 URL。
+只处理新增或源图内容变化的照片（`photo.toml` 的 `source_hash` 与输入文件 MD5 比较），未变化的自动跳过；`python run.py --force` 忽略该检测、重新处理全部照片。OSS 同步同样增量：只上传本次实际处理过的照片（覆盖云端同名文件），其余跳过。**图像分析为独立惰性步骤**：结果缺失或算法版本（JSON 的 v 字段）过期才重算；`--force` 仅重出图时不重算分析（源图未变），首次接入自动全量回填（一次性逐像素成本），此后日常运行只分析新增照片。每次运行都会按输出图字节重算 `hash`（未变化时值相同），上传对象写入一年 `immutable` 长缓存——图片 URL 带内容哈希，可放心缓存，同名换图会生成新 URL。
+
+输出图与 `photo.toml` 均采用临时文件 + `os.replace` 原子写（TOML 固定 LF）；OSS 上传成功后才写 `photo.toml`，上传失败时站点数据保持旧版本。新增照片会打印「请填写 alt/category/place/location」提醒，并在总结中计数。

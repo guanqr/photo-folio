@@ -403,7 +403,9 @@ def write_js_meta(js_path):
     if parent:
         os.makedirs(parent, exist_ok=True)
     tmp_path = js_path + ".tmp"
-    with open(tmp_path, "w", encoding="utf-8") as f:
+    # 固定 LF：Windows 文本模式默认 CRLF，会让仓库中的生成文件每次管线
+    # 运行后出现仅行尾差异（内容不变，2026-10-29）
+    with open(tmp_path, "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines))
     os.replace(tmp_path, js_path)
 

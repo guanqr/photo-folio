@@ -30,7 +30,7 @@ def _get_image_size(path):
         return "", ""
 
 
-def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None):
+def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None, force=False):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
@@ -59,6 +59,7 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None):
     processed = 0
     analyzed = 0
     processed_files = []  # 记录本次实际处理的文件名
+    new_entries = []  # 本次新增的条目（需手填 alt/category 等元数据）
     for f in sorted(os.listdir(input_dir)):
         if not f.lower().endswith((".jpg", ".jpeg")):
             continue
@@ -71,14 +72,18 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None):
         input_hash = file_md5(input_path) if toml_path else None
 
         needs_reprocess = True
+        source_changed = True
         if os.path.exists(output_path):
             if entry is not None:
                 # source_hash 缺失（旧数据）按变化处理；可先用
                 # backfill_source_hash.py 一次性回填以跳过首轮全量重处理
-                needs_reprocess = entry.get("source_hash") != input_hash
+                source_changed = entry.get("source_hash") != input_hash
             else:
                 # 无 toml 条目/无 toml 模式：退回 mtime 判定
-                needs_reprocess = os.path.getmtime(output_path) < os.path.getmtime(input_path)
+                source_changed = os.path.getmtime(output_path) < os.path.getmtime(input_path)
+        # force 只强制重出全部图；图像分析仍按源图变化/缺失/版本惰性判定，
+        # 避免仅重出水印时无谓重算全分辨率分析（2026-10-29）
+        needs_reprocess = force or source_changed or not os.path.exists(output_path)
 
         exif_info = get_exif_info(input_path)
 
@@ -100,11 +105,14 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None):
         if entry is not None and processed_ok and os.path.exists(output_path):
             entry["source_hash"] = input_hash
 
-        # 图像分析：源图变化成功重处理时强制重算；跳过时仅按结果缺失/算法版本
-        # 惰性判定；处理失败不重算（避免分析结果与旧输出图版本错配）
+        # 图像分析：源图变化成功重处理时强制重算；force 仅重出图 / 跳过时按
+        # 结果缺失/算法版本惰性判定；处理失败不重算（避免分析结果与旧输出图版本错配）
         if analysis_dir:
             analysis_path = os.path.join(analysis_dir, os.path.splitext(f)[0] + ".json")
-            if (needs_reprocess and processed_ok) or (not needs_reprocess and is_analysis_stale(analysis_path)):
+            if processed_ok and (
+                (source_changed and needs_reprocess)
+                or (not source_changed and is_analysis_stale(analysis_path))
+            ):
                 try:
                     # 分析 JSON 生成是独立于图像处理的耗时步骤（全分辨率逐像素）：
                     # 开始/完成各输出一行，避免处理完成后长时间静默、无法判断进度
@@ -140,6 +148,8 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None):
                 if processed_ok and os.path.exists(output_path):
                     new_entry["source_hash"] = input_hash
                 src_to_entry[src] = new_entry
+                new_entries.append(f)
+                print(f"🆕 新条目：{f}（请填写 alt/category/place/location 等手填字段）")
 
     if toml_path:
         # 每次按输出图实际字节重算哈希：处理/跳过/新条目统一覆盖，避免增量运行
@@ -151,15 +161,14 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None):
                     entry["hash"] = file_md5(img_path, 8)
                 except OSError as e:
                     print(f"⚠️  哈希计算失败：{os.path.basename(src)}  {e}")
-        write_toml(toml_path, list(src_to_entry.values()))
-        # 分析结果完整性检查：photo.toml 全部条目都应有对应 JSON——src 与
-        # 管线输入文件名不一致的照片（人工条目/历史改名）没有生成路径，站点
+        # 分析结果完整性检查：photo.toml 全部条目（含本次新增）都应有对应 JSON——
+        # src 与管线输入文件名不一致的照片（人工条目/历史改名）没有生成路径，站点
         # 侧会永久显示失败提示卡；此处告警定位（2026-10-21 审查修复 #5）
         if analysis_dir:
             try:
                 missing = [
                     os.path.basename(e["src"])
-                    for e in parse_toml_entries(toml_path)
+                    for e in src_to_entry.values()
                     if not os.path.exists(os.path.join(
                         analysis_dir, os.path.splitext(os.path.basename(e["src"]))[0] + ".json"))
                 ]
@@ -172,8 +181,11 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None):
             except Exception:
                 pass
 
-    print(f"📊 本次处理 {processed} 张，跳过 {skipped} 张（未变化），分析 {analyzed} 张")
-    return processed_files
+    summary = f"📊 本次处理 {processed} 张，跳过 {skipped} 张（未变化），分析 {analyzed} 张"
+    if new_entries:
+        summary += f"，新增 {len(new_entries)} 条（需补手填字段）"
+    print(summary)
+    return processed_files, src_to_entry
 
 
 def _load_config():
@@ -219,7 +231,7 @@ def _load_config():
     return config
 
 
-def run():
+def run(force=False):
     config = _load_config()
     if not config:
         return
@@ -234,16 +246,27 @@ def run():
         return
 
     print("===== 开始处理 =====")
-    processed_files = batch_process(INPUT_FOLDER, OUTPUT_FOLDER, toml_path=TOML_PATH,
-                                    analysis_dir=ANALYSIS_DIR)
+    processed_files, src_to_entry = batch_process(
+        INPUT_FOLDER, OUTPUT_FOLDER, toml_path=TOML_PATH,
+        analysis_dir=ANALYSIS_DIR, force=force)
     print("===== 全部完成 =====")
 
-    # 同步新图片到 OSS
+    # 先传 OSS，成功后才写 photo.toml：上传失败时站点数据保持旧版本，
+    # 不会出现新 hash 指向未上传对象（2026-10-29）
     bucket = create_bucket_from_config()
     if bucket:
         print("===== 开始上传 OSS =====")
-        sync_new_photos(OUTPUT_FOLDER, bucket, force_files=processed_files)
+        try:
+            sync_new_photos(OUTPUT_FOLDER, bucket, force_files=processed_files)
+        except Exception as e:
+            print(f"❌ OSS 上传失败：{e}")
+            print("   photo.toml 未写入；请修复网络/凭证后重新运行"
+                  "（建议 --force，确保云端全部为新版本）")
+            return
         print("===== OSS 上传完成 =====")
+
+    if TOML_PATH and src_to_entry:
+        write_toml(TOML_PATH, list(src_to_entry.values()))
 
 
 if __name__ == "__main__":

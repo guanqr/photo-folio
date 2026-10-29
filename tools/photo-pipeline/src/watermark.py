@@ -5,11 +5,15 @@ from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 
 
-def get_region_brightness(img, region_h=100):
-    """截取图片底部区域，计算平均亮度 0~255"""
-    w, h = img.size
-    crop_box = (0, h - region_h, w, h)
-    crop_img = img.crop(crop_box).convert("L")
+def get_region_brightness(img, box):
+    """计算指定区域（水印文字实际渲染 bbox）的平均亮度 0~255"""
+    left, top, right, bottom = box
+    left = max(0, int(left))
+    top = max(0, int(top))
+    right = min(img.width, int(right))
+    bottom = min(img.height, int(bottom))
+    # 防御：bbox 退化时退回全图平均（正常文字 bbox 不会为空）
+    crop_img = (img.crop((left, top, right, bottom)) if right > left and bottom > top else img).convert("L")
     try:
         pixels = list(crop_img.get_flattened_data())
     except AttributeError:
@@ -45,7 +49,13 @@ def add_watermark(img, text="Guanqr Photography", opacity=0.6, photo_year=""):
     x = (img.width - w) // 2
     y = img.height - h - 25
 
-    bright = get_region_brightness(img, region_h=100)
+    # 只取水印文字实际渲染区域判断明暗：整条底部平均会被左右暗部拉低，
+    # 水印所在中间偏亮时误选白字（2026-10-29）
+    try:
+        region = draw.textbbox((x, y), final_text, font=font)
+    except AttributeError:
+        region = (x, y, x + w, y + h)
+    bright = get_region_brightness(img, region)
     alpha = int(255 * opacity)
     fill = (0, 0, 0, alpha) if bright > 127 else (255, 255, 255, alpha)
 
@@ -88,5 +98,16 @@ def process_image(input_path, output_path, exif_info, target_long_side=1920, max
             print(f"⚠️  {os.path.basename(input_path)} 质量已降至 10 仍 "
                   f"{buf.tell() / 1024:.0f}KB > {max_size_kb}KB 上限")
 
-        with open(output_path, "wb") as f:
-            f.write(buf.getvalue())
+        # 原子写：中断/磁盘满不留下截断的 JPEG——源图未变时增量检测会跳过
+        # 已存在的输出，坏文件会一直被当作最新结果（2026-10-29）
+        tmp_path = output_path + ".tmp"
+        try:
+            with open(tmp_path, "wb") as f:
+                f.write(buf.getvalue())
+            os.replace(tmp_path, output_path)
+        except Exception:
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+            raise

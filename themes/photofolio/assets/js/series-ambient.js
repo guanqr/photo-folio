@@ -166,29 +166,30 @@ function adjustDustCount(st) {
     if (target === st.dustTarget) return; // 数量未变时跳过（拖动窗口时多数帧无需重建数组）
     st.dustTarget = target;
     let kept = 0;
+    const dropped = [];
     st.particles = st.particles.filter((p) => {
         if (p.kind !== 'dust') return true;
         if (kept < target) {
             kept++;
             return true;
         }
+        dropped.push(p);
         return false;
     });
-    for (let i = kept; i < target; i++) {
-        st.particles.push(makeDustParticle(st));
-    }
-    // 数量增减后重建节点：尘土节点全量重挂（其余种类节点保持引用不动；
-    // 尘土主题全部粒子均为尘土，重挂顺序无影响）
-    for (const p of st.particles) {
-        if (p.kind === 'dust' && p.el) {
+    // 淘汰的粒子必须同步摘除 DOM 节点：只从数组删除会留下不再被 frame 更新的
+    // 孤儿 circle，反复变窄/变宽后节点持续累积（2026-10-29 实测 58→58→83…）
+    for (const p of dropped) {
+        if (p.el) {
             p.el.remove();
             p.el = null;
         }
     }
-    for (const p of st.particles) {
-        if (p.kind !== 'dust') continue;
+    // 只补差额：保留的尘土粒子节点与运动状态不动，避免 resize 时全量删建
+    for (let i = kept; i < target; i++) {
+        const p = makeDustParticle(st);
         p.el = makeEl('circle', { r: 32, fill: st.gradients.dust });
         st.root.appendChild(p.el);
+        st.particles.push(p);
     }
 }
 

@@ -92,5 +92,16 @@ def write_toml(toml_path, entries):
 
     lines.append("")
 
-    with open(toml_path, "w", encoding="utf-8") as f:
-        f.write("\n".join(lines))
+    # 原子写 + 固定 LF：photo.toml 是站点唯一数据源，中断不能留下截断文件；
+    # Windows 文本模式默认 CRLF 会让每次重写产生仅行尾差异（2026-10-29）
+    tmp_path = toml_path + ".tmp"
+    try:
+        with open(tmp_path, "w", encoding="utf-8", newline="\n") as f:
+            f.write("\n".join(lines))
+        os.replace(tmp_path, toml_path)
+    except Exception:
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass
+        raise
