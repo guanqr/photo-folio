@@ -612,7 +612,7 @@ width = "1920"
 height = "1281"
 camera = "NIKON Z 5"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
-hash = "08e5b472"
+hash = "f310bff7"
 source_hash = "c0fefe01ae87880cb836181e2abe8173"
 featured = true
 
@@ -700,6 +700,27 @@ lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
 hash = "c2057273"
 source_hash = "dffad2b4324af93f16c3fc6c41e50c06"
 featured = true
+
+[[photo]]
+src = "/images/photos/江岭之春.jpg"
+alt = "江嶺之春"
+category = "scenery"
+focus = "99"
+iso = "100"
+aperture = "6.3"
+shutter = "1/250"
+time = "2026-03-14"
+place = "江西婺源"
+address = "江西省上饒市婺源縣溪頭鄉江嶺風景區"
+lat = "29.453757"
+lng = "118.033068"
+location = "江西"
+width = "1920"
+height = "1079"
+camera = "NIKON Z 5"
+lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "986a2869"
+source_hash = "f76d4580d013f1a5916a0d70f8184452"
 
 [[photo]]
 src = "/images/photos/江岭日出.jpg"
@@ -1220,8 +1241,8 @@ width = "1280"
 height = "1920"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
-hash = "f337f806"
-source_hash = "64c5bd2154445d0515e7095cf9d130e6"
+hash = "4126ffe9"
+source_hash = "3143ac8319b964b2425e44d82f390006"
 
 [[photo]]
 src = "/images/photos/花城中轴夜序.jpg"
@@ -1391,7 +1412,7 @@ width = "1920"
 height = "1279"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
-hash = "0d146bcf"
+hash = "319bf026"
 source_hash = "d7cc3fa1c5b4d7804c41503458b05215"
 series = "廣東的端午"
 
@@ -1438,6 +1459,7 @@ lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
 hash = "6ad04ecc"
 source_hash = "44fe92ec282de171b48ba6b857306542"
 series = "烏蘭布統的秋"
+featured = true
 
 [[photo]]
 src = "/images/photos/坝上秋驰.jpg"
@@ -1763,8 +1785,8 @@ width = "1279"
 height = "1920"
 camera = "NIKON Z 8"
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
-hash = "3248cd75"
-source_hash = "d731d203d9ef04560443367104d9f37b"
+hash = "15c36f9c"
+source_hash = "491e4e5b0b5a473e74d748440bb1c8f8"
 
 [[photo]]
 src = "/images/photos/深中通道悬日.jpg"
