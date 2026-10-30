@@ -41,8 +41,8 @@ export function initLightboxCollection({ shortLens }) {
     // 收集当前页面所有可预览的作品。
     // 结果缓存：脏检查从网格既有状态惰性推导（O(1) 比较，无需跨模块推送脏标记）——
     // ① 网格元素身份变化 = SPA 换页（新页面新网格元素）；② _gridGen 变化 =
-    // 筛选重启（代次递增，见 masonry.js）；③ _shownItems 数量变化 = 无限滚动
-    // 揭示增长（灯箱打开时在途批次揭示完成同样自动感知）。打开入口 openByImg
+    // 筛选重启/跨档重排（代次递增，见 masonry.js）；③ _shownItems 数量变化 =
+    // 滚动时窗口内新行渲染（灯箱打开时同样自动感知）。打开入口 openByImg
     // 恒先 collect 再 open，快照对灯箱会话恒新鲜
     let cachedGrid = null;
     let cachedGen = -1;
@@ -70,7 +70,7 @@ export function initLightboxCollection({ shortLens }) {
         const photos = [];
         wrappers.forEach(wrapper => {
             const img = wrapper.querySelector('img');
-            if (!img || !img.getAttribute('src')) return; // 未揭示的作品还没有 src（无限滚动尚未加载），跳过——箭头仅停留在已加载的最后一张
+            if (!img || !img.getAttribute('src')) return; // 视口窗口外的作品还没有 src（尚未渲染），跳过——箭头只在已渲染的照片间循环
             // [data-title] 通用化：兼容 photo-card 与系列叙事块两种根元素
             const card = wrapper.closest('[data-title]');
             // is-hidden 检查以 card 为起点爬向 .masonry-item（card 恒为其子级、

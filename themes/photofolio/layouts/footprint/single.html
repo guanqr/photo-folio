@@ -12,7 +12,7 @@
 
     <div class="masonry-container">
         {{ if gt (len $realPhotos) 0 }}
-        {{ partial "components/masonry-grid.html" (dict "photos" $realPhotos "site" $.Site "infinite" true) }}
+        {{ partial "components/masonry-grid.html" (dict "photos" $realPhotos "site" $.Site) }}
         {{ else }}
         {{ partial "components/empty-state.html" (dict "titleKey" "no_photos_under" "titleCtx" (dict "Title" .Title)) }}
         {{ end }}

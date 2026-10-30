@@ -1,20 +1,15 @@
-{{/* 瀑布流网格单源（唯一实现）：data-infinite-scroll 标记、加载策略 data 属性、
-   读屏器加载状态与卡片循环。参数：photos、site、infinite（bool）。
-   系列详情页 infinite=false：不加无限滚动标记/状态，masonry 一次揭示全部行。 */}}
+{{/* 瀑布流网格单源（唯一实现）：卡片循环 + 整页容器。
+   参数：photos、site。
+   masonry.js 初始化后按整组行计划撑出完整页面高度：首屏只揭示可见窗口内的行，
+   之后正常下拉逐行补载；未渲染的卡片留在隐藏池（无 src、不请求图片），
+   拖到未渲染区域时只补视口内的行。 */}}
 {{ $photos := .photos }}
 {{ $site := .site }}
-{{ $infinite := .infinite }}
 {{ $gridCfg := $site.Params.grid | default dict }}
-{{ $initialFillExtra := $gridCfg.initialFillExtra | default 200 }}
-{{ $initialFillMaxItems := $gridCfg.initialFillMaxItems | default 24 }}
-{{ $triggerOffset := $gridCfg.triggerOffset | default 40 }}
-<div class="masonry-grid" id="masonry-grid"{{ if $infinite }} data-infinite-scroll data-initial-fill-extra="{{ $initialFillExtra }}" data-initial-fill-max-items="{{ $initialFillMaxItems }}" data-trigger-offset="{{ $triggerOffset }}"{{ end }}>
+{{ $rowLoadRatio := $gridCfg.rowLoadRatio | default 0.75 }}
+<div class="masonry-grid" id="masonry-grid"
+    data-row-load-ratio="{{ $rowLoadRatio }}">
     {{ range $photos }}
         {{ partial "components/photo-card.html" (dict "photo" . "site" $site) }}
     {{ end }}
 </div>
-{{ if $infinite }}
-{{/* 读屏器加载状态（视觉隐藏）：infinite-scroll 播报开始/完成 */}}
-<div class="visually-hidden" id="masonry-status" role="status" aria-live="polite"
-    data-loading="{{ i18n "loading" }}" data-finished="{{ i18n "no_more_photos" }}"></div>
-{{ end }}

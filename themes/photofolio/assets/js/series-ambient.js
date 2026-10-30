@@ -429,7 +429,7 @@ export function initSeriesAmbient() {
     const section = document.querySelector('.series-themed[data-ambient]');
     const svg = section ? section.querySelector('svg.series-ambient') : null;
 
-    // 清理先于早退：导航到非系列页也要释放旧状态（infinite-scroll.js 同款约定）
+    // 清理先于早退：导航到非系列页也要释放旧状态（masonry 窗口监听同款约定）
     if (!section || !svg) {
         destroyState();
         return;

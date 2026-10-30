@@ -1,4 +1,4 @@
-baseURL = "https://photo.guanqr.com/"
+﻿baseURL = "https://photo.guanqr.com/"
 locale = "zh-hant"
 title = "啼鳥怨年華"
 theme = "photofolio"
@@ -69,6 +69,10 @@ defaultContentLanguage = "zh-hant"
     # 是否开启 instant.page 链接预加载加速 (true 为开启，false 为关闭)
     enableInstantPage = true
 
+    # 年份合并分界：早于此年份的年份合并为一档（如 2024 → 「2024 以前」，即 2023 及更早；0 = 不合并）
+    # 同时作用于全部作品页年份筛选与关于页「拍摄档案」年度走势
+    yearMergeBefore = 2024
+
     # 图片尺寸与质量配置（用于 OSS 图片处理参数）
     # 注意：本节开始后到下一节标题前的键都属于 [params.imageSizes]——
     # 新增 [params] 级开关请写在上面两行之前，否则会被归入本节而失效
@@ -87,11 +91,10 @@ defaultContentLanguage = "zh-hant"
         placeholderQuality = 30
         placeholderBlur = 3    # 模糊半径/标准差（OSS blur 的 r_/s_ 同值）
 
-    # 瀑布流加载策略（模板写入网格 data 属性，masonry/infinite-scroll 读取）
+    # 瀑布流加载策略（模板写入网格 data 属性，masonry 读取）：
+    # 首屏只揭示可见窗口内的行，之后正常下拉逐行补载
     [params.grid]
-        initialFillExtra = 200   # 首屏在可见区域之外多留的高度（px）
-        initialFillMaxItems = 24 # 首屏单批最多揭示张数
-        triggerOffset = 40       # 网格底边越过视口底部的触发距离（px）
+        rowLoadRatio = 0.5      # 下一行至少一半进入视口后才逐行加载
 
     # 全部作品页筛选栏：自行选择开启哪些筛选维度（true 开启 / false 关闭）
     [params.galleryFilters]
@@ -110,10 +113,6 @@ defaultContentLanguage = "zh-hant"
         tonal = true        # 影調（高/中/低調 × 長/中/短調 + 合并直方圖/區域系統/三区占比）
         saturation = true    # 飽和度分布
         hue = true           # 色相分布
-
-    # 關於頁「拍攝檔案」統計
-    [params.aboutStats]
-        yearMergeBefore = 2024   # 年度拍攝走勢：此年份以前的照片合併為一項
 
 [params.author]
     name = "Guanqr"

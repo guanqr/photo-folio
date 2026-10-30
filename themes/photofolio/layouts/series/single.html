@@ -46,7 +46,7 @@
         </div>
         {{/* 与全部作品页完全一致的瀑布流（两端对齐行、行内等高，复用 masonry 引擎） */}}
         <div class="series-masonry">
-            {{ partial "components/masonry-grid.html" (dict "photos" $ordered "site" $.Site "infinite" false) }}
+            {{ partial "components/masonry-grid.html" (dict "photos" $ordered "site" $.Site) }}
         </div>
     </div>
     {{ else }}

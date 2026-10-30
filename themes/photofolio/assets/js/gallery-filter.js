@@ -1,9 +1,11 @@
 /**
  * 全部作品页筛选栏：作品範圍 / 拍攝年份 / 拍攝地點 / 作品類型（胶囊按钮组，可组合，默认「全部」）
  *
- * - 筛选切换：按行计划重启网格——集合外隐藏、集合内重新计算行计划，
- *   首屏按一屏行数揭示、其余滚动逐行揭示（无独立触发器）
+ * - 筛选切换：按行计划重启网格——集合外隐藏、集合内重新计算整组行计划与页面高度，
+ *   只渲染当前视口窗口内的行，其余滚动到再渲染
  * - 无匹配时显示空状态文案
+ * - 年份档含合并项：模板生成 `before-<分界年>` token（如 before-2024 = 「2024 以前」，覆盖 2023 及更早），
+ *   按卡片 data-year 数值小于分界年匹配
  * - 筛选状态同步到 URL（参考站同款）：?s=范围 &y=年份 &l=地点 &c=类型（pushState——
  *   iOS 地址栏实时更新、历史入栈返回键可逐步回退筛选，默认值不写入；
  *   加载恢复/过期参数清理走 replaceState 不产生历史）；直接打开带参数的 URL
@@ -11,10 +13,11 @@
  */
 
 import { restartMasonryGrid } from './masonry.js';
-import { initInfiniteScroll } from './infinite-scroll.js';
 import { prefersReducedMotion, easeOutCubic, pushQueryState } from './utils.js';
 
 export const PARAM_KEYS = { scope: 's', year: 'y', location: 'l', category: 'c' };
+
+const YEAR_BUCKET_PREFIX = 'before-'; // 年份合并档 data-value 前缀（与模板生成规则对应）
 
 let resizeBound = false; // 模块级：跨 SPA 页面实例只挂一个窗口监听
 
@@ -47,9 +50,9 @@ export function initGalleryFilter() {
     if (bar._filterBound) return; // SPA 重复初始化幂等
     bar._filterBound = true;
 
-    /* 首次初始化时记录作品原始 DOM 顺序（= 时间顺序）——
-       筛选切换会拍平/重建行容器，行内作品被插到游离作品之前、DOM 顺序被打乱，
-       重置回「全部」时必须按原始顺序排序，不能直接沿用当前 DOM 顺序 */
+    /* 作品原始顺序基准由 initMasonry 在首屏行创建前写入（必须先于任何行容器）；
+       这里只兜底异常路径：若 masonry 未初始化，当前 DOM 仍是原始顺序。
+       筛选切换会拍平/重建行容器、DOM 顺序被打乱，重置「全部」必须按原始顺序排序 */
     if (!grid._origOrder) {
         grid._origOrder = new Map(
             Array.from(grid.querySelectorAll('.masonry-item')).map((el, i) => [el, i])
@@ -115,6 +118,10 @@ export function initGalleryFilter() {
         // 每轮筛选只解析一次各维度值（避免在匹配谓词中逐项重复查询 DOM）
         const scope = valueOf('scope');
         const year = valueOf('year');
+        // 合并档按数值区间匹配；普通年份仍精确相等（分界年由模板写入 token）
+        const yearCutoff = year.startsWith(YEAR_BUCKET_PREFIX)
+            ? parseInt(year.slice(YEAR_BUCKET_PREFIX.length), 10) || 0
+            : 0;
         const locLabel = locLabelOf();
         const category = valueOf('category');
         const active = scope !== '' || year !== '' || locLabel !== '' || category !== '';
@@ -122,7 +129,9 @@ export function initGalleryFilter() {
         const matches = (item) =>
             // 范围维度匹配卡片 data-scope token 列表（featured 与 orientation 可并存）
             (!scope || (' ' + (item.dataset.scope || '') + ' ').includes(scopeToken)) &&
-            (!year || item.dataset.year === year) &&
+            (!year || (yearCutoff > 0
+                ? parseInt(item.dataset.year, 10) < yearCutoff
+                : item.dataset.year === year)) &&
             (!locLabel || item.dataset.location === locLabel) &&
             (!category || item.dataset.category === category);
         const items = Array.from(grid.querySelectorAll('.masonry-item'));
@@ -141,12 +150,9 @@ export function initGalleryFilter() {
         const emptyEl = document.getElementById('gallery-filter-empty');
         if (emptyEl) emptyEl.hidden = !(active && matching.length === 0);
 
-        // 网格重启（0.12s 淡出后真正执行）完成的回调里再初始化无限滚动：
-        // 立即调用会读到重启前的旧待加载队列——上一轮筛选全部加载完时队列为空、
-        // 误判为已加载完全部、摘除滚动监听，重启后剩余作品（如 13 张组合结果
-        // 首屏只揭示一屏行数、剩几张待加载）永远加载不出来；
-        // 回调时刻 _pendingItems 已是新集合的准确状态，挂载/幂等早退均基于真实队列
-        restartMasonryGrid(grid, matching, () => initInfiniteScroll());
+        // 网格重启（0.12s 淡出后真正执行）：按新集合重建行计划与整页高度，
+        // 只渲染当前视口窗口内的行，其余滚动到再加载
+        restartMasonryGrid(grid, matching);
         // 头部计数随筛选结果滚动动画（数字包在 #photo-count-num 中）
         const countNum = document.getElementById('photo-count-num');
         if (countNum) animateCount(countNum, matching.length);

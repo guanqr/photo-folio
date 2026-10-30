@@ -267,10 +267,10 @@ export function initLightbox() {
 
 /* 从 URL 恢复灯箱（?p=照片 slug）：页面加载/SPA 跳转后由 main.js 调用——
    经文档级点击监听触发 open（initLightbox 已绑定、幂等）。
-   先等筛选重启稳定（grid._restartPromise），避免在旧未筛选集合上揭示/打开；
-   目标不属于当前筛选集合时静默放弃。目标尚未揭示时按行揭示至进入已显示集合
+   先等筛选重启稳定（grid._restartPromise），避免在旧未筛选集合上渲染/打开；
+   目标不属于当前筛选集合时静默放弃。目标在视口窗口外时直接建立其所在行
    （instant），再滚入视口打开——缩放浮现动画有可见缩略图作起点；
-   揭示/等待后目标仍隐藏则放弃点击（不再静默点击隐藏目标）。 */
+   渲染后目标仍隐藏则放弃点击（不再静默点击隐藏目标）。 */
 export async function openLightboxFromUrl() {
     const slug = new URLSearchParams(location.search).get('p');
     if (!slug) return;
@@ -281,22 +281,17 @@ export async function openLightboxFromUrl() {
     const grid = document.getElementById('masonry-grid');
     const item = grid ? card.closest('.masonry-item') : null;
     if (grid && item) {
-        // 筛选重启的 120ms 淡出窗口内不读旧队列：等当前重启稳定（连点会改等新 promise）
+        // 筛选重启的 120ms 淡出窗口内不读旧集合：等当前重启稳定（连点会改等新 promise）
         while (grid._restartPromise) {
             await grid._restartPromise;
             if (grid !== document.getElementById('masonry-grid')) return;
         }
         if (grid._planItems && !grid._planItems.includes(item)) return; // 已被筛选隐藏
 
-        if (grid._pendingItems && grid._pendingItems.includes(item)) {
-            await revealUpToItem(grid, item);
-            if (grid !== document.getElementById('masonry-grid')) return;
-            if (grid._planItems && !grid._planItems.includes(item)) return;
-        }
         const img = item.querySelector('img.photo-img');
+        // 视口窗口外的作品尚未渲染（is-hidden、无 src）：建立目标所在行后复核
         if (item.classList.contains('is-hidden') || !img || !img.getAttribute('src')) {
-            // 首屏揭示仍在布局链上，或揭示重试未成功：等链完成复核，仍不行则放弃
-            if (grid._layoutChain) await grid._layoutChain;
+            await revealUpToItem(grid, item);
             if (grid !== document.getElementById('masonry-grid')) return;
             if (grid._planItems && !grid._planItems.includes(item)) return;
             if (item.classList.contains('is-hidden') || !img || !img.getAttribute('src')) return;

@@ -22,9 +22,9 @@
     </main>
 
     {{/* 解析阶段先隐藏全部作品：卡片带 width/height，未隐藏会在 JS 接管前
-         以原始尺寸撑高页面；initMasonry 按行计划揭示首屏，其余保持隐藏。
-         bundle 加载/初始化失败兜底：4s 后仍未 masonry-ready 则放出全部卡片并
-         补 src（浏览器 loading=lazy 仍只取近视口图片）——避免整页空白（2026-10-28） */}}
+         以原始尺寸撑高页面；initMasonry 只渲染视口窗口内的行，其余保持隐藏。
+         bundle 加载/初始化失败兜底：4s 后仍未 masonry-ready 则拆掉行容器、
+         放出全部卡片并补 src（浏览器 loading=lazy 仍只取近视口图片）——避免整页空白 */}}
     <script>
     (function() {
         var grid = document.getElementById('masonry-grid');
@@ -36,6 +36,18 @@
         }
         setTimeout(function() {
             if (!grid.isConnected || grid.classList.contains('masonry-ready')) return;
+            // 虚拟化初始化失败：行容器是绝对定位的，先拆回直属卡片再切兜底网格
+            var rows = grid.querySelectorAll('.masonry-row');
+            for (var r = 0; r < rows.length; r++) {
+                var stray = grid.querySelector(':scope > .masonry-item');
+                while (rows[r].firstChild) {
+                    if (stray) grid.insertBefore(rows[r].firstChild, stray);
+                    else grid.appendChild(rows[r].firstChild);
+                }
+                rows[r].remove();
+            }
+            grid.classList.remove('is-virtual');
+            grid.style.height = '';
             grid.classList.add('is-fallback');
             for (var j = 0; j < items.length; j++) {
                 items[j].classList.remove('is-hidden');

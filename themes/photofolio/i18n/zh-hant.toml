@@ -36,9 +36,6 @@ other = "返回頂部"
 [loading]
 other = "載入中"
 
-[no_more_photos]
-other = "已載入全部作品"
-
 [exif_device]
 other = "機身"
 
@@ -294,8 +291,8 @@ other = "感光度分佈"
 [stats_year]
 other = "年度拍攝走勢"
 
-[stats_year_before]
-other = "~{{ .Year }}"
+[year_before]
+other = "{{ .Year }} 以前"
 
 [stats_other_device]
 other = "其他設備"

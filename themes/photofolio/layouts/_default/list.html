@@ -33,6 +33,7 @@
 
 {{/* 全部作品页：筛选栏选项（年度 desc、地点/类别按作品数 desc） */}}
 {{ $years := slice }}
+{{ $yearOptions := slice }}
 {{ $locList := slice }}
 {{ $catList := slice }}
 {{ if eq $sectionName "gallery" }}
@@ -55,6 +56,22 @@
         {{ end }}
     {{ end }}
     {{ $years = sort $years "value" "desc" }}
+    {{/* 年份合并档：早于 params.yearMergeBefore 的年份合并为一项（年份降序，故追加在
+        按钮列表末尾）；data-value 用 before-<分界年> token，gallery-filter.js 按数值区间匹配 */}}
+    {{ $yearMergeBefore := site.Params.yearMergeBefore | default 0 | int }}
+    {{ $earlyYearCount := 0 }}
+    {{ range $years }}
+        {{ if and (gt $yearMergeBefore 0) (lt (int .) $yearMergeBefore) }}
+            {{ $earlyYearCount = add $earlyYearCount 1 }}
+        {{ else }}
+            {{ $yearOptions = $yearOptions | append (dict "value" . "label" .) }}
+        {{ end }}
+    {{ end }}
+    {{ if gt $earlyYearCount 0 }}
+        {{/* 标签显示分界年本身：「2024 以前」= 早于 2024（2023 及更早）；
+            与 data-value before-2024 / 匹配条件 year < 2024 同义 */}}
+        {{ $yearOptions = $yearOptions | append (dict "value" (printf "before-%d" $yearMergeBefore) "label" (i18n "year_before" (dict "Year" $yearMergeBefore))) }}
+    {{ end }}
     {{ range $locNames }}
         {{/* nil 安全：photo.toml 的 location 未登记进 locations.toml 时回退 urlize（此处不报错；足迹内容适配器会统一校验并 errorf） */}}
         {{ $slug := . | urlize }}
@@ -101,7 +118,7 @@
                 <span class="filter-label">{{ i18n "filter_year" }}</span>
                 <div class="filter-options">
                     <button type="button" data-value="" aria-pressed="true" class="is-active">{{ i18n "filter_all" }}</button>
-                    {{ range $years }}<button type="button" data-value="{{ . }}" aria-pressed="false">{{ . }}</button>{{ end }}
+                    {{ range $yearOptions }}<button type="button" data-value="{{ .value }}" aria-pressed="false">{{ .label }}</button>{{ end }}
                 </div>
             </div>
             {{ end }}
@@ -131,7 +148,7 @@
             {{ end }}
         </div>
         {{ end }}
-        {{ partial "components/masonry-grid.html" (dict "photos" $gridPhotos "site" .Site "infinite" true) }}
+        {{ partial "components/masonry-grid.html" (dict "photos" $gridPhotos "site" .Site) }}
 
         {{/* 筛选无结果提示：构建期预渲染、筛选 JS 切换 hidden（hidden 默认收起） */}}
         {{ if and (eq $sectionName "gallery") (or $filtersCfg.year $filtersCfg.location $filtersCfg.category $filtersCfg.scope) }}

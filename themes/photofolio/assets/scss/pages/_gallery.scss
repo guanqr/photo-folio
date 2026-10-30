@@ -28,12 +28,26 @@
     overflow-x: hidden;
 }
 
-/* 作品网格：纵向排列的显式行容器（引擎行 = 视觉行，杜绝 flex 自动换行与行划分不一致）
-   行宽与行高由 JS 按宽高比计算（每行恰好铺满，间距统一） */
+/* 作品网格：引擎行 = 视觉行，杜绝 flex 自动换行与行划分不一致导致的错位；
+   视口窗口渲染下由 JS 给网格加 .is-virtual（行容器绝对定位、网格高度 = 行计划总高），
+   行宽/行高与间距由 JS 按宽高比计算（每行恰好铺满） */
 .masonry-grid {
     display: flex;
     flex-direction: column;
     gap: 0.5em;
+}
+
+/* 视口窗口渲染：整页高度由 JS 设为行计划总高，行容器按计划 top 绝对定位；
+   只渲染视口上下窗口内的行，其余卡片留在隐藏池（2026-10-31） */
+.masonry-grid.is-virtual {
+    position: relative;
+    display: block;
+}
+
+.masonry-grid.is-virtual .masonry-row {
+    position: absolute;
+    left: 0;
+    right: 0;
 }
 
 /* bundle 加载/初始化失败兜底（baseof 4s 看门狗）：无 JS 精确排版时以自适配
@@ -85,7 +99,7 @@
 /* 主图淡入（模糊到清晰）：.photo-wrapper 底层铺 OSS 端生成并烘焙模糊的低清
    占位图（--photo-blur，见 photo-card.html），主图加载完成（is-loaded）后以
    0.6s 透明度淡入覆盖。占位图模糊在服务端完成、浏览端不叠 CSS filter——
-   网格逐行揭示（每行 1–6 张同时进入），滤镜会让 GPU 为每张并发建模糊纹理
+   网格窗口渲染（每行 1–6 张同时进入），滤镜会让 GPU 为每张并发建模糊纹理
    （低端机掉帧）。img.photo-img 与 base 中 img[loading="lazy"] 同权重（0,1,1），
    靠后导入的 gallery 覆盖；is-loaded 变体与 base 的 img[loading="lazy"].is-loaded
    同特异性、同样靠后，压掉 blur(0) 的常驻滤镜层 */

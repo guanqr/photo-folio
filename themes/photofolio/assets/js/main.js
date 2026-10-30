@@ -6,7 +6,6 @@ import { initNavDropdown } from './nav-dropdown.js';
 import { initBackToTop } from './back-to-top.js';
 import { initThemeToggle } from './theme-toggle.js';
 import { initMasonry, initMasonryResize } from './masonry.js';
-import { initInfiniteScroll } from './infinite-scroll.js';
 import { initGalleryFilter, PARAM_KEYS } from './gallery-filter.js';
 import { initFootprintMap } from './footprint-map.js';
 import { initCardsFlip } from './cards-flip.js';
@@ -28,7 +27,6 @@ function initPageModules() {
         !!document.querySelector('.gallery-filters');
     initMasonry(skipReveal);
     initMasonryResize();
-    initInfiniteScroll();
     initGalleryFilter();
     initFootprintMap();
     initSeriesAmbient();

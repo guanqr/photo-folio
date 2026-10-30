@@ -23,7 +23,7 @@ export function initLightboxAnalysisControl({
 }) {
     // 四项分析区块全关时模板不渲染 trigger/wrap：调用方仍会构造控制器，
     // 这里返回空实现，避免 getComputedStyle(null) 抛错中断 initLightbox
-    // 后续的 masonry / 无限滚动 / 筛选等页面模块
+    // 后续的 masonry / 筛选等页面模块
     if (!trigger || !wrap) {
         return { setOpen() {}, reset() {}, cancelCenterComp() {} };
     }
