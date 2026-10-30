@@ -1,8 +1,13 @@
 /**
- * 页面切换：拦截站内导航，仅替换主内容区，保持 header/footer 不重载
+ * 页面切换：拦截站内导航，仅替换主内容区，保持 header/footer 不重载。
+ *
+ * 导航先 fetch（旧页面保持可见、进度条即时推进），内容就绪后再
+ * 淡出 → 替换 → 淡入——不再在 fetch 之前固定等待 150ms。
+ * 淡出/淡入用 transitionend + 超时兜底；`navSeq` 作废被取代的旧导航。
  */
 import { resetSubMenus } from './nav-dropdown.js';
 import { closeLightbox } from './lightbox.js';
+import { prefersReducedMotion } from './utils.js';
 import { navTimeoutMs } from '@params';
 
 let reinitFn = null;
@@ -13,7 +18,7 @@ let reinitFn = null;
 let navSeq = 0;
 
 // 导航请求超时：弱网下连接挂起（既不 resolve 也不 reject）时 abort 触发
-// reject、回退完整导航——页面不长期停在淡出后的空白主内容区。
+// reject、回退完整导航——页面不长期停在加载中。
 // 值由 baseof.html 的 js.Build params 注入（与 sw.js 的模板注入同源，单点修改）
 const NAV_TIMEOUT_MS = navTimeoutMs || 10000;
 
@@ -28,10 +33,9 @@ let progressTimer = null;
 let progressFadeTimer = null;
 let progressResetTimer = null;
 
-// 淡入收尾定时器入模块级槽位：新导航在窗口内启动时先作废旧收尾——
-// 否则旧定时器会清掉新导航刚写入的淡出过渡、内容瞬间消失而非淡出
-//（2026-10-18）
-let fadeFinishTimer = null;
+// 淡出/淡入收尾清理槽：新导航先取消旧监听/定时器，
+// 防止旧淡入的 transitionend 清掉新导航刚写入的过渡
+let fadeCancel = null;
 
 function startProgress() {
     if (!progressEl) {
@@ -113,11 +117,8 @@ async function navigateTo(url) {
 async function loadContent(url) {
     const seq = ++navSeq;
 
-    // 作废上次导航的淡入收尾定时器（见 fadeFinishTimer 声明注释）
-    if (fadeFinishTimer) {
-        clearTimeout(fadeFinishTimer);
-        fadeFinishTimer = null;
-    }
+    // 作废上一次淡出/淡入收尾，避免旧闭包影响本次导航
+    cancelFade();
 
     // 导航即关灯箱：灯箱在壳层 DOM、不随内容替换——不关闭则旧照片悬在
     // 新页面上（popstate/返回键路径同样经此）
@@ -125,15 +126,14 @@ async function loadContent(url) {
 
     const main = document.querySelector('.main-content');
     if (!main) return;
+    // 新导航在旧淡出/淡入中途启动时，恢复旧主内容可见（旧 DOM 仍在）
+    main.style.transition = '';
+    main.style.opacity = '';
 
-    // 淡出
-    main.style.transition = 'opacity 0.15s ease';
-    main.style.opacity = '0';
-    await sleep(150);
-    if (seq !== navSeq) return; // 淡出期间被更新的导航取代：后续流程（含淡入）由新导航接管
+    // fetch 期间旧页面保持可见，进度条立即推进（不再先淡出空白）
+    startProgress();
 
-    startProgress(); // fetch 窗口的加载反馈（模拟推进，见其注释）
-
+    let doc;
     try {
         // 超时控制见 NAV_TIMEOUT_MS：abort 同时中断正文流读取（headers 到达后
         // 正文停滞同样超时），finally 清理计时器防正常完成路径误触 abort
@@ -148,89 +148,149 @@ async function loadContent(url) {
         } finally {
             clearTimeout(timeoutTimer);
         }
-        if (seq !== navSeq) return; // fetch 期间被取代：不动 DOM（新导航负责淡入与重初始化）
+        if (seq !== navSeq) return; // fetch 期间被取代：不动 DOM（新导航负责后续）
 
-        const doc = new DOMParser().parseFromString(html, 'text/html');
-
-        const newMain = doc.querySelector('.main-content');
-        if (!newMain) {
+        doc = new DOMParser().parseFromString(html, 'text/html');
+        if (!doc.querySelector('.main-content')) {
             if (seq === navSeq) window.location = url;
             return;
         }
-
-        // 替换主内容
-        main.innerHTML = newMain.innerHTML;
-
-        // 同步 is-home 标志：内容替换不会重渲染 body 类，不更新则
-        // 首页跳到其他页后 is-home 残留——亮色主题首页顶部强制暗色导航规则
-        // （.is-home 限定）被错误应用到其他页面；反向跳转同样缺失。
-        // 只动这一个标志（classList.toggle 幂等），保留未来任何动态 body 类
-        const headerEl = document.querySelector('.site-header');
-        if (headerEl) {
-            // 同步期间抑制头部颜色过渡：白字↔深色的 0.3s 过渡若落在新页
-            // 淡入期间，白字压在米色底上不可读；抑制类 + 强制重排让换色瞬时完成
-            headerEl.classList.add('no-color-transition');
-            document.body.classList.toggle('is-home', doc.body.classList.contains('is-home'));
-            void headerEl.offsetWidth;
-            headerEl.classList.remove('no-color-transition');
-        } else {
-            document.body.classList.toggle('is-home', doc.body.classList.contains('is-home'));
-        }
-
-        // 更新标题
-        const newTitle = doc.querySelector('title');
-        if (newTitle) document.title = newTitle.textContent;
-
-        // 更新导航当前页高亮
-        updateActiveNav(url);
-
-        // 关闭移动端菜单（带动画收回），并同步清理 header 上的 menu-open 状态；
-        // 子导航展开态一并重置——否则下次打开菜单时子导航仍是展开的
-        const nav = document.getElementById('site-nav');
-        const navBtn = document.getElementById('nav-toggle');
-        if (nav && nav.classList.contains('active')) {
-            nav.style.transition = 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, visibility 0.3s';
-            nav.classList.remove('active');
-            if (navBtn) navBtn.classList.remove('active');
-            if (headerEl) headerEl.classList.remove('menu-open');
-            resetSubMenus(nav);
-            nav.addEventListener('transitionend', function handler() {
-                nav.removeEventListener('transitionend', handler);
-                nav.style.transition = '';
-            });
-        }
-
-        // 滚动到顶部
-        window.scrollTo(0, 0);
-
-        // 重新初始化页面 JS
-        if (reinitFn) reinitFn();
     } catch (err) {
-        if (seq !== navSeq) return; // 被取代的旧导航失败：不得回退到陈旧 URL（新导航自会处理）
-        // 网络错误/超时等回退到完整导航（浏览器自带加载指示，不留在空白正文）
+        if (seq !== navSeq) return; // 被取代的旧导航失败：不得回退到陈旧 URL
+        // 网络错误/超时等回退到完整导航（浏览器自带加载指示，不留在加载中）
         window.location = url;
         return;
     }
 
-    finishProgress(); // 内容已就绪：进度冲满并淡出收起
+    // 内容已就绪，旧页面再淡出、替换、淡入（fetch 不再被淡出阻塞）
+    if (seq !== navSeq) return;
+    await fadeOut(main);
+    if (seq !== navSeq) return;
+    commitPage(doc, url);
+    finishProgress();
+    await fadeIn(main);
+}
 
-    // 淡入
-    requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-            // 已被新导航取代：不得把新导航刚写入的淡出 opacity 回写为 1
-            //（旧 rAF 链残留覆盖新淡出，2026-10-18）
-            if (seq !== navSeq) return;
-            main.style.opacity = '1';
-            fadeFinishTimer = setTimeout(() => {
-                fadeFinishTimer = null;
-                main.style.transition = '';
-            }, 200);
+/* 主内容替换与页面级状态同步 */
+function commitPage(doc, url) {
+    const main = document.querySelector('.main-content');
+    const newMain = doc.querySelector('.main-content');
+    if (!main || !newMain) return;
+
+    main.innerHTML = newMain.innerHTML;
+
+    // 同步 is-home 标志：内容替换不会重渲染 body 类，不更新则
+    // 首页跳到其他页后 is-home 残留——亮色主题首页顶部强制暗色导航规则
+    // （.is-home 限定）被错误应用到其他页；反向跳转同样缺失。
+    // 只动这一个标志（classList.toggle 幂等），保留未来任何动态 body 类
+    const headerEl = document.querySelector('.site-header');
+    if (headerEl) {
+        // 同步期间抑制头部颜色过渡：白字↔深色的 0.3s 过渡若落在新页
+        // 淡入期间，白字压在米色底上不可读；抑制类 + 强制重排让换色瞬时完成
+        headerEl.classList.add('no-color-transition');
+        document.body.classList.toggle('is-home', doc.body.classList.contains('is-home'));
+        void headerEl.offsetWidth;
+        headerEl.classList.remove('no-color-transition');
+    } else {
+        document.body.classList.toggle('is-home', doc.body.classList.contains('is-home'));
+    }
+
+    // 更新标题
+    const newTitle = doc.querySelector('title');
+    if (newTitle) document.title = newTitle.textContent;
+
+    // 更新导航当前页高亮
+    updateActiveNav(url);
+
+    // 关闭移动端菜单（带动画收回），并同步清理 header 上的 menu-open 状态；
+    // 子导航展开态一并重置——否则下次打开菜单时子导航仍是展开的
+    const nav = document.getElementById('site-nav');
+    const navBtn = document.getElementById('nav-toggle');
+    if (nav && nav.classList.contains('active')) {
+        nav.style.transition = 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, visibility 0.3s';
+        nav.classList.remove('active');
+        if (navBtn) navBtn.classList.remove('active');
+        if (headerEl) headerEl.classList.remove('menu-open');
+        resetSubMenus(nav);
+        nav.addEventListener('transitionend', function handler() {
+            nav.removeEventListener('transitionend', handler);
+            nav.style.transition = '';
         });
+    }
+
+    // 滚动到顶部
+    window.scrollTo(0, 0);
+
+    // 重新初始化页面 JS
+    if (reinitFn) reinitFn();
+}
+
+/* 淡出/淡入：transitionend + 超时兜底；取消槽避免旧收尾影响新导航 */
+function cancelFade() {
+    if (!fadeCancel) return;
+    const cancel = fadeCancel;
+    fadeCancel = null;
+    cancel();
+}
+
+function fadeOut(el) {
+    if (prefersReducedMotion()) {
+        el.style.opacity = '0';
+        return Promise.resolve();
+    }
+    return new Promise(resolve => {
+        let done = false;
+        let timer;
+        const finish = () => {
+            if (done) return;
+            done = true;
+            el.removeEventListener('transitionend', onEnd);
+            clearTimeout(timer);
+            if (fadeCancel === cancel) fadeCancel = null;
+            resolve();
+        };
+        const cancel = () => finish();
+        const onEnd = (e) => {
+            if (e.target === el && e.propertyName === 'opacity') finish();
+        };
+        fadeCancel = cancel;
+        el.addEventListener('transitionend', onEnd);
+        timer = setTimeout(finish, 220);
+        el.style.transition = 'opacity 0.15s ease';
+        el.style.opacity = '0';
     });
 }
 
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+function fadeIn(el) {
+    if (prefersReducedMotion()) {
+        el.style.opacity = '1';
+        el.style.transition = '';
+        return Promise.resolve();
+    }
+    el.style.transition = 'opacity 0.15s ease';
+    el.style.opacity = '0';
+    void el.offsetHeight;
+    return new Promise(resolve => {
+        let done = false;
+        let timer;
+        const finish = () => {
+            if (done) return;
+            done = true;
+            el.removeEventListener('transitionend', onEnd);
+            clearTimeout(timer);
+            el.style.transition = '';
+            if (fadeCancel === cancel) fadeCancel = null;
+            resolve();
+        };
+        const cancel = () => finish();
+        const onEnd = (e) => {
+            if (e.target === el && e.propertyName === 'opacity') finish();
+        };
+        fadeCancel = cancel;
+        el.addEventListener('transitionend', onEnd);
+        timer = setTimeout(finish, 220);
+        el.style.opacity = '1';
+    });
 }
 
 function updateActiveNav(url) {
