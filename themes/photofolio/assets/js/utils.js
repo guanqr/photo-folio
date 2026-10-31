@@ -14,7 +14,9 @@ export function prefersReducedMotion() {
 }
 
 // 布局重排 FLIP 过渡（与足迹时间线列数切换一致；档位内冻结缩放保持实时无动画）
-export const FLIP_TRANSITION = 'transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
+// 时长单源：瀑布流跨档收尾定时器与新卡片淡入共用
+export const FLIP_DURATION = 350;
+export const FLIP_TRANSITION = `transform ${FLIP_DURATION / 1000}s cubic-bezier(0.4, 0, 0.2, 1)`;
 
 // 换列 FLIP 滞回宽度（卡片网格/关于页统计共用）
 export const FLIP_HYSTERESIS = 20;

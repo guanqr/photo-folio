@@ -14,8 +14,11 @@
  */
 import { prefersReducedMotion, BP_LIGHTBOX_NARROW, BP_DESKTOP_MIN } from './utils.js';
 
-export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle, metaEl, dirVerdict }) {
+export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle, metaEl, dirVerdict, reservedBottom }) {
     const narrowMedia = window.matchMedia(`(max-width: ${BP_LIGHTBOX_NARROW}px)`);
+    // 全屏（沉浸）模式：面板 display:none，抽屉手势/布局重算一律暂停，
+    // 退出时由 refreshLayout 在面板恢复可见后统一重算（见 lightbox-fullscreen.js）
+    const isFullscreen = () => lightbox.classList.contains('is-fullscreen');
 
     let level = 0;       // 展开程度 0..1
     let headHeight = 0;  // 面板头部高度（每次打开重测：面板总长恒为 50vh，不随标题行数漂移）
@@ -23,9 +26,11 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
 
     function maxHeight() {
         // 下方最多展开到画面中间，给上方图片留展示空间：
-        // 面板总长（头部 + 详情区）恒为 50% 视口，详情区上限 = 50% 视口 − 面板头部高度
-        const px = Math.round(window.innerHeight * 0.5) - headHeight;
-        return Math.max(minHeight, px); // 至少露得出地点/日期简行；上限恒为半屏
+        // 面板总长（头部 + 详情区）恒为 50% 视口，详情区上限 = 50% 视口 − 面板头部高度；
+        // 底部缩略图条占用的高度扣除，图片区仍保持约半屏（reservedBottom 由调用方注入）
+        const px = Math.round(window.innerHeight * 0.5) - headHeight
+            - (reservedBottom ? reservedBottom() : 0);
+        return Math.max(minHeight, px); // 至少露得出地点/日期简行
     }
 
     function pxFor(lv) {
@@ -62,13 +67,17 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
 
     // 箭头状态：翻转类 + 无障碍标签（翻转后点击是「返回顶部收起」，其余按展开程度区分）
     function updateArrowState() {
+        // 图像分析收起编排期间（inputHold）不重判：内容收缩 + 回顶会让「触底」
+        // 瞬时为假，箭头会先翻下、收起完成后再翻上；保持收起前的方向，
+        // finish 解除挂起时经 refresh 统一重判（2026-10-31）
+        if (inputHold) return;
         const atBottom = atTarget();
         panel.classList.toggle('is-at-bottom', atBottom);
         if (panelToggle) {
             panelToggle.setAttribute('aria-label', atBottom
                 ? (panelToggle.dataset.topLabel || '')
                 : (level > 0
-                    ? (panelToggle.dataset.collapseLabel || '')
+                    ? (panelToggle.dataset.bottomLabel || '')
                     : (panelToggle.dataset.expandLabel || '')));
         }
     }
@@ -110,6 +119,26 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
         scrollAnim = requestAnimationFrame(step);
     }
 
+    // 向下箭头 = 滚到内容底部：展开与滚底同时开始，避免信息栏到上限后
+    // 再等展开结束才滚动的停顿；目标按展开后的最终可视高度计算（介于展开
+    // 中间的高度范围内，不会滚过头）
+    const scrollToBottom = (finalClientH) => {
+        const clientH = finalClientH != null ? finalClientH : panelDetails.clientHeight;
+        const to = Math.max(0, panelDetails.scrollHeight - clientH);
+        if (to <= panelDetails.scrollTop + 1) {
+            updateArrowState(); // 已经触底（内容放得下）：无需滚动，直接同步箭头
+            return;
+        }
+        if (prefersReducedMotion()) {
+            panelDetails.scrollTop = to;
+            updateArrowState();
+            return;
+        }
+        // 原生平滑滚动（合成器驱动）：展开的图像分析图表较重，逐帧 JS 写
+        // scrollTop 会在长内容中产生可感知的中途停顿（2026-10-31）
+        panelDetails.scrollTo({ top: to, behavior: 'smooth' });
+    };
+
     // 中断即完成到目标：回滚期间「展开程度 < 1 时 scrollTop 必为 0」的虚拟位置
     // 不变量被新输入打断后必须立即复原，否则滚动模型错位
     function cancelScrollAnim() {
@@ -118,6 +147,9 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
             scrollAnim = null;
             panelDetails.scrollTop = scrollAnimTo;
         }
+        // 同时取消在途的原生平滑滚动：以当前 scrollTop 的 auto 滚动落位，
+        // 用户滚轮/拖动/点击接管时不被残余平滑动画继续拖动
+        panelDetails.scrollTo({ top: panelDetails.scrollTop, behavior: 'auto' });
     }
 
     function reset(animate = false) {
@@ -162,6 +194,7 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
     // 面板触发一次淡入动画柔化布局跳变（prefers-reduced-motion 时由 CSS 关闭）
     narrowMedia.addEventListener('change', (e) => {
         if (!lightbox.classList.contains('active')) return;
+        if (isFullscreen()) return; // 隐藏态不测量；退出时 refreshLayout 按新视口重算
         lightbox.classList.remove('is-layout-switching');
         void lightbox.offsetWidth; // 强制回流，重新触发动画
         lightbox.classList.add('is-layout-switching');
@@ -174,6 +207,7 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
     // 继续挤占图片区；头部与简行高度同步重测（标题行数 / 地点日期双列↔单列都会改变高度）
     window.addEventListener('resize', () => {
         if (!narrowMedia.matches || !lightbox.classList.contains('active')) return;
+        if (isFullscreen()) return; // 隐藏态不测量；退出时 refreshLayout 按新视口重算
         headHeight = panel.offsetHeight - panelDetails.offsetHeight;
         minHeight = metaEl ? metaEl.offsetHeight : 0;
         if (level <= 0) {
@@ -193,13 +227,19 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
             if (!narrowMedia.matches) return;
             cancelScrollAnim();
             if (atTarget()) {
+                // 已触底：收起并回到顶部（箭头由朝上翻转回朝下）
                 level = 0;
                 apply(minHeight, true);
                 // 内容回滚动画：与收起过渡同曲线同时长，锁步合拢（减弱动态直切）
                 animateScrollTop(0, prefersReducedMotion() ? 0 : 400);
-            } else {
+            } else if (level < 1) {
+                // 向下箭头：展开与滚底同时开始，避免信息栏到上限后再等一拍的停顿
                 level = 1;
                 apply(maxHeight(), true);
+                scrollToBottom(Math.min(maxHeight(), panelDetails.scrollHeight));
+            } else {
+                // 已全开但未触底：继续滚到内容底部
+                scrollToBottom();
             }
             updateArrowState();
         });
@@ -238,12 +278,23 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
         panel.classList.toggle('is-fit', totalH <= panel.clientHeight);
     }
 
-    panelDetails.addEventListener('scroll', markScrolling, { passive: true });
+    // 任何滚动（滚轮/拖动/程序化滚底）都重判箭头：原生/程序化滚动不一定经过
+    // 手势分支的 updateArrowState，遗漏会让箭头停在旧方向（2026-10-31）
+    panelDetails.addEventListener('scroll', () => {
+        markScrolling();
+        updateArrowState();
+    }, { passive: true });
     lightbox.addEventListener('wheel', markScrolling, { passive: true });
 
     // 面板与子块尺寸变化（内容渲染、切图、视口变化）→ 重判「放得下/放不下」
     if (typeof ResizeObserver !== 'undefined') {
-        const fitObserver = new ResizeObserver(() => updateFit());
+        const fitObserver = new ResizeObserver(() => {
+            if (isFullscreen()) return; // 隐藏态不重判；退出时 refreshFit/refreshLayout 统一恢复
+            updateFit();
+            // 窄屏：抽屉/内容高度变化（展开过渡、分析区开合、切图换内容）后
+            // 重判箭头方向——高度过渡结束没有滚动事件，箭头不能停在旧状态
+            if (narrowMedia.matches && lightbox.classList.contains('active')) updateArrowState();
+        });
         fitObserver.observe(panel);
         fitObserver.observe(panelDetails);
         Array.from(panel.children).forEach((el) => fitObserver.observe(el));
@@ -255,6 +306,8 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
     // 上滚时内容回滚，到顶后渐进收起（至少保留地点/日期简行）
     lightbox.addEventListener('wheel', (e) => {
         if (inputHold) return; // 收起编排挂起：点击收起后的旧手势惯性尾不接管（见 setInputHold）
+        if (isFullscreen()) return; // 全屏：面板已隐藏，滚轮不驱动抽屉
+        if (e.target.closest('.lightbox-strip')) return; // 底部缩略图条自行处理滚轮（横向滚动）
         // 新输入接管：中断回滚并完成到目标（桌面端分析区收起同样会启动回滚动画，
         // 用户中途滚轮时必须先摘除，否则动画逐帧覆盖滚动输入）
         cancelScrollAnim();
@@ -309,13 +362,17 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
     let dragFromImgArea = false; // 拖拽起点是否在图片区——方向仲裁仅对图片区起手的手势生效
     lightbox.addEventListener('pointerdown', (e) => {
         if (!narrowMedia.matches || !lightbox.classList.contains('active')) return;
+        if (isFullscreen()) return; // 全屏：不进入抽屉拖拽，触屏水平滑动切图由 swipe 模块接管
+        // 任何点按（含按钮/缩略图条）接管在途的 JS 回滚与原生平滑滚底
+        cancelScrollAnim();
         if (e.target.closest('button') || e.target.closest('a')) return;
+        // 底部缩略图条：横向滚动/点按切换，不进入抽屉拖拽
+        if (e.target.closest('.lightbox-strip')) return;
         // 鼠标不进入拖拽模型（展开由滚轮路径覆盖）：保留中屏桌面的文本
         // 选择/复制（触屏选择本就被 touch-action:none 禁止、拖拽期间另由
         // .is-dragging 禁选中防 pointercancel 打断）
         if (e.pointerType !== 'touch') return;
         e.preventDefault(); // 阻止原生图片拖拽/文本选择抢走 pointermove
-        cancelScrollAnim(); // 拖拽接管前完成进行中的回滚，保持虚拟位置不变量
         if (maxHeight() - minHeight < 1) return; // 行程为零：拖拽无展开余地，不启动
         dragging = true;
         lightbox.classList.add('is-dragging'); // 拖拽期间禁选中（见 _lightbox-panel.scss）
@@ -383,6 +440,15 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
         // 滚动上下文保持；false 解除，翻转随内容增长自然发生——此前为
         // 「高度扣除回调」但从不被调用、属死 API，2026-10-21 审查修复 #15）
         setFitAdjuster: (frozen) => { fitAdjuster = frozen; },
+        // 全屏退出：面板恢复可见后按当前 level 重算抽屉高度（全屏期间 resize/
+        // 媒体查询重算被跳过，且 display:none 测量不可用）；桌面 is-fit 由 refreshFit 负责
+        refreshLayout: () => {
+            if (!narrowMedia.matches || !lightbox.classList.contains('active')) return;
+            headHeight = panel.offsetHeight - panelDetails.offsetHeight;
+            minHeight = metaEl ? metaEl.offsetHeight : 0;
+            apply(pxFor(level), false);
+            updateArrowState();
+        },
         // 挂起/恢复滚轮输入（分析区收起期间置位、finish/展开/重置清除——
         // 收起编排不被旧手势惯性尾接管，2026-10-21）
         setInputHold: (held) => { inputHold = held; },

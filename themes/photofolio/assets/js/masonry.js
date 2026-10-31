@@ -7,19 +7,21 @@
  *   行高天然落在 H 附近；作品严格保持自身长宽比（object-fit: cover 仅兜底取整误差）
  * - 超窄屏 ≤500px：每行 1–2 张——3:2 横构图独占一行（行高基准 H = 行宽 × 2/3），
  *   竖构图（宽高比 < 1）绝不落单，与相邻作品同行
- * - 最后一行不强行对齐：行高封顶 H、左侧对齐、右侧留白
+ * - 末行默认不强行对齐：行高封顶 H、左侧对齐、右侧留白；余量连当前集合最窄照片
+ *   都放不下且末行 ≥2 张时按自然高度放大铺满，单张末行不放大（见 shouldFillLastRow）
  * - 整页容器 + 渐进加载（2026-10-31）：初始化时一次算完整组行计划并把网格高度设为总高——
  *   滚动条一开始就是完整长度；首屏只揭示可见窗口内的行（不额外预载），由串行队列
  *   一次建立一行（图片请求与入场都逐行）；之后正常下拉按行逐行补载，已渲染的行保留
- *   （滚回不闪、灯箱箭头覆盖已看过的照片）。拖到未渲染区域时只补视口内的行，
- *   同样逐行建立；刷新恢复滚动位置时只揭示当前视口行
+ *   （滚回不闪）。拖到未渲染区域时只补视口内的行，同样逐行建立；
+ *   刷新恢复滚动位置时只揭示当前视口行
  * - 行容器按计划绝对定位，未渲染的卡片留在隐藏池（无 src、不请求图片）
  * - 逐张淡入（60ms/张），图片未到时由 LQIP 模糊底图占位
  * - resize：同档位行成员冻结、只按新宽度重算行高与位置（实时无动画）；跨档位重排整组行，
- *   不做 FLIP，按视口锚点补偿滚动位置，避免内容跳动
+ *   对视口内已渲染卡片做 FLIP（锚点补偿滚动位置），滑出视口的卡片临时保留参与
+ *   动画、新进入视口的卡片按旧行计划位置移入，换行有平滑过渡
  */
 
-import { prefersReducedMotion, markImageLoaded } from './utils.js';
+import { prefersReducedMotion, markImageLoaded, FLIP_TRANSITION, FLIP_DURATION } from './utils.js';
 
 const DEFAULT_RATIO = 1.5; // 图片宽高比读取失败时的兜底值（3:2）
 const REVEAL_STAGGER = 60; // 逐张揭示间隔 ms
@@ -45,6 +47,7 @@ export function initMasonry(skipInitialReveal = false) {
     }
     if (!grid) return;
     clearRenderQueue(grid); // 同页重入/异常残留的行队列先作废
+    clearTransientRelease(grid); // 上一轮跨档临时行的收尾定时器作废
 
     const allItems = Array.from(grid.querySelectorAll('.masonry-item'));
     if (allItems.length === 0) return;
@@ -59,7 +62,7 @@ export function initMasonry(skipInitialReveal = false) {
         grid._origOrder = new Map(allItems.map((el, i) => [el, i]));
     }
     grid._planItems = allItems; // 行计划覆盖的作品集合（筛选重启时替换为筛选结果）
-    grid._shownItems = []; // 已渲染过的作品（灯箱集合与锚点补偿读取）
+    grid._shownItems = []; // 已渲染过的作品（视口锚点补偿读取；灯箱集合改按 _planItems，2026-10-31）
     grid._shownSet = new Set();
     grid._renderedRows = new Map(); // 已渲染行：行号 → 行容器
     grid._ratios = new Map(allItems.map((item) => [item, ratioOf(grid, item)]));
@@ -146,7 +149,8 @@ function watchRatioOnLoad(grid, item, img) {
 
 /* 按当前宽度/档位为整组（筛选后）作品预计算行计划：
    行 = 一段连续作品，start/count/sum 以 _planItems 为坐标系；
-   只有全局最后一行是 ragged（左对齐留白），其余行都恰好铺满 */
+   全局最后一行可能标记 ragged（默认左对齐留白，铺满判定见 shouldFillLastRow），
+   其余行都恰好铺满 */
 function buildPlan(grid) {
     const W = getGridWidth(grid);
     const gap = getRowGap(grid);
@@ -154,6 +158,12 @@ function buildPlan(grid) {
     updateTier(grid);
     const H = getTargetRowHeight(W, gap, border2, grid._tier);
     const ratios = grid._planItems.map((item) => grid._ratios.get(item) || DEFAULT_RATIO);
+    // 当前集合最窄照片的宽高比：末行留白判定用（筛选后集合内「放得下一张照片」的口径）
+    let minRatio = Infinity;
+    ratios.forEach((ratio) => {
+        if (ratio < minRatio) minRatio = ratio;
+    });
+    grid._planMinRatio = Number.isFinite(minRatio) ? minRatio : DEFAULT_RATIO;
     const plan = partitionRows(ratios, W, H, gap, border2, true, grid._tier);
     computeRowLayout(grid, plan);
     return plan;
@@ -169,6 +179,15 @@ function computeRowLayout(grid, plan) {
     const H = getTargetRowHeight(W, gap, border2, grid._tier);
     const layout = [];
     let top = 0;
+    // 末行若标记为 ragged：逐宽度重判是否放大铺满——同一档位 resize 时
+    // H 与余量都在变，判定必须跟着当前宽度走（2026-10-31）
+    const last = plan[plan.length - 1];
+    if (last && last.ragged) {
+        const ratios = grid._planItems
+            .slice(last.start, last.start + last.count)
+            .map((item) => grid._ratios.get(item) || DEFAULT_RATIO);
+        last.fill = shouldFillLastRow(last, ratios, W, gap, border2, H, grid._planMinRatio || DEFAULT_RATIO);
+    }
     for (const row of plan) {
         const h = Math.round(planRowHeight(row, W, gap, border2, H));
         layout.push({ top, h });
@@ -183,10 +202,28 @@ function computeRowLayout(grid, plan) {
     return layout;
 }
 
-/* 行在给定宽度下的高度：普通行恰好铺满；真正的最后一行封顶 H、左对齐 */
+/* 末行是否放大铺满：自然高度不超过 H 时本来就能铺满（只需吸收取整余量）；
+   单张末行不放大（避免一张照片被拉成通栏大图，2026-10-31 用户裁定）；
+   至少两张时，按 H 排布后若右侧余量连当前集合最窄的一张照片都放不下
+   （最窄照片宽 = 宽高比 × H + 左右边框，另需一个行间距），则放弃留白、
+   按自然高度放大到整行宽 */
+function shouldFillLastRow(row, ratios, W, gap, border2, H, minRatio) {
+    if (rowHeight(W, row.count, row.sum, gap, border2) <= H) return true;
+    if (row.count < 2) return false;
+    // 未铺满时的实际渲染行高（computeRowLayout 对行高取整）：余量按同口径估算
+    const h = Math.round(H);
+    let used = border2 * row.count + gap * (row.count - 1);
+    for (let k = 0; k < row.count; k++) {
+        used += Math.round(ratios[k] * h + border2) - border2;
+    }
+    return W - used < minRatio * h + border2 + gap;
+}
+
+/* 行在给定宽度下的高度：普通行恰好铺满；末行（ragged）默认按 H 封顶、
+   左对齐留白，仅在 fill 判定为真（余量放不下任何照片）时按自然高度铺满 */
 function planRowHeight(row, W, gap, border2, H) {
     let h = rowHeight(W, row.count, row.sum, gap, border2);
-    if (row.ragged) h = Math.min(h, H);
+    if (row.ragged && !row.fill) h = Math.min(h, H);
     return h;
 }
 
@@ -417,7 +454,7 @@ function renderRow(grid, rowIndex, instant = false) {
     insertRowSorted(grid, rowEl, rowIndex);
 
     const ratios = items.map((item) => grid._ratios.get(item) || DEFAULT_RATIO);
-    applyRows(items, [{ start: 0, count: row.count, h: layout.h, ragged: row.ragged }], ratios,
+    applyRows(items, [{ start: 0, count: row.count, h: layout.h, ragged: row.ragged, fill: row.fill }], ratios,
         grid._lastW, grid._gap, grid._border2);
 
     items.forEach((item) => {
@@ -432,8 +469,8 @@ function renderRow(grid, rowIndex, instant = false) {
     revealItems(grid, items, instant);
 }
 
-/* 行容器按行号排序插入，保持 DOM 顺序 = 时间顺序（灯箱集合依赖 DOM 顺序）；
-   隐藏池中的卡片无 src，不参与灯箱集合 */
+/* 行容器按行号排序插入，保持 DOM 顺序 = 时间顺序；灯箱集合按 _planItems
+   生成（含隐藏池中无 src 的卡片），不依赖行容器的 DOM 顺序（2026-10-31） */
 function insertRowSorted(grid, rowEl, index) {
     const rows = grid.querySelectorAll(':scope > .masonry-row');
     for (const el of rows) {
@@ -548,7 +585,8 @@ function getTargetRowHeight(containerWidth, gap, border2, tier) {
    超窄屏档位 0：每行最多 2 张——横构图（宽高比 ≥ 1）可独占一行；竖构图开头的行必须
    与下一张同行（绝不落单）；行内一张横构图后若下一张是最后一张竖构图，则并入本行；
    其余档位：边界处比较「停在此处 / 纳入下一张」，取行高最接近 H 者；
-   最后一行（作品耗尽）行高封顶 H、右侧留白不强行对齐 */
+   最后一行（作品耗尽）可能标记 ragged：默认行高封顶 H、右侧留白，
+   余量放不下照片且 ≥2 张时再按自然高度铺满（见 planRowHeight） */
 function partitionRows(ratios, W, H, gap, border2, refine, tier) {
     const isTier0 = tier === 0;
     const maxPhotos = isTier0 ? 2 : Infinity; // 超窄屏每行最多 2 张
@@ -605,7 +643,8 @@ function partitionRows(ratios, W, H, gap, border2, refine, tier) {
 /* 应用行布局：每张盒子严格按自身比例（自然行高下恰好铺满，无裁切）
    非末张四舍五入、末张吸收取整误差并向下取整——防换行不依赖逐项 floor，
    末张 floor(remaining − border2) 已使行宽总和精确 ≤ W；
-   ragged 行（真正的最后一行）不吸收余量，按自然宽度排列、右侧留白 */
+   ragged 行（真正的最后一行）默认不吸收余量、按自然宽度排列、右侧留白；
+   判定铺满的 ragged 行（row.fill）与普通行一样由末张吸收取整余量 */
 function applyRows(items, rows, ratios, W, gap, border2) {
     rows.forEach((row) => {
         let remaining = W;
@@ -619,8 +658,8 @@ function applyRows(items, rows, ratios, W, gap, border2) {
             if (item.style.marginRight) item.style.marginRight = ''; // 清除任何残留的 inline margin（防止历史版本遗留导致行超宽换行）
             const cellW = ratios[idx] * row.h + border2;
             let imgW;
-            if (!row.ragged && k === row.count - 1) {
-                imgW = Math.max(1, Math.floor(remaining - border2)); // 末张吸收余量，整行恰好铺满
+            if ((!row.ragged || row.fill) && k === row.count - 1) {
+                imgW = Math.max(1, Math.floor(remaining - border2)); // 末张吸收余量，整行恰好铺满（放大铺满的末行同样适用）
             } else {
                 // 非末张取 round：误差 ±0.5px 正负分布（原 floor 单向为负、末张
                 // 系统性吸收 ~n/2 px 正偏差、总是宽于理想）；防换行不依赖逐项
@@ -683,8 +722,8 @@ function captureAnchor(grid) {
     return best;
 }
 
-/* 按新行计划把锚点作品放回原视口偏移（不依赖 FLIP——虚拟化行是绝对定位，
-   直接滚动补偿即可，跨档重排不会出现内容跳动） */
+/* 按新行计划把锚点作品放回原视口偏移（虚拟化行是绝对定位，直接滚动补偿；
+   跨档重排的视觉过渡由 rebuildForPlanChange 的 FLIP 负责） */
 function restoreAnchor(grid, anchor) {
     if (!anchor || !anchor.item || !grid._planItems.includes(anchor.item)) return;
     // 网格顶部仍在视口内时不补偿：保留页头/筛选栏位置，避免 resize 后把页头滚出屏幕
@@ -773,7 +812,7 @@ function scheduleRelayout(grid) {
 }
 
 /* 宽度变化：同档位只按新宽度重算行高与行容器 top（行成员冻结）；
-   跨档位重新规划整组行（不做 FLIP），按视口锚点补偿滚动位置 */
+   跨档位重新规划整组行并对视口内作品做 FLIP，锚点补偿滚动位置 */
 function relayout(grid) {
     if (!grid || !grid._plan || !grid._rowLayout) return;
     if (grid._restartPromise) return; // 筛选重启在即：按新集合统一重排，避免在旧集合上白算
@@ -806,15 +845,203 @@ function applyRenderedRows(grid) {
         rowEl.style.top = layout.top + 'px';
         const items = Array.from(rowEl.children).filter((el) => el.classList.contains('masonry-item'));
         const ratios = items.map((item) => grid._ratios.get(item) || DEFAULT_RATIO);
-        applyRows(items, [{ start: 0, count: row.count, h: layout.h, ragged: row.ragged }], ratios,
+        applyRows(items, [{ start: 0, count: row.count, h: layout.h, ragged: row.ragged, fill: row.fill }], ratios,
             grid._lastW, grid._gap, grid._border2);
     });
 }
 
+/* ===== 跨档位重排 FLIP ===== */
+/* 时长/缓动见 utils.js 的 FLIP_TRANSITION；同档位的冻结缩放保持实时无动画 */
+
+/* 清除上一次未完成的 FLIP 残留（内联 transform/transition/transform-origin）——
+   残留会使 First 测量包含旧位移，导致新一轮动画起点错位 */
+function clearFlipStyles(items) {
+    items.forEach((item) => {
+        if (item.style.transform) item.style.transform = '';
+        if (item.style.transition) item.style.transition = '';
+        if (item.style.transformOrigin) item.style.transformOrigin = '';
+    });
+}
+
+/* 捕获重建前的整组行计划几何：进入视口的新卡片没有 DOM 旧矩形，
+   按旧计划算出它们的旧位置/尺寸，FLIP 才能从原布局位置移入而非浮现 */
+function capturePlanGeometry(grid) {
+    const rect = grid.getBoundingClientRect();
+    return {
+        plan: grid._plan,
+        layout: grid._rowLayout,
+        items: grid._planItems,
+        ratios: grid._ratios,
+        W: grid._lastW,
+        gap: grid._gap,
+        border2: grid._border2,
+        borderV: grid._borderV,
+        gridLeft: rect.left,
+        gridTopDoc: rect.top + window.scrollY,
+        scrollY: window.scrollY
+    };
+}
+
+/* 按旧行计划计算某张作品在重建前的视口矩形（与 applyRows 的宽度分配同口径） */
+function itemRectInPlan(geom, item) {
+    if (!geom || !geom.plan || !geom.layout) return null;
+    const idx = geom.items.indexOf(item);
+    if (idx < 0) return null;
+    let rowIdx = -1;
+    for (let i = 0; i < geom.plan.length; i++) {
+        const row = geom.plan[i];
+        if (idx >= row.start && idx < row.start + row.count) {
+            rowIdx = i;
+            break;
+        }
+    }
+    if (rowIdx < 0) return null;
+    const row = geom.plan[rowIdx];
+    const entry = geom.layout[rowIdx];
+    if (!entry) return null;
+    const top = geom.gridTopDoc + entry.top - geom.scrollY;
+    let x = geom.gridLeft;
+    let remaining = geom.W;
+    for (let k = 0; k < row.count; k++) {
+        const gi = row.start + k;
+        const ratio = geom.ratios.get(geom.items[gi]) || DEFAULT_RATIO;
+        const cellW = ratio * entry.h + geom.border2;
+        let imgW;
+        if ((!row.ragged || row.fill) && k === row.count - 1) {
+            imgW = Math.max(1, Math.floor(remaining - geom.border2));
+        } else {
+            imgW = Math.round(cellW - geom.border2);
+            remaining -= (imgW + geom.border2) + geom.gap;
+        }
+        const cardW = imgW + geom.border2;
+        if (gi === idx) {
+            return { left: x, top, width: cardW, height: entry.h + geom.borderV };
+        }
+        x += cardW + geom.gap;
+    }
+    return null;
+}
+
+/* 记录重排前视口内已渲染作品的旧矩形（减弱动态时返回 null）。
+   只取视口内：重排后只有视口行会被重建（按窗口渲染），屏外卡片重排后不可见；
+   重建前未渲染、重排后新进入视口的卡片没有旧矩形，直接出现（不从屏外飞入） */
+function captureFlipRects(grid) {
+    if (prefersReducedMotion() || !grid._shownItems.length) return null;
+    clearFlipStyles(grid._shownItems);
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    const items = [];
+    const rects = [];
+    grid._shownItems.forEach((item) => {
+        if (!item.isConnected || item.classList.contains('is-hidden')) return;
+        const r = item.getBoundingClientRect();
+        if (r.width <= 0 || r.height <= 0 || r.bottom <= 0 || r.top >= vh) return;
+        items.push(item);
+        rects.push(r);
+    });
+    return items.length ? { items, rects } : null;
+}
+
+/* FLIP 收尾：transform 过渡结束/取消后清内联 transition 与 transform-origin
+   （transform 已在 Play 时清空）；监听只挂网格一次（事件冒泡，目标为作品项） */
+function bindFlipCleanup(grid) {
+    if (grid._flipCleanupBound) return;
+    grid._flipCleanupBound = true;
+    const cleanup = (e) => {
+        if (e.propertyName !== 'transform') return;
+        const item = e.target;
+        if (!item.classList || !item.classList.contains('masonry-item')) return;
+        if (!(item.style.transition || '').includes('transform')) return;
+        item.style.transition = '';
+        item.style.transformOrigin = '';
+    };
+    grid.addEventListener('transitionend', cleanup);
+    grid.addEventListener('transitioncancel', cleanup);
+}
+
+/* 对重建后的可见作品执行 FLIP：Last 测量 → Invert 回旧位 → Play 过渡到新位。
+   重建后未渲染（is-hidden）或被新视口排除的作品跳过 */
+function flipRebuild(grid, flip) {
+    const playing = [];
+    flip.items.forEach((item, i) => {
+        if (!item.isConnected || item.classList.contains('is-hidden')) return;
+        const f = flip.rects[i];
+        const l = item.getBoundingClientRect();
+        if (l.width <= 0 || l.height <= 0) return;
+        const dx = f.left - l.left;
+        const dy = f.top - l.top;
+        const sx = f.width / l.width;
+        const sy = f.height / l.height;
+        if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5 &&
+            Math.abs(sx - 1) < 0.001 && Math.abs(sy - 1) < 0.001) return;
+        item.style.transition = 'none';
+        item.style.transformOrigin = 'top left';
+        item.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
+        playing.push(item);
+    });
+    if (!playing.length) return;
+    // 强制回流：单次布局读取即提交全部 Invert 起点（同一任务内完成换位与起播）
+    void playing[0].offsetHeight;
+    playing.forEach((item) => {
+        item.style.transition = FLIP_TRANSITION;
+        item.style.transform = '';
+    });
+    bindFlipCleanup(grid);
+}
+
+/* 跨档重排后，重建前可见、重建后落入视口外的作品：临时渲染其新行并参与
+   FLIP（滑出视口），动画结束后收回隐藏池；期间若滚入视口则保留。
+   避免卡片在视口边缘瞬消（2026-10-31） */
+function scheduleTransientRelease(grid, rowIndices) {
+    if (!rowIndices.length) return;
+    clearTransientRelease(grid);
+    grid._transientReleaseTimer = setTimeout(() => {
+        grid._transientReleaseTimer = null;
+        if (!grid.isConnected || grid !== document.getElementById('masonry-grid')) return;
+        const range = viewportRowRange(grid);
+        rowIndices.forEach((rowIdx) => {
+            if (range && rowIdx >= range.start && rowIdx < range.end) return; // 期间滚入视口：保留
+            const rowEl = grid._renderedRows.get(rowIdx);
+            if (!rowEl) return;
+            rowEl.querySelectorAll('.masonry-item').forEach((item) => {
+                item.classList.add('is-hidden');
+                item.style.transition = '';
+                item.style.transform = '';
+                item.style.transformOrigin = '';
+                grid._shownSet.delete(item);
+                const pos = grid._shownItems.indexOf(item);
+                if (pos >= 0) grid._shownItems.splice(pos, 1);
+            });
+            // 卡片必须放回网格隐藏池（与 flattenRows 同款顺序插入）——只删行容器会
+            // 把卡片一起从 DOM 摘掉，后续筛选 querySelectorAll 会漏掉这些照片
+            const firstStray = grid.querySelector(':scope > .masonry-item');
+            while (rowEl.firstChild) {
+                if (firstStray) grid.insertBefore(rowEl.firstChild, firstStray);
+                else grid.appendChild(rowEl.firstChild);
+            }
+            rowEl.remove();
+            grid._renderedRows.delete(rowIdx);
+        });
+    }, FLIP_DURATION + 100);
+}
+
+function clearTransientRelease(grid) {
+    if (grid._transientReleaseTimer) {
+        clearTimeout(grid._transientReleaseTimer);
+        grid._transientReleaseTimer = null;
+    }
+}
+
 /* 行计划整体重建（跨档位 / 比例校正）：拆行回到隐藏池、重新规划、按当前视口窗口渲染。
-   已渲染过的卡片保留已加载的 src 与 is-revealed（重排后不闪、不重播淡入） */
+   已渲染过的卡片保留已加载的 src 与 is-revealed（重排后不闪、不重播淡入）；
+   重建前后对视口内可见作品做 FLIP（滑出视口的作品临时保留）；新进入视口的
+   作品按旧行计划矩形参与 FLIP，从原布局位置移入而不是浮现；锚点滚动补偿保留 */
 function rebuildForPlanChange(grid) {
     if (grid._restartPromise) return; // 筛选重启会按更新后的比例重建，无需插队
+    clearTransientRelease(grid); // 上一轮临时行收尾作废（不能误删重建后的新行）
+    // 旧行计划几何 + 旧视口矩形都快照后再重建：前者供新进入视口的卡片
+    // 反推旧位置，后者供重建前可见卡片 FLIP；两者都基于清理后的布局位置
+    const geom = capturePlanGeometry(grid);
+    const flip = captureFlipRects(grid);
     const anchor = captureAnchor(grid);
     grid._gridGen = (grid._gridGen || 0) + 1; // 作废旧批次的淡入计时器
     clearRenderQueue(grid);
@@ -826,8 +1053,41 @@ function rebuildForPlanChange(grid) {
     grid._plan = buildPlan(grid);
     setGridHeight(grid);
     restoreAnchor(grid, anchor);
-    // 重建后按视口补行（instant：不能让已看过的照片再淡一次），再交回滚动补载
+    // 重建后按视口补行（instant：不让已看过的照片再淡一次），再交回滚动补载
     renderVisibleRows(grid, true);
+    if (flip) {
+        const oldVisible = new Set(flip.items);
+        // 重建前可见、重建后落入视口外的作品：临时渲染其新行参与 FLIP
+        const leavingRows = new Set();
+        flip.items.forEach((item) => {
+            if (grid._shownSet.has(item)) return; // 新视口行已渲染（含留在视口内的 FLIP 项）
+            const idx = grid._planItems.indexOf(item);
+            if (idx < 0) return;
+            const rowIdx = rowIndexForItem(grid, idx);
+            if (rowIdx >= 0) leavingRows.add(rowIdx);
+        });
+        const transient = [...leavingRows];
+        transient.forEach((rowIdx) => renderRow(grid, rowIdx, true));
+        // 新进入视口的作品：旧行计划矩形作为 FLIP 起点（重建前未渲染也有位置），
+        // 从原布局位置移入；查不到旧位置时保持直接出现
+        const range = viewportRowRange(grid);
+        if (range) {
+            for (let r = range.start; r < range.end; r++) {
+                const row = grid._plan[r];
+                if (!row) continue;
+                for (let k = row.start; k < row.start + row.count; k++) {
+                    const item = grid._planItems[k];
+                    if (!item || oldVisible.has(item) || item.classList.contains('is-hidden')) continue;
+                    const oldRect = itemRectInPlan(geom, item);
+                    if (!oldRect) continue;
+                    flip.items.push(item);
+                    flip.rects.push(oldRect);
+                }
+            }
+        }
+        flipRebuild(grid, flip);
+        scheduleTransientRelease(grid, transient);
+    }
     updateRowsOnScroll(grid);
 }
 
@@ -899,10 +1159,12 @@ export function restartMasonryGrid(grid, items) {
 }
 
 function restartGrid(grid, items) {
+    clearTransientRelease(grid); // 上一轮跨档临时行的收尾定时器作废
     grid._gridGen = (grid._gridGen || 0) + 1; // 作废在途的旧批次淡入
     clearRenderQueue(grid);
     flattenRows(grid);
     const allItems = Array.from(grid.querySelectorAll('.masonry-item'));
+    clearFlipStyles(allItems); // 在途 FLIP 的内联残留不带入筛选后的布局
     allItems.forEach((item) => {
         item.classList.add('is-hidden');
         item.classList.remove('is-revealed');

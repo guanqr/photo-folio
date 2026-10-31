@@ -1,0 +1,27 @@
+/* ===== Lightbox 全屏（沉浸）模式 ===== */
+/* 状态类 is-fullscreen 由 lightbox-fullscreen.js 切换：隐藏底部缩略图条与
+   信息面板（桌面右栏 / 窄屏抽屉），主图占满内容区并居中；顶栏编号/按钮与
+   左右箭头保留。状态在切图时保持，关闭灯箱后于下一次首开前复位（不摘类
+   到关闭动画里，避免面板闪回）。 */
+
+.lightbox.is-fullscreen {
+    /* 条已隐藏：图片区底部留白与箭头容器不再扣除条高 */
+    --lightbox-strip-h: 0em;
+}
+
+.lightbox.is-fullscreen .lightbox-strip,
+.lightbox.is-fullscreen .lightbox-panel {
+    display: none;
+}
+
+/* 主图居中：上下左右对称留白（同时压过抽屉展开态的顶部 2.5em 补白） */
+.lightbox.is-fullscreen .lightbox-main .lightbox-img-area {
+    padding: 1em;
+}
+
+@media (min-width: 1001px) {
+    /* 桌面端左右对称留出箭头列（与常规视图左侧留白一致），主图水平居中 */
+    .lightbox.is-fullscreen .lightbox-main .lightbox-img-area {
+        padding: 1em 5.5em;
+    }
+}

@@ -43,8 +43,11 @@
     padding-bottom: var(--space-footer-gap);
 }
 
-/* 系列/分类详情页底端「其他系列/分類」联动入口：与目录页同款卡片，顶部加分隔线 */
+/* 系列/分类详情页底端「其他系列/分類」联动入口：与目录页同款卡片，顶部加分隔线。
+   分隔线上方与页脚横线对齐：页脚 margin-top 2em 按其 0.85em 字号计算为 1.7em，
+   此前缺这一段导致系列/分类页瀑布流到横线比全部作品/足迹地区页短（2026-10-31） */
 .page-others {
+    margin-top: 1.7em;
     padding-top: 3em;
     border-top: 0.0625em solid var(--color-border);
     transition: border-color var(--transition-fade);

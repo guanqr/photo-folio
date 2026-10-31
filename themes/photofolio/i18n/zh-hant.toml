@@ -24,6 +24,30 @@ other = "關閉"
 [lightbox_dialog]
 other = "照片檢視器"
 
+[lightbox_counter]
+other = "{{ .Current }} / {{ .Total }}"
+
+[lightbox_counter_label]
+other = "第 {{ .Current }} 張，共 {{ .Total }} 張"
+
+[lightbox_strip]
+other = "作品縮圖列"
+
+[lightbox_strip_photo]
+other = "第 {{ .Number }} 張"
+
+[lightbox_play]
+other = "自動播放"
+
+[lightbox_pause]
+other = "暫停自動播放"
+
+[lightbox_fullscreen]
+other = "全螢幕"
+
+[lightbox_fullscreen_exit]
+other = "退出全螢幕"
+
 [scroll_down]
 other = "向下捲動"
 
@@ -72,8 +96,8 @@ other = "色卡"
 [lightbox_expand]
 other = "展開詳情"
 
-[lightbox_collapse]
-other = "收起詳情"
+[lightbox_bottom]
+other = "查看其餘詳情"
 
 [lightbox_story]
 other = "背後的故事"
@@ -292,7 +316,7 @@ other = "感光度分佈"
 other = "年度拍攝走勢"
 
 [year_before]
-other = "{{ .Year }} 以前"
+other = "{{ .Year }} 前"
 
 [stats_other_device]
 other = "其他設備"

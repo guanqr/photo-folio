@@ -40,12 +40,14 @@ defaultContentLanguage = "zh-hant"
 
 [params]
     description = "用鏡頭記錄生活的每一個瞬間"
-    heroTitle = "用鏡頭記錄生活"
-    heroSubtitle = "每一幀都是一個故事"
+    heroTitle = "向時間借一瞬"
+    heroSubtitle = "按下快門，世界便安靜了半拍"
     # 首页轮播图数量（1-12 张，超出范围自动钳制到边界值）
     carouselCount = 6
     # 首页轮播自动播放间隔（毫秒；0 禁用自动播放，其余最小 1200——与淡入淡出时长一致）
     carouselInterval = 5000
+    # 灯箱自动播放间隔（毫秒；默认关闭、用户点播放后生效；0 禁用并隐藏按钮）
+    lightboxAutoplay = 5000
     logo = ""
     # 自定义底部版权文字 (支持 HTML 标签，如 <a> 链接)
     copyrightText = ""
@@ -69,7 +71,7 @@ defaultContentLanguage = "zh-hant"
     # 是否开启 instant.page 链接预加载加速 (true 为开启，false 为关闭)
     enableInstantPage = true
 
-    # 年份合并分界：早于此年份的年份合并为一档（如 2024 → 「2024 以前」，即 2023 及更早；0 = 不合并）
+    # 年份合并分界：早于此年份的年份合并为一档（如 2024 → 「2024 前」，即 2023 及更早；0 = 不合并）
     # 同时作用于全部作品页年份筛选与关于页「拍摄档案」年度走势
     yearMergeBefore = 2024
 
@@ -78,6 +80,7 @@ defaultContentLanguage = "zh-hant"
     # 新增 [params] 级开关请写在上面两行之前，否则会被归入本节而失效
     [params.imageSizes]
         gallery = 800          # 瀑布流缩略图
+        strip = 240            # 灯箱底部缩略图条（小图，lazy 加载）
         carousel = 1920        # 首页轮播图
         category = 1000        # 分类卡片封面
         lightbox = 1920        # 灯箱大图
@@ -117,7 +120,7 @@ defaultContentLanguage = "zh-hant"
 [params.author]
     name = "Guanqr"
     avatar = "/icons/favicon.svg"
-    bio = "用鏡頭記錄生活的每一個瞬間"
+    bio = "舍南舍北皆春水，但見群鷗日日來"
 
 [params.typography]
     # 【升级】字体外链对象数组 (支持 preconnect 和 stylesheet 混排)

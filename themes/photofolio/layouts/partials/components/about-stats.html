@@ -151,7 +151,7 @@
     {{ end }}
 {{ end }}
 {{ if gt $earlySum 0 }}
-    {{/* 标签显示分界年本身：「2024 以前」= 2023 及更早（与年份筛选共用） */}}
+    {{/* 标签显示分界年本身：「2024 前」= 2023 及更早（与年份筛选共用） */}}
     {{ $yearList = $yearList | append (dict "name" (i18n "year_before" (dict "Year" $yearMergeBefore)) "count" $earlySum) }}
 {{ end }}
 {{ range $years }}

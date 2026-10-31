@@ -70,17 +70,39 @@
         标题为空时回落 aria-label 静态名（acccname 计算规则） */}}
     <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-labelledby="lightbox-caption" aria-label="{{ i18n "lightbox_dialog" }}">
         <!-- 毛玻璃背景层由 JS 动态创建（每张作品一层） -->
+        {{/* 自动播放时间进度条：灯箱最顶部细条，播放时按间隔填充、切图重置、停止隐藏 */}}
+        <div class="lightbox-autoplay-progress" id="lightbox-autoplay-progress" aria-hidden="true">
+            <span class="lightbox-autoplay-progress-fill"></span>
+        </div>
         <div class="lightbox-topbar">
+            {{/* 当前照片编号（左上角，与播放按钮同一垂直中线）：格式与无障碍
+                标签均走 i18n，模板传入哨兵占位，由 lightbox-counter.js 替换数值 */}}
+            <span class="lightbox-counter" id="lightbox-counter"
+                data-format='{{ i18n "lightbox_counter" (dict "Current" "%CUR%" "Total" "%TOTAL%") }}'
+                data-label-format='{{ i18n "lightbox_counter_label" (dict "Current" "%CUR%" "Total" "%TOTAL%") }}'></span>
+            {{/* 自动播放开关（默认关闭；集合 ≥2 且间隔 >0 时由 JS 显示）——
+                play/pause 图标并置、aria-pressed 同步状态 */}}
+            <button class="lightbox-autoplay" id="lightbox-autoplay" type="button" hidden
+                aria-label="{{ i18n "lightbox_play" }}" aria-pressed="false"
+                data-play-label="{{ i18n "lightbox_play" }}"
+                data-pause-label="{{ i18n "lightbox_pause" }}"
+                data-autoplay-ms="{{ site.Params.lightboxAutoplay }}">
+                <span class="lightbox-autoplay-play">{{ partial "utils/icon.html" (dict "name" "play") }}</span>
+                <span class="lightbox-autoplay-pause">{{ partial "utils/icon.html" (dict "name" "pause") }}</span>
+            </button>
+            {{/* 全屏（沉浸）开关：隐藏底部缩略图条与信息面板，只留主图、编号、
+                顶栏按钮与左右箭头；展开/收拢图标并置、aria-pressed 同步状态 */}}
+            <button class="lightbox-fullscreen" id="lightbox-fullscreen" type="button"
+                aria-label="{{ i18n "lightbox_fullscreen" }}" aria-pressed="false"
+                data-enter-label="{{ i18n "lightbox_fullscreen" }}"
+                data-exit-label="{{ i18n "lightbox_fullscreen_exit" }}">
+                <span class="lightbox-fullscreen-enter">{{ partial "utils/icon.html" (dict "name" "fullscreen") }}</span>
+                <span class="lightbox-fullscreen-exit">{{ partial "utils/icon.html" (dict "name" "fullscreen_exit") }}</span>
+            </button>
             <button class="lightbox-close" id="lightbox-close" aria-label="{{ i18n "close" }}">
                 {{ partial "utils/icon.html" (dict "name" "x") }}
             </button>
         </div>
-        <button class="lightbox-arrow lightbox-prev" id="lightbox-prev" aria-label="{{ i18n "prev_photo" }}">
-            {{ partial "utils/icon.html" (dict "name" "chevron_left") }}
-        </button>
-        <button class="lightbox-arrow lightbox-next" id="lightbox-next" aria-label="{{ i18n "next_photo" }}">
-            {{ partial "utils/icon.html" (dict "name" "chevron_right") }}
-        </button>
         <div class="lightbox-content">
             <div class="lightbox-main">
                 <div class="lightbox-img-area">
@@ -243,11 +265,28 @@
                         </div>
                         {{ end }}
                     </div>
-                    <button class="lightbox-panel-toggle" id="lightbox-panel-toggle" aria-label="{{ i18n "lightbox_expand" }}" aria-expanded="false" data-expand-label="{{ i18n "lightbox_expand" }}" data-collapse-label="{{ i18n "lightbox_collapse" }}" data-top-label="{{ i18n "back_to_top" }}">
+                    <button class="lightbox-panel-toggle" id="lightbox-panel-toggle" aria-label="{{ i18n "lightbox_expand" }}" aria-expanded="false" data-expand-label="{{ i18n "lightbox_expand" }}" data-bottom-label="{{ i18n "lightbox_bottom" }}" data-top-label="{{ i18n "back_to_top" }}">
                         {{ partial "utils/icon.html" (dict "name" "arrow_down" "variant" "thick") }}
                     </button>
                 </aside>
             </div>
+            {{/* 左右箭头定位容器：桌面端底部缩略图条覆盖内容底部时，容器 bottom
+                扣除条高，箭头仍在图片内容区垂直居中；指针事件仅落在按钮上 */}}
+            <div class="lightbox-arrows">
+                <button class="lightbox-arrow lightbox-prev" id="lightbox-prev" aria-label="{{ i18n "prev_photo" }}">
+                    {{ partial "utils/icon.html" (dict "name" "chevron_left") }}
+                </button>
+                <button class="lightbox-arrow lightbox-next" id="lightbox-next" aria-label="{{ i18n "next_photo" }}">
+                    {{ partial "utils/icon.html" (dict "name" "chevron_right") }}
+                </button>
+            </div>
+        </div>
+        {{/* 底部缩略图条：横向缩略图由 lightbox-strip.js 按当前页面集合构建；
+            当前项高亮、自动跟随；小图走 [params.imageSizes] 的 strip 尺寸，lazy 加载 */}}
+        <div class="lightbox-strip" id="lightbox-strip" role="group" aria-label="{{ i18n "lightbox_strip" }}"
+            data-strip-cell-label="{{ i18n "lightbox_strip_photo" (dict "Number" "__N__") }}"
+            data-strip-thumb-width="{{ site.Params.imageSizes.strip | default 240 }}" hidden>
+            <div class="lightbox-strip-track" id="lightbox-strip-track"></div>
         </div>
     </div>
 

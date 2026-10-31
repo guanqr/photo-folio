@@ -68,7 +68,7 @@
         {{ end }}
     {{ end }}
     {{ if gt $earlyYearCount 0 }}
-        {{/* 标签显示分界年本身：「2024 以前」= 早于 2024（2023 及更早）；
+        {{/* 标签显示分界年本身：「2024 前」= 早于 2024（2023 及更早）；
             与 data-value before-2024 / 匹配条件 year < 2024 同义 */}}
         {{ $yearOptions = $yearOptions | append (dict "value" (printf "before-%d" $yearMergeBefore) "label" (i18n "year_before" (dict "Year" $yearMergeBefore))) }}
     {{ end }}

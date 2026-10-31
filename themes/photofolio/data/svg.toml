@@ -31,6 +31,14 @@ chevron_left = '<svg width="24" height="24"><polyline points="15 18 9 12 15 6"/>
 
 chevron_right = '<svg width="24" height="24"><polyline points="9 18 15 12 9 6"/></svg>'
 
+play = '<svg width="24" height="24"><polygon points="5 3 19 12 5 21 5 3"/></svg>'
+
+pause = '<svg width="24" height="24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>'
+
+fullscreen = '<svg width="24" height="24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>'
+
+fullscreen_exit = '<svg width="24" height="24"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>'
+
 home = '<svg width="24" height="24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>'
 
 grid = '<svg width="24" height="24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>'

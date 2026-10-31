@@ -5,6 +5,10 @@ import { initLightboxMeta } from './lightbox-meta.js';
 import { initLightboxBackdrop } from './lightbox-backdrop.js';
 import { initLightboxGlow } from './lightbox-glow.js';
 import { initLightboxCollection } from './lightbox-collection.js';
+import { initLightboxStrip } from './lightbox-strip.js';
+import { initLightboxAutoplay } from './lightbox-autoplay.js';
+import { initLightboxCounter } from './lightbox-counter.js';
+import { initLightboxFullscreen } from './lightbox-fullscreen.js';
 import { initLightboxSwitch } from './lightbox-switch.js';
 import { initLightboxAnalysisControl } from './lightbox-analysis-control.js';
 import { prefersReducedMotion, BP_LIGHTBOX_NARROW } from './utils.js';
@@ -25,6 +29,12 @@ export function initLightbox() {
     if (inited) return;
 
     const lightbox = document.getElementById('lightbox');
+    const lightboxStrip = document.getElementById('lightbox-strip');
+    const lightboxStripTrack = document.getElementById('lightbox-strip-track');
+    const lightboxAutoplay = document.getElementById('lightbox-autoplay');
+    const lightboxFullscreen = document.getElementById('lightbox-fullscreen');
+    const lightboxCounter = document.getElementById('lightbox-counter');
+    let autoplay = null; // 自动播放模块（switch 初始化后创建，钩子经闭包引用）
     const lightboxImg = document.getElementById('lightbox-img');
     const lightboxImgArea = lightbox ? lightbox.querySelector('.lightbox-img-area') : null; // 辉光层插入点（主图之前；lightbox 缺失时保持 null——下方守卫兜底）
     const lightboxImgLoading = document.getElementById('lightbox-img-loading');
@@ -115,7 +125,9 @@ export function initLightbox() {
     // dirVerdict：触屏方向仲裁（未决冻结抽屉、垂直交还、水平结束拖拽）
     const drawer = initLightboxDrawer({
         lightbox, panel, panelDetails, panelToggle, metaEl: lightboxMeta,
-        dirVerdict: () => swipe.getVerdict()
+        dirVerdict: () => swipe.getVerdict(),
+        // 底部缩略图条占用的高度：抽屉上限扣除后图片区仍保持约半屏
+        reservedBottom: () => (lightboxStrip ? lightboxStrip.offsetHeight : 0)
     });
 
     // 图片分析：色卡/影调与色彩（独立模块，见 lightbox-analysis.js；直方图
@@ -159,6 +171,34 @@ export function initLightbox() {
     // 作品集合与预加载（独立模块见 lightbox-collection.js）：收集/邻居预载/照片 URL 同步
     const collection = initLightboxCollection({ shortLens: meta.shortLens });
 
+    // 底部缩略图条（独立模块见 lightbox-strip.js）：当前集合构建、点击切图、
+    // 当前项自动跟随；open 的 onPhotoOpen 钩子把集合与索引同步给本模块
+    const strip = lightboxStrip && lightboxStripTrack
+        ? initLightboxStrip({
+            lightbox,
+            strip: lightboxStrip,
+            track: lightboxStripTrack,
+            thumbWidth: parseInt(lightboxStrip.dataset.stripThumbWidth, 10) || 240,
+            cellLabelTemplate: lightboxStrip.dataset.stripCellLabel || '',
+            onSelect: (index) => switchModule.openAt(index)
+        })
+        : null;
+
+    // 当前照片编号（独立模块见 lightbox-counter.js）：左上角 001/050——
+    // 随 switch 的 onPhotoOpen 同步（打开/切图/深链），关闭清空
+    const counter = initLightboxCounter({ el: lightboxCounter });
+
+    // 全屏（沉浸）模式（独立模块见 lightbox-fullscreen.js）：隐藏底部条与信息面板；
+    // 退出时恢复抽屉布局、缩略图条当前项滚回中央
+    const fullscreen = initLightboxFullscreen({
+        lightbox, button: lightboxFullscreen,
+        onExit: () => {
+            if (strip) strip.recenter();
+            drawer.refreshLayout();
+            drawer.refreshFit();
+        }
+    });
+
     // 渲染整个元信息面板（标题 / 分类与系列胶囊 / 简行 / EXIF 分行 / 直方图与色卡 / 故事）
     function renderPanel(p) {
         if (lightboxCaption) lightboxCaption.textContent = p.title;
@@ -185,11 +225,28 @@ export function initLightbox() {
         lightbox, lightboxImg, lightboxImgLoading, lightboxImgArea,
         btnPrev, btnNext, revealSynced, narrowLightbox, reducedMotion,
         collection, renderPanel,
+        // 照片集合/索引变化时同步底部缩略图条与自动播放按钮可用性
+        // （open 唯一入口，含首开/切图/深链）
+        onPhotoOpen: (photos, index) => {
+            // 上次关闭遗留的全屏态在首开（灯箱尚未激活）前复位：面板/条恢复
+            // 可见，后续 drawer.reset 测量与 strip.sync 居中才有效
+            if (!lightbox.classList.contains('active')) fullscreen.reset();
+            if (strip) strip.sync(photos, index);
+            if (autoplay) autoplay.photoChanged(photos.length, index);
+            counter.update(index, photos.length);
+        },
+        // 当前照片全尺寸主图加载完成/失败：自动播放开始当前照片的计时
+        onPhotoReady: (index) => { if (autoplay) autoplay.photoReady(index); },
         prefetchAnalysis: (photos) => photos.forEach((p) => analysis.prefetch(p.slug, p.hash)),
         glow, backdrop, swipe, drawer,
         closeBtn: lightboxClose, pageRoots,
         onSwitchStart: () => analysisControl.cancelCenterComp(),
-        onClose: () => analysisControl.reset()
+        onClose: () => {
+            analysisControl.reset();
+            if (autoplay) autoplay.stop();
+            counter.reset();
+            fullscreen.exitNative(); // 退出浏览器全屏；沉浸布局保留到关闭动画结束（下次首开 reset）
+        }
     });
 
     // 分析区开合控制（独立模块见 lightbox-analysis-control.js）：展开收起过渡、
@@ -204,6 +261,17 @@ export function initLightbox() {
             if (p) analysis.analyze(p.slug, p.hash);
         }
     });
+
+    // 自动播放（独立模块见 lightbox-autoplay.js）：默认关闭、用户主动开始；
+    // 末张由 next 回绕循环；手动操作/后台标签页停止或暂停（详见模块注释）
+    if (lightboxAutoplay) {
+        autoplay = initLightboxAutoplay({
+            button: lightboxAutoplay,
+            lightbox,
+            next: () => switchModule.next(),
+            intervalMs: parseInt(lightboxAutoplay.dataset.autoplayMs, 10) || 0
+        });
+    }
 
     // 点击作品打开
     document.addEventListener('click', (e) => {
@@ -255,9 +323,17 @@ export function initLightbox() {
     // 键盘
     document.addEventListener('keydown', e => {
         if (!lightbox.classList.contains('active')) return;
-        if (e.key === 'Escape') switchModule.close();
-        if (e.key === 'ArrowLeft') switchModule.prev();
-        if (e.key === 'ArrowRight') switchModule.next();
+        if (e.key === 'Escape') {
+            // 全屏/沉浸态下 Esc 先退出全屏（原生由 fullscreenchange 摘布局，
+            // 降级模式直接摘布局），再按一次才关闭灯箱
+            if (document.fullscreenElement || lightbox.classList.contains('is-fullscreen')) {
+                fullscreen.exit();
+                return;
+            }
+            switchModule.close();
+        }
+        if (e.key === 'ArrowLeft') { if (autoplay) autoplay.stop(); switchModule.prev(); }
+        if (e.key === 'ArrowRight') { if (autoplay) autoplay.stop(); switchModule.next(); }
     });
 
     closeLightboxRef = switchModule.close;

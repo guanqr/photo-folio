@@ -173,7 +173,15 @@ export function initLightboxAnalysisControl({
                     drawer.refresh(); // 内容高度已变：窄屏抽屉箭头状态补判（t=0 时高度未变、判的是旧态）
                 };
                 collapseEndHandler = (e) => {
-                    if (e.type === 'transitionend' && e.propertyName !== 'max-height') return; // opacity 结束不处理
+                    // 只认分析容器自身的 max-height 过渡：transitionend/cancel 会冒泡，
+                    // 收起按钮的 color 过渡在真实点按的 hover/focus 切换中取消并冒泡，
+                    // 会误触发收尾（inputHold 提前解除、抽屉箭头在收起途中翻下）；
+                    // 过渡被压制等无 end 事件的场景仍由 650ms 兜底定时器收尾（2026-10-31）
+                    if (e.target !== wrap || e.propertyName !== 'max-height') return;
+                    // 收起起点重设会在同一帧产生 elapsed=0 的 transitioncancel 并立即重启，
+                    // 不能当作收尾（否则同样提前解除挂起，且是否被监听到取决于事件时序——
+                    // 首次点击常碰不到、再次操作碰到时表现为「先翻下再翻上」）（2026-10-31）
+                    if (e.type === 'transitioncancel' && e.elapsedTime < 0.001) return;
                     finish();
                 };
                 wrap.addEventListener('transitionend', collapseEndHandler);

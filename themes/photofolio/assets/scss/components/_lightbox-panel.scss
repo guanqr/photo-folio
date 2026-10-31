@@ -133,8 +133,9 @@
     }
 
     .lightbox-panel.is-open & {
-        /* 兜底值（JS 会按「50% 视口 − 面板头部」精确覆盖）：下拉到底图片区不小于页面一半 */
-        max-height: calc(50vh - 9em);
+        /* 兜底值（JS 会按「50% 视口 − 面板头部 − 底部缩略图条」精确覆盖）：
+           下拉到底图片区不小于页面一半 */
+        max-height: calc(50vh - 9em - var(--lightbox-strip-h, 0em));
         opacity: 1;
         overflow-y: auto;
     }

@@ -31,9 +31,6 @@
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s, visibility 0.3s;
-    /* 抽屉拖动手势：禁止浏览器滚动接管（否则拖动一小段即触发 pointercancel）；
-       对整个灯箱生效（含详情区——内容滚动由抽屉统一虚拟位置模型接管，不依赖原生滚动） */
-    touch-action: none;
 
     /* 桌面端右侧元信息面板宽度（箭头按钮右移避让用同一变量） */
     --lightbox-panel-w: 22em;
@@ -79,6 +76,10 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
+    /* 抽屉拖动手势：禁止浏览器滚动接管（否则拖动一小段即触发 pointercancel）；
+       对内容区生效（含详情区——内容滚动由抽屉统一虚拟位置模型接管，不依赖原生滚动）。
+       底部缩略图条在内容区之外，保留 pan-x 供原生横向滚动 */
+    touch-action: none;
 }
 
 .lightbox-main {
@@ -97,6 +98,22 @@
     right: 0;
     z-index: 3;
     height: 4em;
+}
+
+/* 当前照片编号：顶栏 4em 的垂直中心与播放/关闭按钮中心重合（0.5em + 1.5em）；
+   纯展示、不拦截图片区手势；浅阴影保证叠在照片亮部也能读清 */
+.lightbox-counter {
+    position: absolute;
+    top: 50%;
+    left: 1em;
+    transform: translateY(-50%);
+    font-family: var(--font-meta);
+    font-size: 1em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    color: var(--color-lightbox-ctrl-text);
+    text-shadow: 0 0.08em 0.3em hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.6);
+    pointer-events: none;
 }
 
 /* 灯箱控件按钮基类（关闭/左右箭头共用）：3em 圆形 + 半透底色 + hover 反馈 */
@@ -129,7 +146,7 @@
 .lightbox-close {
     /* 与左右箭头同一套定位机制：绝对定位 + right: 1em，保证与箭头严格同列 */
     @extend %lightbox-ctrl;
-    top: 0.5em; /* 顶栏 4em 内垂直居中 */
+    top: calc(50% - 1.5em); /* 按按钮自身高度居中：button 不继承 topbar 字号，3em 高度以自身 em 计 */
     right: 1em;
 
     svg {
@@ -141,10 +158,141 @@
     }
 }
 
+/* 箭头定位容器：absolute inset:0（桌面端 bottom 扣除底部缩略图条高度），
+   箭头在其内垂直居中；容器本身不拦截指针，只有按钮可交互 */
+.lightbox-arrows {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+/* 自动播放开关：与关闭/全屏按钮同行，位于全屏按钮左侧；play/pause 图标随
+   aria-pressed 切换。两个图标叠放，切换时交叉淡入淡出 + 缩放旋转（弹簧）；
+   减弱动态由全局归零 */
+.lightbox-autoplay {
+    @extend %lightbox-ctrl;
+    top: calc(50% - 1.5em); /* 与关闭按钮同高同中线（见上） */
+    right: 8em; /* 全屏按钮 3em + 关闭按钮 3em + 两个 0.5em 间距 */
+
+    .lightbox-autoplay-play,
+    .lightbox-autoplay-pause {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.2s ease, transform var(--transition-spring);
+    }
+
+    .lightbox-autoplay-play {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+    }
+
+    .lightbox-autoplay-pause {
+        opacity: 0;
+        transform: scale(0.6) rotate(-90deg);
+    }
+
+    &[aria-pressed="true"] {
+        .lightbox-autoplay-play {
+            opacity: 0;
+            transform: scale(0.6) rotate(90deg);
+        }
+
+        .lightbox-autoplay-pause {
+            opacity: 1;
+            transform: scale(1) rotate(0deg);
+        }
+    }
+
+    &[hidden] {
+        display: none;
+    }
+}
+
+/* 全屏（沉浸）开关：位于播放按钮右侧、关闭按钮左侧，展开/收拢图标
+   交叉淡入 + 缩放 */
+.lightbox-fullscreen {
+    @extend %lightbox-ctrl;
+    top: calc(50% - 1.5em);
+    right: 4.5em; /* 关闭按钮 3em + 0.5em 间距 */
+
+    .lightbox-fullscreen-enter,
+    .lightbox-fullscreen-exit {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.2s ease, transform var(--transition-spring);
+    }
+
+    .lightbox-fullscreen-enter {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    .lightbox-fullscreen-exit {
+        opacity: 0;
+        transform: scale(0.6);
+    }
+
+    &[aria-pressed="true"] {
+        .lightbox-fullscreen-enter {
+            opacity: 0;
+            transform: scale(0.6);
+        }
+
+        .lightbox-fullscreen-exit {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+}
+
+/* 自动播放时间进度条：灯箱最顶部的极细条（与 SPA 加载条同款），
+   JS 在播放时显示并按间隔从左到右填充；切图重置、暂停/停止隐藏 */
+.lightbox-autoplay-progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 0.125em;
+    z-index: 5;
+    background: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.1);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+
+    &.is-visible {
+        opacity: 1;
+    }
+
+    .lightbox-autoplay-progress-fill {
+        display: block;
+        width: 100%;
+        height: 100%;
+        background: var(--color-accent);
+        transform-origin: 0 50%;
+        transform: scaleX(0);
+    }
+
+    &.is-running .lightbox-autoplay-progress-fill {
+        animation: lightbox-autoplay-progress var(--lightbox-autoplay-duration, 5000ms) linear forwards;
+    }
+}
+
+@keyframes lightbox-autoplay-progress {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+}
+
 .lightbox-arrow {
     @extend %lightbox-ctrl;
     top: 50%;
     transform: translateY(-50%);
+    pointer-events: auto;
     /* 覆盖基类 transition：补 transform 过渡（旋转/缩放） */
     transition: background 0.2s, color 0.2s, transform var(--transition-35);
     z-index: var(--z-lightbox-arrow);

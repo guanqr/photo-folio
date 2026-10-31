@@ -9,8 +9,9 @@
  *   层创建/就绪门控/淡入/剪枝仍在 lightbox-glow 模块
  * - 作品收集与邻居预载在 lightbox-collection 模块（无状态工具 + 预载缓存）；
  *   面板渲染 renderPanel 与分析数据预取 prefetchAnalysis 由调用方注入；
- *   分析区开合经 onSwitchStart/onClose 钩子交给调用方接线（本模块不认识
- *   分析控制模块）
+ *   照片切换与主图加载就绪经 onPhotoOpen/onPhotoReady 钩子交给调用方
+ *   （缩略图条/自动播放）；分析区开合经 onSwitchStart/onClose 钩子交给
+ *   调用方接线（本模块不认识分析控制模块）
  */
 import { isImageReady, loadWithAvifFallback } from './utils.js';
 import { initLightboxZoom } from './lightbox-zoom.js';
@@ -19,12 +20,21 @@ export function initLightboxSwitch({
     lightbox, lightboxImg, lightboxImgLoading, lightboxImgArea,
     btnPrev, btnNext, revealSynced, narrowLightbox, reducedMotion,
     collection, renderPanel, prefetchAnalysis,
+    onPhotoOpen, onPhotoReady,
     glow, backdrop, swipe, drawer,
     closeBtn, pageRoots,
     onSwitchStart, onClose
 }) {
     let currentPhotos = [];
     let currentIndex = -1;
+    // 当前照片主图（全尺寸）就绪状态：打开即复位，图片真正加载完成/失败后
+    // 通知一次（自动播放据此延后计时，加载时间不计入当前图片的播放时间）
+    let photoReady = false;
+    const notifyPhotoReady = () => {
+        if (photoReady) return;
+        photoReady = true;
+        if (onPhotoReady) onPhotoReady(currentIndex);
+    };
 
     let switching = false; // 切换动画进行中（滑出/滑入期间 onLoad 不强制图片透明度，避免覆盖过渡）
 
@@ -100,6 +110,7 @@ export function initLightboxSwitch({
     const clearPendingUnlock = () => {
         if (pendingUnlock) {
             lightboxImg.removeEventListener('load', pendingUnlock);
+            lightboxImg.removeEventListener('error', pendingUnlock);
             pendingUnlock = null;
         }
     };
@@ -110,6 +121,7 @@ export function initLightboxSwitch({
     const clearPendingFirstLoad = () => {
         if (pendingFirstLoad) {
             lightboxImg.removeEventListener('load', pendingFirstLoad);
+            lightboxImg.removeEventListener('error', pendingFirstLoad);
             pendingFirstLoad = null;
         }
     };
@@ -183,7 +195,9 @@ export function initLightboxSwitch({
         lightbox.classList.add('active');
         enterDialog();
         drawer.refreshFit(); // 激活后强制重判「放得下」：关灯箱重置期间的 is-fit 状态可能过期
-        document.body.style.overflow = 'hidden';
+        // 滚动锁挂根元素：html 的 overflow-x: clip 使 body 的 overflow 不再向
+        // 视口传播——只锁 body 时页面仍能滚动、经典滚动条也盖不住（2026-10-31）
+        document.documentElement.style.overflow = 'hidden';
     };
 
     // 图片加载转圈：新图未就绪时隐藏图片并显示（与瀑布流加载指示器同款），就绪后滑入消失
@@ -205,6 +219,7 @@ export function initLightboxSwitch({
     // （见 open 的 isSwitch 分支）：旧层淡出与图片切换同刻开始、新层就绪后
     // 淡入，背景变化贯穿整个切换过程
     function startSlideIn(p) {
+        notifyPhotoReady(); // 新图已就绪（或加载失败）：自动播放可开始计时
         hideImgLoading();
         mainSlideStarted = true;
         // 主图滑入归位并淡入
@@ -428,15 +443,23 @@ export function initLightboxSwitch({
                 if (openToken !== token) return;
                 lightboxImg.src = src;
                 clearPendingUnlock();
-                lightboxImg.addEventListener('load', pendingUnlock = () => {
-                    pendingUnlock = null;
+                // 换入主图后要等当前 <img> 真正加载完成（不是预载 Image）：
+                // 自动播放据此计时，加载期间不算入当前图片的播放时长
+                const onFullReady = () => {
+                    clearPendingUnlock();
                     lightboxImg.style.width = '';
                     lightboxImg.style.height = '';
-                }, { once: true });
+                    notifyPhotoReady();
+                };
+                pendingUnlock = onFullReady;
+                lightboxImg.addEventListener('load', onFullReady, { once: true });
+                lightboxImg.addEventListener('error', onFullReady, { once: true });
             };
             full.onerror = () => {
                 if (openToken !== token) return; // 旧打开的失败不得影响当前打开
-                // 失败保留缩略图：锁保持（见上方注释），无需动作
+                // 失败保留缩略图：锁保持（见上方注释），无需动作；
+                // 自动播放不能为加载失败的图片永久停摆，按就绪继续
+                notifyPhotoReady();
             };
             full.src = src;
         } else {
@@ -453,16 +476,21 @@ export function initLightboxSwitch({
                 lightboxImg.style.opacity = '1';
                 hideImgLoading();
                 revealMain();
+                notifyPhotoReady();
             } else {
                 clearPendingFirstLoad(); // 作废上一次的同槽位监听（重开路径）
-                lightboxImg.addEventListener('load', pendingFirstLoad = function onLoad() {
-                    pendingFirstLoad = null;
+                const onFirstReady = () => {
+                    clearPendingFirstLoad(); // 成功/失败都摘掉另一个方向的监听
                     // 切换动画进行中不强制透明度（slideIn 过渡会将其归位）——
                     // 否则慢图恰在滑出期间加载完成时会闪一下满透明覆盖过渡
                     if (!switching) lightboxImg.style.opacity = '1';
                     hideImgLoading();
                     revealMain();
-                }, { once: true });
+                    notifyPhotoReady();
+                };
+                pendingFirstLoad = onFirstReady;
+                lightboxImg.addEventListener('load', onFirstReady, { once: true });
+                lightboxImg.addEventListener('error', onFirstReady, { once: true });
             }
         }
     }
@@ -483,7 +511,11 @@ export function initLightboxSwitch({
         // 的目标是同一张、索引反推恒判正向（2026-10-21）；首开 dir 恒 1
         const dir = isSwitch ? dirHint : 1;
         currentIndex = index;
+        photoReady = false; // 新照片主图尚未就绪；加载完成/失败后由 notifyPhotoReady 标记
         const p = currentPhotos[index];
+        // 底部缩略图条同步（首开构建 + 当前项高亮/滚动）：先于动画与尺寸测量，
+        // 条的出现/隐藏带来的内容区高度变化在动画开始前落定
+        if (onPhotoOpen) onPhotoOpen(currentPhotos, currentIndex);
         // 照片 URL：?p=slug（保留筛选等其余参数）——首开 push、切图 replace：
         // 灯箱只占一个历史条目、返回键 = 关闭灯箱，翻看照片不刷历史
         collection.syncPhotoUrl(p.slug, isSwitch);
@@ -579,7 +611,7 @@ export function initLightboxSwitch({
         } else {
             lightboxImg.style.opacity = '0';
         }
-        document.body.style.overflow = '';
+        document.documentElement.style.overflow = '';
     }
 
     function prev(fromPx) {
@@ -603,6 +635,14 @@ export function initLightboxSwitch({
         }
         const idx = (currentIndex + 1) % currentPhotos.length;
         open(idx, fromPx, undefined, 1);
+    }
+
+    // 缩略图条/外部索引切换：方向按目标与当前索引决定，复用同一 open 管线
+    function openAt(index) {
+        if (!lightbox.classList.contains('active')) return;
+        currentPhotos = collection.collect();
+        if (index < 0 || index >= currentPhotos.length || index === currentIndex) return;
+        open(index, undefined, undefined, index > currentIndex ? 1 : -1);
     }
 
     function updateArrows() {
@@ -653,7 +693,7 @@ export function initLightboxSwitch({
     };
 
     return {
-        open, close, prev, next, openByImg,
+        open, close, prev, next, openByImg, openAt,
         getActiveGlow: () => activeGlow,
         current: () => (currentIndex >= 0 && currentIndex < currentPhotos.length)
             ? currentPhotos[currentIndex] : null,

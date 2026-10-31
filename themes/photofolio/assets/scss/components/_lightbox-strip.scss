@@ -1,0 +1,126 @@
+/* ===== Lightbox 底部缩略图条 ===== */
+/* 横向 strip track：等高缩略图按自身比例宽、原生横向滚动；当前项 accent
+   描边 + 外环、其余降透明。灯箱内容区高度扣除条高（箭头随之重新居中），
+   窄屏条在抽屉下方；抽屉上限在 lightbox-drawer 中同步扣除本条高度。 */
+.lightbox {
+    /* 条高（含上下留白）；无缩略图条时为 0，箭头按内容区居中 */
+    --lightbox-strip-h: 0em;
+    --lightbox-strip-thumb-h: 3.375em;
+
+    &.has-strip {
+        --lightbox-strip-h: 4.75em;
+    }
+}
+
+/* ≤1000px（与灯箱抽屉断点一致，见 utils.js BP_LIGHTBOX_NARROW）：条更矮 */
+@media (max-width: 1000px) {
+    .lightbox {
+        --lightbox-strip-thumb-h: 2.75em;
+
+        &.has-strip {
+            --lightbox-strip-h: 4em;
+        }
+    }
+}
+
+.lightbox-strip {
+    flex: none;
+    position: relative;
+    z-index: 2; /* 与 .lightbox-content 同层，高于毛玻璃背景 */
+    height: var(--lightbox-strip-h);
+    padding: 0 1em; /* 与顶栏/箭头边距一致 */
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+
+    &[hidden] {
+        display: none;
+    }
+}
+
+/* 桌面端：条改为内容区底部的透明覆盖层（不再占 flex 行高），图片区/面板
+   底部预留条高、图片内容仍在条上方，但图片区与辉光继续延伸到条背后，
+   条直接浮在毛玻璃背景上——不新增背景层，也不在图片区底缘裁出硬边界 */
+@media (min-width: 1001px) {
+    .lightbox-strip {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+    }
+
+    .lightbox-img-area {
+        padding-bottom: calc(1em + var(--lightbox-strip-h, 0em));
+    }
+
+    .lightbox-panel {
+        padding-bottom: calc(2em + var(--lightbox-strip-h, 0em));
+    }
+
+    .lightbox-arrows {
+        bottom: var(--lightbox-strip-h, 0em);
+    }
+}
+
+.lightbox-strip-track {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.375em;
+    padding: 0 0.125em;
+    box-sizing: border-box;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    overscroll-behavior-x: contain;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+.lightbox-strip-cell {
+    flex: 0 0 auto;
+    /* 按钮不继承页面字号（UA 默认 ~13.3px），会让 em 尺寸偏小；
+       继承后缩略图高度/比例宽与灯箱其它 em 尺寸同一基准 */
+    font: inherit;
+    height: var(--lightbox-strip-thumb-h);
+    width: calc(var(--strip-ratio, 1.5) * var(--lightbox-strip-thumb-h));
+    box-sizing: border-box;
+    padding: 0;
+    border: 0.0625em solid hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.14);
+    border-radius: 0.1875em;
+    background: none;
+    overflow: hidden;
+    opacity: 0.42;
+    cursor: pointer;
+    transition: opacity 0.3s, border-color 0.3s, box-shadow 0.3s;
+    -webkit-user-drag: none;
+
+    img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        -webkit-user-drag: none;
+        /* 全局 img[loading="lazy"] 默认 blur + 0.6 透明度（等 is-loaded 才清晰）；
+           条内小图仅 ~54px 高，模糊层会被看成蒙层——直接清晰显示，不参与渐显 */
+        filter: none;
+        opacity: 1;
+    }
+
+    &:hover {
+        opacity: 0.75;
+    }
+
+    &.is-active {
+        opacity: 1;
+        border-color: var(--color-accent);
+        box-shadow: 0 0 0 0.0625em var(--color-accent);
+    }
+}
