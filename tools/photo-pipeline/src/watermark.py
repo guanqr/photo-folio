@@ -4,6 +4,8 @@ import os
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 
+from compat import atomic_write_bytes
+
 
 def get_region_brightness(img, box):
     """计算指定区域（水印文字实际渲染 bbox）的平均亮度 0~255"""
@@ -100,14 +102,4 @@ def process_image(input_path, output_path, exif_info, target_long_side=1920, max
 
         # 原子写：中断/磁盘满不留下截断的 JPEG——源图未变时增量检测会跳过
         # 已存在的输出，坏文件会一直被当作最新结果（2026-10-29）
-        tmp_path = output_path + ".tmp"
-        try:
-            with open(tmp_path, "wb") as f:
-                f.write(buf.getvalue())
-            os.replace(tmp_path, output_path)
-        except Exception:
-            try:
-                os.remove(tmp_path)
-            except OSError:
-                pass
-            raise
+        atomic_write_bytes(output_path, buf.getvalue())

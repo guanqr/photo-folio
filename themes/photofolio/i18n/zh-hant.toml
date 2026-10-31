@@ -78,6 +78,33 @@ other = "快門"
 [exif_iso]
 other = "感光度"
 
+[exif_missing]
+other = "—"
+
+[exif_na]
+other = "N/A"
+
+[exif_focus_value]
+other = "{{ .Value }}mm"
+
+[exif_aperture_value]
+other = "f/{{ .Value }}"
+
+[exif_shutter_value]
+other = "{{ .Value }}s"
+
+[exif_iso_value]
+other = "ISO{{ .Value }}"
+
+[list_separator]
+other = " · "
+
+[footprint_region_label]
+other = "{{ .Name }}，{{ .Count }}"
+
+[feed_photo_line]
+other = "《{{ .Title }}》{{ with .Place }} · {{ . }}{{ end }}{{ with .Date }} · {{ . }}{{ end }}"
+
 [lightbox_place]
 other = "地點"
 
@@ -120,17 +147,17 @@ other = "收起圖像分析"
 [lightbox_analysis_failed]
 other = "無法載入分析結果"
 
-[tonal_key_low]
-other = "低調"
-
-[tonal_key_mid]
-other = "中間調"
-
-[tonal_key_high]
-other = "高調"
-
 [tonal_mid_prefix]
 other = "中"
+
+[tonal_key_low_prefix]
+other = "低"
+
+[tonal_key_high_prefix]
+other = "高"
+
+[tonal_frac_line]
+other = "{{ .ShadowName }} {{ .Shadow }}% · {{ .MidName }} {{ .Mid }}% · {{ .HighName }} {{ .High }}%"
 
 [tonal_range_short]
 other = "短調"

@@ -9,7 +9,7 @@
  * - 点击缩略图经 onSelect(index) 交给切换管线；集合数组变化时重建
  * - 集合只有 1 张时隐藏条（与左右箭头一致），灯箱内容区高度/箭头居中随之恢复
  */
-import { prefersReducedMotion } from './utils.js';
+import { prefersReducedMotion, fillTemplate, replaceImageWidth } from './utils.js';
 
 export function initLightboxStrip({ lightbox, strip, track, thumbWidth, cellLabelTemplate, onSelect }) {
     let builtFor = null; // 当前条对应的 photos 数组（集合缓存身份，变化才重建）
@@ -18,7 +18,7 @@ export function initLightboxStrip({ lightbox, strip, track, thumbWidth, cellLabe
     let firstSync = true;
 
     // 小图 URL：网格缩略图的宽度段替换为条宽（绝对 URL/无宽度段时原样使用）
-    const thumbUrl = (p) => (p.thumb || p.src || '').replace(/w_\d+/, `w_${thumbWidth}`);
+    const thumbUrl = (p) => replaceImageWidth(p.thumb || p.src, thumbWidth);
 
     const build = (photos) => {
         track.textContent = '';
@@ -28,8 +28,8 @@ export function initLightboxStrip({ lightbox, strip, track, thumbWidth, cellLabe
             cell.type = 'button';
             cell.className = 'lightbox-strip-cell';
             cell.style.setProperty('--strip-ratio', String(ratio));
-            // 文案由模板 i18n 格式串注入（__N__ 占位），不在 JS 硬编码
-            cell.setAttribute('aria-label', cellLabelTemplate.replace('__N__', String(i + 1)));
+            // 文案由模板 i18n 格式串注入（%N% 占位），不在 JS 硬编码
+            cell.setAttribute('aria-label', fillTemplate(cellLabelTemplate, { N: i + 1 }));
             cell.addEventListener('click', () => onSelect(i));
             const img = document.createElement('img');
             img.loading = 'lazy';

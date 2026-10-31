@@ -6,8 +6,11 @@
  * - 镜头型号展示缩减：仅保留到光圈值（f/x-x）为止，其后的字母/系列后缀
  *   （VR、S、Di III VC VXD…）不展示——photo.toml 原始记录不动，仅灯箱展示截断
  * - EXIF 行结构（图标/标签）由模板渲染，这里只填值——行配置与 li 列表
- *   恒定，初始化时一次建好，切图时不再重建
+ *   恒定，初始化时一次建好，切图时不再重建；单位/缺失文案由模板 data-* 的
+ *   i18n 格式串提供，JS 不再硬编码 mm/f//ISO/s/N/A
  */
+import { fillTemplate } from './utils.js';
+
 export function initLightboxMeta({ tagsEl, metaEl, metaPlaceEl, metaDateEl, exifList }) {
     const shortLens = (lens) => {
         const m = lens.match(/f\/\d+(?:[.,]\d+)?(?:[-–]\d+(?:[.,]\d+)?)?/i);
@@ -35,36 +38,28 @@ export function initLightboxMeta({ tagsEl, metaEl, metaPlaceEl, metaDateEl, exif
     }
 
     // EXIF 分行列表（行配置与 li 列表恒定，初始化时一次建好）：
-    // 普通项空值隐藏；设备（相机）缺失时显示删除线占位「—」、
-    // 镜头缺失时以英文 N/A 表示——删除线在长型号旁视觉不佳
-    const exifRows = [
-        { key: 'camera', value: '', prefix: '', suffix: '', showMissing: true },
-        { key: 'lens', value: '', prefix: '', suffix: '', showMissing: true, missingText: 'N/A' },
-        { key: 'focus', value: '', prefix: '', suffix: 'mm' },
-        { key: 'aperture', value: '', prefix: 'f/', suffix: '' },
-        { key: 'shutter', value: '', prefix: '', suffix: 's' },
-        { key: 'iso', value: '', prefix: 'ISO', suffix: '' }
-    ];
+    // 单位/缺失文案由模板 data-format / data-missing 提供（i18n）；
+    // 普通项空值隐藏，相机/镜头缺失显示占位（相机删除线）
     const exifLis = exifList ? Array.from(exifList.querySelectorAll('li')) : [];
 
     function renderExif(p) {
         if (!exifList) return;
         exifLis.forEach((li) => {
-            const row = exifRows.find((r) => r.key === li.dataset.exifKey);
             const valueEl = li.querySelector('.exif-value');
-            if (!row) {
-                li.style.display = 'none';
-                return;
-            }
-            const value = p[row.key] || '';
+            if (!valueEl) return;
+            const key = li.dataset.exifKey;
+            const value = p[key] || '';
+            const missing = li.dataset.missing;
             valueEl.classList.remove('is-missing');
             if (value) {
                 li.style.display = '';
-                valueEl.textContent = row.prefix + value + row.suffix;
-            } else if (row.showMissing) {
+                valueEl.textContent = li.dataset.format
+                    ? fillTemplate(li.dataset.format, { VALUE: value })
+                    : value;
+            } else if (missing !== undefined) {
                 li.style.display = '';
-                valueEl.textContent = row.missingText || '—';
-                if (!row.missingText) valueEl.classList.add('is-missing');
+                valueEl.textContent = missing;
+                if (li.dataset.missingStrike === 'true') valueEl.classList.add('is-missing');
             } else {
                 li.style.display = 'none';
             }

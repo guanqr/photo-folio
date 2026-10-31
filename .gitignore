@@ -24,6 +24,6 @@ __pycache__/
 
 # 内部设计计划文档，禁止发布
 DESIGN-PLANS.md
-# 代码审查记录（工作文档，不随代码库发布；两种大小写都要列——gitignore 匹配区分大小写）
-REVIEW.md
-review.MD
+# 代码审查记录（工作文档，不随代码库发布）：用字符类覆盖大小写，
+# 大小写敏感文件系统也能命中实际的 review.md（不再依赖 Windows 的忽略大小写行为）
+[Rr][Ee][Vv][Ii][Ee][Ww].[Mm][Dd]

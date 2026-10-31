@@ -7,9 +7,14 @@
 {{ $site := .site }}
 {{ $gridCfg := $site.Params.grid | default dict }}
 {{ $rowLoadRatio := $gridCfg.rowLoadRatio | default 0.75 }}
+{{/* 首行 LCP 预载：前 N 张卡片在 HTML 里直接写 src（保留 data-src 供灯箱/懒载），
+   让 preload scanner 在 defer bundle 执行前就发现图片；首张高优先级。0 = 关闭。
+   isset 而不是 default——default 会把合法的 0 当成无值（工程约定） */}}
+{{ $lcpPreload := 4 }}
+{{ if isset $gridCfg "lcpPreload" }}{{ $lcpPreload = int (index $gridCfg "lcpPreload") }}{{ end }}
 <div class="masonry-grid" id="masonry-grid"
     data-row-load-ratio="{{ $rowLoadRatio }}">
-    {{ range $photos }}
-        {{ partial "components/photo-card.html" (dict "photo" . "site" $site) }}
+    {{ range $index, $photo := $photos }}
+        {{ partial "components/photo-card.html" (dict "photo" $photo "site" $site "eager" (lt $index $lcpPreload) "priority" (eq $index 0)) }}
     {{ end }}
 </div>

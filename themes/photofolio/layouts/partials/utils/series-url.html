@@ -13,5 +13,5 @@
 {{- if $page -}}
     {{- $page.RelPermalink -}}
 {{- else -}}
-    {{- printf "/series/%s/" ($name | urlize) | relURL -}}
+    {{- errorf "系列《%s》沒有對應的 content/series 頁面（系列卡/燈箱膠囊會 404）" $name -}}
 {{- end -}}

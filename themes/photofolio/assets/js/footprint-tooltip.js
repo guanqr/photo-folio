@@ -15,7 +15,7 @@
  *   （(hover: hover)）在 iPad 桌面级浏览/外接键鼠配置下会匹配为真，
  *   手指触碰的 pointerenter 被放行、点按跳转前的空窗内弹层闪现——不可用
  */
-import { prefersReducedMotion } from './utils.js';
+import { prefersReducedMotion, fillTemplate } from './utils.js';
 
 // 淡出时长与 .fm-tooltip 的 transition（--transition = 0.3s）一致
 const TOOLTIP_FADE_MS = 300;
@@ -27,12 +27,14 @@ export function initFootprintTooltip({ root, tooltip, countFormat, yearFormat })
     // 随后加 fm-visible 才有淡入过渡）。
     const render = (el, anchorX, anchorY) => {
         const { name, count, minYear, maxYear } = el.dataset;
-        const years = minYear === maxYear ? String(minYear) : yearFormat.replace('%MIN%', minYear).replace('%MAX%', maxYear);
+        const years = minYear === maxYear
+            ? String(minYear)
+            : fillTemplate(yearFormat, { MIN: minYear, MAX: maxYear });
         tooltip.innerHTML = '';
         const nameEl = document.createElement('strong');
         nameEl.textContent = name;
         const countEl = document.createElement('span');
-        countEl.textContent = countFormat.replace('%COUNT%', count);
+        countEl.textContent = fillTemplate(countFormat, { COUNT: count });
         const yearEl = document.createElement('span');
         yearEl.textContent = years;
         tooltip.append(nameEl, countEl, yearEl);

@@ -15,7 +15,7 @@
 import { prefersReducedMotion } from './utils.js';
 
 export function initLightboxSwipe({ img, area, getGlow, onSwitch, onTakeover }) {
-    if (!area) return { isGestureActive: () => false, getVerdict: () => null, reset: () => {} };
+    if (!area) return { getVerdict: () => null, reset: () => {} };
 
     const SWIPE_TAKE_OVER = 20; // 滑动接管阈值 px（|dx| 且 |dx| > |dy|）——阈值过小
                                // 会在斜向手势（上下滑动带横向抖动）时误接管、与抽屉同时响应
@@ -28,9 +28,6 @@ export function initLightboxSwipe({ img, area, getGlow, onSwitch, onTakeover }) 
     // null 未决（抽屉暂不响应）| 'horizontal' 已接管（抽屉结束拖拽）| 'vertical' 交还抽屉
     let verdict = null;
     const getVerdict = () => verdict;
-
-    // 抽屉挂点：水平接管后为真
-    const isGestureActive = () => verdict === 'horizontal';
 
     const applyFollow = (dx) => {
         img.style.transform = `translateX(${dx}px)`;
@@ -59,6 +56,9 @@ export function initLightboxSwipe({ img, area, getGlow, onSwitch, onTakeover }) 
         const glow = getGlow();
         if (glow) glow.style.transition = tr;
         img.style.transform = '';
+        // 接管可能发生在旧图滑出（opacity 已在 0.25s 内写向 0）期间；
+        // transition:none 会把 opacity 落到 0，回弹必须恢复主图可见
+        img.style.opacity = '1';
         if (glow) glow.style.transform = 'scale(2)';
         const cleanup = () => {
             snapCleanup = null;
@@ -158,5 +158,5 @@ export function initLightboxSwipe({ img, area, getGlow, onSwitch, onTakeover }) 
 
     // snapBack 导出供 lightbox.js 复用：单照片集合下滑动提交无可切换目标，
     // open() 不执行——走回弹动画归位（原地 reset 会瞬间跳回）
-    return { isGestureActive, getVerdict, reset, snapBack };
+    return { getVerdict, reset, snapBack };
 }

@@ -41,8 +41,23 @@ let runningTimer = null;
 //（对照系列页氛围粒子的停帧/续帧先例，2026-10-18）
 let onVisibility = null;
 
+// 邻居预取句柄（模块级）：SPA 换页/轮播销毁时必须取消，否则 idle 回调仍持有
+// 已脱离文档的 slide img 并发起请求；同页重复导航也不能叠加多个回调
+let neighborIdle = null;
+let neighborTimer = null;
+
+function cancelNeighborPrefetch() {
+    if (neighborIdle !== null && typeof window.cancelIdleCallback === 'function') {
+        window.cancelIdleCallback(neighborIdle);
+    }
+    if (neighborTimer !== null) clearTimeout(neighborTimer);
+    neighborIdle = null;
+    neighborTimer = null;
+}
+
 export function initCarousel() {
     // 拆线先于早退：换页后旧监听闭包持有已销毁轮播的整组 slide img（解码位图）
+    cancelNeighborPrefetch();
     if (onVisibility) {
         document.removeEventListener('visibilitychange', onVisibility);
         onVisibility = null;
@@ -71,13 +86,33 @@ export function initCarousel() {
 
     let index = 0;
 
-    // 轮播图懒加载：第 2+ 张为 data-src（首张保持 src + eager，LCP 不受影响）——
-    // 切换前确保目标与左右邻居已加载：预载领先于 1.2s 淡入过渡、切换无空窗
+    // 轮播图懒加载：第 2+ 张为 data-src / data-srcset（首张保持 src/srcset + eager，
+    // LCP 不受影响）——切换前确保目标已加载；左右邻居改到 requestIdleCallback
+    // 中预取（1.5s 兜底），首屏不再同时拉 3 张 1920 图
     const slideImgs = slides.map((slide) => slide.querySelector('img'));
     const ensureLoaded = (i) => {
         const img = slideImgs[i];
         if (img && img.dataset.src && !img.src) {
+            if (img.dataset.srcset) img.srcset = img.dataset.srcset;
             img.src = img.dataset.src;
+            img.removeAttribute('data-src');
+            img.removeAttribute('data-srcset');
+        }
+    };
+
+    const scheduleNeighborPrefetch = (i) => {
+        cancelNeighborPrefetch();
+        if (slides.length <= 1) return;
+        const run = () => {
+            neighborIdle = null;
+            neighborTimer = null;
+            ensureLoaded((i + 1) % slides.length);
+            ensureLoaded((i - 1 + slides.length) % slides.length);
+        };
+        if (typeof window.requestIdleCallback === 'function') {
+            neighborIdle = window.requestIdleCallback(run, { timeout: 1500 });
+        } else {
+            neighborTimer = setTimeout(run, 1000);
         }
     };
 
@@ -101,8 +136,10 @@ export function initCarousel() {
     onVisibility = () => {
         if (document.hidden) {
             stopAutoplay();
+            cancelNeighborPrefetch(); // 后台不预取邻居
         } else if (carousel.isConnected) {
             startAutoplay();
+            scheduleNeighborPrefetch(index);
         }
     };
     document.addEventListener('visibilitychange', onVisibility);
@@ -126,10 +163,9 @@ export function initCarousel() {
         // 点击当前正在播放的项时，不重置、不暂停，保持正常轮播
         if (!force && i === index) return;
         index = (i + slides.length) % slides.length;
-        // 目标与左右邻居确保已加载（首张 src 恒在、邻居预载一次即命中）
+        // 目标立即加载；左右邻居空闲预取（首屏只发首图请求）
         ensureLoaded(index);
-        ensureLoaded((index + 1) % slides.length);
-        ensureLoaded((index - 1 + slides.length) % slides.length);
+        scheduleNeighborPrefetch(index);
         // Ken Burns：新激活 slide 重新缓推（旧 slide 保持放大态淡出、不缩回；
         // 减弱动态与自动播放禁用时跳过）
         if (!prefersReducedMotion() && AUTOPLAY_MS > 0) {

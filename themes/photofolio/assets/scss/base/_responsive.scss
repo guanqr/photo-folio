@@ -24,7 +24,7 @@
         visibility: visible;
         opacity: 1;
         /* 跨断点进入窄屏时汉堡按钮原地淡入（display 切换不触发 transition，用 animation） */
-        animation: hamburger-in 0.6s ease both;
+        animation: fadeIn 0.6s ease both;
     }
 
     .site-nav {

@@ -26,16 +26,6 @@
     }
 }
 
-/* 汉堡按钮入场：原地淡入（不做位移，避免在图标右侧留下移动残影） */
-@keyframes hamburger-in {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-
 /* 进入宽屏：导航文字从右侧向左滑回原位（类由 JS 在断点跨越时添加，时长与首页进度条标题切换一致） */
 @media (min-width: 769px) {
     .site-nav.nav-slide-in {

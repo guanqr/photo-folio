@@ -7,7 +7,10 @@
  */
 import { BP_DESKTOP_MIN } from './utils.js';
 
-let armListener = null; // 待命恢复 hover-ready 的监听（跨断点可替换，防残留堆积）
+// 待命恢复 hover-ready 的监听：pointermove/focusin 共用 AbortController，
+// 任一触发即作废另一个，跨断点不残留 once 监听（旧写法只把变量置空，
+// 另一目标上的监听仍挂着，下一次进入宽屏时无法摘除、随断点累积）
+let armController = null;
 
 export function initNavDropdown() {
     const nav = document.getElementById('site-nav');
@@ -105,22 +108,28 @@ export function initNavDropdown() {
                 // 进入窄屏：拆除 hover-ready（此前只在进入宽屏时武装、回到窄屏
                 // 不拆——残留的 hover-ready 配合触屏粘性 :hover 会让更高特异性的
                 // transform:none 规则恒压过 sub-open 的箭头旋转，子导航展开后
-                // 箭头不翻转、点击导航栏外才恢复）
+                // 箭头不翻转、点击导航栏外才恢复）；同时作废待命监听
+                if (armController) {
+                    armController.abort();
+                    armController = null;
+                }
                 disarmHover();
                 return;
             }
             resetSubMenus(nav);
             disarmHover();
-            if (armListener) {
-                window.removeEventListener('pointermove', armListener);
-                nav.removeEventListener('focusin', armListener);
-            }
-            armListener = () => {
-                armListener = null;
-                armHover();
+            if (armController) armController.abort();
+            const controller = new AbortController();
+            armController = controller;
+            const armOnce = () => {
+                if (armController === controller) {
+                    armController = null;
+                    armHover();
+                }
+                controller.abort(); // 摘除 pointermove/focusin 中尚未触发的另一个
             };
-            window.addEventListener('pointermove', armListener, { once: true });
-            nav.addEventListener('focusin', armListener, { once: true });
+            window.addEventListener('pointermove', armOnce, { once: true, signal: controller.signal });
+            nav.addEventListener('focusin', armOnce, { once: true, signal: controller.signal });
         });
     }
 }

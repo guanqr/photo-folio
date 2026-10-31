@@ -29,6 +29,25 @@
     {{ end }}
 {{ end }}
 
+{{/* 反向校验：photo.toml 中 series 属于本页但未列入 front matter photos 的照片
+   会从系列页静默消失，计数也少算；重复列表项会重复渲染。构建期直接报错。 */}}
+{{ $listed := slice }}
+{{ range $ordered }}{{ $listed = $listed | append (path.Base .src) }}{{ end }}
+{{ $missing := slice }}
+{{ range $photos }}
+    {{ if not (in $listed (path.Base .src)) }}{{ $missing = $missing | append (path.Base .src) }}{{ end }}
+{{ end }}
+{{ with $missing }}
+    {{ errorf "系列《%s》photo.toml 中有照片未列入 front matter photos：%s" $seriesName (delimit . "、") }}
+{{ end }}
+{{ if ne (len $listed) (len (uniq $listed)) }}
+    {{ errorf "系列《%s》front matter photos 存在重复项" $seriesName }}
+{{ end }}
+{{ $covers := where $photos "is_cover" true }}
+{{ if ne (len $covers) 1 }}
+    {{ errorf "系列《%s》is_cover 应恰好 1 张，实际 %d 张" $seriesName (len $covers) }}
+{{ end }}
+
 {{ $ambientTheme := .Params.theme | default "" }}
 {{/* 校验 theme 键：未注册键会在构建期警告（否则粒子静默失效） */}}
 {{ if and $ambientTheme (not (in (slice "falling-leaves" "firecracker" "dust") $ambientTheme)) }}

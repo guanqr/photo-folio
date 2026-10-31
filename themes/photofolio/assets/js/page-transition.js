@@ -6,7 +6,7 @@
  * 淡出/淡入用 transitionend + 超时兜底；`navSeq` 作废被取代的旧导航。
  */
 import { resetSubMenus } from './nav-dropdown.js';
-import { closeLightbox } from './lightbox.js';
+import { closeLightbox } from './lightbox-bridge.js';
 import { prefersReducedMotion } from './utils.js';
 import { navTimeoutMs } from '@params';
 
@@ -84,7 +84,14 @@ export function initPageTransition(reinit) {
         // 开新窗口——拦截会把它们劫持为同标签 SPA 导航（2026-10-18）
         if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
         const link = e.target.closest('a');
-        if (!link || !shouldIntercept(link)) return;
+        if (!link) return;
+        // 当前地址完全相同的链接：拦截但不导航——否则 pushState 出重复历史
+        // 并重新 fetch/替换当前页、滚回顶部；带 hash 的链接放行给原生锚点
+        if (isSamePageLink(link)) {
+            e.preventDefault();
+            return;
+        }
+        if (!shouldIntercept(link)) return;
         e.preventDefault();
         // 下拉子项点击后移出焦点：否则 :focus-within 会让下拉菜单在鼠标移出后仍保持展开
         if (link.closest('.nav-dropdown')) link.blur();
@@ -97,6 +104,17 @@ export function initPageTransition(reinit) {
         // 此时按当前地址恢复（popstate 触发时 location 已指向目标页），否则无法返回首页
         loadContent(e.state && e.state.url ? e.state.url : location.href);
     });
+}
+
+function isSamePageLink(link) {
+    if (link.host !== location.host || link.hash
+        || link.getAttribute('href') === '#'
+        || link.hasAttribute('download') || link.target === '_blank') return false;
+    const target = new URL(link.href, location.href);
+    return target.origin === location.origin
+        && target.pathname === location.pathname
+        && target.search === location.search
+        && target.hash === location.hash;
 }
 
 function shouldIntercept(link) {
@@ -171,13 +189,56 @@ async function loadContent(url) {
     await fadeIn(main);
 }
 
+/* 同步 SPA 导航后的 head 元数据：首屏 head 由服务端渲染，换页只替换
+   .main-content 时 canonical/OG/Twitter/description/RSS alternate 会停留在旧页；
+   只替换这些页面级标签，字体/样式/站点级 JSON-LD 保持不动（2026-10-31） */
+function syncHead(doc) {
+    const selectors = [
+        'meta[name="description"]',
+        'meta[property^="og:"]',
+        'meta[name^="twitter:"]',
+        'link[rel="canonical"]',
+        'link[rel="alternate"][type="application/rss+xml"]',
+    ];
+    selectors.forEach((selector) => {
+        document.head.querySelectorAll(selector).forEach((el) => el.remove());
+        doc.head.querySelectorAll(selector).forEach((el) => {
+            document.head.appendChild(document.importNode(el, true));
+        });
+    });
+}
+
 /* 主内容替换与页面级状态同步 */
 function commitPage(doc, url) {
     const main = document.querySelector('.main-content');
     const newMain = doc.querySelector('.main-content');
     if (!main || !newMain) return;
 
-    main.innerHTML = newMain.innerHTML;
+    /* 节点导入替代 innerHTML 重解析：避免把同源 HTML 再序列化一次，
+       也不让未来富文本/外部内容直接成为 HTML 注入 sink。
+       - 保留 application/json 与 application/ld+json 数据脚本（足迹地图数据、
+         JSON-LD）；可执行脚本（无 type/text/javascript/module）由 initPageModules
+         统一初始化，导入前移除，避免 SPA 换页时重复执行。
+       - 去掉内联 on* 事件属性：当前唯一消费方是轮播首图的 AVIF 兜底；SPA 换页时
+         avif-fallback 已在 bundle 中常驻，改用全局 error 监听。
+       - 初始首屏仍保留模板里的内联兜底（bundle 尚未求值时的早期 error）。 */
+    newMain.querySelectorAll('script').forEach((s) => {
+        const type = (s.getAttribute('type') || '').toLowerCase();
+        const isData = type === 'application/json' || type === 'application/ld+json';
+        if (!isData) s.remove();
+    });
+    const stripInlineHandlers = (el) => {
+        for (const attr of [...el.attributes]) {
+            if (/^on/i.test(attr.name)) el.removeAttribute(attr.name);
+        }
+    };
+    stripInlineHandlers(newMain);
+    newMain.querySelectorAll('*').forEach(stripInlineHandlers);
+    const fragment = document.createDocumentFragment();
+    for (const node of newMain.childNodes) {
+        fragment.appendChild(document.importNode(node, true));
+    }
+    main.replaceChildren(fragment);
 
     // 同步 is-home 标志：内容替换不会重渲染 body 类，不更新则
     // 首页跳到其他页后 is-home 残留——亮色主题首页顶部强制暗色导航规则
@@ -195,9 +256,10 @@ function commitPage(doc, url) {
         document.body.classList.toggle('is-home', doc.body.classList.contains('is-home'));
     }
 
-    // 更新标题
+    // 更新标题与页面级 head 元数据（description/canonical/OG/Twitter/RSS）
     const newTitle = doc.querySelector('title');
     if (newTitle) document.title = newTitle.textContent;
+    syncHead(doc);
 
     // 更新导航当前页高亮
     updateActiveNav(url);
@@ -221,8 +283,8 @@ function commitPage(doc, url) {
     // 滚动到顶部
     window.scrollTo(0, 0);
 
-    // 重新初始化页面 JS
-    if (reinitFn) reinitFn();
+    // 重新初始化页面 JS（SPA 标记供入口加载期的网格兜底计时器使用）
+    if (reinitFn) reinitFn(true);
 }
 
 /* 淡出/淡入：transitionend + 超时兜底；取消槽避免旧收尾影响新导航 */
@@ -233,12 +295,10 @@ function cancelFade() {
     cancel();
 }
 
-function fadeOut(el) {
-    if (prefersReducedMotion()) {
-        el.style.opacity = '0';
-        return Promise.resolve();
-    }
-    return new Promise(resolve => {
+/* 单次 opacity 过渡收尾（fadeOut/fadeIn 共用）：transitionend + 220ms 兜底；
+   取消槽确保新导航先作废旧收尾；clearTransition 用于淡入结束后清内联过渡 */
+function runFade(el, target, clearTransition) {
+    return new Promise((resolve) => {
         let done = false;
         let timer;
         const finish = () => {
@@ -246,6 +306,7 @@ function fadeOut(el) {
             done = true;
             el.removeEventListener('transitionend', onEnd);
             clearTimeout(timer);
+            if (clearTransition) el.style.transition = '';
             if (fadeCancel === cancel) fadeCancel = null;
             resolve();
         };
@@ -256,9 +317,17 @@ function fadeOut(el) {
         fadeCancel = cancel;
         el.addEventListener('transitionend', onEnd);
         timer = setTimeout(finish, 220);
-        el.style.transition = 'opacity 0.15s ease';
-        el.style.opacity = '0';
+        el.style.opacity = target;
     });
+}
+
+function fadeOut(el) {
+    if (prefersReducedMotion()) {
+        el.style.opacity = '0';
+        return Promise.resolve();
+    }
+    el.style.transition = 'opacity 0.15s ease';
+    return runFade(el, '0', false);
 }
 
 function fadeIn(el) {
@@ -270,27 +339,7 @@ function fadeIn(el) {
     el.style.transition = 'opacity 0.15s ease';
     el.style.opacity = '0';
     void el.offsetHeight;
-    return new Promise(resolve => {
-        let done = false;
-        let timer;
-        const finish = () => {
-            if (done) return;
-            done = true;
-            el.removeEventListener('transitionend', onEnd);
-            clearTimeout(timer);
-            el.style.transition = '';
-            if (fadeCancel === cancel) fadeCancel = null;
-            resolve();
-        };
-        const cancel = () => finish();
-        const onEnd = (e) => {
-            if (e.target === el && e.propertyName === 'opacity') finish();
-        };
-        fadeCancel = cancel;
-        el.addEventListener('transitionend', onEnd);
-        timer = setTimeout(finish, 220);
-        el.style.opacity = '1';
-    });
+    return runFade(el, '1', true);
 }
 
 function updateActiveNav(url) {

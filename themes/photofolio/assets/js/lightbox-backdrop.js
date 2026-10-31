@@ -61,6 +61,7 @@ export function initLightboxBackdrop({ container, insertBefore, reducedMotion })
         el.src = src;
         appendBackdropEl(el);
         backdropLayers.push(el);
+        backdropStack.cap(3); // 保留当前 + 两张淡出层；快速连切不随次数累积
         const show = () => {
             // 守卫：已被更新的切换取代（不再是末位）或已显示过（首开/同步
             // complete 路径）则不再执行——被剪枝的层同样不在数组中

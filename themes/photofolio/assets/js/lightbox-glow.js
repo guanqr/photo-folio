@@ -57,6 +57,7 @@ export function initLightboxGlow({ reducedMotion }) {
         const el = createEl();
         area.insertBefore(el, img);
         layers.push(el);
+        glowStack.cap(2); // 快速连切时旧层未淡入不触发剪枝，硬上限防层数累积
         el.src = src;
         attachReady(el, whenReady);
         return el;

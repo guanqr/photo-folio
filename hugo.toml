@@ -18,7 +18,7 @@ defaultContentLanguage = "zh-hant"
     [server.headers.values]
         Cache-Control = "no-cache"
 
-# 分析 JSON 同理：URL 不随 schema 版本变化，启发式缓存会在 v3→v4 等升级后
+# 分析 JSON 同理：URL 不随 schema 版本变化，启发式缓存会在 v4→v5 等升级后
 # 继续回旧结果，新代码校验失败、部分照片显示分析失败（2026-10-25 实测）
 [[server.headers]]
     for = "/analysis/**"
@@ -37,6 +37,9 @@ defaultContentLanguage = "zh-hant"
 
 [outputs]
     home = ["HTML", "rss"]
+    # RSS 只保留首页摄影 feed；section 默认也会生成空的 /section/index.xml，
+    # 与 head 的 rel=alternate 一起造成空订阅（2026-10-31）
+    section = ["HTML"]
 
 [params]
     description = "用鏡頭記錄生活的每一個瞬間"
@@ -68,12 +71,16 @@ defaultContentLanguage = "zh-hant"
     # 启用 Service Worker (仅在 hugo 构建生产环境时生效)
     enableServiceWorker = true
 
-    # 是否开启 instant.page 链接预加载加速 (true 为开启，false 为关闭)
-    enableInstantPage = true
+    # instant.page 链接预取：SPA 已拦截点击自行 fetch，且 SW 对 HTML 走 NetworkFirst，
+    # 预取结果不会被 SPA 复用（悬停预取 + 点击 fetch 重复整页请求），故关闭；
+    # 保留开关以便未来 SPA 自带悬停预取后重新评估
+    enableInstantPage = false
 
     # 年份合并分界：早于此年份的年份合并为一档（如 2024 → 「2024 前」，即 2023 及更早；0 = 不合并）
     # 同时作用于全部作品页年份筛选与关于页「拍摄档案」年度走势
     yearMergeBefore = 2024
+    # 列表页 JSON-LD 最多输出的照片条数（0 = 不限制；EXIF 明细不进 JSON-LD）
+    jsonldPhotoLimit = 24
 
     # 图片尺寸与质量配置（用于 OSS 图片处理参数）
     # 注意：本节开始后到下一节标题前的键都属于 [params.imageSizes]——
@@ -81,9 +88,11 @@ defaultContentLanguage = "zh-hant"
     [params.imageSizes]
         gallery = 800          # 瀑布流缩略图
         strip = 240            # 灯箱底部缩略图条（小图，lazy 加载）
-        carousel = 1920        # 首页轮播图
+        carousel = 1920        # 首页轮播图回退宽度（无 srcset 环境）
+        carouselWidths = [640, 960, 1280, 1920]  # 轮播 srcset 候选宽度
         category = 1000        # 分类卡片封面
         lightbox = 1920        # 灯箱大图
+        lightboxNarrow = 1280  # 窄屏（≤1000px）灯箱主图宽度
         ogWidth = 1200         # Open Graph 宽度
         ogHeight = 630         # Open Graph 高度
         quality = 80           # 默认质量
@@ -98,6 +107,7 @@ defaultContentLanguage = "zh-hant"
     # 首屏只揭示可见窗口内的行，之后正常下拉逐行补载
     [params.grid]
         rowLoadRatio = 0.5      # 下一行至少一半进入视口后才逐行加载
+        lcpPreload = 4          # 首行前 N 张卡片在 HTML 中直接写 src（0 关闭）
 
     # 全部作品页筛选栏：自行选择开启哪些筛选维度（true 开启 / false 关闭）
     [params.galleryFilters]
@@ -123,21 +133,18 @@ defaultContentLanguage = "zh-hant"
     bio = "舍南舍北皆春水，但見群鷗日日來"
 
 [params.typography]
-    # 【升级】字体外链对象数组 (支持 preconnect 和 stylesheet 混排)
+    # 字体外链对象数组（支持 preconnect 与 stylesheet 混排）：只指向自建字体库的
+    # I.MingCP / LXGW，不再引入思源宋体或 Google Fonts 镜像；统一 fonts.min.css
+    # 会连带引入未使用的 JetBrains Mono / Amstelvar，故按需分别加载
     fontLinks = [
-        # 1. 自定义字体的预连接
         { rel = "preconnect", href = "https://cdn.jsdelivr.net", crossorigin = true },
-        # 2. 自定义字体的样式表
-        { rel = "stylesheet", href = "https://cdn.jsdelivr.net/gh/guanqr/fonts@build/css/fonts.min.css" },
-
-        # 3. Google Fonts (loli镜像) 的预连接
-        { rel = "preconnect", href = "https://fonts.loli.net", crossorigin = true },
-        # 4. Google Fonts (loli镜像) 的样式表
-        { rel = "stylesheet", href = "https://fonts.loli.net/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap" }
+        { rel = "stylesheet", href = "https://cdn.jsdelivr.net/gh/guanqr/fonts@build/css/imingcp.min.css" },
+        { rel = "stylesheet", href = "https://cdn.jsdelivr.net/gh/guanqr/fonts@build/css/lxgwwenkaitc.min.css" }
     ]
 
     # 【重要】字体名称不要加引号，不要加逗号，只写核心字体名
-    headingFont = "Glyph Correction, Noto Serif TC"
+    # 标题与正文同用 I.MingCP（仅提供 400 字重，600/700 由浏览器合成粗体）
+    headingFont = "Glyph Correction, I.MingCP"
     bodyFont = "Glyph Correction, I.MingCP"
     footerFont = "Glyph Correction, LXGW WenKai TC"
     metaFont = "Glyph Correction, LXGW WenKai TC"

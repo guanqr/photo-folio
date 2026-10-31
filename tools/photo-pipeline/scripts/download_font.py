@@ -6,6 +6,10 @@ import urllib.request
 import zipfile
 from io import BytesIO
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
+from compat import setup_windows_stdout  # noqa: E402
+setup_windows_stdout()
+
 FONTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "fonts")
 FONT_FILE = "NotoSans-Bold.ttf"
 

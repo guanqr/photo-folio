@@ -15,7 +15,7 @@ import { prefersReducedMotion } from './utils.js';
 
 export function initLightboxAutoplay({ button, lightbox, next, intervalMs }) {
     if (!button || !lightbox) {
-        return { photoChanged() {}, photoReady() {}, stop() {}, isPlaying: () => false };
+        return { photoChanged() {}, photoReady() {}, stop() {} };
     }
 
     let playing = false;
@@ -150,5 +150,5 @@ export function initLightboxAutoplay({ button, lightbox, next, intervalMs }) {
     syncButton();
     button.hidden = true; // 集合数量未知前保持隐藏
 
-    return { photoChanged, photoReady, stop, isPlaying: () => playing };
+    return { photoChanged, photoReady, stop };
 }

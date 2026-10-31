@@ -37,6 +37,29 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
         return Math.round(minHeight + lv * (maxHeight() - minHeight));
     }
 
+    function measure() {
+        headHeight = panel.offsetHeight - panelDetails.offsetHeight;
+        minHeight = metaEl ? metaEl.offsetHeight : 0;
+    }
+
+    // 收起态只露出 meta 简行；其余直接子块 inert，阻止被裁掉的分析触发器
+    // 进入 Tab 序并改写 panelDetails.scrollTop。分析容器自身的 inert 由
+    // analysis-control 管理，跳过不覆盖；桌面端全部解除。
+    function setCollapsedInert(collapsed) {
+        const hide = collapsed && narrowMedia.matches;
+        Array.from(panelDetails.children).forEach((el) => {
+            if (el === metaEl || el.classList.contains('lightbox-analysis')) return;
+            el.inert = hide;
+        });
+    }
+
+    function clearCollapsedInert() {
+        Array.from(panelDetails.children).forEach((el) => {
+            if (el.classList.contains('lightbox-analysis')) return;
+            el.inert = false;
+        });
+    }
+
     function apply(px, animate) {
         panelDetails.style.transition = animate
             ? 'max-height 0.4s ease, opacity 0.3s ease'
@@ -52,6 +75,7 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
         if (panelToggle) {
             panelToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
         }
+        if (narrowMedia.matches) setCollapsedInert(!open);
     }
 
     // 内容绝对底部（滚轮/拖动的滚动停止条件）
@@ -163,6 +187,7 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
             panelDetails.style.overflowY = '';
             level = 0; // 展开程度归零：窄屏开过抽屉再切宽屏时，桌面原生滚动不残留箭头翻转判定
             panel.classList.remove('is-open', 'is-at-bottom');
+            clearCollapsedInert();
             updateFit();
             return;
         }
@@ -170,8 +195,7 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
         panelDetails.style.transition = 'none';
         panelDetails.style.maxHeight = '0px';
         // 每次打开重测头部：详情上限 = 50% 视口 − 头部 → 面板总长恒为 50vh
-        headHeight = panel.offsetHeight - panelDetails.offsetHeight;
-        minHeight = metaEl ? metaEl.offsetHeight : 0;
+        measure();
         level = 0;
         panelDetails.scrollTop = 0;
         panel.classList.remove('is-fit');
@@ -208,8 +232,7 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
     window.addEventListener('resize', () => {
         if (!narrowMedia.matches || !lightbox.classList.contains('active')) return;
         if (isFullscreen()) return; // 隐藏态不测量；退出时 refreshLayout 按新视口重算
-        headHeight = panel.offsetHeight - panelDetails.offsetHeight;
-        minHeight = metaEl ? metaEl.offsetHeight : 0;
+        measure();
         if (level <= 0) {
             apply(minHeight, false); // 收起态高度随简行重测（双列↔单列切换）
         } else {
@@ -440,12 +463,33 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
         // 滚动上下文保持；false 解除，翻转随内容增长自然发生——此前为
         // 「高度扣除回调」但从不被调用、属死 API，2026-10-21 审查修复 #15）
         setFitAdjuster: (frozen) => { fitAdjuster = frozen; },
-        // 全屏退出：面板恢复可见后按当前 level 重算抽屉高度（全屏期间 resize/
-        // 媒体查询重算被跳过，且 display:none 测量不可用）；桌面 is-fit 由 refreshFit 负责
+        // 全屏退出：面板恢复可见后按当前视口重算抽屉高度（全屏期间 resize/
+        // 媒体查询重算被跳过，且 display:none 测量不可用）；桌面 is-fit 由 refreshFit
+        // 负责。全屏中跨到宽屏时窄屏分支会提前返回，这里必须清掉窄屏内联
+        // max-height/overflow（内联优先级高于桌面样式），否则宽屏详情被旧高度裁切
         refreshLayout: () => {
+            if (!lightbox.classList.contains('active')) return;
+            if (!narrowMedia.matches) {
+                panelDetails.style.maxHeight = '';
+                panelDetails.style.opacity = '';
+                panelDetails.style.transition = '';
+                panelDetails.style.overflowY = '';
+                level = 0;
+                panel.classList.remove('is-open', 'is-at-bottom');
+                clearCollapsedInert();
+                updateFit(true);
+                updateArrowState();
+                return;
+            }
+            measure();
+            apply(pxFor(level), false);
+            updateArrowState();
+        },
+        // 切图后重测头部/简行：标题换行或标签行数变化会改变 minHeight/headHeight，
+        // 不改则抽屉总高偏离 50vh（展开上限与收起高度都按上一张计算）
+        remeasure: () => {
             if (!narrowMedia.matches || !lightbox.classList.contains('active')) return;
-            headHeight = panel.offsetHeight - panelDetails.offsetHeight;
-            minHeight = metaEl ? metaEl.offsetHeight : 0;
+            measure();
             apply(pxFor(level), false);
             updateArrowState();
         },

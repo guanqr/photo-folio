@@ -7,8 +7,9 @@
  *   行高天然落在 H 附近；作品严格保持自身长宽比（object-fit: cover 仅兜底取整误差）
  * - 超窄屏 ≤500px：每行 1–2 张——3:2 横构图独占一行（行高基准 H = 行宽 × 2/3），
  *   竖构图（宽高比 < 1）绝不落单，与相邻作品同行
- * - 末行默认不强行对齐：行高封顶 H、左侧对齐、右侧留白；余量连当前集合最窄照片
- *   都放不下且末行 ≥2 张时按自然高度放大铺满，单张末行不放大（见 shouldFillLastRow）
+ * - 末行默认不强行对齐：左侧对齐、右侧留白；≥2 张时以常规行最小实际行高为基准，
+ *   铺满后不超过其 1.1 倍且余量连最窄照片都放不下才放大，单张末行仍按 H 封顶
+ *  （见 shouldFillLastRow，2026-11-01 用户裁定）
  * - 整页容器 + 渐进加载（2026-10-31）：初始化时一次算完整组行计划并把网格高度设为总高——
  *   滚动条一开始就是完整长度；首屏只揭示可见窗口内的行（不额外预载），由串行队列
  *   一次建立一行（图片请求与入场都逐行）；之后正常下拉按行逐行补载，已渲染的行保留
@@ -26,6 +27,8 @@ import { prefersReducedMotion, markImageLoaded, FLIP_TRANSITION, FLIP_DURATION }
 const DEFAULT_RATIO = 1.5; // 图片宽高比读取失败时的兜底值（3:2）
 const REVEAL_STAGGER = 60; // 逐张揭示间隔 ms
 const DEFAULT_ROW_LOAD_RATIO = 0.75; // 下一行至少 3/4 进入视口才补载，config 缺省值
+// 末行放大上限：铺满后行高最多比常规行最小实际行高高 10%（2026-11-01 用户裁定）
+const LAST_ROW_FILL_MAX_RATIO = 1.1;
 
 let resizeBound = false;
 let windowBound = false;
@@ -179,17 +182,24 @@ function computeRowLayout(grid, plan) {
     const H = getTargetRowHeight(W, gap, border2, grid._tier);
     const layout = [];
     let top = 0;
+    // 常规行（非末行）的最小实际渲染行高：末行留白/放大判定与高度上限以它为基准
+    // （2026-11-01 用户裁定：不按目标行高 H，而按实际最低行，避免末行明显更大）
+    const regularHeights = plan
+        .slice(0, Math.max(0, plan.length - 1))
+        .map((row) => Math.round(planRowHeight(row, W, gap, border2, H)));
+    const minRowH = regularHeights.length ? Math.min(...regularHeights) : Math.round(H);
+    grid._minRowH = minRowH;
     // 末行若标记为 ragged：逐宽度重判是否放大铺满——同一档位 resize 时
-    // H 与余量都在变，判定必须跟着当前宽度走（2026-10-31）
+    // 最小行高与余量都在变，判定必须跟着当前宽度走（2026-10-31）
     const last = plan[plan.length - 1];
     if (last && last.ragged) {
         const ratios = grid._planItems
             .slice(last.start, last.start + last.count)
             .map((item) => grid._ratios.get(item) || DEFAULT_RATIO);
-        last.fill = shouldFillLastRow(last, ratios, W, gap, border2, H, grid._planMinRatio || DEFAULT_RATIO);
+        last.fill = shouldFillLastRow(last, ratios, W, gap, border2, H, minRowH, grid._planMinRatio || DEFAULT_RATIO);
     }
     for (const row of plan) {
-        const h = Math.round(planRowHeight(row, W, gap, border2, H));
+        const h = Math.round(planRowHeight(row, W, gap, border2, H, minRowH));
         layout.push({ top, h });
         top += h + borderV + gap;
     }
@@ -202,16 +212,21 @@ function computeRowLayout(grid, plan) {
     return layout;
 }
 
-/* 末行是否放大铺满：自然高度不超过 H 时本来就能铺满（只需吸收取整余量）；
-   单张末行不放大（避免一张照片被拉成通栏大图，2026-10-31 用户裁定）；
-   至少两张时，按 H 排布后若右侧余量连当前集合最窄的一张照片都放不下
-   （最窄照片宽 = 宽高比 × H + 左右边框，另需一个行间距），则放弃留白、
-   按自然高度放大到整行宽 */
-function shouldFillLastRow(row, ratios, W, gap, border2, H, minRatio) {
-    if (rowHeight(W, row.count, row.sum, gap, border2) <= H) return true;
-    if (row.count < 2) return false;
+/* 末行是否放大铺满（2026-11-01 用户裁定）：
+   - 单张末行始终按 H 封顶、不放大（2026-10-31 用户裁定）；
+   - 至少两张时以常规行的最小实际行高 minRowH 为基准：铺满后行高超过
+     minRowH × 1.1 即放弃放大（否则末行照片明显大于前面各行）；
+   - 未超过上限时，再按 minRowH 排布检查右侧余量——连当前集合最窄的一张照片
+     都放不下（最窄照片宽 = 宽高比 × minRowH + 左右边框，另需一个行间距）
+     才铺满，否则左对齐留白。自然高度不超过 minRowH 时本来就能铺满，
+     只需吸收取整余量 */
+function shouldFillLastRow(row, ratios, W, gap, border2, H, minRowH, minRatio) {
+    const hFill = rowHeight(W, row.count, row.sum, gap, border2);
+    if (row.count < 2) return hFill <= H; // 单张末行按 H 封顶
+    if (hFill > minRowH * LAST_ROW_FILL_MAX_RATIO) return false;
+    if (hFill <= minRowH) return true;
     // 未铺满时的实际渲染行高（computeRowLayout 对行高取整）：余量按同口径估算
-    const h = Math.round(H);
+    const h = Math.round(minRowH);
     let used = border2 * row.count + gap * (row.count - 1);
     for (let k = 0; k < row.count; k++) {
         used += Math.round(ratios[k] * h + border2) - border2;
@@ -219,11 +234,12 @@ function shouldFillLastRow(row, ratios, W, gap, border2, H, minRatio) {
     return W - used < minRatio * h + border2 + gap;
 }
 
-/* 行在给定宽度下的高度：普通行恰好铺满；末行（ragged）默认按 H 封顶、
-   左对齐留白，仅在 fill 判定为真（余量放不下任何照片）时按自然高度铺满 */
-function planRowHeight(row, W, gap, border2, H) {
+/* 行在给定宽度下的高度：普通行恰好铺满；末行（ragged）默认左对齐留白，
+   至少两张时按常规行最小实际行高 minRowH 封顶（单张仍按 H），仅在 fill
+   判定为真时按自然高度铺满 */
+function planRowHeight(row, W, gap, border2, H, minRowH = H) {
     let h = rowHeight(W, row.count, row.sum, gap, border2);
-    if (row.ragged && !row.fill) h = Math.min(h, H);
+    if (row.ragged && !row.fill) h = Math.min(h, row.count >= 2 ? minRowH : H);
     return h;
 }
 
@@ -238,13 +254,14 @@ function initialRowCount(grid) {
     const gap = getRowGap(grid);
     const border2 = getCardBorder(grid);
     const H = getTargetRowHeight(W, gap, border2, grid._tier);
+    const minRowH = grid._minRowH || H;
     const visible = (window.innerHeight || 800) - Math.max(0, grid.getBoundingClientRect().top);
     if (visible <= 0) return 0;
     let acc = 0;
     let n = 0;
     while (n < grid._plan.length && acc < visible) {
         const row = grid._plan[n];
-        acc += planRowHeight(row, W, gap, border2, H) + gap;
+        acc += planRowHeight(row, W, gap, border2, H, minRowH) + gap;
         n++;
     }
     return n;
@@ -543,23 +560,19 @@ function getRowGap(grid) {
    0=超窄屏 ≤500px（每行 1–2 张：3:2 横构图独占或与竖构图同行）、
    1=窄屏 501-768px（每行 2 张 3:2 基准）、2=中屏 769-1000px（每行 3 张 3:2 基准）、
    3=宽屏 >1000px（每行 4 张 3:2 基准）
-   滞回：升档需越过 TIER_EXIT（520/788/1020），降档按原始阈值（500/768/1000），
-   防止断点附近来回切换导致布局跳跃；返回档位是否变化。
-   宽度信号：档位基础值读 CSS 变量 --layout-tier（样式表媒体查询写入——旋转后
-   CSS 评估恒可信）；升档滞回用 TIER_EXIT 的 matchMedia 查询补充（媒体查询
-   随旋转正常重估，与 CSS 变量同为可信信号） */
-const TIER_ENTER = [500, 768, 1000];
-const TIER_EXIT = [520, 788, 1020];
-
+   档位信号唯一源在样式表（_base.scss）：--layout-tier 基础档位、--layout-tier-exit
+   为已越过的最高出口档位（520/788/1020 对应 1/2/3），JS 只读不持有阈值；
+   升档需 exitTier > grid._tier，降档随基础档位立即生效；返回档位是否变化。
+   iPad Safari 旋转后 JS matchMedia/clientWidth 可能永久陈旧——这里不再查询
+   matchMedia，改由 orientationchange/screen.orientation 触发重排（见 initMasonryResize） */
 function updateTier(grid) {
-    const raw = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--layout-tier'), 10);
+    const style = getComputedStyle(document.documentElement);
+    const raw = parseInt(style.getPropertyValue('--layout-tier'), 10);
     let tier = Number.isFinite(raw) ? Math.max(0, Math.min(3, raw)) : 0;
-    if (grid._tier != null && tier > grid._tier) {
-        // 升档滞回：未越过当前档位的出口值时保持原档位（降档随 CSS 变量立即生效）
-        const exit = TIER_EXIT[grid._tier];
-        if (!window.matchMedia(`(min-width: ${exit + 1}px)`).matches) {
-            tier = grid._tier;
-        }
+    const exitRaw = parseInt(style.getPropertyValue('--layout-tier-exit'), 10);
+    if (grid._tier != null && tier > grid._tier
+        && Number.isFinite(exitRaw) && exitRaw <= grid._tier) {
+        tier = grid._tier;
     }
     const changed = tier !== grid._tier;
     grid._tier = tier;
@@ -585,8 +598,8 @@ function getTargetRowHeight(containerWidth, gap, border2, tier) {
    超窄屏档位 0：每行最多 2 张——横构图（宽高比 ≥ 1）可独占一行；竖构图开头的行必须
    与下一张同行（绝不落单）；行内一张横构图后若下一张是最后一张竖构图，则并入本行；
    其余档位：边界处比较「停在此处 / 纳入下一张」，取行高最接近 H 者；
-   最后一行（作品耗尽）可能标记 ragged：默认行高封顶 H、右侧留白，
-   余量放不下照片且 ≥2 张时再按自然高度铺满（见 planRowHeight） */
+   最后一行（作品耗尽）可能标记 ragged：默认左对齐留白；≥2 张时以常规行最小
+   实际行高为基准，放大不超过其 1.1 倍（见 planRowHeight / shouldFillLastRow） */
 function partitionRows(ratios, W, H, gap, border2, refine, tier) {
     const isTier0 = tier === 0;
     const maxPhotos = isTier0 ? 2 : Infinity; // 超窄屏每行最多 2 张
@@ -640,9 +653,23 @@ function partitionRows(ratios, W, H, gap, border2, refine, tier) {
     return rows;
 }
 
+function rowCellAbsorbs(row, k) {
+    return (!row.ragged || row.fill) && k === row.count - 1;
+}
+
+/* 行内第 k 张图片的宽度（applyRows 与 itemRectInPlan 共用，避免跨档 FLIP
+   起点与实际布局各算一套而脱节）：普通行/判定铺满的 ragged 行末张向下取整
+   吸收余量、整行恰好铺满；其余四舍五入（误差正负分布，末张 floor 已使行宽
+   总和精确 ≤ W）。ragged 非铺满的末张按自然宽度参与四舍五入（右侧留白） */
+function rowCellWidth(row, k, remaining, ratio, h, border2) {
+    if (rowCellAbsorbs(row, k)) {
+        return Math.max(1, Math.floor(remaining - border2));
+    }
+    const cellW = ratio * h + border2;
+    return Math.round(cellW - border2);
+}
+
 /* 应用行布局：每张盒子严格按自身比例（自然行高下恰好铺满，无裁切）
-   非末张四舍五入、末张吸收取整误差并向下取整——防换行不依赖逐项 floor，
-   末张 floor(remaining − border2) 已使行宽总和精确 ≤ W；
    ragged 行（真正的最后一行）默认不吸收余量、按自然宽度排列、右侧留白；
    判定铺满的 ragged 行（row.fill）与普通行一样由末张吸收取整余量 */
 function applyRows(items, rows, ratios, W, gap, border2) {
@@ -656,17 +683,9 @@ function applyRows(items, rows, ratios, W, gap, border2) {
             const img = item._img || (item._img = item.querySelector('img.photo-img'));
             if (!img) continue;
             if (item.style.marginRight) item.style.marginRight = ''; // 清除任何残留的 inline margin（防止历史版本遗留导致行超宽换行）
-            const cellW = ratios[idx] * row.h + border2;
-            let imgW;
-            if ((!row.ragged || row.fill) && k === row.count - 1) {
-                imgW = Math.max(1, Math.floor(remaining - border2)); // 末张吸收余量，整行恰好铺满（放大铺满的末行同样适用）
-            } else {
-                // 非末张取 round：误差 ±0.5px 正负分布（原 floor 单向为负、末张
-                // 系统性吸收 ~n/2 px 正偏差、总是宽于理想）；防换行不依赖逐项
-                // floor——末张 floor(remaining − border2) 已使行宽总和精确 ≤ W
-                // （2026-10-19）
-                imgW = Math.round(cellW - border2);
-                // 按「实际渲染宽度」扣减，避免误差累积导致行宽超过容器而换行留白
+            const imgW = rowCellWidth(row, k, remaining, ratios[idx], row.h, border2);
+            // 非吸收项按「实际渲染宽度」扣减，避免误差累积导致行宽超过容器而换行留白
+            if (!rowCellAbsorbs(row, k)) {
                 remaining -= (imgW + border2) + gap;
             }
             img.style.width = imgW + 'px';
@@ -756,35 +775,27 @@ export function initMasonryResize() {
         // 延迟重判定时器（debounce：新 resize 到来时重置——连续缩放/地址栏伸缩
         // 不再堆积数十个定时器；每个只触发一次幂等的重排）
         let delayTimers = [];
-        window.addEventListener('resize', () => {
+        const relayoutAfterViewportChange = () => {
             const grid = getGrid();
             if (!grid || !grid._plan) return;
             scheduleRelayout(grid);
-            // 旋转完成后 iPad Safari 不再派发 resize/change 事件——延迟重判补上
-            // 查询稳定后的最终档位（幂等：无变化时只做一次廉价的档位比较）
+            // 旋转完成后 iPad Safari 不再派发 resize（且 JS matchMedia 评估可能
+            // 陈旧）——延迟重判补上最终档位；档位本身由 CSS 变量提供
             delayTimers.forEach(clearTimeout);
             delayTimers = [300, 800].map((ms) => setTimeout(() => {
                 const g = getGrid();
                 if (g && g._plan) scheduleRelayout(g);
             }, ms));
-        });
-        // 边界媒体查询 change 驱动档位重判：旋转过渡期间的中间态 resize 会落错档
-        // （如 4→3 而不到 2、刷新才恢复）——查询最终稳定后的 change 事件补上
-        // 最终判定（iPad Safari 旋转后 resize 不再触发、媒体查询照常重估；
-        // change 监听器幂等，与 resize 路径的重排互不冲突）
-        const boundaries = [];
-        TIER_ENTER.forEach((v) => boundaries.push(v + 1));
-        TIER_EXIT.forEach((v) => boundaries.push(v + 1));
-        boundaries.forEach((minPx) => {
-            const mq = window.matchMedia(`(min-width: ${minPx}px)`);
-            if (mq.addEventListener) {
-                mq.addEventListener('change', () => {
-                    const grid = getGrid();
-                    if (!grid || !grid._plan) return;
-                    scheduleRelayout(grid);
-                });
-            }
-        });
+        };
+        window.addEventListener('resize', relayoutAfterViewportChange);
+        // 旋转信号补充：orientationchange 与 screen.orientation change 不依赖
+        // window resize，覆盖 iPad Safari 旋转后 resize 不派发的场景；
+        // 档位值仍只从 --layout-tier / --layout-tier-exit 读取
+        window.addEventListener('orientationchange', relayoutAfterViewportChange);
+        if (window.screen && window.screen.orientation
+            && typeof window.screen.orientation.addEventListener === 'function') {
+            window.screen.orientation.addEventListener('change', relayoutAfterViewportChange);
+        }
     }
 
     // 滚动窗口更新：rAF 节流；SPA 换页后读取当前文档中的网格（旧网格已脱离文档）
@@ -819,9 +830,13 @@ function relayout(grid) {
 
     const W = getGridWidth(grid);
     const modeChanged = updateTier(grid);
-    // 宽度与档位均未变（延迟重判/边界监听触发的大量幂等重排）：跳过全量
-    // 样式写回——只在真正变化时重算
-    if (!modeChanged && grid._lastW === W) return;
+    // 宽度与档位均未变（延迟重判/高度变化触发的大量幂等重排）：跳过全量
+    // 样式写回；但视口高度可能已变（全屏/F11/拖窗口下边缘），仍需按新视口
+    // 补新露出的行，不能直接 return
+    if (!modeChanged && grid._lastW === W) {
+        updateRowsOnScroll(grid);
+        return;
+    }
 
     if (modeChanged) {
         rebuildForPlanChange(grid);
@@ -882,7 +897,8 @@ function capturePlanGeometry(grid) {
     };
 }
 
-/* 按旧行计划计算某张作品在重建前的视口矩形（与 applyRows 的宽度分配同口径） */
+/* 按旧行计划计算某张作品在重建前的视口矩形（宽度分配与 applyRows 共用
+   rowCellWidth，避免两套取整口径让 FLIP 起点与真实布局错位） */
 function itemRectInPlan(geom, item) {
     if (!geom || !geom.plan || !geom.layout) return null;
     const idx = geom.items.indexOf(item);
@@ -905,12 +921,8 @@ function itemRectInPlan(geom, item) {
     for (let k = 0; k < row.count; k++) {
         const gi = row.start + k;
         const ratio = geom.ratios.get(geom.items[gi]) || DEFAULT_RATIO;
-        const cellW = ratio * entry.h + geom.border2;
-        let imgW;
-        if ((!row.ragged || row.fill) && k === row.count - 1) {
-            imgW = Math.max(1, Math.floor(remaining - geom.border2));
-        } else {
-            imgW = Math.round(cellW - geom.border2);
+        const imgW = rowCellWidth(row, k, remaining, ratio, entry.h, geom.border2);
+        if (!rowCellAbsorbs(row, k)) {
             remaining -= (imgW + geom.border2) + geom.gap;
         }
         const cardW = imgW + geom.border2;
@@ -941,8 +953,11 @@ function captureFlipRects(grid) {
     return items.length ? { items, rects } : null;
 }
 
-/* FLIP 收尾：transform 过渡结束/取消后清内联 transition 与 transform-origin
-   （transform 已在 Play 时清空）；监听只挂网格一次（事件冒泡，目标为作品项） */
+/* FLIP 收尾：transform 过渡结束后清内联 transition 与 transform-origin
+   （transform 已在 Play 时清空）；监听只挂网格一次（事件冒泡，目标为作品项）。
+   不监听 transitioncancel：旧过渡被下一轮 FLIP 取消后，其 cancel 事件会在新
+   过渡起播之后才派发，按「当前仍有 transform 过渡」判断会误清新过渡；改用
+   flipRebuild 起播后的 FLIP_DURATION+50ms 兜底定时器（见下） */
 function bindFlipCleanup(grid) {
     if (grid._flipCleanupBound) return;
     grid._flipCleanupBound = true;
@@ -955,7 +970,6 @@ function bindFlipCleanup(grid) {
         item.style.transformOrigin = '';
     };
     grid.addEventListener('transitionend', cleanup);
-    grid.addEventListener('transitioncancel', cleanup);
 }
 
 /* 对重建后的可见作品执行 FLIP：Last 测量 → Invert 回旧位 → Play 过渡到新位。
@@ -986,6 +1000,18 @@ function flipRebuild(grid, flip) {
         item.style.transform = '';
     });
     bindFlipCleanup(grid);
+    // 中断/取消兜底：不依赖 transitioncancel（旧事件会误伤新过渡），
+    // 起播后 FLIP_DURATION + 50ms 清理仍在 transform 过渡的内联样式；
+    // 新一轮 FLIP 会先作废旧定时器
+    clearTimeout(grid._flipCleanupTimer);
+    grid._flipCleanupTimer = setTimeout(() => {
+        grid._flipCleanupTimer = null;
+        playing.forEach((item) => {
+            if (!(item.style.transition || '').includes('transform')) return;
+            item.style.transition = '';
+            item.style.transformOrigin = '';
+        });
+    }, FLIP_DURATION + 50);
 }
 
 /* 跨档重排后，重建前可见、重建后落入视口外的作品：临时渲染其新行并参与
@@ -1192,17 +1218,16 @@ function restartGrid(grid, items) {
    同步渲染 + 等待筛选重启稳定，无需再按行逐步揭示 */
 export async function revealUpToItem(grid, item) {
     if (!grid || !item || !grid._planItems) return;
-    for (let attempt = 0; attempt < 3; attempt++) {
-        while (grid._restartPromise) {
-            await grid._restartPromise;
-            if (grid !== document.getElementById('masonry-grid')) return;
-        }
+    // 等待筛选重启稳定（重启期间 plan/行号会变）；此前的 for(attempt<3)
+    // 每条路径都 return，重试语义并不存在，直接顺序执行即可
+    while (grid._restartPromise) {
+        await grid._restartPromise;
         if (grid !== document.getElementById('masonry-grid')) return;
-        if (!grid._planItems.includes(item)) return;
-        const idx = grid._planItems.indexOf(item);
-        const rowIdx = rowIndexForItem(grid, idx);
-        if (rowIdx < 0) return;
-        renderRow(grid, rowIdx, true);
-        return;
     }
+    if (grid !== document.getElementById('masonry-grid')) return;
+    if (!grid._planItems.includes(item)) return;
+    const idx = grid._planItems.indexOf(item);
+    const rowIdx = rowIndexForItem(grid, idx);
+    if (rowIdx < 0) return;
+    renderRow(grid, rowIdx, true);
 }

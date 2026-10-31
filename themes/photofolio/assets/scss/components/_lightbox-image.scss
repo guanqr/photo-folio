@@ -9,9 +9,10 @@
     grid-template: 100% / 100%;
     place-items: center;
     overflow: hidden; /* 水平滑动切换时图片裁剪在图片区内 */
-    /* 底部 2.5em：窄屏抽屉升到最高时，辉光的 blur 向外溢出（约 1.5~2em）
-       在到达裁剪边缘前自然衰减——间距过小会露出辉光被硬切的分界线 */
-    padding: 1em 1em 2.5em;
+    /* 顶部 4em = 顶栏高度：普通视图主图不进入顶栏覆盖区（全屏模式在
+       _lightbox-fullscreen.scss 中另行还原为 1em）；底部 2.5em：窄屏抽屉升到
+       最高时，辉光的 blur 向外溢出（约 1.5~2em）在到达裁剪边缘前自然衰减 */
+    padding: 4em 1em 2.5em;
     user-select: none; /* 长按拖动抽屉时避免选中/拖图 */
     /* 触屏滑动手势由 JS（lightbox-swipe）接管，禁浏览器原生手势
        （原生滚动/捏合会触发 pointercancel 打断拖拽） */
@@ -62,13 +63,6 @@
     pointer-events: none;
 }
 
-/* 抽屉展开态：照片贴顶时辉光顶部溢出被图片区边缘硬裁——顶部内边距 1em
-   不足以容纳 1.5~2em 的 blur 溢出（底部特意留了 2.5em、顶部此前未留），
-   展开时顶部内边距补到与底部一致（随既有 padding 过渡平滑变化） */
-.lightbox-main:has(.lightbox-panel.is-open) .lightbox-img-area {
-    padding-top: 2.5em;
-}
-
 /* 图片加载转圈：与瀑布流加载指示器同款（新图未就绪时显示，加载完成后随图片滑入消失） */
 .lightbox-img-loading {
     display: none;
@@ -92,8 +86,9 @@
 /* 图片区左侧留白与右侧对称：右侧面板内容到右缘 = 面板内边距 1.25em + 箭头列 4.25em = 5.5em，
    左侧同样留 5.5em（箭头列 4.25em + 内边距 1.25em）——作品不贴左缘、不被左箭头遮挡；
    右侧留 2em 给辉光溢出余地，避免切入面板区域。
-   上下内边距对称（1em/1em）：图片真正上下居中——基础态的底部 2.5em 是为窄屏抽屉
-   升起时辉光衰减留的（桌面无抽屉，辉光溢出被裁切的边缘在屏幕底缘、压在暗色背景上不可见） */
+   顶部沿用基础态的 4em 顶栏留白（主图不进入顶栏覆盖区），底部桌面 1em（无抽屉，
+   辉光溢出被裁切的边缘在屏幕底缘、压在暗色背景上不可见）；主图在顶栏以下的
+   可用区内居中 */
 @media (min-width: 1001px) {
     .lightbox-img-area {
         padding-left: 5.5em;

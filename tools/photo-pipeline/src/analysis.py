@@ -20,7 +20,7 @@
 
 输入：全分辨率 RGB 原图（管线处理链上、加水印之前的原图口径——分析对象
 是照片本身而非压缩产物，也不含水印文字污染）。
-输出：static/analysis/{文件名}.json（schema 版本由 v 字段标识，当前 v4——
+输出：static/analysis/{文件名}.json（schema 版本由 v 字段标识，当前 v5——
 算法改动时递增 ANALYSIS_VERSION，旧结果由 main.py 的惰性判定自动重算）。
 """
 import json
@@ -29,10 +29,10 @@ import os
 
 from PIL import Image
 
-ANALYSIS_VERSION = 4  # v4：饱和度判定改按分段像素占比（<18 / 18–45 / ≥45），
-                      # 结果增 satFracs/satBounds（2026-10-25）——v3 JSON 由
-                      # 惰性判定自动判过期、下次运行全量重算（或由一次性回填
-                      # 脚本直写）
+from compat import atomic_write_text, js_round as _js_round
+
+ANALYSIS_VERSION = 5  # v5：影调三段占比把取整余数并入最大档（与饱和度同口径，
+                      # 2026-10-31）——v4 JSON 已一次性更新并升到 v5
 
 # ===== 影调/色彩阈值（与灯箱渲染口径一致） =====
 TONAL_ZONE_SHADOW = 85   # 18% 灰（118）向下精确 1 档曝光：0.18/2 经 sRGB 标准
@@ -103,12 +103,6 @@ def _analyze_dr(dr_hist):
     bin 步长 1/256 档、两百分位 bin 之差即真档（bin 中心项相消，误差
     < 1/256 档）；纯黑像素累计在最暗 bin（DR_FLOOR 下限）"""
     return (_percentile_bin(dr_hist, 0.95) - _percentile_bin(dr_hist, 0.05)) / 256.0
-
-
-def _js_round(x):
-    """对齐 JS Math.round 的半入舍入——Python round() 是银行家舍入（round-half-even），
-    JS Math.round(0.5)=1 而 Python round(0.5)=0，逐个调用点逐一换成 floor(x+0.5)"""
-    return int(x + 0.5)
 
 
 def _percentile_of(hist, total, p):
@@ -187,6 +181,13 @@ def _analyze_tone(lum_hist, total, dr_stops):
         warnings.append("shadow")
     if clip_high / total >= TONAL_CLIP_FRAC:
         warnings.append("high")
+    fracs = [_js_round(shadow / total * 100), _js_round(mid / total * 100),
+             _js_round(high / total * 100)]
+    # 取整余数并入最大档，保证三段显示合计恒为 100%（与饱和度同口径；
+    # 判定仍用原始计数）
+    residual = 100 - sum(fracs)
+    if residual:
+        fracs[fracs.index(max(fracs))] += residual
     return {
         "key": key,
         "range": range_tier,
@@ -195,8 +196,7 @@ def _analyze_tone(lum_hist, total, dr_stops):
         "warnings": warnings,
         "zoneFrom": zone_from,
         "zoneTo": zone_to,
-        "fracs": [_js_round(shadow / total * 100), _js_round(mid / total * 100),
-                  _js_round(high / total * 100)],
+        "fracs": fracs,
     }
 
 
@@ -402,12 +402,9 @@ def write_js_meta(js_path):
     parent = os.path.dirname(js_path)
     if parent:
         os.makedirs(parent, exist_ok=True)
-    tmp_path = js_path + ".tmp"
-    # 固定 LF：Windows 文本模式默认 CRLF，会让仓库中的生成文件每次管线
-    # 运行后出现仅行尾差异（内容不变，2026-10-29）
-    with open(tmp_path, "w", encoding="utf-8", newline="\n") as f:
-        f.write("\n".join(lines))
-    os.replace(tmp_path, js_path)
+    # 固定 LF + 原子替换：Windows 文本模式默认 CRLF 会让生成文件每次管线
+    # 运行后出现仅行尾差异；中断不留下半截文件（2026-10-29）
+    atomic_write_text(js_path, "\n".join(lines))
 
 
 def analyze_and_store(input_path, analysis_path):
@@ -417,7 +414,4 @@ def analyze_and_store(input_path, analysis_path):
     with Image.open(input_path) as img:
         result = analyze_image(img.convert("RGB"))
     os.makedirs(os.path.dirname(analysis_path), exist_ok=True)
-    tmp_path = analysis_path + ".tmp"
-    with open(tmp_path, "w", encoding="utf-8") as f:
-        json.dump(result, f, separators=(",", ":"))
-    os.replace(tmp_path, analysis_path)
+    atomic_write_text(analysis_path, json.dumps(result, separators=(",", ":")))

@@ -8,6 +8,8 @@
  * - 全部为无状态纯函数：数据进、DOM 元素出，不触碰模块状态
  */
 
+import { fillTemplate } from './utils.js';
+
 const VIEW_W = 1000;       // 视图固定宽（SVG user 单位）
 const MIN_H = 400;         // 视图高下限（桌面 0.45 封顶须低于此值；退化守卫由 MIN_SPAN 承担）
 const MAX_H = 1000;        // 视图高上限
@@ -144,8 +146,9 @@ function round1(v) {
 /* 区块图层构建（省/国共用）：每个地区合并为单个 path，挂地点名/计数/年份
    数据属性；nameOf 把数据键映射为站点地点名（省经繁简映射、国恒等）；
    无照片地区中性填充、不可交互。有照片地区键盘可达：tabindex/role/link +
-   aria-label（地点与作品数，countFormat 由页面模板注入、与弹层同格式） */
-export function buildRegionLayer(g, data, pr, locationData, statsByName, nameOf, countFormat) {
+   aria-label（地点与作品数；countFormat / regionLabelFormat 均由页面模板注入，
+   后者为空时退化为计数文本，JS 不拼展示字面量） */
+export function buildRegionLayer(g, data, pr, locationData, statsByName, nameOf, countFormat, regionLabelFormat) {
     for (const [key, polys] of Object.entries(data.data)) {
         const siteName = nameOf(key);
         const entry = siteName ? locationData.find((d) => d.name === siteName) : null;
@@ -161,7 +164,10 @@ export function buildRegionLayer(g, data, pr, locationData, statsByName, nameOf,
             attrs['data-max-year'] = st.yearMax || '';
             attrs.tabindex = '0';
             attrs.role = 'link';
-            attrs['aria-label'] = `${siteName}，${String(countFormat).replace('%COUNT%', entry.count)}`;
+            const countText = fillTemplate(countFormat, { COUNT: entry.count });
+            attrs['aria-label'] = regionLabelFormat
+                ? fillTemplate(regionLabelFormat, { NAME: siteName, COUNT: countText })
+                : countText;
         }
         buildRegionPath(g, polys, pr, data.quant, attrs);
     }

@@ -1,0 +1,16 @@
+{{- /* 轮播响应式图片候选：宽度表来自 [params.imageSizes].carouselWidths，
+       第一张 slide 与 hero-preload 共用同一组 URL（浏览器按 sizes=100vw 选档）。
+       返回 dict：src（无 srcset 环境的回退，取 carousel 宽度）、srcset。 */ -}}
+{{- $photo := .photo -}}
+{{- $site := .site -}}
+{{- $cfg := $site.Params.imageSizes | default dict -}}
+{{- $widths := $cfg.carouselWidths | default (slice 640 960 1280 1920) -}}
+{{- $fallbackWidth := $cfg.carousel | default 1920 -}}
+{{- $quality := $cfg.ogQuality | default 85 -}}
+{{- $entries := slice -}}
+{{- range $widths -}}
+    {{- $url := partial "utils/img-url-cached.html" (dict "src" $photo.src "hash" ($photo.hash | default "") "site" $site "width" . "mode" "lfit" "format" "avif" "quality" $quality) -}}
+    {{- $entries = $entries | append (printf "%s %dw" ($url | string) (int .)) -}}
+{{- end -}}
+{{- $src := partial "utils/img-url-cached.html" (dict "src" $photo.src "hash" ($photo.hash | default "") "site" $site "width" $fallbackWidth "mode" "lfit" "format" "avif" "quality" $quality) -}}
+{{- return (dict "src" ($src | string) "srcset" (delimit $entries ", ")) -}}

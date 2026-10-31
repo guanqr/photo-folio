@@ -25,6 +25,8 @@ PHOTO_PATH = ROOT / "data" / "photo.toml"
 TIMEOUT_SEC = 15
 
 sys.path.insert(0, str(ROOT / "tools" / "photo-pipeline" / "src"))
+from compat import setup_windows_stdout  # noqa: E402
+setup_windows_stdout()
 from toml_utils import parse_toml_entries, write_toml  # noqa: E402
 
 
@@ -39,7 +41,10 @@ def read_cdn_base():
 
 def fetch_image_info(cdn_base, src):
     """单条回填：请求 OSS image/info → (width, height)"""
-    url = urllib.parse.urljoin(cdn_base + "/", src.lstrip("/"))
+    # 中文文件名必须百分号编码，否则 http.client 请求行按 ASCII 编码直接抛
+    # UnicodeEncodeError（本仓库照片 src 全为中文名）
+    src_path = urllib.parse.quote(src.lstrip("/"), safe="/")
+    url = urllib.parse.urljoin(cdn_base + "/", src_path)
     sep = "&" if "?" in url else "?"
     url += f"{sep}x-oss-process=image/info"
     with urllib.request.urlopen(url, timeout=TIMEOUT_SEC) as resp:

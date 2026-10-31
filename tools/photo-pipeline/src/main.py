@@ -1,15 +1,10 @@
 # -*- coding: utf-8 -*-
 """摄影作品批量处理 — 入口与调度"""
-import sys
 import os
+import sys
 
-# 修复 Windows 控制台乱码
-if sys.platform.startswith("win"):
-    try:
-        import codecs
-        sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
-    except Exception:
-        pass
+from compat import setup_windows_stdout
+setup_windows_stdout()
 
 from PIL import Image
 
@@ -19,6 +14,11 @@ from toml_utils import parse_toml_entries, write_toml
 from watermark import process_image
 from analysis import is_analysis_stale, analyze_and_store, write_js_meta
 from oss_utils import create_bucket_from_config, sync_new_photos
+
+# 同名换图（source_hash 变化）时随 EXIF 一起更新的自动字段；手动字段
+# （alt/category/place/address/location/description/series/is_cover/featured）
+# 不在此列，保持用户编辑
+AUTO_EXIF_FIELDS = ("focus", "iso", "aperture", "shutter", "time", "camera", "lens")
 
 
 def _get_image_size(path):
@@ -48,6 +48,9 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None, forc
     src_to_entry = {}
     if toml_path:
         for entry in parse_toml_entries(toml_path):
+            if entry["src"] in src_to_entry:
+                raise ValueError(
+                    f"photo.toml 存在重复 src（拒绝重写，否则条目会被覆盖）：{entry['src']}")
             src_to_entry[entry["src"]] = entry
         # 宽高始终以处理后的输出图为准（覆盖历史记录中可能存在的原始尺寸）
         for src, entry in src_to_entry.items():
@@ -68,6 +71,7 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None, forc
         output_path = os.path.join(output_dir, f)
         src = f"/images/photos/{f}" if toml_path else None
         entry = src_to_entry.get(src) if src else None
+        is_new = src is not None and src not in src_to_entry
         # 输入图内容哈希（全 32 位）：同名换图保留旧 mtime 也能发现（2026-10-28）
         input_hash = file_md5(input_path) if toml_path else None
 
@@ -85,7 +89,12 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None, forc
         # 避免仅重出水印时无谓重算全分辨率分析（2026-10-29）
         needs_reprocess = force or source_changed or not os.path.exists(output_path)
 
-        exif_info = get_exif_info(input_path)
+        # EXIF 只在需要处读取：已存在且未变化的照片跳过时不再逐张打开原图
+        # （此前每次运行都为全部跳过照片做无效 I/O）；新条目即使输出已存在
+        # 也需 EXIF 填字段
+        exif_info = None
+        if needs_reprocess or is_new:
+            exif_info = get_exif_info(input_path)
 
         processed_ok = not needs_reprocess
         if needs_reprocess:
@@ -104,6 +113,11 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None, forc
         # 只有处理成功/跳过（输出图与输入一致）才记录源哈希；失败保留旧值，下次重试
         if entry is not None and processed_ok and os.path.exists(output_path):
             entry["source_hash"] = input_hash
+            # 同名换图：源图内容真正变化并成功重出后，EXIF/time/camera/lens
+            # 一并更新；--force 重出同一张不覆盖手动修正过的 EXIF
+            if source_changed and exif_info is not None:
+                for key in AUTO_EXIF_FIELDS:
+                    entry[key] = exif_info.get(key, "")
 
         # 图像分析：源图变化成功重处理时强制重算；force 仅重出图 / 跳过时按
         # 结果缺失/算法版本惰性判定；处理失败不重算（避免分析结果与旧输出图版本错配）
@@ -124,11 +138,11 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None, forc
                     print(f"❌ 分析失败：{f}  {e}")
 
         if toml_path:
-            if src not in src_to_entry:
-                # 宽高取处理后输出图的尺寸；处理失败输出不存在时留空，下次运行由回填逻辑补上
-                width, height = "", ""
-                if os.path.exists(output_path):
-                    width, height = _get_image_size(output_path)
+            # 处理失败不落新条目：否则 width/height 为空、无 hash/source_hash、
+            # src 指向从未生成/上传的 CDN 文件，站点出现 404 卡片且每次运行
+            # 重复报分析失败。输出存在且处理成功（或本就跳过）才建条目
+            if is_new and processed_ok and os.path.exists(output_path):
+                width, height = _get_image_size(output_path)
                 new_entry = {
                     "src": src,
                     "alt": "",
@@ -144,9 +158,8 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None, forc
                     "height": height,
                     "camera": exif_info.get("camera", ""),
                     "lens": exif_info.get("lens", ""),
+                    "source_hash": input_hash,
                 }
-                if processed_ok and os.path.exists(output_path):
-                    new_entry["source_hash"] = input_hash
                 src_to_entry[src] = new_entry
                 new_entries.append(f)
                 print(f"🆕 新条目：{f}（请填写 alt/category/place/location 等手填字段）")

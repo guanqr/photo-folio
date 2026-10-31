@@ -8,9 +8,12 @@
 tools/photo-pipeline/
 ├── run.py                   # 入口（python run.py）
 ├── backfill_camera_lens.py  # 一次性回填相机/镜头（历史数据迁移）
+├── backfill_source_hash.py  # 一次性回填输入图 source_hash（接入换图检测前）
 ├── src/                     # 源代码
 │   ├── main.py              # 调度逻辑 + 路径配置读取
+│   ├── compat.py            # Windows stdout UTF-8 / 原子写 / JS 取整
 │   ├── exif_utils.py        # EXIF 提取
+│   ├── hash_utils.py        # 文件内容 MD5
 │   ├── toml_utils.py        # TOML 读写（保留 address/lat/lng/hash 等站点扩展字段）
 │   ├── watermark.py         # 水印与处理
 │   ├── analysis.py          # 图像分析预计算（直方图/色卡/影调，输出 static/analysis/）
@@ -22,7 +25,7 @@ tools/photo-pipeline/
 └── requirements.txt        # Pillow、oss2
 ```
 
-**照片原图/输出图不在仓库内**（体积大），路径由 `pipeline_config.json` 指定（复制 example 修改；未配置时回退默认值并打印提示）。`data/photo.toml` 由管线直写。
+**照片原图/输出图不在仓库内**（体积大），路径由 `pipeline_config.json` 指定（复制 example 修改；input_dir/output_dir 未配置时直接退出并提示，不会回退默认路径）。`data/photo.toml` 由管线直写。
 
 ## 准备工作
 
@@ -52,11 +55,11 @@ python run.py --force    # 全量重跑（忽略 source_hash 增量检测）
 - **缩放**：长边缩放至 1920px
 - **水印**：`Guanqr Photography @ 年份` 底部居中（年份从 EXIF 读取，颜色按水印文字实际区域明暗自动选黑白）
 - **压缩**：JPEG 质量循环递减，控制在 400KB 以内
-- **图像分析**：对全分辨率原图（加水印前）预计算统计——RGB/明度/饱和度/色相直方图、6 主色色卡、影调定性（九调/动态范围/剪裁警告/区域系统），结果写 `static/analysis/{文件名}.json`（含 v 算法版本号），灯箱直接加载渲染、不再在线采样（每张约 2–3KB；全分辨率逐像素只付一次，见下「增量处理」）
+- **图像分析**：对全分辨率原图（加水印前）预计算统计——RGB/明度/饱和度/色相直方图、6 主色色卡、影调定性（九调/动态范围/剪裁警告/区域系统），结果写 `static/analysis/{文件名}.json`（含 v 算法版本号，当前 v5），灯箱直接加载渲染、不再在线采样（每张约 8KB、压缩后约 3.6KB；全分辨率逐像素只付一次，见下「增量处理」）
 
 ## photo.toml 自动更新
 
-新增照片自动追加，EXIF 拍摄参数自动填入，手动字段留空，按拍摄时间升序排列；已有条目的手动编辑内容（alt/category/place/location/description/series/featured/address/lat/lng 等）完整保留。
+新增照片自动追加，EXIF 拍摄参数自动填入，手动字段留空，按拍摄时间升序排列；已有条目的手动编辑内容（alt/category/place/location/description/series/featured/address/lat/lng 等）完整保留。同名换图（source_hash 变化）成功重出后，focus/iso/aperture/shutter/time/camera/lens 会随新 EXIF 更新；新照片处理失败不会写入条目。
 
 | 字段 | 来源 |
 |------|------|
@@ -80,6 +83,6 @@ python backfill_camera_lens.py <original_photos目录> <photo.toml路径>
 
 ## 增量处理
 
-只处理新增或源图内容变化的照片（`photo.toml` 的 `source_hash` 与输入文件 MD5 比较），未变化的自动跳过；`python run.py --force` 忽略该检测、重新处理全部照片。OSS 同步同样增量：只上传本次实际处理过的照片（覆盖云端同名文件），其余跳过。**图像分析为独立惰性步骤**：结果缺失或算法版本（JSON 的 v 字段）过期才重算；`--force` 仅重出图时不重算分析（源图未变），首次接入自动全量回填（一次性逐像素成本），此后日常运行只分析新增照片。每次运行都会按输出图字节重算 `hash`（未变化时值相同），上传对象写入一年 `immutable` 长缓存——图片 URL 带内容哈希，可放心缓存，同名换图会生成新 URL。
+只处理新增或源图内容变化的照片（`photo.toml` 的 `source_hash` 与输入文件 MD5 比较），未变化的自动跳过；同名换图（source_hash 变化）成功重出后会同步更新 focus/iso/aperture/shutter/time/camera/lens 等 EXIF 字段，手动字段保留。`python run.py --force` 忽略该检测、重新处理全部照片。OSS 同步：本次实际处理过的照片始终覆盖上传；未处理但在云端缺失的文件也会补传（避免本地有、云端无的 404）；其余跳过。**图像分析为独立惰性步骤**：结果缺失或算法版本（JSON 的 v 字段）过期才重算；`--force` 仅重出图时不重算分析（源图未变），首次接入自动全量回填（一次性逐像素成本），此后日常运行只分析新增照片。每次运行都会按输出图字节重算 `hash`（未变化时值相同），上传对象写入一年 `immutable` 长缓存——图片 URL 带内容哈希，可放心缓存，同名换图会生成新 URL。
 
 输出图与 `photo.toml` 均采用临时文件 + `os.replace` 原子写（TOML 固定 LF）；OSS 上传成功后才写 `photo.toml`，上传失败时站点数据保持旧版本。新增照片会打印「请填写 alt/category/place/location」提醒，并在总结中计数。

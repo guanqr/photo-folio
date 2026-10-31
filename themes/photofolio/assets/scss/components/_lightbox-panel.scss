@@ -288,9 +288,10 @@
         width: var(--lightbox-panel-w);
         height: 100%;
         border-top: none;
-        /* 上下留白对称（叉号悬浮于右侧箭头列，不占面板顶部空间）；右侧留出箭头按钮列；
-           左侧 2em 与图片区辉光保持距离 */
-        padding: 2em 1.25em 2em 2em;
+        /* 顶部 4em = 顶栏高度：标题/EXIF 等信息不进入顶栏覆盖区（与图片区
+           顶部留白一致）；底部 1em + 缩略图条高（见 strip 覆盖规则），与图片区
+           底部对齐；右侧留出箭头按钮列；左侧 2em 与图片区辉光保持距离 */
+        padding: 4em 1.25em 1em 2em;
         margin-right: 4.25em;
     }
 

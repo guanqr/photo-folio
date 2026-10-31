@@ -4,8 +4,21 @@ import os
 import re
 
 _CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
-# 字符串行正则：支持 \" 与 \\ 转义（写侧 _tostr 只产生这两种转义）
-_STR_RE = re.compile(r'^(\w+)\s*=\s*"((?:[^"\\]|\\.)*)"')
+# 支持 \" 与 \\ 转义（写侧 _tostr 只产生这两种转义）；严格匹配整行，
+# 单引号/数组/多行字符串等不支持语法直接报错，避免静默丢字段
+_STR_RE = re.compile(r'^\s*(\w+)\s*=\s*"((?:[^"\\]|\\.)*)"\s*$')
+_VALUE_RE = re.compile(r'^\s*(\w+)\s*=\s*(true|false|\d+(?:\.\d+)?)\s*$')
+
+# 站点扩展字段白名单（写入顺序）
+FIELDS = [
+    "src", "alt", "category", "focus", "iso",
+    "aperture", "shutter", "time", "place", "address", "lat", "lng",
+    "location", "width", "height",
+    "camera", "lens", "hash", "source_hash",
+]
+# 有值才写的字段
+CONDITIONAL_FIELDS = ("description", "series", "is_cover", "featured")
+KNOWN_FIELDS = set(FIELDS) | set(CONDITIONAL_FIELDS)
 
 
 def _clean(value):
@@ -39,16 +52,24 @@ def parse_toml_entries(toml_path):
         if not block:
             continue
         entry = {}
-        for line in block.split("\n"):
+        for line in block.splitlines():
+            s = line.strip()
+            if not s or s.startswith("#"):
+                continue
             m = _STR_RE.match(line)
             if m:
                 entry[m.group(1)] = _fromstr(m.group(2))
-            else:
-                # 匹配非引号值：布尔值（true/false）或数字
-                m = re.match(r'^(\w+)\s*=\s*(true|false|\d+(?:\.\d+)?)', line)
-                if m:
-                    entry[m.group(1)] = m.group(2)
+                continue
+            m = _VALUE_RE.match(line)
+            if m:
+                entry[m.group(1)] = m.group(2)
+                continue
+            raise ValueError(
+                "photo.toml 存在无法解析的行（仅支持双引号字符串/布尔/数字）："
+                f"{line.strip()!r}")
         if entry:
+            if "src" not in entry:
+                raise ValueError("photo.toml 条目缺少 src")
             entries.append(entry)
 
     return entries
@@ -67,12 +88,14 @@ def write_toml(toml_path, entries):
     # source_hash 是输入图内容哈希（换图检测，站点不消费，均由 main.py 生成）
     # ——必须列入白名单，否则管线重写会抹掉它们
     # （featured 字段曾被丢过一次，同一类坑）
-    FIELDS = [
-        "src", "alt", "category", "focus", "iso",
-        "aperture", "shutter", "time", "place", "address", "lat", "lng",
-        "location", "width", "height",
-        "camera", "lens", "hash", "source_hash",
-    ]
+    # 未知字段 fail-fast：手工新增字段但未登记白名单时拒绝全量重写，
+    # 避免静默丢数据；需先在 FIELDS/CONDITIONAL_FIELDS 注册
+    for entry in entries:
+        unknown = sorted(set(entry) - KNOWN_FIELDS)
+        if unknown:
+            raise ValueError(
+                f"photo.toml 条目 {entry.get('src', '?')!r} 含未支持字段 {unknown}；"
+                "请先在 toml_utils.FIELDS/CONDITIONAL_FIELDS 注册，拒绝全量重写")
 
     lines = []
     for i, entry in enumerate(entries):
@@ -94,14 +117,5 @@ def write_toml(toml_path, entries):
 
     # 原子写 + 固定 LF：photo.toml 是站点唯一数据源，中断不能留下截断文件；
     # Windows 文本模式默认 CRLF 会让每次重写产生仅行尾差异（2026-10-29）
-    tmp_path = toml_path + ".tmp"
-    try:
-        with open(tmp_path, "w", encoding="utf-8", newline="\n") as f:
-            f.write("\n".join(lines))
-        os.replace(tmp_path, toml_path)
-    except Exception:
-        try:
-            os.remove(tmp_path)
-        except OSError:
-            pass
-        raise
+    from compat import atomic_write_text
+    atomic_write_text(toml_path, "\n".join(lines))

@@ -10,13 +10,19 @@ export function initAvifFallback() {
     document.addEventListener('error', (e) => {
         const img = e.target;
         if (!(img instanceof HTMLImageElement)) return;
-        const src = img.src;
-        if (!src || !src.includes('format,avif')) return;
-        // 换 webp 重试一次：webp 再失败时 error 再次到达但 src 已不含
+        const src = img.src || '';
+        const srcset = img.getAttribute('srcset') || '';
+        if (!src.includes('format,avif') && !srcset.includes('format,avif')) return;
+        // 换 webp 重试一次：webp 再失败时 error 再次到达但 src/srcset 已不含
         // format,avif、自然不再处理（无循环，无需按 URL 防重——按 URL 防重
         // 会因 #lightbox-img 跨照片复用而误杀同照片重开的重试）；
         // dataset.avifRetry 标记供图层错误处理器识别「重试在途」（见 lightbox-backdrop）
         img.dataset.avifRetry = '1';
-        img.src = src.replace('format,avif', 'format,webp');
+        if (srcset.includes('format,avif')) {
+            img.setAttribute('srcset', srcset.split('format,avif').join('format,webp'));
+        }
+        if (src.includes('format,avif')) {
+            img.src = src.split('format,avif').join('format,webp');
+        }
     }, true);
 }

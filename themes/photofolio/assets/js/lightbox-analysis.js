@@ -14,7 +14,7 @@
  * 256 点固定结构可形变），以及全部图表渲染（SVG 矢量：高 DPI / 缩放 / 窄屏
  * 下始终清晰，不随像素密度发糊）与切图形变动画（新旧曲线线性插值）。
  */
-import { prefersReducedMotion, easeOutCubic } from './utils.js';
+import { prefersReducedMotion, easeOutCubic, fillTemplate } from './utils.js';
 import { ANALYSIS_VERSION, TONAL_ZONE_SHADOW, TONAL_ZONE_HIGH, TONAL_CLIP_DARK, TONAL_CLIP_BRIGHT, ZONE_COUNT, HUE_SEG_COUNT } from './analysis-meta.js';
 
 /* 合并直方图（纯曲线 + 影调注释，连续形变过渡）：
@@ -338,19 +338,22 @@ function renderTone(tone, histYs, lumYs, labels, els) {
     if (!els.wrap) return;
     els.wrap.style.display = '';
     // 经典九调组合名：低调 + 长调 → 低長調（共用「調」后缀；中调键前缀来自 i18n）
-    const keyPrefix = tone.key === 1 ? labels.midPrefix : labels.key[tone.key].slice(0, -1);
+    const keyPrefix = tone.key === 1 ? labels.midPrefix : (labels.keyPrefixes[tone.key] || '');
     const parts = [keyPrefix + labels.range[tone.range]];
     tone.warnings.forEach((w) => {
         parts.push(w === 'shadow' ? labels.clipShadow : labels.clipHigh);
     });
-    els.name.textContent = parts.join(' · ');
+    els.name.textContent = parts.join(labels.separator);
     els.dr.textContent = tone.drStops + ' ' + labels.drUnit;
     els.p50.textContent = tone.p50;
     els.fracs[0].style.width = tone.fracs[0] + '%';
     els.fracs[1].style.width = tone.fracs[1] + '%';
     els.fracs[2].style.width = tone.fracs[2] + '%';
-    els.fracText.textContent =
-        `${labels.zoneNames[0]} ${tone.fracs[0]}% · ${labels.zoneNames[1]} ${tone.fracs[1]}% · ${labels.zoneNames[2]} ${tone.fracs[2]}%`;
+    els.fracText.textContent = fillTemplate(labels.fracFormat, {
+        SHADOW_NAME: labels.zoneNames[0], SHADOW: tone.fracs[0],
+        MID_NAME: labels.zoneNames[1], MID: tone.fracs[1],
+        HIGH_NAME: labels.zoneNames[2], HIGH: tone.fracs[2],
+    });
     paintHistogram(histYs, lumYs, els.histEl, tone);
     renderHistLegend(els.legendEl, labels.histLegend);
     renderZoneStrip(tone, els.zoneStripEl, els.zoneBracketEl);
@@ -388,7 +391,7 @@ export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, o
     const satEls = sat || {};
     const hueEls = hue || {};
     const toneLabels = toneEls.wrap ? {
-        key: (toneEls.wrap.dataset.keyNames || '').split('|'),
+        keyPrefixes: (toneEls.wrap.dataset.keyPrefixes || '').split('|'),
         range: (toneEls.wrap.dataset.rangeNames || '').split('|'),
         zoneNames: (toneEls.wrap.dataset.zoneNames || '').split('|'),
         clipShadow: toneEls.wrap.dataset.clipShadow,
@@ -396,6 +399,8 @@ export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, o
         midPrefix: toneEls.wrap.dataset.midPrefix,
         drUnit: toneEls.wrap.dataset.drUnit,
         histLegend: toneEls.wrap.dataset.histLegend,
+        separator: toneEls.wrap.dataset.separator || '',
+        fracFormat: toneEls.wrap.dataset.fracFormat || '',
     } : null;
     const satLabels = satEls.wrap ? {
         sat: (satEls.wrap.dataset.satNames || '').split('|'),

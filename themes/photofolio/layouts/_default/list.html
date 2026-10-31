@@ -17,18 +17,11 @@
 {{ end }}
 {{ $totalRealCount := len $realPhotos }}
 
-{{/* 【修复 2】再过滤出用于瀑布流显示的卡片（剔除系列内页，只保留单图和封面） */}}
-{{ $displayPhotos := slice }}
-{{ range $realPhotos }}
-    {{ if or (not .series) .is_cover }}
-        {{ $displayPhotos = $displayPhotos | append . }}
-    {{ end }}
-{{ end }}
-
 {{/* 网格渲染集：全站一致——系列拆分为全部作品（封面+内页）展示；
     画廊与分类页均用 $realPhotos（分类页已按 category 过滤，同样含内页）；
     筛选选项与网格渲染集同源（内页独有年份/地点/类型同样有对应按钮，
-    与卡片 data 属性一致）；$displayPhotos（仅封面）仅用于空集合守卫 */}}
+    与卡片 data 属性一致）；空集合守卫也直接用它——此前的仅封面集合
+    会在「只有系列内页、没有封面」时误判为空 */}}
 {{ $gridPhotos := $realPhotos }}
 
 {{/* 全部作品页：筛选栏选项（年度 desc、地点/类别按作品数 desc） */}}
@@ -73,10 +66,9 @@
         {{ $yearOptions = $yearOptions | append (dict "value" (printf "before-%d" $yearMergeBefore) "label" (i18n "year_before" (dict "Year" $yearMergeBefore))) }}
     {{ end }}
     {{ range $locNames }}
-        {{/* nil 安全：photo.toml 的 location 未登记进 locations.toml 时回退 urlize（此处不报错；足迹内容适配器会统一校验并 errorf） */}}
-        {{ $slug := . | urlize }}
-        {{ with index $locReg . }}{{ $slug = .slug }}{{ end }}
-        {{ $locList = $locList | append (dict "name" . "slug" $slug "count" (index $locCount .)) }}
+        {{/* 地点注册表已含全部地点（内容适配器对未登记地点 errorf），不再回退 urlize */}}
+        {{ $loc := index $locReg . }}
+        {{ $locList = $locList | append (dict "name" . "slug" $loc.slug "count" (index $locCount .)) }}
     {{ end }}
     {{ $locList = sort $locList "count" "desc" }}
     {{ range $catNames }}{{ $catList = $catList | append (dict "name" . "count" (index $catCount .)) }}{{ end }}
@@ -95,7 +87,7 @@
     {{ partial "components/page-header.html" (dict "title" .Title "description" .Params.description "countKey" "total_photos" "count" $totalRealCount "countId" "photo-count-num") }}
 
     <div class="masonry-container">
-        {{ if gt (len $displayPhotos) 0 }}
+        {{ if gt (len $gridPhotos) 0 }}
         {{/* 筛选栏：仅全部作品页；各维度由 hugo.toml [params.galleryFilters] 控制开关
            （胶囊按钮组，可横向滚动；缺省仅开启 year）——开关解析一次成 dict */}}
         {{ $filtersCfg := merge (dict "year" true "location" false "category" false "scope" false) (default dict site.Params.galleryFilters) }}

@@ -14,23 +14,27 @@
     {{ if gt $carouselCount 12 }}{{ $carouselCount = 12 }}{{ end }}
     {{ $carouselPhotos := first $carouselCount $featured }}
 
-    {{ $cfg := .Site.Params.imageSizes | default dict }}
-    {{ $carouselWidth := $cfg.carousel | default 1920 }}
-    {{ $carouselQuality := $cfg.ogQuality | default 85 }}
-
     {{ if gt (len $carouselPhotos) 0 }}
         <div class="carousel" id="home-carousel" data-autoplay-ms="{{ .Site.Params.carouselInterval }}">
             <div class="carousel-track">
                 {{ range $i, $photo := $carouselPhotos }}
-                {{ $srcUrl := partial "utils/img-url-cached.html" (dict "src" $photo.src "hash" ($photo.hash | default "") "site" $.Site "width" $carouselWidth "mode" "lfit" "format" "avif" "quality" $carouselQuality) }}
+                {{ $cs := partial "utils/carousel-srcset.html" (dict "photo" $photo "site" $.Site) }}
+                {{/* URL 属性整段经 safeHTMLAttr 输出：srcset 含空格/逗号，交给 Hugo 会被按
+                   URL 上下文转义；同时保证 preload 与 img 的候选 URL 编码完全一致（否则
+                   中文路径分别按大写/小写百分号编码，浏览器视为两个 URL 重复下载） */}}
+                {{ $srcAttr := printf `src="%s"` ($cs.src | htmlEscape) }}
+                {{ $srcsetAttr := printf `srcset="%s"` ($cs.srcset | htmlEscape) }}
+                {{ $dataSrcAttr := printf `data-src="%s"` ($cs.src | htmlEscape) }}
+                {{ $dataSrcsetAttr := printf `data-srcset="%s"` ($cs.srcset | htmlEscape) }}
                 {{/* 非激活 slide 对读屏器隐藏（aria-hidden 随切换由 carousel.js 同步） */}}
                 <div class="carousel-slide{{ if eq $i 0 }} active{{ end }}"{{ if ne $i 0 }} aria-hidden="true"{{ end }}>
                     <div class="carousel-photo">
-                        {{/* 首张保持 src + eager + fetchpriority（LCP 元素，hero-preload 同 URL 预载）；
-                            其余张 data-src 由 JS 按需加载（邻居预载领先于淡入过渡） */}}
+                        {{/* 首张保持 src/srcset + eager + fetchpriority（LCP 元素，hero-preload
+                            同步 imagesrcset）；其余张 data-src/data-srcset 由 JS 按需加载，
+                            邻居在 requestIdleCallback 中预取 */}}
                         {{/* 首张另带内联 AVIF 兜底：preload 请求早于 defer bundle，
                             error 可能先于 JS 监听到达（非 AVIF 环境二次访问确定性复现） */}}
-                        <img {{ if eq $i 0 }}src="{{ $srcUrl }}" loading="eager" fetchpriority="high" onerror="this.onerror=null;if(this.src.indexOf('format,avif')>-1)this.src=this.src.replace('format,avif','format,webp')"{{ else }}data-src="{{ $srcUrl }}"{{ end }} alt="{{ $photo.alt }}" class="carousel-img">
+                        <img {{ if eq $i 0 }}{{ $srcAttr | safeHTMLAttr }} {{ $srcsetAttr | safeHTMLAttr }} loading="eager" fetchpriority="high" onerror="this.onerror=null;if(this.srcset)this.srcset=this.srcset.split('format,avif').join('format,webp');if(this.getAttribute('src')&&this.getAttribute('src').includes('format,avif'))this.src=this.src.split('format,avif').join('format,webp')"{{ else }}{{ $dataSrcAttr | safeHTMLAttr }} {{ $dataSrcsetAttr | safeHTMLAttr }}{{ end }} sizes="100vw" decoding="async" alt="{{ $photo.alt }}" class="carousel-img">
                     </div>
                 </div>
                 {{ end }}

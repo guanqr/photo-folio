@@ -9,6 +9,8 @@
  * - 分析结果 JSON（/analysis/，URL 带内容版本 ?v=）：Stale-While-Revalidate——
  *   回看直接出缓存、后台刷新；版本变化换 URL、不命中旧条目，同版本单张
  *   仅数 KB，缓存收益远大于陈旧风险
+ * - 地图几何 JSON（/maps/，约 580KB）：Stale-While-Revalidate——静态数据
+ *   仅在管线重生成时变化，回访直接出缓存、后台刷新，避免每次重新下载
  * - 其余同源 GET：NetworkFirst 入运行时缓存
  * - 跨域（OSS 图片）与非 GET 不拦截；Range 请求直接放行网络
  * - 版本号由构建时间自动注入（baseof.html 的 ExecuteAsTemplate，
@@ -79,6 +81,8 @@ self.addEventListener('fetch', (event) => {
   // 后台刷新——版本变化自然换 URL、不命中旧条目；同版本回看零等待（预取
   // 命中后展开即出图）
   const isAnalysis = url.pathname.startsWith('/analysis/')
+  // 地图几何 JSON：静态数据、无内容哈希，SWR 让回访零等待并在后台更新
+  const isMap = url.pathname.startsWith('/maps/')
   // 缓存键去查询串：?y=/?p= 等客户端状态参数服务端返回同一份 HTML——
   // 导航与 SPA fetch（同源非导航 GET）同键复用，避免重复条目挤占运行时配额；
   // 分析结果为内容版本，必须保留查询串（否则换图/算法升级仍命中旧缓存）；
@@ -90,10 +94,10 @@ self.addEventListener('fetch', (event) => {
   event.respondWith((async () => {
     const cache = await runtimeCache
 
-    // 指纹产物（生产构建的哈希 JS/CSS）与分析结果 JSON：SWR——缓存即用、
-    // 后台更新。单次 fetch 共享：未命中时返回同一个 promise（后台写缓存与
-    // 响应共用），避免冷缓存时同一 URL 并发两次请求
-    if ((isHashed && isFingerprinted) || isAnalysis) {
+    // 指纹产物（生产构建的哈希 JS/CSS）、分析结果 JSON 与地图几何 JSON：
+    // SWR——缓存即用、后台更新。单次 fetch 共享：未命中时返回同一个 promise
+    //（后台写缓存与响应共用），避免冷缓存时同一 URL 并发两次请求
+    if ((isHashed && isFingerprinted) || isAnalysis || isMap) {
       const cachedResponse = await cache.match(cacheKey)
       const network = fetch(request)
         .then((res) => {

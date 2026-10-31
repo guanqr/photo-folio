@@ -14,8 +14,7 @@
 
 import { restartMasonryGrid } from './masonry.js';
 import { prefersReducedMotion, easeOutCubic, pushQueryState } from './utils.js';
-
-export const PARAM_KEYS = { scope: 's', year: 'y', location: 'l', category: 'c' };
+import { PARAM_KEYS } from './gallery-filter-params.js';
 
 const YEAR_BUCKET_PREFIX = 'before-'; // 年份合并档 data-value 前缀（与模板生成规则对应）
 
@@ -104,12 +103,17 @@ export function initGalleryFilter() {
         box.classList.toggle('can-scroll-r', scrollable);
     };
 
-    /* 切换筛选后把选中胶囊滚到可视区中间 */
+    /* 切换筛选后把选中胶囊滚到可视区中间：用矩形相对位置 + 当前 scrollLeft
+       计算内容坐标，不依赖 offsetLeft/offsetParent（标签行/容器的定位变化不再
+       让居中偏移一个标签宽度） */
     const scrollActiveIntoView = (g) => {
         const box = g.querySelector('.filter-options');
         const active = g.querySelector('button.is-active');
         if (!box || !active) return;
-        const target = active.offsetLeft - box.clientWidth / 2 + active.clientWidth / 2;
+        const boxRect = box.getBoundingClientRect();
+        const activeRect = active.getBoundingClientRect();
+        const target = box.scrollLeft + (activeRect.left - boxRect.left)
+            - (box.clientWidth - activeRect.width) / 2;
         box.scrollTo({ left: target, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
         updateMask(box);
     };

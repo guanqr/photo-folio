@@ -33,10 +33,9 @@
 {{ $previewData := slice }}
 {{ range $item := $locations }}
     {{ $loc := $item.location }}
-    {{ $targetUrl := printf "/footprint/%s/" ($loc | urlize) | relURL }}
-    {{ $slug := $loc | urlize }}
-    {{ with index $locReg $loc }}{{ $targetUrl = .url }}{{ with .slug }}{{ $slug = . }}{{ end }}{{ end }}
-    {{ $previewData = $previewData | append (dict "slug" $slug "name" $loc "url" $targetUrl "count" (int $item.realCount)) }}
+    {{/* 注册表已含全部地点（内容适配器对未登记地点 errorf），不再回退 urlize */}}
+    {{ $locEntry := index $locReg $loc }}
+    {{ $previewData = $previewData | append (dict "slug" $locEntry.slug "name" $loc "url" $locEntry.url "count" (int $item.realCount)) }}
 {{ end }}
 
 {{/* 5. 照片坐标点迹：全部有 lat/lng 的照片按坐标去重（同坐标重叠无意义）；地图视图按点迹适配 */}}
@@ -74,7 +73,8 @@
     <section class="footprint-map-section">
         <div class="footprint-map" id="footprint-map"
              data-count-format='{{ i18n "photo_count" (dict "Count" "%COUNT%") }}'
-             data-year-range-format='{{ i18n "footprint_map_year_range" (dict "Min" "%MIN%" "Max" "%MAX%") }}'>
+             data-year-range-format='{{ i18n "footprint_map_year_range" (dict "Min" "%MIN%" "Max" "%MAX%") }}'
+             data-region-label-format='{{ i18n "footprint_region_label" (dict "Name" "%NAME%" "Count" "%COUNT%") }}'>
             {{/* 地图加载指示：几何数据 fetch 与 SVG 构建期间居中转圈（JS 构建完成后移除） */}}
             <span class="footprint-map-loading" role="status" aria-label="{{ i18n "loading" }}"></span>
             <noscript>

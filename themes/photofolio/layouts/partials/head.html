@@ -22,10 +22,18 @@
 <meta property="og:type" content="{{ if .IsHome }}website{{ else }}article{{ end }}">
 <meta property="og:url" content="{{ .Permalink }}">
 <meta property="og:site_name" content="{{ .Site.Title }}">
-{{/* 页面 cover 是 front matter 的路径字符串：经照片数据反查哈希，封面换图同样换 URL */}}
+{{/* 页面 cover 是 front matter 的路径字符串：经照片数据反查哈希，封面换图同样换 URL。
+   无 cover 的首页/全部作品/系列/足迹/关于回退到最新精选（无则最新作品），
+   避免这些主入口分享时没有 og:image */}}
 {{ $cover := .Params.cover }}
 {{ $coverHash := "" }}
 {{ with $cover }}{{ $coverHash = partialCached "utils/photo-hash.html" (dict "src" .) . }}{{ end }}
+{{ if not $cover }}
+    {{ $sorted := partialCached "utils/photo-sorted.html" . "desc" }}
+    {{ $featured := where $sorted "featured" true }}
+    {{ with $featured }}{{ with index . 0 }}{{ $cover = .src }}{{ $coverHash = .hash }}{{ end }}{{ end }}
+    {{ if not $cover }}{{ with $sorted }}{{ with index . 0 }}{{ $cover = .src }}{{ $coverHash = .hash }}{{ end }}{{ end }}{{ end }}
+{{ end }}
 {{ with $cover }}
     {{ $ogImg := partial "utils/img-url-cached.html" (dict "src" . "hash" ($coverHash | default "") "site" $.Site "width" $ogWidth "height" $ogHeight "mode" "fill" "format" "webp" "quality" $ogQuality) }}
     {{/* string：content 属性不是 URL 上下文，template.HTML 会原样输出 &；

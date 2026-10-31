@@ -96,9 +96,10 @@
             {{ else if ge $den 60 }}{{ $label = i18n "stats_shutter_5" }}
             {{ else }}{{ $label = i18n "stats_shutter_6" }}{{ end }}
         {{ else }}
-            {{ $sec := int . }}
-            {{ if gt $sec 1 }}{{ $label = i18n "stats_shutter_7" }}
-            {{ else if ge $sec 1 }}{{ $label = i18n "stats_shutter_6" }}
+            {{/* 长曝光可能是 1.3 / 2.5 秒；int 会截断为 1 或 0，必须用 float */}}
+            {{ $sec := float . }}
+            {{ if gt $sec 1.0 }}{{ $label = i18n "stats_shutter_7" }}
+            {{ else if ge $sec 1.0 }}{{ $label = i18n "stats_shutter_6" }}
             {{ else }}{{ warnf "photo.toml 快門值無法歸檔（已忽略）：%s" . }}{{ end }}
         {{ end }}
         {{ with $label }}

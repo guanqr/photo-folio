@@ -7,10 +7,10 @@
     {{- if .featured }}{{ $featured = $featured | append . }}{{ end -}}
 {{- end -}}
 {{- with index $featured 0 -}}
-    {{- $cfg := site.Params.imageSizes | default dict -}}
-    {{- $carouselWidth := $cfg.carousel | default 1920 -}}
-    {{- $carouselQuality := $cfg.ogQuality | default 85 -}}
-    {{- $srcUrl := partial "utils/img-url-cached.html" (dict "src" .src "hash" (.hash | default "") "site" site "width" $carouselWidth "mode" "lfit" "format" "avif" "quality" $carouselQuality) -}}
-    <link rel="preload" as="image" href="{{ $srcUrl }}" fetchpriority="high">
+    {{- $cs := partial "utils/carousel-srcset.html" (dict "photo" . "site" site) -}}
+    {{/* imagesrcset 的多候选串含空格/逗号：Hugo 会按 URL 上下文把整串转义成 %20，
+       必须手动拼标签并只做 HTML 属性转义（& → &amp;），保留 srcset 语法 */}}
+    {{- printf `<link rel="preload" as="image" href="%s" imagesrcset="%s" imagesizes="100vw" fetchpriority="high">`
+        ($cs.src | htmlEscape) ($cs.srcset | htmlEscape) | safeHTML -}}
 {{- end -}}
 {{- end -}}

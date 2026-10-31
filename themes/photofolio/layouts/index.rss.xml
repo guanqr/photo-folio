@@ -43,7 +43,8 @@
                替换为 ]]]]><![CDATA[> */ -}}
         <description><![CDATA[
         {{- range $photos -}}
-<p>《{{ replace .alt "]]>" "]]]]><![CDATA[>" }}》{{ with default .location .place }} · {{ replace . "]]>" "]]]]><![CDATA[>" }}{{ end }}{{ with .time }} · {{ . }}{{ end }}</p>
+{{- $line := i18n "feed_photo_line" (dict "Title" .alt "Place" (default .location .place) "Date" .time) -}}
+<p>{{ replace $line "]]>" "]]]]><![CDATA[>" }}</p>
         {{- end -}}
         ]]></description>
     </item>

@@ -15,9 +15,11 @@
         {{ end }}
     {{ end }}
 {{ else }}
-    {{/* 默认回退：如果没有配置 fontLinks，使用默认的字体服务镜像（同样异步加载） */}}
-    <link rel="preconnect" href="https://fonts.loli.net" crossorigin>
-    <link rel="stylesheet" href="https://fonts.loli.net/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap" media="print" onload="this.media='all'">
+    {{/* 默认回退：只使用自建字体库的 I.MingCP / LXGW（同样异步加载），
+         不引入 Google Fonts 或镜像外链 */}}
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/guanqr/fonts@build/css/imingcp.min.css" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/guanqr/fonts@build/css/lxgwwenkaitc.min.css" media="print" onload="this.media='all'">
 {{ end }}
 
 <!-- 动态注入排版变量 -->
@@ -46,7 +48,7 @@
             (dict "param" "metaFont" "var" "--font-meta")
         }}
         {{ range $f := $fontStacks }}
-            {{ $stack := "'Glyph Correction', 'Noto Serif TC', serif" }}
+            {{ $stack := "'Glyph Correction', 'I.MingCP', serif" }}
             {{ with index $typo $f.param }}
                 {{ $q := slice }}{{ range split . "," }}{{ $q = $q | append (printf "'%s'" (trim . " ")) }}{{ end }}
                 {{ $stack = printf "%s, serif" (delimit $q ", ") }}

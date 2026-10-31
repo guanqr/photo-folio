@@ -1,9 +1,10 @@
 /* ===== Lightbox 底部缩略图条 ===== */
 /* 横向 strip track：等高缩略图按自身比例宽、原生横向滚动；当前项 accent
-   描边 + 外环、其余降透明。灯箱内容区高度扣除条高（箭头随之重新居中），
+   描边 + 外环、其余降透明。灯箱内容区高度扣除条高；箭头不在扣除后的内容区
+   居中，而是始终位于页面高度中线（窄屏条在内容区之外，用负 bottom 补回）。
    窄屏条在抽屉下方；抽屉上限在 lightbox-drawer 中同步扣除本条高度。 */
 .lightbox {
-    /* 条高（含上下留白）；无缩略图条时为 0，箭头按内容区居中 */
+    /* 条高（含上下留白）；无缩略图条时为 0 */
     --lightbox-strip-h: 0em;
     --lightbox-strip-thumb-h: 3.375em;
 
@@ -20,6 +21,12 @@
         &.has-strip {
             --lightbox-strip-h: 4em;
         }
+    }
+
+    /* 窄屏条是内容区之外的 flex 行：负 bottom 把箭头容器补回整页高度，
+       箭头始终位于页面高度中线（全屏时变量为 0，自然回到 inset:0） */
+    .lightbox-arrows {
+        bottom: calc(-1 * var(--lightbox-strip-h, 0em));
     }
 }
 
@@ -54,11 +61,8 @@
     }
 
     .lightbox-panel {
-        padding-bottom: calc(2em + var(--lightbox-strip-h, 0em));
-    }
-
-    .lightbox-arrows {
-        bottom: var(--lightbox-strip-h, 0em);
+        /* 与图片区底部同值：内容底边与照片底边对齐（顶部同为 4em 顶栏留白） */
+        padding-bottom: calc(1em + var(--lightbox-strip-h, 0em));
     }
 }
 

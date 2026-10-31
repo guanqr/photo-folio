@@ -1,5 +1,9 @@
 {{ $photo := .photo }}
 {{ $site := .site }}
+{{/* 首行 LCP 候选：直接写 src 让 preload scanner 提前发现；仍保留 data-src，
+   masonry 揭示时按 src 已就绪处理，灯箱集合/缩略图继续读 data-src */}}
+{{ $eager := .eager | default false }}
+{{ $priority := .priority | default false }}
 
 {{ $altText := $photo.alt }}
 {{ $src := $photo.src }}
@@ -91,7 +95,7 @@
             两行小字（触屏无悬停，详情由灯箱承担）；wrapper 统一用 div 避免 a 嵌套 a */}}
         {{/* style 经 safeCSS：URL 由仓库数据构造，避免 Hugo 对查询串的 CSS 值转义 */}}
         <div class="photo-wrapper"{{ with $blurUrl }} style="{{ printf "--photo-blur: url('%s')" . | safeCSS }}"{{ end }}>
-            <img data-src="{{ $srcUrl }}" data-full-src="{{ $fullUrl }}" alt="{{ $altText }}" loading="lazy" class="photo-img" {{ with $photo.width }}width="{{ . }}"{{ end }} {{ with $photo.height }}height="{{ . }}"{{ end }}>
+            <img {{ if $eager }}src="{{ $srcUrl }}"{{ end }} data-src="{{ $srcUrl }}" data-full-src="{{ $fullUrl }}" alt="{{ $altText }}" loading="{{ if $eager }}eager{{ else }}lazy{{ end }}" {{ if $priority }}fetchpriority="high" {{ end }}decoding="async" class="photo-img" {{ with $photo.width }}width="{{ . }}"{{ end }} {{ with $photo.height }}height="{{ . }}"{{ end }}>
             {{/* 悬停信息层：底部渐变遮罩 + 标题/焦距·光圈（aria-hidden——卡片
                 aria-label 已含标题，此处为视觉副本；格式与灯箱 EXIF 一致） */}}
             <div class="photo-hover-info" aria-hidden="true">

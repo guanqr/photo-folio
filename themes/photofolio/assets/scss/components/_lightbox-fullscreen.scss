@@ -5,7 +5,7 @@
    到关闭动画里，避免面板闪回）。 */
 
 .lightbox.is-fullscreen {
-    /* 条已隐藏：图片区底部留白与箭头容器不再扣除条高 */
+    /* 条已隐藏：图片区底部留白不再扣除条高（箭头本身已按页面中线定位） */
     --lightbox-strip-h: 0em;
 }
 
@@ -14,7 +14,8 @@
     display: none;
 }
 
-/* 主图居中：上下左右对称留白（同时压过抽屉展开态的顶部 2.5em 补白） */
+/* 主图居中：全屏不受普通视图的 4em 顶栏留白限制（图片可延伸到顶栏浮层下方），
+   上下左右对称 1em */
 .lightbox.is-fullscreen .lightbox-main .lightbox-img-area {
     padding: 1em;
 }

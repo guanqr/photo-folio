@@ -13,7 +13,7 @@
  *   （缩略图条/自动播放）；分析区开合经 onSwitchStart/onClose 钩子交给
  *   调用方接线（本模块不认识分析控制模块）
  */
-import { isImageReady, loadWithAvifFallback } from './utils.js';
+import { isImageReady, loadWithAvifFallback, imageWidth } from './utils.js';
 import { initLightboxZoom } from './lightbox-zoom.js';
 
 export function initLightboxSwitch({
@@ -418,12 +418,11 @@ export function initLightboxSwitch({
             activateDialog();
             const token = openToken;
             zoomPending = true; // 揭示交由 zoom.onDone；error 监听不提前揭示
-            // 展示图自然尺寸上限：OSS lfit 仅按宽度封顶（w_1920/w_1280、
-            // 高度随比例）——超宽屏 contain 拟合大于自然尺寸时，缩放目标
+            // 展示图自然尺寸上限：OSS lfit 仅按宽度封顶（大图/窄屏宽度来自
+            // params.imageSizes，高度随比例）——超宽屏 contain 拟合大于自然尺寸时，缩放目标
             // 与布局盒锁按自然尺寸封顶（最大显示到自然尺寸、不再放大），
             // 换源后自然尺寸接管时盒不缩回；无尺寸属性（旧数据）时不封顶
-            const srcWMatch = /w_(\d+)/.exec(src);
-            const srcW = srcWMatch ? parseInt(srcWMatch[1], 10) : 0;
+            const srcW = imageWidth(src);
             const maxW = srcW && p.width ? Math.min(p.width, srcW) : 0;
             const maxH = maxW && p.height ? p.height * maxW / p.width : 0;
             zoom.start(zoomFrom, () => {
@@ -519,8 +518,8 @@ export function initLightboxSwitch({
         // 照片 URL：?p=slug（保留筛选等其余参数）——首开 push、切图 replace：
         // 灯箱只占一个历史条目、返回键 = 关闭灯箱，翻看照片不刷历史
         collection.syncPhotoUrl(p.slug, isSwitch);
-        // 窄屏（≤1000px，与抽屉断点一致）灯箱主图改用 w_1280：手机屏约 1080px
-        // 宽、观感无差；w_1920 的首次光栅化与背景淡入同窗争抢合成器是旧版
+        // 窄屏（≤1000px，与抽屉断点一致）灯箱主图改用 imageSizes.lightboxNarrow：
+        // 手机屏约 1080px 宽、观感无差；大图宽度的首次光栅化与背景淡入同窗争抢合成器是旧版
         // Chromium 暗角恢复卡顿的剩余尖峰——桌面保持 w_1920
         const displaySrc = (photo) => (narrowLightbox.matches && photo.srcNarrow) || photo.src;
         const src = displaySrc(p);

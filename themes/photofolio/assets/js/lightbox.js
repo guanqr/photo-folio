@@ -13,17 +13,9 @@ import { initLightboxSwitch } from './lightbox-switch.js';
 import { initLightboxAnalysisControl } from './lightbox-analysis-control.js';
 import { prefersReducedMotion, BP_LIGHTBOX_NARROW } from './utils.js';
 import { revealUpToItem } from './masonry.js';
+import { setLightboxClose as setCloseBridge } from './lightbox-bridge.js';
 
 let inited = false;
-
-// SPA 导航时由 page-transition 调用的关闭钩子（initLightbox 后指向内部 close）：
-// 灯箱在壳层 DOM、不随内容替换——不关闭则旧照片悬在新页面上、URL 状态错乱；
-// keepUrl 保留目标 URL 的 ?p=（此时 location 已是导航目标地址）——前进/后退
-// 到 ?p= 条目后由 openLightboxFromUrl 恢复灯箱，清理则会抹掉恢复条目并改写历史
-let closeLightboxRef = null;
-export function closeLightbox() {
-    if (closeLightboxRef) closeLightboxRef({ keepUrl: true });
-}
 
 export function initLightbox() {
     if (inited) return;
@@ -51,7 +43,11 @@ export function initLightbox() {
     const pageRoots = [
         document.querySelector('.site-header'),
         document.getElementById('main-content'),
-        document.querySelector('.site-footer')
+        document.querySelector('.site-footer'),
+        // body 直属焦点元素：skip-link 的 z-index 高于灯箱，back-to-top 在滚动后
+        // 可见；不纳入 inert 时 Tab 可离开模态并把 skip-link 画在灯箱之上
+        document.querySelector('.skip-link'),
+        document.getElementById('back-to-top')
     ].filter(Boolean);
     // 元信息面板（桌面右栏 / 窄屏底部抽屉）
     const panel = document.getElementById('lightbox-panel');
@@ -91,9 +87,10 @@ export function initLightbox() {
     const analysisTrigger = document.getElementById('lightbox-analysis-trigger');
     const analysisWrap = document.getElementById('lightbox-analysis');
     const analysisCollapse = document.getElementById('lightbox-analysis-collapse');
-    // 窄屏灯箱主图降档判定（≤BP_LIGHTBOX_NARROW 用 w_1280）：与抽屉断点一致
-    //（单源见 utils.js）——初始化时创建一次，不在每次 open() 重建 MQL
+    // 窄屏灯箱主图降档判定（宽度取 params.imageSizes.lightboxNarrow，默认
+    // 1280）：与抽屉断点一致（单源见 utils.js）——初始化时创建一次
     const narrowLightbox = window.matchMedia(`(max-width: ${BP_LIGHTBOX_NARROW}px)`);
+    const narrowWidth = parseInt(lightbox.dataset.narrowWidth, 10) || 1280;
 
     // 随图片同步淡入的元信息元素：打开时全部隐藏，图片加载完成后统一揭示——
     // 标题 / 分类与系列胶囊 / 地点日期简行 / EXIF / 分析触发行 / 直方图与色卡 / 影调与色彩 / 故事
@@ -169,7 +166,7 @@ export function initLightbox() {
     const glow = initLightboxGlow({ reducedMotion });
 
     // 作品集合与预加载（独立模块见 lightbox-collection.js）：收集/邻居预载/照片 URL 同步
-    const collection = initLightboxCollection({ shortLens: meta.shortLens });
+    const collection = initLightboxCollection({ shortLens: meta.shortLens, narrowWidth });
 
     // 底部缩略图条（独立模块见 lightbox-strip.js）：当前集合构建、点击切图、
     // 当前项自动跟随；open 的 onPhotoOpen 钩子把集合与索引同步给本模块
@@ -214,9 +211,9 @@ export function initLightbox() {
         }
         // 切图保持信息栏滚动位置（不回到顶部）：内容高度变化时浏览器自动把
         // scrollTop 钳制到新范围，抽屉的虚拟位置模型（展开程度 × 行程 + scrollTop）
-        // 随之停在原位；箭头状态按当前 scrollTop 显式刷新（内容变化后可能
-        // 不触发 scroll 事件）
-        drawer.refresh();
+        // 随之停在原位；标题换行/胶囊行数变化会改变头部与简行高度，需重测抽屉
+        // 再重判箭头（内容变化后可能不触发 scroll 事件）
+        drawer.remeasure();
     }
 
     // 切换管线（独立模块见 lightbox-switch.js）：open/close/prev/next 状态机、
@@ -336,7 +333,8 @@ export function initLightbox() {
         if (e.key === 'ArrowRight') { if (autoplay) autoplay.stop(); switchModule.next(); }
     });
 
-    closeLightboxRef = switchModule.close;
+    // page-transition 经 bridge 关闭灯箱，避免静态 import 把整套灯箱代码拉回主 bundle
+    setCloseBridge(switchModule.close);
 
     inited = true;
 }

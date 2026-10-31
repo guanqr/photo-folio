@@ -5,14 +5,14 @@
  * 本模块只替换数值，不在 JS 里拼展示字面量；索引/总数由切换管线
  * onPhotoOpen 注入（打开/切图/深链同一入口），关闭时清空。
  */
+import { fillTemplate } from './utils.js';
+
 export function initLightboxCounter({ el }) {
     if (!el) return { update() {}, reset() {} };
 
     // 三位补零（超过三位自然增长）；无障碍标签用不补零的原始数值
     const pad = (n) => String(n).padStart(3, '0');
-    const fill = (template, current, total) => template
-        .replace('%CUR%', current)
-        .replace('%TOTAL%', total);
+    const fill = (template, current, total) => fillTemplate(template, { CUR: current, TOTAL: total });
 
     function reset() {
         el.textContent = '';

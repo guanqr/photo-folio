@@ -23,16 +23,6 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-# 修复 Windows 控制台编码：默认 GBK stdout 无法编码结果行里的 ✓/✗/⛔/↳
-# 等符号，直接 print 会抛 UnicodeEncodeError 并中断脚本——与照片管线同法
-# 将 stdout 重包 UTF-8（2026-10-25）
-if sys.platform.startswith("win"):
-    try:
-        import codecs
-        sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
-    except Exception:
-        pass
-
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 PHOTO_PATH = ROOT / "data" / "photo.toml"
@@ -41,8 +31,10 @@ API_URL = "https://restapi.amap.com/v3/geocode/geo"
 INTERVAL_SEC = 0.35   # 高德个人 key 并发限制 3 QPS，串行 + 间隔最稳妥
 TIMEOUT_SEC = 15
 
-# 复用预处理管线的 TOML 读写（单一实现，避免字段白名单分叉）
+# 复用预处理管线的 TOML 读写与兼容层（单一实现，避免字段白名单/编码分叉）
 sys.path.insert(0, str(ROOT / "tools" / "photo-pipeline" / "src"))
+from compat import setup_windows_stdout  # noqa: E402
+setup_windows_stdout()
 from toml_utils import parse_toml_entries, write_toml  # noqa: E402
 
 

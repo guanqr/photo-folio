@@ -10,7 +10,10 @@
  * - 懒加载：IntersectionObserver rootMargin 600px 进入视口才构建
  * - SPA 页面切换重跑 initFootprintMap：同一节点幂等，旧状态（observers）先销毁
  */
-import { prefersReducedMotion, FLIP_TRANSITION } from './utils.js';
+import {
+    prefersReducedMotion, FLIP_TRANSITION,
+    clearFlipInline, resetFlipFinish, scheduleFlipFinish
+} from './utils.js';
 import {
     SVG_NS, VIEW_W, targetHForWidth, fitProjection, project, matrixFrom,
     buildGrid, buildLand, buildRegionLayer, computeBounds
@@ -22,7 +25,7 @@ import {
 import { initFootprintTooltip } from './footprint-tooltip.js';
 
 let state = null;          // { root, observer, resizeObserver, cleanup, tooltipCleanup,
-                           //   view, layoutRects, layoutAnimating }
+                           //   view, layoutRects, layoutAnimating, finishTimer }
 
 export function initFootprintMap() {
     // 清理先于一切：导航到非足迹页时（无 #footprint-map）释放旧状态，
@@ -55,7 +58,7 @@ function destroyState() {
     if (!state) return;
     if (state.observer) state.observer.disconnect();
     if (state.resizeObserver) state.resizeObserver.disconnect();
-    if (state.layoutTimer) clearTimeout(state.layoutTimer); // FLIP 收尾定时器（SPA 跳页后 state 置空，回调会解引用 null 抛 TypeError）
+    resetFlipFinish(state); // FLIP 收尾定时器（SPA 跳页后 state 置空，回调会解引用 null 抛 TypeError）
     if (typeof state.cleanup === 'function') state.cleanup();
     state = null;
 }
@@ -108,11 +111,10 @@ function flipLayout() {
         state.layoutRects = rectsOf(els);
         return;
     }
-    // 取消可能仍在进行的上一次动画（内联 transform 会污染量测）
-    els.forEach((el) => {
-        el.style.transition = '';
-        el.style.transform = '';
-    });
+    // 取消可能仍在进行的上一次动画（内联 transform 会污染量测）；旧收尾
+    // 定时器与新一轮共用槽位，先作废再起播（2026-11-01）
+    resetFlipFinish(state);
+    clearFlipInline(els);
     void document.body.offsetWidth;
     const lasts = rectsOf(els);
     // Invert：摆回上一帧基准位置与尺寸（位移 + 缩放，左上角同一起点复合）
@@ -136,15 +138,11 @@ function flipLayout() {
     });
     state.layoutRects = lasts;
     state.layoutAnimating = true;
-    state.layoutTimer = setTimeout(() => {
-        state.layoutTimer = null;
+    scheduleFlipFinish(state, () => {
         if (!state) return; // SPA 跳页后 destroyState 已置空（定时器本应被取消，双保险）
         state.layoutAnimating = false;
-        els.forEach((el) => {
-            if (el.style.transition === FLIP_TRANSITION) el.style.transition = '';
-            if (el.style.transformOrigin === '0 0') el.style.transformOrigin = '';
-        });
-    }, 400);
+        clearFlipInline(els);
+    });
 }
 
 async function build(root, points, locationData, statsByName) {
@@ -177,38 +175,43 @@ async function build(root, points, locationData, statsByName) {
     // 跨断点后内联 aspect-ratio 会让窄屏框高也非 0，导致误按桌面模式算投影
     const countFormat = root.dataset.countFormat;
     const yearFormat = root.dataset.yearRangeFormat || '%MIN% — %MAX%';
+    const regionLabelFormat = root.dataset.regionLabelFormat || '';
 
     // 可交互区块名单：locationData 里有该地点才可点（无照片的地区中性填充、pointer-events none）
     const activeNames = new Set(locationData.map((d) => d.name));
 
     // 几何数据先于投影加载：视图范围 = 照片点迹 ∪ 全部有照片地区的完整区块
     //（省区块完整可见、不被 viewBox 裁切——如青海照片在中东部、省界西段须完整露出）
-    let landPolys = null;
-    try {
-        landPolys = await loadLandData();
-    } catch (err) {
-        resetLandData();
-        console.warn('[footprint-map] land geometry load failed', err);
-    }
+    // 三份数据互不依赖：并行请求，失败分别降级（地图仍可用其余图层），
+    // 总等待 = 最慢一份而不是三份之和（2026-10-31）
+    const [landRes, provRes, countryRes] = await Promise.allSettled([
+        loadLandData(), loadProvincesData(), loadCountriesData(),
+    ]);
     if (!root.isConnected || seq !== buildSeq) return;
+
+    let landPolys = null;
+    if (landRes.status === 'fulfilled') {
+        landPolys = landRes.value;
+    } else {
+        resetLandData();
+        console.warn('[footprint-map] land geometry load failed', landRes.reason);
+    }
 
     let provData = null;
-    try {
-        provData = await loadProvincesData();
-    } catch (err) {
+    if (provRes.status === 'fulfilled') {
+        provData = provRes.value;
+    } else {
         resetProvincesData();
-        console.warn('[footprint-map] province boundaries load failed', err);
+        console.warn('[footprint-map] province boundaries load failed', provRes.reason);
     }
-    if (!root.isConnected || seq !== buildSeq) return;
 
     let countryData = null;
-    try {
-        countryData = await loadCountriesData();
-    } catch (err) {
+    if (countryRes.status === 'fulfilled') {
+        countryData = countryRes.value;
+    } else {
         resetCountriesData();
-        console.warn('[footprint-map] country boundaries load failed', err);
+        console.warn('[footprint-map] country boundaries load failed', countryRes.reason);
     }
-    if (!root.isConnected || seq !== buildSeq) return;
 
     const bounds = computeBounds(points, provData, activeNames, provinceNameOf);
     const fitPoints = [
@@ -299,7 +302,7 @@ async function build(root, points, locationData, statsByName) {
     if (provData) {
         const prov = document.createElementNS(SVG_NS, 'g');
         prov.setAttribute('class', 'fm-regions');
-        buildRegionLayer(prov, provData, pr, locationData, statsByName, provinceNameOf, countFormat);
+        buildRegionLayer(prov, provData, pr, locationData, statsByName, provinceNameOf, countFormat, regionLabelFormat);
         prov.setAttribute('transform', matrixFrom(pr, state.view.pr));
         state.view.prov = prov;
         state.view.provPr = pr;
@@ -310,7 +313,7 @@ async function build(root, points, locationData, statsByName) {
     if (countryData) {
         const country = document.createElementNS(SVG_NS, 'g');
         country.setAttribute('class', 'fm-regions');
-        buildRegionLayer(country, countryData, pr, locationData, statsByName, (key) => key, countFormat);
+        buildRegionLayer(country, countryData, pr, locationData, statsByName, (key) => key, countFormat, regionLabelFormat);
         country.setAttribute('transform', matrixFrom(pr, state.view.pr));
         state.view.country = country;
         state.view.countryPr = pr;

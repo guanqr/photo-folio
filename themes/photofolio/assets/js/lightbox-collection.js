@@ -15,9 +15,9 @@
  * - 照片 URL 同步：?p=slug（与筛选共用 pushQueryState——地址栏实时更新、
  *   返回键回退历史、规范化比较防乱序参数误推）
  */
-import { isImageReady, pushQueryState, loadWithAvifFallback } from './utils.js';
+import { isImageReady, pushQueryState, loadWithAvifFallback, replaceImageWidth } from './utils.js';
 
-export function initLightboxCollection({ shortLens }) {
+export function initLightboxCollection({ shortLens, narrowWidth = 1280 }) {
     // 预加载缓存（裸 Image 引用）：已就绪与在途（complete=false）的条目都保留
     // 现有引用——在途重建会丢弃进行中的下载/解码，慢网下同一张 10MB 图解码两次；
     // 只有失败过的条目（complete 但 naturalWidth=0）换新 Image 重试——否则一次
@@ -103,7 +103,9 @@ export function initLightboxCollection({ shortLens }) {
                 // 内容哈希（分析 JSON 的缓存版本号）：photo-card 由 photo.toml 的 hash 写入
                 hash: card ? (card.dataset.hash || '') : '',
                 src,
-                srcNarrow: src.replace(/w_\d+/, 'w_1280'), // 窄屏灯箱主图（≤1000px 用）：首次光栅化成本约降 2.3×
+                // 窄屏灯箱主图（≤1000px 用）：宽度由 params.imageSizes.lightboxNarrow
+                // 注入（默认 1280），首次光栅化成本约降 2.3×
+                srcNarrow: replaceImageWidth(src, narrowWidth),
                 // 网格缩略图（w_800）：背景毛玻璃与辉光层共用——已渲染卡片用实际
                 // URL（AVIF 兜底后可能是 webp、且已在缓存中）；未渲染卡片读
                 // data-src，与网格后续加载同 URL 保证命中同一缓存

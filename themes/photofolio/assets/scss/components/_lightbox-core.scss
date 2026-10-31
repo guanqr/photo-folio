@@ -158,8 +158,8 @@
     }
 }
 
-/* 箭头定位容器：absolute inset:0（桌面端 bottom 扣除底部缩略图条高度），
-   箭头在其内垂直居中；容器本身不拦截指针，只有按钮可交互 */
+/* 箭头定位容器：absolute inset:0，箭头在页面高度中线垂直居中（窄屏底部条
+   在内容区之外，由 strip 规则以负 bottom 补回条高）；容器不拦截指针，只有按钮可交互 */
 .lightbox-arrows {
     position: absolute;
     inset: 0;

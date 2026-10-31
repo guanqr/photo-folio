@@ -14,9 +14,11 @@ export function prefersReducedMotion() {
 }
 
 // 布局重排 FLIP 过渡（与足迹时间线列数切换一致；档位内冻结缩放保持实时无动画）
-// 时长单源：瀑布流跨档收尾定时器与新卡片淡入共用
+// 时长单源：瀑布流跨档收尾定时器与新卡片淡入共用；缓动同时供 about-stats
+// 的 width/height 过渡复用（0.35s + 标准缓出，2026-11-01）
 export const FLIP_DURATION = 350;
-export const FLIP_TRANSITION = `transform ${FLIP_DURATION / 1000}s cubic-bezier(0.4, 0, 0.2, 1)`;
+export const FLIP_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
+export const FLIP_TRANSITION = `transform ${FLIP_DURATION / 1000}s ${FLIP_EASE}`;
 
 // 换列 FLIP 滞回宽度（卡片网格/关于页统计共用）
 export const FLIP_HYSTERESIS = 20;
@@ -48,12 +50,23 @@ export function resetFlipFinish(entry) {
     }
 }
 
-export function scheduleFlipFinish(entry, finish, delay = 400) {
+export function scheduleFlipFinish(entry, finish, delay = FLIP_DURATION + 50) {
     resetFlipFinish(entry);
     entry.finishTimer = setTimeout(() => {
         entry.finishTimer = null;
         finish();
     }, delay);
+}
+
+// OSS CDN 图片宽度段（w_<n>）改写/读取：灯箱集合窄屏主图、底部缩略图条与
+// 展示图自然尺寸上限共用同一口径（2026-11-01 自三处正则收敛）
+export function replaceImageWidth(url, width) {
+    return (url || '').replace(/w_\d+/, `w_${width}`);
+}
+
+export function imageWidth(url) {
+    const match = /w_(\d+)/.exec(url || '');
+    return match ? parseInt(match[1], 10) : 0;
 }
 
 // easeOutCubic 缓动：图表的连续形变、数字滚动等 rAF 动画共用
@@ -102,7 +115,8 @@ export function loadWithAvifFallback(img) {
 export const BP_DESKTOP_MIN = 769;
 
 // 灯箱窄屏断点单源（lightbox.js 与 lightbox-drawer.js 共用）：≤1000px 抽屉模式、
-// 主图 w_1280 降档与抽屉同界——改断点两处同步生效（2026-10-18 自双份字面量收敛）
+// 主图窄屏宽度降档（imageSizes.lightboxNarrow）与抽屉同界——改断点两处同步生效
+//（2026-10-18 自双份字面量收敛）
 export const BP_LIGHTBOX_NARROW = 1000;
 
 // URL 查询参数状态同步（灯箱 ?p= 与筛选 ?y=/?s=/?l=/?c= 共用）：
@@ -127,6 +141,13 @@ export function pushQueryState(updates, { replace = false } = {}) {
     else history.pushState({ url: location.origin + url }, '', url);
 }
 
+// i18n 格式串填充：统一 %KEY% 占位（%CUR%/%TOTAL%、%N%、%COUNT%/%MIN%/%MAX%、
+// %SHADOW_NAME% 等）；未知占位原样保留，便于暴露漏传
+export function fillTemplate(template, values) {
+    return (template || '').replace(/%([A-Z0-9_]+)%/g, (token, key) =>
+        Object.prototype.hasOwnProperty.call(values, key) ? String(values[key]) : token);
+}
+
 // 裸元素层栈（灯箱背景层与辉光层共用）：最新层 = 末位；剪枝只留末层
 // （延时由调用方传入，均取「淡入时长 + 50ms 余量」）；关闭时全清。
 // 层元素自身的状态标志（背景 _shown / 辉光 _ready）由调用方维护。
@@ -145,6 +166,11 @@ export function createLayerStack(pruneDelay) {
             clearTimeout(stack.pruneTimer);
             stack.pruneTimer = null;
         }
+    };
+    // 硬上限：快速连切时新层可能迟迟不淡入、schedulePrune 不触发；只保留
+    // 最新 max 层，防止层数随切换次数线性增长（辉光/背景层共用）
+    stack.cap = (max) => {
+        while (stack.layers.length > max) stack.layers.shift().remove();
     };
     stack.clear = () => {
         stack.cancelPrune();

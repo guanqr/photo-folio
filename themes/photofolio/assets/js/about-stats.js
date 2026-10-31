@@ -11,7 +11,8 @@
 //   （动画期间暂停刷新，避免把变换中的位置当基准——与足迹地图 flipLayout 同款经验）
 
 import {
-    prefersReducedMotion, FLIP_TRANSITION, BP_DESKTOP_MIN, FLIP_HYSTERESIS,
+    prefersReducedMotion, FLIP_TRANSITION, FLIP_DURATION, FLIP_EASE,
+    BP_DESKTOP_MIN, FLIP_HYSTERESIS,
     clearFlipInline, recordFlipRects, resetFlipFinish, scheduleFlipFinish
 } from './utils.js';
 
@@ -67,8 +68,8 @@ function flipColumns(grid, entry, nextTwo) {
     // Play：位置平移 + 真实宽高过渡到新布局（与 FLIP 同曲线同时长）
     panels.forEach((panel, i) => {
         if (!panel.style.width) return;
-        panel.style.transition = FLIP_TRANSITION +
-            ', width 0.35s cubic-bezier(0.4, 0, 0.2, 1), height 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
+        const sizeTransition = `width ${FLIP_DURATION / 1000}s ${FLIP_EASE}, height ${FLIP_DURATION / 1000}s ${FLIP_EASE}`;
+        panel.style.transition = `${FLIP_TRANSITION}, ${sizeTransition}`;
         panel.style.transform = '';
         panel.style.width = lasts[i].width + 'px';
         panel.style.height = lasts[i].height + 'px';
@@ -127,7 +128,7 @@ function flipHeader(container, entry, fromRects, els) {
         entry.headerFinishTimer = null;
         entry.headerAnimating = false;
         clearFlipInline(els.map((item) => item.el)); // 恢复头像自身的 hover 过渡
-    }, 400);
+    }, FLIP_DURATION + 50);
 }
 
 export function initAboutStats() {
