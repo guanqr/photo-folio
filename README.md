@@ -232,6 +232,7 @@ lng = "120.1320"          # 经度（同上）
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"  # 镜头（灯箱「鏡頭」行展示，缺失时以删除线占位）
 description = "照片描述（可选，用于 Lightbox 展示）"
 series = ""               # 系列名称（可选，同一系列的多张照片填写相同名称）
+species = ""              # 鸟种 id（可选，对应 data/birds.toml；灯箱显示觀鳥圖鑑）
 is_cover = false          # 是否为系列封面（同一系列中仅一张设为 true）
 featured = true           # 精選标记（可选，true 的照片进入首页轮播，并可在全部作品页按「作品範圍 → 精選」筛选）
 ```
@@ -278,6 +279,34 @@ title = "割藺草"
 photos = ["割蔺草-1.jpg", "割蔺草-2.jpg", "割蔺草-3.jpg"]
 +++
 ```
+
+### 观鸟图鉴（`data/birds.toml`）
+
+观鸟照片在 `photo.toml` 填 `species = "<id>"`（对应 `data/birds.toml` 的 `[[bird]]` id），灯箱详情栏底部会显示可折叠的「觀鳥圖鑑」：目→科→屬→種（中文 + 拉丁/英文）、分布區域、棲息地、習性與資料來源；默认收起、开合状态跨切图保持、关闭灯箱复位。不显示插图、观察记录与保护级别。
+
+```toml
+[[bird]]
+id = "fairy-pitta"
+name = "仙八色鶇"
+latin = "Pitta nympha"
+english = "Fairy Pitta"
+order = "雀形目"
+order_latin = "Passeriformes"
+family = "八色鶇科"
+family_latin = "Pittidae"
+genus = "八色鶇屬"
+genus_latin = "Pitta"
+distribution = "分布区域说明"
+habitat = "栖息环境说明"
+habits = "习性说明"
+
+[[bird.source]]
+label = "资料来源名称"
+url = "https://example.com/source"
+```
+
+- `id` 唯一；photo.toml 的 `species` 必须能在 birds.toml 找到；构建期校验字段完整性与引用，缺项会报错
+- `[[bird.source]]` 至少一条，灯箱内显示为外链；数据文本建议使用繁体中文
 
 ### 精選（featured）
 

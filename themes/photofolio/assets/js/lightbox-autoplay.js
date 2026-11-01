@@ -9,6 +9,8 @@
  *   当前图片的播放时长，就绪后才开始完整间隔
  * - 任意手动操作立即停止：指针/滚轮在 capture 阶段先于目标处理，键盘监听
  *   在 document（播放按钮自身的操作除外）；页面隐藏暂停计时、回到前台恢复
+ * - 全屏闲置淡出期间的首次点按例外：只用于唤回控件，不打断自动播放计时
+ *   （is-idle 由 lightbox-fullscreen.js 管理，阈值与唤醒逻辑同在该模块）
  * - 灯箱关闭由调用方 stop() 复位；状态不跨打开保留
  */
 import { prefersReducedMotion } from './utils.js';
@@ -121,6 +123,9 @@ export function initLightboxAutoplay({ button, lightbox, next, intervalMs }) {
     // capture 先于目标处理
     lightbox.addEventListener('pointerdown', (e) => {
         if (!playing) return;
+        // 全屏闲置淡出中：首次点按只唤回控件（lightbox-fullscreen 的活动监听
+        // 在冒泡阶段才摘除 is-idle，本 capture 监听先执行），不打断计时
+        if (lightbox.classList.contains('is-idle')) return;
         if (e.target.closest && (e.target.closest('.lightbox-autoplay') || e.target.closest('.lightbox-fullscreen'))) return;
         stop();
     }, true);

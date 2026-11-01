@@ -147,6 +147,39 @@ other = "收起圖像分析"
 [lightbox_analysis_failed]
 other = "無法載入分析結果"
 
+[lightbox_bird_guide]
+other = "觀鳥圖鑑"
+
+[lightbox_bird_guide_collapse]
+other = "收起觀鳥圖鑑"
+
+[lightbox_bird_rank_order]
+other = "目"
+
+[lightbox_bird_rank_family]
+other = "科"
+
+[lightbox_bird_rank_genus]
+other = "屬"
+
+[lightbox_bird_rank_species]
+other = "種"
+
+[lightbox_bird_rank_format]
+other = "{{ .Name }} · {{ .Latin }}"
+
+[lightbox_bird_distribution]
+other = "分布區域"
+
+[lightbox_bird_habitat]
+other = "棲息地"
+
+[lightbox_bird_habits]
+other = "習性"
+
+[lightbox_bird_sources]
+other = "資料來源"
+
 [tonal_mid_prefix]
 other = "中"
 

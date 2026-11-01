@@ -59,7 +59,7 @@ python run.py --force    # 全量重跑（忽略 source_hash 增量检测）
 
 ## photo.toml 自动更新
 
-新增照片自动追加，EXIF 拍摄参数自动填入，手动字段留空，按拍摄时间升序排列；已有条目的手动编辑内容（alt/category/place/location/description/series/featured/address/lat/lng 等）完整保留。同名换图（source_hash 变化）成功重出后，focus/iso/aperture/shutter/time/camera/lens 会随新 EXIF 更新；新照片处理失败不会写入条目。
+新增照片自动追加，EXIF 拍摄参数自动填入，手动字段留空，按拍摄时间升序排列；已有条目的手动编辑内容（alt/category/place/location/description/series/species/featured/address/lat/lng 等）完整保留。同名换图（source_hash 变化）成功重出后，focus/iso/aperture/shutter/time/camera/lens 会随新 EXIF 更新；新照片处理失败不会写入条目。
 
 | 字段 | 来源 |
 |------|------|
@@ -69,7 +69,7 @@ python run.py --force    # 全量重跑（忽略 source_hash 增量检测）
 | hash | 处理后图片内容 MD5 前 8 位（图片 URL 的 `?v=` 缓存版本号） |
 | alt / category / place / location / description / address | 留空，手动填写 |
 | lat / lng | 由站点侧 geocode-photos.py 从 address 生成 |
-| series / is_cover / featured | 不自动生成，手动添加后保留 |
+| series / species / is_cover / featured | 不自动生成，手动添加后保留（species 对应 data/birds.toml 的鸟种 id） |
 
 ## 历史数据回填（一次性）
 

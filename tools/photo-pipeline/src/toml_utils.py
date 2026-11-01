@@ -17,7 +17,7 @@ FIELDS = [
     "camera", "lens", "hash", "source_hash",
 ]
 # 有值才写的字段
-CONDITIONAL_FIELDS = ("description", "series", "is_cover", "featured")
+CONDITIONAL_FIELDS = ("description", "series", "species", "is_cover", "featured")
 KNOWN_FIELDS = set(FIELDS) | set(CONDITIONAL_FIELDS)
 
 
@@ -108,6 +108,8 @@ def write_toml(toml_path, entries):
             lines.append(f'description = "{_tostr(entry["description"])}"')
         if entry.get("series"):
             lines.append(f'series = "{_tostr(entry["series"])}"')
+        if entry.get("species"):
+            lines.append(f'species = "{_tostr(entry["species"])}"')
         if entry.get("is_cover") == "true":
             lines.append(f'is_cover = {entry["is_cover"]}')
         if entry.get("featured") == "true":

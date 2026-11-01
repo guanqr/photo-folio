@@ -11,6 +11,7 @@ import { initLightboxCounter } from './lightbox-counter.js';
 import { initLightboxFullscreen } from './lightbox-fullscreen.js';
 import { initLightboxSwitch } from './lightbox-switch.js';
 import { initLightboxAnalysisControl } from './lightbox-analysis-control.js';
+import { initLightboxBird } from './lightbox-bird.js';
 import { prefersReducedMotion, BP_LIGHTBOX_NARROW } from './utils.js';
 import { revealUpToItem } from './masonry.js';
 import { setLightboxClose as setCloseBridge } from './lightbox-bridge.js';
@@ -78,6 +79,13 @@ export function initLightbox() {
     const hueHist = document.getElementById('lightbox-hue-hist');
     const hueAxis = document.getElementById('lightbox-hue-axis');
     const analysisErrorEl = document.getElementById('lightbox-analysis-error');
+    // 观鸟图鉴（详情栏底部）：仅带 species 的照片显示；数据随灯箱壳内嵌
+    const lightboxBirdSlot = document.getElementById('lightbox-bird-slot');
+    const lightboxBird = document.getElementById('lightbox-bird');
+    const lightboxBirdTrigger = document.getElementById('lightbox-bird-trigger');
+    const lightboxBirdBody = document.getElementById('lightbox-bird-body');
+    const lightboxBirdName = document.getElementById('lightbox-bird-name');
+    const lightboxBirdSources = document.getElementById('lightbox-bird-sources');
     // 图像分析默认收起、只在点击触发行时展开渲染；分析结果 JSON（压缩后约
     // 3.6KB）在打开/切图时预取当前 ±1 照片（见 lightbox-switch），展开时直接
     // 命中缓存——不再探测下载 w_1024 采样图（旧版打开/切图即下载数百 KB）。
@@ -97,6 +105,7 @@ export function initLightbox() {
     const revealSynced = [
         lightboxCaption, tagsEl, lightboxMeta, exifList, analysisTrigger,
         paletteWrap, tonalWrap, satWrap, hueWrap, storyWrap, analysisErrorEl,
+        lightboxBirdSlot,
     ].filter(Boolean);
 
     if (!lightbox || !lightboxImg) return;
@@ -125,6 +134,13 @@ export function initLightbox() {
         dirVerdict: () => swipe.getVerdict(),
         // 底部缩略图条占用的高度：抽屉上限扣除后图片区仍保持约半屏
         reservedBottom: () => (lightboxStrip ? lightboxStrip.offsetHeight : 0)
+    });
+
+    // 观鸟图鉴（独立模块见 lightbox-bird.js）：按 photo.species 查内嵌鸟种数据，
+    // 默认收起；开合状态跨切图保持，关闭灯箱复位
+    const birdGuide = initLightboxBird({
+        block: lightboxBird, trigger: lightboxBirdTrigger, body: lightboxBirdBody,
+        nameEl: lightboxBirdName, sourceList: lightboxBirdSources, drawer
     });
 
     // 图片分析：色卡/影调与色彩（独立模块，见 lightbox-analysis.js；直方图
@@ -209,6 +225,8 @@ export function initLightbox() {
         if (analysisWrap && analysisWrap.classList.contains('is-open')) {
             analysis.analyze(p.slug, p.hash);
         }
+        // 观鸟图鉴内容随照片切换；块在详情栏最底部，填充后再重测抽屉
+        birdGuide.render(p);
         // 切图保持信息栏滚动位置（不回到顶部）：内容高度变化时浏览器自动把
         // scrollTop 钳制到新范围，抽屉的虚拟位置模型（展开程度 × 行程 + scrollTop）
         // 随之停在原位；标题换行/胶囊行数变化会改变头部与简行高度，需重测抽屉
@@ -240,6 +258,7 @@ export function initLightbox() {
         onSwitchStart: () => analysisControl.cancelCenterComp(),
         onClose: () => {
             analysisControl.reset();
+            birdGuide.reset();
             if (autoplay) autoplay.stop();
             counter.reset();
             fullscreen.exitNative(); // 退出浏览器全屏；沉浸布局保留到关闭动画结束（下次首开 reset）

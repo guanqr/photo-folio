@@ -1,3 +1,5 @@
+    {{- /* 构建期校验 photo.toml 的 species 引用与 birds.toml 条目（页面无关，缓存一次） */ -}}
+    {{- $_ := partialCached "utils/bird-registry.html" "birds" "birds" -}}
     <!-- Lightbox 全局容器（dialog 语义：读屏器视作模态对话框、背景 inert 由 JS 管理） -->
     {{/* 对话框名称随照片变化：aria-labelledby 指向当前照片标题（打开即填充）；
         标题为空时回落 aria-label 静态名（acccname 计算规则） */}}
@@ -200,6 +202,63 @@
                             <p class="lightbox-story" id="lightbox-story"></p>
                         </div>
                         {{ end }}
+                        {{/* 觀鳥圖鑑：仅带 species 的照片显示；空 slot 恒为详情区末子块，
+                            让「末子块 auto 边距」居中规则无需改动（块隐藏时 slot 高度为 0） */}}
+                        <div class="lightbox-bird-slot" id="lightbox-bird-slot">
+                            <section class="lightbox-bird" id="lightbox-bird" hidden>
+                                <button class="lightbox-bird-trigger" id="lightbox-bird-trigger" type="button"
+                                    aria-expanded="false" aria-controls="lightbox-bird-body">
+                                    <span>{{ i18n "lightbox_bird_guide" }}</span>
+                                    {{ partial "utils/icon.html" (dict "name" "arrow_down" "variant" "thick") }}
+                                </button>
+                                <div class="lightbox-bird-body" id="lightbox-bird-body" aria-hidden="true" inert>
+                                    <div class="lightbox-bird-inner">
+                                        {{/* 物种名作为图鉴标题：展开后才随内容出现，不占触发行位置 */}}
+                                        <h4 class="lightbox-section-title lightbox-bird-name" id="lightbox-bird-name"></h4>
+                                        <dl class="lightbox-bird-taxonomy">
+                                            <div class="lightbox-bird-rank">
+                                                <dt>{{ i18n "lightbox_bird_rank_order" }}</dt>
+                                                <dd data-rank="order" data-format='{{ i18n "lightbox_bird_rank_format" (dict "Name" "%NAME%" "Latin" "%LATIN%") }}'></dd>
+                                            </div>
+                                            <div class="lightbox-bird-rank">
+                                                <dt>{{ i18n "lightbox_bird_rank_family" }}</dt>
+                                                <dd data-rank="family" data-format='{{ i18n "lightbox_bird_rank_format" (dict "Name" "%NAME%" "Latin" "%LATIN%") }}'></dd>
+                                            </div>
+                                            <div class="lightbox-bird-rank">
+                                                <dt>{{ i18n "lightbox_bird_rank_genus" }}</dt>
+                                                <dd data-rank="genus" data-format='{{ i18n "lightbox_bird_rank_format" (dict "Name" "%NAME%" "Latin" "%LATIN%") }}'></dd>
+                                            </div>
+                                            <div class="lightbox-bird-rank">
+                                                <dt>{{ i18n "lightbox_bird_rank_species" }}</dt>
+                                                <dd data-rank="species" data-format='{{ i18n "lightbox_bird_rank_format" (dict "Name" "%NAME%" "Latin" "%LATIN%") }}'></dd>
+                                            </div>
+                                        </dl>
+                                        <div class="lightbox-bird-section">
+                                            <h4 class="lightbox-section-title">{{ i18n "lightbox_bird_distribution" }}</h4>
+                                            <p class="lightbox-bird-text" data-field="distribution"></p>
+                                        </div>
+                                        <div class="lightbox-bird-section">
+                                            <h4 class="lightbox-section-title">{{ i18n "lightbox_bird_habitat" }}</h4>
+                                            <p class="lightbox-bird-text" data-field="habitat"></p>
+                                        </div>
+                                        <div class="lightbox-bird-section">
+                                            <h4 class="lightbox-section-title">{{ i18n "lightbox_bird_habits" }}</h4>
+                                            <p class="lightbox-bird-text" data-field="habits"></p>
+                                        </div>
+                                        <p class="lightbox-bird-sources">
+                                            <span class="lightbox-bird-sources-label">{{ i18n "lightbox_bird_sources" }}</span>
+                                            <span class="lightbox-bird-source-list" id="lightbox-bird-sources"
+                                                data-separator="{{ i18n "list_separator" }}"></span>
+                                        </p>
+                                        {{/* 与图像分析一致：展开后触发行隐藏，收起入口移到内容最底部 */}}
+                                        <button class="lightbox-bird-collapse" id="lightbox-bird-collapse" type="button">
+                                            <span>{{ i18n "lightbox_bird_guide_collapse" }}</span>
+                                            {{ partial "utils/icon.html" (dict "name" "arrow_up" "variant" "thick") }}
+                                        </button>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
                     </div>
                     <button class="lightbox-panel-toggle" id="lightbox-panel-toggle" aria-label="{{ i18n "lightbox_expand" }}" aria-expanded="false" data-expand-label="{{ i18n "lightbox_expand" }}" data-bottom-label="{{ i18n "lightbox_bottom" }}" data-top-label="{{ i18n "back_to_top" }}">
                         {{ partial "utils/icon.html" (dict "name" "arrow_down" "variant" "thick") }}
@@ -224,4 +283,7 @@
             data-strip-thumb-width="{{ site.Params.imageSizes.strip | default 240 }}" hidden>
             <div class="lightbox-strip-track" id="lightbox-strip-track"></div>
         </div>
+        {{/* 鸟种图鉴数据：随灯箱壳一次性载入（当前 3 个物种约几 KB），
+             lightbox-bird.js 按照片的 species id 查找；jsonify 必须 safeJS */}}
+        <script type="application/json" id="lightbox-birds-data">{{ with hugo.Data.birds }}{{ .bird | jsonify | safeJS }}{{ else }}[]{{ end }}</script>
     </div>

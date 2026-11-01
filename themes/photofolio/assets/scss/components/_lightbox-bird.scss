@@ -1,0 +1,172 @@
+/* ===== Lightbox 觀鳥圖鑑 ===== */
+/* slot 恒为详情区末子块（无鸟种时块 hidden、slot 高度 0）——保留详情区
+   「末子块 auto 边距」居中规则，不用为隐藏尾块改选择器。块默认收起，
+   点击触发行展开；开合状态跨切图保持、关闭灯箱复位（lightbox-bird.js）。
+   展开后触发行隐藏、收起入口移到内容最底部（与图像分析一致）。 */
+.lightbox-bird {
+    /* 与上一块（图像分析触发行/故事块）的间距由触发行自身的 padding-top 提供，
+       不再额外加 margin-top——否则两行文字之间会多出一大段空白 */
+    &[hidden] {
+        display: none;
+    }
+}
+
+.lightbox-bird-trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+    width: 100%;
+    /* 展开态随触发行一起收拢：内边距一并归零，避免 border-box 下最大高度为 0
+       仍残留内边距条（与 lightbox-analysis-trigger 同法） */
+    max-height: 2.6em;
+    padding: 0.8em 0 0.2em;
+    overflow: hidden;
+    background: none;
+    border: none;
+    /* 与「圖像分析」触发行同色：静置 muted、hover secondary */
+    color: var(--color-text-muted);
+    font-family: var(--font-meta);
+    font-size: 0.85em;
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: color var(--transition-fade), opacity var(--transition-fade),
+        max-height 0.6s ease, padding 0.6s ease;
+
+    svg {
+        width: 0.85em;
+        height: 0.85em;
+        flex: none;
+    }
+
+    &:hover {
+        color: var(--color-text-secondary);
+    }
+}
+
+.lightbox-bird.is-open .lightbox-bird-trigger {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+    visibility: hidden;
+}
+
+/* 开合：grid 行 0fr↔1fr 过渡，内容高度未知也无需 JS 测量；内层裁剪溢出 */
+.lightbox-bird-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition: grid-template-rows 0.4s ease, opacity 0.3s ease;
+}
+
+.lightbox-bird.is-open .lightbox-bird-body {
+    grid-template-rows: 1fr;
+    opacity: 1;
+}
+
+.lightbox-bird-inner {
+    /* 内层不能再留 padding：网格行 0fr 时 grid item 的 padding 仍占高度，
+       收起态会残留约一行；首段间距放到内容元素上（行内裁剪可归零） */
+    overflow: hidden;
+    min-height: 0;
+}
+
+/* 物种名标题：展开后随内容出现（收起时由 body 网格行裁掉），
+   样式沿用区块标题，间距由标题自身承担 */
+.lightbox-bird-name {
+    margin-top: 0.9em;
+}
+
+.lightbox-bird-taxonomy {
+    display: grid;
+    gap: 0.35em;
+    margin: 0;
+    font-size: 0.85em;
+    line-height: 1.7;
+}
+
+.lightbox-bird-rank {
+    display: flex;
+    gap: 0.6em;
+
+    dt {
+        flex: none;
+        min-width: 2em;
+        /* 目/科/屬/種与区块标题同色 */
+        color: var(--color-text);
+        font-family: var(--font-meta);
+    }
+
+    dd {
+        min-width: 0;
+        margin: 0;
+        color: var(--color-text-secondary);
+    }
+}
+
+.lightbox-bird-section {
+    margin-top: 1em;
+}
+
+.lightbox-bird-text {
+    margin: 0;
+    /* 与「背後的故事」正文同字号/颜色（故事为 0.9em / text-secondary） */
+    font-size: 0.9em;
+    line-height: 1.8;
+    color: var(--color-text-secondary);
+}
+
+.lightbox-bird-sources {
+    margin: 1.1em 0 0;
+    font-size: 0.75em;
+    line-height: 1.7;
+    color: var(--color-text-muted);
+
+    a {
+        color: var(--color-accent);
+        text-decoration: none;
+
+        &:hover {
+            text-decoration: underline;
+        }
+    }
+}
+
+.lightbox-bird-sources-label {
+    margin-right: 0.4em;
+}
+
+/* 收起入口：内容最底部的安静文字（上箭头），与图像分析底部收起按钮同款 */
+.lightbox-bird-collapse {
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+    margin: 1.1em 0 0;
+    padding: 0.2em 0;
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    font-family: var(--font-meta);
+    font-size: 0.85em;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: color var(--transition-fade);
+
+    svg {
+        width: 0.85em;
+        height: 0.85em;
+        flex: none;
+    }
+
+    &:hover {
+        color: var(--color-text-secondary);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lightbox-bird-body,
+    .lightbox-bird-trigger {
+        transition: none;
+    }
+}

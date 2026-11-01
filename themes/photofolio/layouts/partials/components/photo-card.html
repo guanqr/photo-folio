@@ -83,6 +83,7 @@
         {{ with $categoryPage }}data-category-url="{{ .RelPermalink }}"{{ end }}
         {{ with $seriesName }}data-series="{{ . }}"{{ end }}
         {{ with $seriesUrl }}data-series-url="{{ . }}"{{ end }}
+        {{ with $photo.species }}data-species="{{ . }}"{{ end }}
         {{ with $dateStr }}data-date="{{ . }}"{{ end }}
         {{ with $focus }}data-focus="{{ . }}"{{ end }}
         {{ with $aperture }}data-aperture="{{ . }}"{{ end }}

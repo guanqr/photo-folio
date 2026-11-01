@@ -16,7 +16,7 @@ from analysis import is_analysis_stale, analyze_and_store, write_js_meta
 from oss_utils import create_bucket_from_config, sync_new_photos
 
 # 同名换图（source_hash 变化）时随 EXIF 一起更新的自动字段；手动字段
-# （alt/category/place/address/location/description/series/is_cover/featured）
+# （alt/category/place/address/location/description/series/species/is_cover/featured）
 # 不在此列，保持用户编辑
 AUTO_EXIF_FIELDS = ("focus", "iso", "aperture", "shutter", "time", "camera", "lens")
 

@@ -26,3 +26,24 @@
         padding: 1em 5.5em;
     }
 }
+
+/* 闲置隐藏：全屏静置数秒（is-idle 由 lightbox-fullscreen.js 切换，等待时长
+   同在该模块）后顶栏（编号/播放/全屏/关闭）、左右箭头与自动播放进度条一起
+   淡出、光标隐藏，只留主图；指针/触屏/键盘活动立即恢复。只改透明度——进度
+   条动画与自动播放计时照常推进，恢复时显示当前进度 */
+.lightbox.is-fullscreen.is-idle {
+    cursor: none;
+}
+
+.lightbox.is-fullscreen.is-idle .lightbox-topbar,
+.lightbox.is-fullscreen.is-idle .lightbox-arrows,
+.lightbox.is-fullscreen.is-idle .lightbox-autoplay-progress {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* 箭头按钮自身声明了 pointer-events: auto，隐藏时单独收回——透明按钮不再
+   可点击，首次点按只负责唤回控件 */
+.lightbox.is-fullscreen.is-idle .lightbox-arrow {
+    pointer-events: none;
+}

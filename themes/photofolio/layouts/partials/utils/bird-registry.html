@@ -1,0 +1,28 @@
+{{- /* 鸟种数据注册表与构建期校验（唯一实现）：
+       data/birds.toml 的 id 必须唯一且字段完整；photo.toml 中带 species 的照片
+       必须能反查到条目。页面无关，调用方用 partialCached（variant "birds"）只跑一次。 */ -}}
+{{- $birds := slice -}}
+{{- with hugo.Data.birds }}{{ with .bird }}{{ $birds = . }}{{ end }}{{ end -}}
+{{- $ids := slice -}}
+{{- $required := slice "name" "latin" "english" "order" "order_latin" "family" "family_latin" "genus" "genus_latin" "distribution" "habitat" "habits" -}}
+{{- range $bird := $birds -}}
+    {{- $id := $bird.id | default "" -}}
+    {{- if not $id }}{{ errorf "data/birds.toml 存在缺少 id 的鸟种条目" }}{{ end -}}
+    {{- if in $ids $id }}{{ errorf "data/birds.toml 鸟种 id %q 重复" $id }}{{ end -}}
+    {{- range $field := $required -}}
+        {{- if not (index $bird $field) }}{{ errorf "鸟种 %q 缺少字段 %q" $id $field }}{{ end -}}
+    {{- end -}}
+    {{- with $bird.source -}}
+        {{- range $src := . -}}
+            {{- if or (not $src.label) (not $src.url) }}{{ errorf "鸟种 %q 的 source 条目必须同时有 label 与 url" $id }}{{ end -}}
+        {{- end -}}
+    {{- else -}}
+        {{- errorf "鸟种 %q 至少需要一个 [[bird.source]] 资料来源" $id -}}
+    {{- end -}}
+    {{- $ids = $ids | append $id -}}
+{{- end -}}
+{{- range $photo := hugo.Data.photo.photo -}}
+    {{- with $photo.species -}}
+        {{- if not (in $ids .) }}{{ errorf "photo.toml 照片 %q 的 species %q 未在 data/birds.toml 建档" $photo.src . }}{{ end -}}
+    {{- end -}}
+{{- end -}}
