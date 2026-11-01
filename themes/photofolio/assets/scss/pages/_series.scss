@@ -7,7 +7,7 @@
 .series-story {
     display: flex;
     flex-direction: column;
-    gap: 2.5em;
+    gap: 1em; /* 有正文时文字栏与作品瀑布流的间距；无正文不渲染文字栏，gap 不产生空白 */
     max-width: var(--container-width); /* 与全部作品页同宽 */
     margin: 0 auto;
     padding: 1em 1em var(--space-footer-gap); /* 底部与页脚间距统一（--space-footer-gap） */

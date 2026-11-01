@@ -59,10 +59,11 @@
 
     {{ if gt (len $ordered) 0 }}
     <div class="series-story">
-        {{/* 正文叙述（md 正文只写文字） */}}
-        <div class="story-text-col">
-            {{ .Content }}
-        </div>
+        {{/* 正文叙述（md 正文只写文字）：无正文时不渲染文字栏——空的 flex 子项
+            仍会计入 .series-story 的 2.5em 行间距（gap），图片上方多出一行空白 */}}
+        {{ with .Content }}
+        <div class="story-text-col">{{ . }}</div>
+        {{ end }}
         {{/* 与全部作品页完全一致的瀑布流（两端对齐行、行内等高，复用 masonry 引擎） */}}
         <div class="series-masonry">
             {{ partial "components/masonry-grid.html" (dict "photos" $ordered "site" $.Site) }}
