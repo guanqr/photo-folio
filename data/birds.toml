@@ -1,11 +1,12 @@
 # 观鸟图鉴物种资料：灯箱「觀鳥圖鑑」区块的数据源
 # id 与 photo.toml 的 species 字段对应；文本为繁体内容，来源见每条的 [[bird.source]]
+# 属于该系列的观鸟照片即使缺少 species 也显示图鉴开关，展开提示缺少资料
+bird_series = "觀鳥"
 
 [[bird]]
 id = "fairy-pitta"
 name = "仙八色鶇"
 latin = "Pitta nympha"
-english = "Fairy Pitta"
 order = "雀形目"
 order_latin = "Passeriformes"
 family = "八色鶇科"
@@ -15,6 +16,7 @@ genus_latin = "Pitta"
 distribution = "繁殖於日本、朝鮮半島、中國東部與臺灣；冬季南遷至東南亞，主要越冬地為婆羅洲的低地森林。"
 habitat = "繁殖季棲於低海拔潮濕闊葉林與混合林，偏好林下植被茂密、落葉層深厚的環境；越冬地亦以低地森林為主。"
 habits = "多在地面翻找落葉層覓食，主食蚯蚓、甲蟲與其他昆蟲，也取食小型無脊椎動物；性情隱蔽，為長距離遷徙候鳥。"
+conservation_level = "vu"
 
 [[bird.source]]
 label = "IOC World Bird List"
@@ -32,7 +34,6 @@ url = "https://en.wikipedia.org/wiki/Fairy_pitta"
 id = "grey-heron"
 name = "蒼鷺"
 latin = "Ardea cinerea"
-english = "Grey Heron"
 order = "鵜形目"
 order_latin = "Pelecaniformes"
 family = "鷺科"
@@ -42,6 +43,7 @@ genus_latin = "Ardea"
 distribution = "廣布於歐洲、亞洲與非洲的濕地；北方族群多隨季節南遷，南方族群常為留鳥。"
 habitat = "棲於河流、湖泊、池塘、沼澤、水田、河口與海岸等淺水環境，常在岸邊樹木或蘆葦叢附近活動。"
 habits = "以魚類為主，也捕食兩棲類、甲殼類、昆蟲與小型脊椎動物；常靜立水邊伏擊，晨昏活動較頻繁。"
+conservation_level = "lc"
 
 [[bird.source]]
 label = "IOC World Bird List"
@@ -59,7 +61,6 @@ url = "https://en.wikipedia.org/wiki/Grey_heron"
 id = "spot-billed-duck"
 name = "斑嘴鴨"
 latin = "Anas zonorhyncha"
-english = "Eastern Spot-billed Duck"
 order = "雁形目"
 order_latin = "Anseriformes"
 family = "鴨科"
@@ -69,6 +70,7 @@ genus_latin = "Anas"
 distribution = "繁殖於東亞與俄羅斯遠東地區，冬季南遷至中國南方、臺灣與東南亞；日本與朝鮮半島部分族群為留鳥。"
 habitat = "棲於湖泊、水庫、河流、池塘、沼澤與水田等淡水濕地，遷徙與越冬期也利用河口、海灣與農田。"
 habits = "以水生植物的葉、莖、根與種子為主食，也取食水生昆蟲與軟體動物；多以浮游方式在水面覓食，晨昏與夜間較活躍。"
+conservation_level = "lc"
 
 [[bird.source]]
 label = "IOC World Bird List"
@@ -81,3 +83,30 @@ url = "https://datazone.birdlife.org/species/factsheet/eastern-spot-billed-duck-
 [[bird.source]]
 label = "Wikipedia"
 url = "https://en.wikipedia.org/wiki/Eastern_spot-billed_duck"
+
+[[bird]]
+id = "chinese-goose"
+name = "白鵝"
+latin = "Anser cygnoides"
+order = "雁形目"
+order_latin = "Anseriformes"
+family = "鴨科"
+family_latin = "Anatidae"
+genus = "雁屬"
+genus_latin = "Anser"
+distribution = "白鵝是鴻雁的馴化型，世界各地均有飼養；其野生祖先繁殖於蒙古、西伯利亞與中國北方的草原濕地，冬季南遷至中國東部與長江流域。"
+habitat = "白鵝常見於公園水域、農家與湖泊周邊；野生鴻雁棲於草原湖泊、沼澤、河漫灘與農田。"
+habits = "白鵝以水生植物、青草、穀物與昆蟲為食，善游泳，常在水陸之間覓食；野生鴻雁成群活動，繁殖季在濕地築巢，冬季結群遷徙。"
+conservation_level = "domestic"
+
+[[bird.source]]
+label = "IOC World Bird List"
+url = "https://www.worldbirdnames.org/"
+
+[[bird.source]]
+label = "BirdLife International"
+url = "https://datazone.birdlife.org/species/factsheet/swan-goose-anser-cygnoid"
+
+[[bird.source]]
+label = "Wikipedia"
+url = "https://en.wikipedia.org/wiki/Chinese_goose"
