@@ -1,10 +1,11 @@
 /* ===== Lightbox 分析图表（影調 / 色卡 / 飽和度 / 色相）与故事 ===== */
 
-/* 分析加载失败提示：借用 .empty-state 的虚线框与图标/标题配色、无底色，
+/* 分析加载失败/观鸟图鉴缺少资料提示：借用 .empty-state 的虚线框与图标/标题配色、无底色，
    图标与文字上下居中排布（与全站空状态同构，面板内收紧）；
    display 限定在 :not([hidden])——author 的 display 声明会压过 UA 的
    [hidden] 规则，不限定则 hidden 失效、提示永远显示 */
-.lightbox-analysis-error:not([hidden]) {
+.lightbox-analysis-error:not([hidden]),
+.lightbox-bird-missing:not([hidden]) {
     display: flex;
     flex-direction: column;
     align-items: center;

@@ -148,6 +148,39 @@ export function fillTemplate(template, values) {
         Object.prototype.hasOwnProperty.call(values, key) ? String(values[key]) : token);
 }
 
+// 开合内容高度变化时把控件钉在屏幕位置（2026-11-02 用户方案）：每帧按控件
+// 视口位移补偿容器 scrollTop；edge='bottom' 用于收起方向（锚定可折叠容器
+// 的底边，避免收起按钮被裁剪后的布局位置失真）。滚到容器上/下尽头即停止
+// 锚定，让内容随整体移动（例如详情栏上/下方已无可滚动内容）
+export function anchorWhile(el, container, duration, edge = 'top') {
+    if (!el || !container) return () => {};
+    const read = () => {
+        const r = el.getBoundingClientRect();
+        return edge === 'bottom' ? r.bottom : r.top;
+    };
+    const anchorPos = read();
+    const start = performance.now();
+    let raf = 0;
+    let canceled = false;
+    const step = () => {
+        if (canceled) return;
+        const delta = read() - anchorPos;
+        if (Math.abs(delta) > 0.5) {
+            const before = container.scrollTop;
+            const max = Math.max(0, container.scrollHeight - container.clientHeight);
+            const next = Math.max(0, Math.min(max, before + delta));
+            container.scrollTop = next;
+            if (Math.abs(next - before) < 0.5 && Math.abs(delta) > 1) return; // 滚动尽头
+        }
+        if (performance.now() - start < duration + 60) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => {
+        canceled = true;
+        cancelAnimationFrame(raf);
+    };
+}
+
 // 裸元素层栈（灯箱背景层与辉光层共用）：最新层 = 末位；剪枝只留末层
 // （延时由调用方传入，均取「淡入时长 + 50ms 余量」）；关闭时全清。
 // 层元素自身的状态标志（背景 _shown / 辉光 _ready）由调用方维护。

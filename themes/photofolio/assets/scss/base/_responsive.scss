@@ -166,6 +166,9 @@
         }
 
         .has-dropdown.sub-open .nav-dropdown {
+            /* 清除桌面展开态的 0.5em 悬浮间距：否则收起时该 margin 瞬间归零，
+               子导航先向上跳 0.5em 再开始 max-height 收起（2026-11-02） */
+            margin-top: 0;
             max-height: 10em; /* 足够容纳当前 3 个子项（约 7.5em），上限贴近实际高度、开合无明显延迟感 */
             opacity: 1;
             visibility: visible;

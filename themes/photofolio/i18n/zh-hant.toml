@@ -153,6 +153,27 @@ other = "觀鳥圖鑑"
 [lightbox_bird_guide_collapse]
 other = "收起觀鳥圖鑑"
 
+[lightbox_bird_missing]
+other = "缺少鳥種圖鑑資料"
+
+[bird_conservation_lc]
+other = "無危 LC"
+
+[bird_conservation_nt]
+other = "近危 NT"
+
+[bird_conservation_vu]
+other = "易危 VU"
+
+[bird_conservation_en]
+other = "瀕危 EN"
+
+[bird_conservation_cr]
+other = "極危 CR"
+
+[bird_conservation_domestic]
+other = "馴化"
+
 [lightbox_bird_rank_order]
 other = "目"
 

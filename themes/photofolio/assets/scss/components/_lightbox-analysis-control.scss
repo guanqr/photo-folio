@@ -56,9 +56,11 @@
     max-height: 0;
     opacity: 0;
     /* 收起态不可见（visibility 离散过渡至时长末才翻转，内容淡出不被瞬间切断）；
-       同时把容器内的收起按钮移出 Tab 序——aria-hidden 不阻止聚焦，可见性才阻止 */
+       同时把容器内的收起按钮移出 Tab 序——aria-hidden 不阻止聚焦，可见性才阻止。
+       opacity 与 max-height 同为 0.6s：内容先淡出时高度仍在收起，两块按钮之间
+       会短暂露出空白（2026-11-02 宽屏收起时实测） */
     visibility: hidden;
-    transition: max-height 0.6s ease, opacity 0.3s ease, visibility 0.6s;
+    transition: max-height 0.6s ease, opacity 0.6s ease, visibility 0.6s;
 
     &.is-open {
         max-height: 80em;

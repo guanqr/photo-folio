@@ -2,9 +2,17 @@
        data/birds.toml 的 id 必须唯一且字段完整；photo.toml 中带 species 的照片
        必须能反查到条目。页面无关，调用方用 partialCached（variant "birds"）只跑一次。 */ -}}
 {{- $birds := slice -}}
-{{- with hugo.Data.birds }}{{ with .bird }}{{ $birds = . }}{{ end }}{{ end -}}
+{{- $birdSeries := "" -}}
+{{- with hugo.Data.birds -}}
+    {{- $birdSeries = .bird_series | default "" -}}
+    {{- with .bird }}{{ $birds = . }}{{ end -}}
+{{- end -}}
+{{- if not $birdSeries -}}
+    {{- warnf "data/birds.toml 缺少 bird_series（观鸟系列名），缺 species 的观鸟照片不会显示图鉴开关" -}}
+{{- end -}}
 {{- $ids := slice -}}
-{{- $required := slice "name" "latin" "english" "order" "order_latin" "family" "family_latin" "genus" "genus_latin" "distribution" "habitat" "habits" -}}
+{{- $required := slice "name" "latin" "order" "order_latin" "family" "family_latin" "genus" "genus_latin" "distribution" "habitat" "habits" "conservation_level" -}}
+{{- $levels := slice "lc" "nt" "vu" "en" "cr" "domestic" -}}
 {{- range $bird := $birds -}}
     {{- $id := $bird.id | default "" -}}
     {{- if not $id }}{{ errorf "data/birds.toml 存在缺少 id 的鸟种条目" }}{{ end -}}
@@ -12,6 +20,7 @@
     {{- range $field := $required -}}
         {{- if not (index $bird $field) }}{{ errorf "鸟种 %q 缺少字段 %q" $id $field }}{{ end -}}
     {{- end -}}
+    {{- if not (in $levels $bird.conservation_level) }}{{ errorf "鸟种 %q 的 conservation_level %q 不支持（可用：lc / nt / vu / en / cr / domestic）" $id $bird.conservation_level }}{{ end -}}
     {{- with $bird.source -}}
         {{- range $src := . -}}
             {{- if or (not $src.label) (not $src.url) }}{{ errorf "鸟种 %q 的 source 条目必须同时有 label 与 url" $id }}{{ end -}}

@@ -213,8 +213,18 @@
                                 </button>
                                 <div class="lightbox-bird-body" id="lightbox-bird-body" aria-hidden="true" inert>
                                     <div class="lightbox-bird-inner">
-                                        {{/* 物种名作为图鉴标题：展开后才随内容出现，不占触发行位置 */}}
-                                        <h4 class="lightbox-section-title lightbox-bird-name" id="lightbox-bird-name"></h4>
+                                        <div class="lightbox-bird-content" id="lightbox-bird-content">
+                                        {{/* 物种名作为图鉴标题：展开后才随内容出现；右侧为保育等级标签 */}}
+                                        <div class="lightbox-bird-heading">
+                                            <h4 class="lightbox-section-title lightbox-bird-name" id="lightbox-bird-name"></h4>
+                                            <span class="lightbox-bird-status" id="lightbox-bird-status" hidden
+                                                data-label-lc="{{ i18n "bird_conservation_lc" }}"
+                                                data-label-nt="{{ i18n "bird_conservation_nt" }}"
+                                                data-label-vu="{{ i18n "bird_conservation_vu" }}"
+                                                data-label-en="{{ i18n "bird_conservation_en" }}"
+                                                data-label-cr="{{ i18n "bird_conservation_cr" }}"
+                                                data-label-domestic="{{ i18n "bird_conservation_domestic" }}"></span>
+                                        </div>
                                         <dl class="lightbox-bird-taxonomy">
                                             <div class="lightbox-bird-rank">
                                                 <dt>{{ i18n "lightbox_bird_rank_order" }}</dt>
@@ -250,6 +260,9 @@
                                             <span class="lightbox-bird-source-list" id="lightbox-bird-sources"
                                                 data-separator="{{ i18n "list_separator" }}"></span>
                                         </p>
+                                        </div>
+                                        {{/* 缺 species/资料：开关仍显示，展开显示与分析失败同款空状态卡 */}}
+                                        {{ partial "components/empty-state.html" (dict "class" "lightbox-bird-missing" "id" "lightbox-bird-missing" "hidden" true "icon" "alert" "titleKey" "lightbox_bird_missing") }}
                                         {{/* 与图像分析一致：展开后触发行隐藏，收起入口移到内容最底部 */}}
                                         <button class="lightbox-bird-collapse" id="lightbox-bird-collapse" type="button">
                                             <span>{{ i18n "lightbox_bird_guide_collapse" }}</span>
@@ -259,6 +272,11 @@
                                 </div>
                             </section>
                         </div>
+                    </div>
+                    {{/* 窄屏详情滚动条：抽屉原生滚动条被手势模型隐藏，这里用覆盖层常显
+                        位置指示；pointer-events none，不拦截抽屉手势 */}}
+                    <div class="lightbox-panel-scrollbar" id="lightbox-panel-scrollbar" aria-hidden="true" hidden>
+                        <span class="lightbox-panel-scrollbar-thumb"></span>
                     </div>
                     <button class="lightbox-panel-toggle" id="lightbox-panel-toggle" aria-label="{{ i18n "lightbox_expand" }}" aria-expanded="false" data-expand-label="{{ i18n "lightbox_expand" }}" data-bottom-label="{{ i18n "lightbox_bottom" }}" data-top-label="{{ i18n "back_to_top" }}">
                         {{ partial "utils/icon.html" (dict "name" "arrow_down" "variant" "thick") }}

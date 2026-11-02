@@ -113,19 +113,26 @@
     opacity: 0;
     transition: max-height 0.4s ease, opacity 0.3s ease;
     padding-right: 0.5em; /* 内容与滚动条之间留出间距（窄屏） */
-    /* 统一细滚动条：始终预留空间（scrollbar-gutter），空闲时隐藏、
-       滚动中显示（面板 is-scrolling 类由 JS 控制）——出现/隐藏不引起文字横向移动 */
+    /* 分析/图鉴开合改变内容高度时滚动位置由 JS/抽屉统一接管；禁用浏览器
+       滚动锚定，避免收起时视口被锚定到下方内容、看起来被拉到底部 */
+    overflow-anchor: none;
+    /* 统一细滚动条：常显，不随滚动空闲隐藏；scrollbar-gutter 始终预留空间，
+       滚动条出现/消失不引起文字横向移动 */
     scrollbar-width: thin;
     scrollbar-gutter: stable;
-    scrollbar-color: transparent transparent;
+    scrollbar-color: var(--color-border) transparent;
 
     &::-webkit-scrollbar {
         width: 0.375em;
     }
 
     &::-webkit-scrollbar-thumb {
-        background: transparent;
+        background: var(--color-border);
         border-radius: var(--radius-pill);
+
+        &:hover {
+            background: var(--color-text-muted);
+        }
     }
 
     &::-webkit-scrollbar-track {
@@ -141,17 +148,47 @@
     }
 }
 
-/* 滚动条按需显示：滚动中（面板 is-scrolling，JS 在滚轮/拖动时挂上、停止约 0.6s 后移除）
-   显示细圆角滑块；空闲时透明隐藏——scrollbar-gutter 始终预留空间，文字不横向移动 */
-.lightbox-panel.is-scrolling .lightbox-panel-details {
-    scrollbar-color: var(--color-border) transparent;
+/* 窄屏详情自定义滚动条：抽屉滚动由手势/程序化 scrollTop 模型接管、原生滚动条
+   被隐藏（见 lightbox-drawer.js），这里用覆盖层常显位置指示；不拦截手势 */
+@media (max-width: 1000px) {
+    .lightbox-panel-scrollbar {
+        position: absolute;
+        right: 1em;
+        /* 视觉与桌面原生细滚动条一致：透明轨道、border 色滑块、悬停 muted */
+        width: 0.375em;
+        z-index: 2;
+        /* 可点击/拖动的自定义滚动条：单独处理指针事件，不触发抽屉拖拽 */
+        pointer-events: auto;
+        touch-action: none;
+        cursor: pointer;
 
-    &::-webkit-scrollbar-thumb {
+        &[hidden] {
+            display: none;
+        }
+    }
+
+    .lightbox-panel-scrollbar-thumb {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        border-radius: var(--radius-pill);
         background: var(--color-border);
+        cursor: grab;
 
         &:hover {
             background: var(--color-text-muted);
         }
+
+        &:active {
+            cursor: grabbing;
+        }
+    }
+}
+
+@media (min-width: 1001px) {
+    .lightbox-panel-scrollbar {
+        display: none;
     }
 }
 
@@ -308,7 +345,7 @@
         flex-direction: column;
         overflow-y: auto;
         padding-right: 0.75em; /* 内容与滚动条之间留出间距（桌面） */
-        scrollbar-width: thin; /* 原生细滚动条（与 0.14.0 一致，按需显示由 is-scrolling 控制） */
+        scrollbar-width: thin; /* 原生细滚动条常显 */
 
         /* 子块保持天然高度：内容超高时溢出滚动，而非被 flex 压缩（压缩会导致
            滚动失效） */

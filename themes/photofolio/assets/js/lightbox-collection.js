@@ -121,6 +121,8 @@ export function initLightboxCollection({ shortLens, narrowWidth = 1280 }) {
                 seriesUrl: card ? (card.dataset.seriesUrl || '') : '',
                 // 鸟种 id（data/birds.toml 的 id）：灯箱底部「觀鳥圖鑑」块按此取资料
                 species: card ? (card.dataset.species || '') : '',
+                // 观鸟系列照片即使缺 species 也显示图鉴开关（展开提示缺少资料）
+                birdGuide: card ? card.dataset.birdGuide === 'true' : false,
                 // 照片真实像素尺寸（photo.toml 回填的 width/height 属性）：
                 // 供缩放目标按展示图自然尺寸封顶（超宽屏不再放大过头）
                 width: parseFloat(img.getAttribute('width')) || 0,

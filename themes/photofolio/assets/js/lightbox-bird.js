@@ -10,7 +10,7 @@
  *   因此现有「末子块 auto 边距」居中规则无需改动
  * - 关闭灯箱静默复位为收起（同图像分析），开合时刷新窄屏抽屉高度/箭头
  */
-import { fillTemplate } from './utils.js';
+import { fillTemplate, anchorWhile } from './utils.js';
 
 export function initLightboxBird({ block, trigger, body, nameEl, sourceList, drawer }) {
     if (!block || !trigger || !body) return { render() {}, reset() {} };
@@ -30,8 +30,13 @@ export function initLightboxBird({ block, trigger, body, nameEl, sourceList, dra
 
     const rankEls = Array.from(body.querySelectorAll('[data-rank]'));
     const fieldEls = Array.from(body.querySelectorAll('[data-field]'));
+    const contentEl = document.getElementById('lightbox-bird-content');
+    const missingEl = document.getElementById('lightbox-bird-missing');
+    const statusEl = document.getElementById('lightbox-bird-status');
     const collapseBtn = document.getElementById('lightbox-bird-collapse');
+    const scrollContainer = body.closest('.lightbox-panel-details');
     let open = false;
+    let anchorCancel = null;
 
     const syncOpen = () => {
         block.classList.toggle('is-open', open);
@@ -42,6 +47,12 @@ export function initLightboxBird({ block, trigger, body, nameEl, sourceList, dra
 
     const setOpen = (next) => {
         if (open === next) return;
+        // 窄屏：开合期间把当前按钮（展开=触发行、收起=底部收起按钮）锚定在
+        // 屏幕位置；滚到上/下尽头时 anchorWhile 自动停止，让内容整体移动
+        if (scrollContainer && drawer && !drawer.fitApplicable()) {
+            if (anchorCancel) anchorCancel();
+            anchorCancel = anchorWhile(next ? trigger : body, scrollContainer, next ? 650 : 450, next ? 'top' : 'bottom');
+        }
         open = next;
         // 收起时显式移出子树焦点：inert 生效前焦点可能仍在資料來源链接上
         if (!open && body.contains(document.activeElement)) document.activeElement.blur();
@@ -65,13 +76,31 @@ export function initLightboxBird({ block, trigger, body, nameEl, sourceList, dra
     function render(photo) {
         const id = photo ? (photo.species || '') : '';
         const bird = id ? birds.get(id) : null;
-        if (!bird) {
+        // 开关显示条件：带 species 或属于观鸟系列（缺 species 也显示）
+        if (!photo || (!photo.species && !photo.birdGuide)) {
             block.hidden = true;
             return;
         }
 
         block.hidden = false;
+        // 缺 species / 无对应鸟种数据：展开显示与分析失败同款空状态卡
+        if (!bird) {
+            if (contentEl) contentEl.hidden = true;
+            if (missingEl) missingEl.hidden = false;
+            syncOpen();
+            return;
+        }
+
+        if (contentEl) contentEl.hidden = false;
+        if (missingEl) missingEl.hidden = true;
         if (nameEl) nameEl.textContent = bird.name || '';
+        if (statusEl) {
+            const level = bird.conservation_level || '';
+            const label = level ? (statusEl.getAttribute('data-label-' + level) || '') : '';
+            statusEl.textContent = label;
+            statusEl.className = 'lightbox-bird-status' + (level ? ' is-' + level : '');
+            statusEl.hidden = !label;
+        }
 
         const values = rankValues(bird);
         rankEls.forEach((el) => {
@@ -118,6 +147,10 @@ export function initLightboxBird({ block, trigger, body, nameEl, sourceList, dra
         reset() {
             open = false;
             block.hidden = true;
+            if (anchorCancel) {
+                anchorCancel();
+                anchorCancel = null;
+            }
             syncOpen();
         }
     };

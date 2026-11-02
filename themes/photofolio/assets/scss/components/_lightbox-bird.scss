@@ -15,28 +15,27 @@
     display: flex;
     align-items: center;
     gap: 0.4em;
-    width: 100%;
-    /* 展开态随触发行一起收拢：内边距一并归零，避免 border-box 下最大高度为 0
-       仍残留内边距条（与 lightbox-analysis-trigger 同法） */
-    max-height: 2.6em;
-    padding: 0.8em 0 0.2em;
+    /* 与图像分析触发行完全一致：上边距/内边距/最大高度/过渡同值，
+       展开后边距与内边距一并归零（border-box 下 max-height 无法压缩 padding） */
+    margin-top: 1.1em;
+    padding: 0.2em 0;
+    max-height: 2em;
     overflow: hidden;
     background: none;
     border: none;
-    /* 与「圖像分析」触发行同色：静置 muted、hover secondary */
     color: var(--color-text-muted);
     font-family: var(--font-meta);
     font-size: 0.85em;
-    text-align: left;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition: color var(--transition-fade), opacity var(--transition-fade),
-        max-height 0.6s ease, padding 0.6s ease;
+    transition: opacity var(--transition-fade), color var(--transition-fade),
+        max-height 0.6s ease, margin-top 0.6s ease, padding 0.6s ease;
 
     svg {
         width: 0.85em;
         height: 0.85em;
         flex: none;
+        transition: transform var(--transition-spring);
     }
 
     &:hover {
@@ -46,6 +45,7 @@
 
 .lightbox-bird.is-open .lightbox-bird-trigger {
     max-height: 0;
+    margin-top: 0;
     padding-top: 0;
     padding-bottom: 0;
     opacity: 0;
@@ -57,7 +57,8 @@
     display: grid;
     grid-template-rows: 0fr;
     opacity: 0;
-    transition: grid-template-rows 0.4s ease, opacity 0.3s ease;
+    /* 透明度与高度收起同长，避免内容先淡出留下短暂空白 */
+    transition: grid-template-rows 0.4s ease, opacity 0.4s ease;
 }
 
 .lightbox-bird.is-open .lightbox-bird-body {
@@ -72,10 +73,69 @@
     min-height: 0;
 }
 
-/* 物种名标题：展开后随内容出现（收起时由 body 网格行裁掉），
-   样式沿用区块标题，间距由标题自身承担 */
-.lightbox-bird-name {
-    margin-top: 0.9em;
+/* 物种名标题行：左侧名称、右侧保育等级标签；展开后随内容出现
+   （收起时由 body 网格行裁掉） */
+.lightbox-bird-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+    margin: 0.9em 0 0.5em;
+}
+
+.lightbox-bird-heading .lightbox-bird-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+}
+
+.lightbox-bird-status {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.1em 0.55em;
+    border: 0.0625em solid transparent;
+    border-radius: var(--radius-pill);
+    font-family: var(--font-meta);
+    font-size: 0.72em;
+    line-height: 1.6;
+    white-space: nowrap;
+    transition: color var(--transition-fade), background-color var(--transition-fade),
+        border-color var(--transition-fade);
+
+    &[hidden] {
+        display: none;
+    }
+}
+
+/* 保育等级底色：不同等级不同色相，统一透明底 + 同色描边/文字 */
+@mixin bird-status-color($name) {
+    color: var(--color-bird-status-#{$name});
+    background: hsla(var(--color-bird-status-#{$name}-h), var(--color-bird-status-#{$name}-s), var(--color-bird-status-#{$name}-l), 0.16);
+    border-color: hsla(var(--color-bird-status-#{$name}-h), var(--color-bird-status-#{$name}-s), var(--color-bird-status-#{$name}-l), 0.45);
+}
+
+.lightbox-bird-status.is-lc {
+    @include bird-status-color(lc);
+}
+
+.lightbox-bird-status.is-nt {
+    @include bird-status-color(nt);
+}
+
+.lightbox-bird-status.is-vu {
+    @include bird-status-color(vu);
+}
+
+.lightbox-bird-status.is-en {
+    @include bird-status-color(en);
+}
+
+.lightbox-bird-status.is-cr {
+    @include bird-status-color(cr);
+}
+
+.lightbox-bird-status.is-domestic {
+    @include bird-status-color(domestic);
 }
 
 .lightbox-bird-taxonomy {

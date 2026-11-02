@@ -5,18 +5,21 @@
  *   保持——用户已选择查看分析，后续打开延续该选择）；setOpen 展开/收起
  *   （max-height + opacity 过渡、双内联起点值、transitionend 收尾、
  *   reduced-motion 直切），reset 为关闭灯箱时的静默重置（不带动画、不发请求）
- * - 桌面收起改「滚动 + 居中同窗并发」（打开动作的逆向，2026-10-20 用户
- *   确认方案）：收起窗口内经 drawer.setFitAdjuster 冻结 is-fit 翻转——详情区
- *   保持可滚动、scrollToTop 回滚动画真实生效（内容随收缩平滑回顶）；同时
- *   整组以最终居中偏移 transform 下滑（与收缩同曲线同时长 0.6s）；过渡结束
- *   同帧交换为真实 is-fit 居中（先清 transform 再翻转、实测残余 0.3s 吸收，
- *   零瞬跳）；仅桌面生效且收起前未居中时下滑；放不下时不翻转不滑动
+ * - 桌面收起保留居中补偿（2026-10-20 方案）：收起窗口内经 drawer.setFitAdjuster
+ *   冻结 is-fit 翻转——详情区保持可滚动；整组以最终居中偏移 transform 下滑
+ *   （与收缩同曲线同时长 0.6s）；过渡结束同帧交换为真实 is-fit 居中（先清
+ *   transform 再翻转、实测残余 0.3s 吸收，零瞬跳）；仅桌面生效且收起前未居中
+ *   时下滑；放不下时不翻转不滑动。2026-11-02 起不再主动 scrollToTop：收起
+ *   只折叠分析内容，分析触发行保持原位。窄屏开合时对触发行顶部（展开）/
+ *   折叠容器底边（收起）做滚动锚定——滚到容器上/下尽头才让内容整体移动
  * - 收起期间经 drawer.setInputHold 挂起滚轮输入：点击收起后仍在到达的旧手势
  *   惯性尾会瞬跳在途回滚/拉低抽屉 level，刻意编排不被旧手势接管；finish/
  *   展开/重置解除
  * - 展开时分析当前照片由调用方注入 analyze 回调（本模块不认识切换管线；
  *   分析本体为管线预计算结果拉取与渲染，见 lightbox-analysis.js）
  */
+import { anchorWhile } from './utils.js';
+
 export function initLightboxAnalysisControl({
     trigger, wrap, caption, tagsEl, panelDetails, panel,
     reducedMotion, drawer, analyze
@@ -42,6 +45,8 @@ export function initLightboxAnalysisControl({
     // 直接落位终态、触发行瞬弹约 2.6em，2026-10-21 审查修复 #3）
     const triggerCs = getComputedStyle(trigger);
     const triggerFootprint = trigger.offsetHeight + parseFloat(triggerCs.marginTop) + parseFloat(triggerCs.marginBottom);
+    // 窄屏开合锚定：当前正在执行的控件锚定取消函数
+    let anchorCancel = null;
     // 收起收尾的槽位（transitionend/transitioncancel 监听 + 超时兜底定时器）——
     // 幽灵监听教训：可拆可作废；展开/重置/新一轮收起前先作废旧收尾
     let collapseEndHandler = null;
@@ -72,8 +77,15 @@ export function initLightboxAnalysisControl({
         if (!open && wrap.contains(document.activeElement)) document.activeElement.blur();
         wrap.inert = !open;
         wrap.setAttribute('aria-hidden', open ? 'false' : 'true');
+        // 窄屏：开合期间把当前按钮（展开=触发行、收起=底部收起按钮）锚定在
+        // 屏幕位置；滚到上/下尽头时 anchorWhile 自动停止，让内容整体移动
+        if (panelDetails && !drawer.fitApplicable()) {
+            if (anchorCancel) anchorCancel();
+            anchorCancel = anchorWhile(open ? trigger : wrap, panelDetails, 600, open ? 'top' : 'bottom');
+        }
         if (open) {
             // 展开：清除收起留下的内联 max-height，走 class 兜底大值过渡；
+            // 窄屏记录展开前的滚动位置，收起时恢复（桌面由 is-fit 居中复位）
             // 图表区照常展示（空图表框即占位，不额外显示加载指示），数据就绪后填充；
             // 触发行随开合平滑收拢（纯 CSS），展开方向无 t=0 布局跳变
             teardownCollapseEnd(); // 收起中途再展开：作废在途收尾（否则在展开过渡结束时重放）
@@ -81,7 +93,7 @@ export function initLightboxAnalysisControl({
             drawer.setInputHold(false); // 收起中途再展开：一并解除输入挂起
             cancelCenterComp(); // 停止滑入/补偿、摘除 transform
             if (panelDetails) panelDetails.classList.remove('no-margin-center'); // 展开清除收起窗口的顶对齐态
-            drawer.cancelScroll(); // 取消收起启动的回滚动画（2026-10-18：不取消则展开期间仍逐帧强制 scrollTop 归零、覆盖用户滚动）
+            drawer.cancelScroll(); // 取消在途回滚/滚底动画，避免展开期间逐帧强制 scrollTop 覆盖用户滚动
             wrap.style.maxHeight = '';
             wrap.classList.add('is-open');
             analyze(); // 展开即分析当前照片（调用方注入：展开态拉取预计算结果、结果入缓存）
@@ -188,9 +200,9 @@ export function initLightboxAnalysisControl({
                 wrap.addEventListener('transitioncancel', collapseEndHandler);
                 collapseEndTimer = setTimeout(finish, 650);
             }
-            // 内容同步回滚到顶部：与收起过渡同曲线同时长锁步（cssEaseY =
-            // CSS ease），收起过程中视口跟随内容收缩上移，不残留空白等待区
-            drawer.scrollToTop(reducedMotion ? 0 : 600); // 0.6s 与收缩/下滑同窗锁步
+            // 只收起展开的分析内容，不主动把详情区滚回顶部：浏览器会把
+            // scrollTop 钳制到新的可滚动上限，分析触发行保持在原位置附近
+            // （2026-11-02 用户反馈：回顶会把图像分析按钮移出视口）
         }
         drawer.refresh(); // 内容高度变化：刷新箭头状态（桌面 is-fit 由 ResizeObserver 重判）
     }
@@ -211,6 +223,10 @@ export function initLightboxAnalysisControl({
         if (panelDetails) panelDetails.classList.remove('no-margin-center'); // 关闭清除收起窗口的顶对齐态
         drawer.setInputHold(false); // 关闭中断在途收起：解除输入挂起
         drawer.setFitAdjuster(false);
+        if (anchorCancel) {
+            anchorCancel();
+            anchorCancel = null;
+        }
     }
 
     return { setOpen, reset, cancelCenterComp };

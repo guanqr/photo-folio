@@ -282,14 +282,16 @@ photos = ["割蔺草-1.jpg", "割蔺草-2.jpg", "割蔺草-3.jpg"]
 
 ### 观鸟图鉴（`data/birds.toml`）
 
-观鸟照片在 `photo.toml` 填 `species = "<id>"`（对应 `data/birds.toml` 的 `[[bird]]` id），灯箱详情栏底部会显示可折叠的「觀鳥圖鑑」：目→科→屬→種（中文 + 拉丁/英文）、分布區域、棲息地、習性與資料來源；默认收起、开合状态跨切图保持、关闭灯箱复位。不显示插图、观察记录与保护级别。
+观鸟照片在 `photo.toml` 填 `species = "<id>"`（对应 `data/birds.toml` 的 `[[bird]]` id），灯箱详情栏底部会显示可折叠的「觀鳥圖鑑」：目→科→屬→種（中文 + 拉丁学名）、分布區域、棲息地、習性與資料來源，物种名右侧显示保育等级标签；默认收起、开合状态跨切图保持、关闭灯箱复位。不显示插图、观察记录与保护级别。
 
 ```toml
+# 观鸟系列名：属于该系列的照片即使缺少 species 也显示图鉴开关
+bird_series = "觀鳥"
+
 [[bird]]
 id = "fairy-pitta"
 name = "仙八色鶇"
 latin = "Pitta nympha"
-english = "Fairy Pitta"
 order = "雀形目"
 order_latin = "Passeriformes"
 family = "八色鶇科"
@@ -299,6 +301,7 @@ genus_latin = "Pitta"
 distribution = "分布区域说明"
 habitat = "栖息环境说明"
 habits = "习性说明"
+conservation_level = "vu"        # 保育等级：lc / nt / vu / en / cr / domestic；文案与底色由该值决定
 
 [[bird.source]]
 label = "资料来源名称"
@@ -306,6 +309,8 @@ url = "https://example.com/source"
 ```
 
 - `id` 唯一；photo.toml 的 `species` 必须能在 birds.toml 找到；构建期校验字段完整性与引用，缺项会报错
+- 属于 `bird_series` 的照片即使没有 `species` 也会显示图鉴开关；展开显示「缺少鳥種圖鑑資料」空状态（与图像分析失败卡同款），补上 `species` 后显示图鉴
+- 物种名标题右侧显示保育等级标签：只维护 `conservation_level`（`lc` / `nt` / `vu` / `en` / `cr` / `domestic`），标签文案按等级从 i18n 取、底色按等级切换；构建期校验等级取值
 - `[[bird.source]]` 至少一条，灯箱内显示为外链；数据文本建议使用繁体中文
 
 ### 精選（featured）

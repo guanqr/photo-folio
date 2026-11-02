@@ -89,6 +89,14 @@ body {
     @include defineColorHSL(--dark-border, 210, 16.3%, 16.9%);
     @include defineColorHSL(--dark-lum-curve, 43.9, 89.9%, 61%); /* 直方图明度曲线金色（灯箱组件引用） */
 
+    /* 观鸟图鉴保育等级标签（灯箱固定暗色；不同等级底色区分，不随明暗主题切换） */
+    @include defineColorHSL(--color-bird-status-lc, 160, 45%, 58%);
+    @include defineColorHSL(--color-bird-status-nt, 42, 90%, 60%);
+    @include defineColorHSL(--color-bird-status-vu, 28, 90%, 62%);
+    @include defineColorHSL(--color-bird-status-en, 8, 80%, 62%);
+    @include defineColorHSL(--color-bird-status-cr, 350, 70%, 60%);
+    @include defineColorHSL(--color-bird-status-domestic, 0, 0%, 62%);
+
     /* 主题色（暗色主题底色为蓝灰色调、非纯黑；亮色值见 [data-theme="light"]）；
        --color-bg 暗色值与 assets/manifest.tmpl 的 theme_color/background_color 同源，
        改色须两处同步（Hugo 无法解析 SCSS 变量，manifest 侧注释互指） */

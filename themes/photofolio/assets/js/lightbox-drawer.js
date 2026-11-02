@@ -19,6 +19,9 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
     // 全屏（沉浸）模式：面板 display:none，抽屉手势/布局重算一律暂停，
     // 退出时由 refreshLayout 在面板恢复可见后统一重算（见 lightbox-fullscreen.js）
     const isFullscreen = () => lightbox.classList.contains('is-fullscreen');
+    // 窄屏详情自定义滚动条（抽屉原生滚动条被手势模型隐藏）
+    const scrollbarEl = panel.querySelector('.lightbox-panel-scrollbar');
+    const scrollbarThumb = scrollbarEl ? scrollbarEl.querySelector('.lightbox-panel-scrollbar-thumb') : null;
 
     let level = 0;       // 展开程度 0..1
     let headHeight = 0;  // 面板头部高度（每次打开重测：面板总长恒为 50vh，不随标题行数漂移）
@@ -89,8 +92,91 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
         return atAbsoluteBottom();
     }
 
+    // 窄屏自定义滚动条：轨道高度对齐详情可视区，滑块按 scrollTop 比例移动；
+    // 桌面由原生常显滚动条负责（CSS 隐藏本覆盖层）
+    function updateScrollbar() {
+        if (!scrollbarEl || !scrollbarThumb) return;
+        if (!narrowMedia.matches || !lightbox.classList.contains('active') ||
+            isFullscreen() || !panel.classList.contains('is-open')) {
+            scrollbarEl.hidden = true;
+            return;
+        }
+        const viewH = panelDetails.clientHeight;
+        const contentH = panelDetails.scrollHeight;
+        const overflow = contentH - viewH;
+        if (viewH <= 0 || overflow <= 1) {
+            scrollbarEl.hidden = true;
+            return;
+        }
+        const panelRect = panel.getBoundingClientRect();
+        const detailsRect = panelDetails.getBoundingClientRect();
+        const trackTop = Math.max(0, detailsRect.top - panelRect.top);
+        const thumbH = Math.min(viewH, Math.max((viewH * viewH) / contentH, 20));
+        const maxThumbTop = viewH - thumbH;
+        const thumbTop = (panelDetails.scrollTop / overflow) * maxThumbTop;
+        scrollbarEl.hidden = false;
+        scrollbarEl.style.top = `${trackTop}px`;
+        scrollbarEl.style.height = `${viewH}px`;
+        scrollbarThumb.style.height = `${thumbH}px`;
+        scrollbarThumb.style.transform = `translateY(${thumbTop}px)`;
+    }
+
+    // 自定义滚动条交互：点击轨道跳到对应位置，按住滑块拖动滚动；
+    // 独立处理指针事件（stopPropagation），不触发抽屉拖拽/页面选择
+    let scrollbarDrag = null;
+
+    function scrollToScrollbarPointer(clientY) {
+        if (!scrollbarDrag || !scrollbarEl || !scrollbarThumb) return;
+        const rect = scrollbarEl.getBoundingClientRect();
+        const thumbH = scrollbarThumb.getBoundingClientRect().height;
+        const maxThumbTop = rect.height - thumbH;
+        const maxScroll = panelDetails.scrollHeight - panelDetails.clientHeight;
+        if (maxThumbTop <= 0 || maxScroll <= 0) return;
+        const thumbTop = Math.min(
+            Math.max(clientY - rect.top - scrollbarDrag.grabOffset, 0),
+            maxThumbTop
+        );
+        panelDetails.scrollTop = (thumbTop / maxThumbTop) * maxScroll;
+        updateArrowState();
+    }
+
+    if (scrollbarEl && scrollbarThumb) {
+        scrollbarEl.addEventListener('pointerdown', (e) => {
+            if (!narrowMedia.matches || !lightbox.classList.contains('active') ||
+                isFullscreen() || !panel.classList.contains('is-open')) return;
+            if (e.pointerType === 'mouse' && e.button !== 0) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const thumbRect = scrollbarThumb.getBoundingClientRect();
+            const onThumb = e.target === scrollbarThumb;
+            scrollbarDrag = {
+                pointerId: e.pointerId,
+                grabOffset: onThumb ? e.clientY - thumbRect.top : thumbRect.height / 2
+            };
+            if (!onThumb) scrollToScrollbarPointer(e.clientY); // 轨道点击：滑块中心跳到点击处
+            scrollbarEl.setPointerCapture(e.pointerId);
+        });
+        scrollbarEl.addEventListener('pointermove', (e) => {
+            if (!scrollbarDrag || e.pointerId !== scrollbarDrag.pointerId) return;
+            e.preventDefault();
+            e.stopPropagation();
+            scrollToScrollbarPointer(e.clientY);
+        });
+        const endScrollbarDrag = (e) => {
+            if (!scrollbarDrag || (e && e.pointerId !== scrollbarDrag.pointerId)) return;
+            scrollbarDrag = null;
+            if (scrollbarEl.hasPointerCapture(e.pointerId)) {
+                scrollbarEl.releasePointerCapture(e.pointerId);
+            }
+            updateArrowState();
+        };
+        scrollbarEl.addEventListener('pointerup', endScrollbarDrag);
+        scrollbarEl.addEventListener('pointercancel', endScrollbarDrag);
+    }
+
     // 箭头状态：翻转类 + 无障碍标签（翻转后点击是「返回顶部收起」，其余按展开程度区分）
     function updateArrowState() {
+        updateScrollbar();
         // 图像分析收起编排期间（inputHold）不重判：内容收缩 + 回顶会让「触底」
         // 瞬时为假，箭头会先翻下、收起完成后再翻上；保持收起前的方向，
         // finish 解除挂起时经 refresh 统一重判（2026-10-31）
@@ -268,22 +354,12 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
         });
     }
 
-    // 滚动条按需显示：滚轮/拖动内容时挂 is-scrolling、停止约 0.6s 后移除——
-    // scroll 事件同时覆盖桌面原生滚轮滚动与窄屏程序化滚动（拖拽/滚轮手动 scrollTop）
-    let scrollIdleTimer = null;
-    const markScrolling = () => {
-        panel.classList.add('is-scrolling');
-        clearTimeout(scrollIdleTimer);
-        scrollIdleTimer = setTimeout(() => panel.classList.remove('is-scrolling'), 600);
-    };
-
     // 桌面端「放得下整体居中、放不下标题固定数据滚动」：
     // 全部内容天然高度 ≤ 面板高度 → is-fit（面板居中整组含标题胶囊，详情区不滚动）；
     // 否则标题/胶囊固定在顶部，仅数据区滚动。
-    // fitAdjuster（分析区收起期间非空）：**冻结** is-fit 翻转——收起改「滚动
-    // 先行、翻转押后」（2026-10-20 用户确认方案）：收起窗口内详情区保持
-    // 可滚动、scrollToTop 回滚动画真实生效，过渡结束由调用方置 null 并经
-    // flipFitNow 翻转（翻转位移由调用方做位置补偿平滑滑入居中）。
+    // fitAdjuster（分析区收起期间非空）：**冻结** is-fit 翻转——收起过渡
+    // 窗口内详情区保持可滚动，过渡结束由调用方置 null 并经 flipFitNow 翻转
+    // （翻转位移由调用方做位置补偿平滑滑入居中）。
     // force：跳过 active 守卫强制重判（灯箱刚激活/关闭重置时调用）
     let fitAdjuster = null;
     // inputHold（分析区收起期间 true）：wheel 事件整链早退（含最顶部的
@@ -304,10 +380,8 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
     // 任何滚动（滚轮/拖动/程序化滚底）都重判箭头：原生/程序化滚动不一定经过
     // 手势分支的 updateArrowState，遗漏会让箭头停在旧方向（2026-10-31）
     panelDetails.addEventListener('scroll', () => {
-        markScrolling();
         updateArrowState();
     }, { passive: true });
-    lightbox.addEventListener('wheel', markScrolling, { passive: true });
 
     // 面板与子块尺寸变化（内容渲染、切图、视口变化）→ 重判「放得下/放不下」
     if (typeof ResizeObserver !== 'undefined') {
@@ -331,8 +405,8 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
         if (inputHold) return; // 收起编排挂起：点击收起后的旧手势惯性尾不接管（见 setInputHold）
         if (isFullscreen()) return; // 全屏：面板已隐藏，滚轮不驱动抽屉
         if (e.target.closest('.lightbox-strip')) return; // 底部缩略图条自行处理滚轮（横向滚动）
-        // 新输入接管：中断回滚并完成到目标（桌面端分析区收起同样会启动回滚动画，
-        // 用户中途滚轮时必须先摘除，否则动画逐帧覆盖滚动输入）
+        // 新输入接管：中断在途回滚/滚底动画（用户中途滚轮时必须先摘除，
+        // 否则动画逐帧覆盖滚动输入）
         cancelScrollAnim();
         if (!narrowMedia.matches || !lightbox.classList.contains('active')) return;
         // 容差 1px：浏览器缩放等场景 scrollTop 可能残留小数
@@ -391,6 +465,8 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
         if (e.target.closest('button') || e.target.closest('a')) return;
         // 底部缩略图条：横向滚动/点按切换，不进入抽屉拖拽
         if (e.target.closest('.lightbox-strip')) return;
+        // 自定义详情滚动条自行处理点击/拖动，不进入抽屉拖拽
+        if (e.target.closest('.lightbox-panel-scrollbar')) return;
         // 鼠标不进入拖拽模型（展开由滚轮路径覆盖）：保留中屏桌面的文本
         // 选择/复制（触屏选择本就被 touch-action:none 禁止、拖拽期间另由
         // .is-dragging 禁选中防 pointercancel 打断）
@@ -453,11 +529,8 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
     return {
         reset,
         refresh: updateArrowState,
-        // 内容回滚到顶部（供分析区收起时同步回顶）：与收起过渡同曲线同时长锁步——
-        // 曲线/时长与抽屉收起动画共用，中断行为同样由滚轮/拖动接管（cancelScrollAnim）
-        scrollToTop: (duration) => animateScrollTop(0, duration),
-        // 取消在途回滚动画（供分析区收起中途再展开调用：回滚仍在逐帧强制
-        // scrollTop 归零、会覆盖用户任何滚动输入，2026-10-18）
+        // 取消在途回滚动画（分析区开合/用户滚动接管时调用：回滚仍在逐帧
+        // 强制 scrollTop，会覆盖用户任何滚动输入，2026-10-18）
         cancelScroll: cancelScrollAnim,
         // 设置/清除 is-fit 冻结（布尔语义：分析区收起期间 true 冻结翻转、
         // 滚动上下文保持；false 解除，翻转随内容增长自然发生——此前为
