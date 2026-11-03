@@ -5,6 +5,8 @@
  *   （12% + 淡出）→ 换内容 → 新图从另一侧滑入归位并淡入，全程由
  *   slideStyle/startSlideIn/swapIn 编排；滑动提交经 fromPx 显式起点接入
  *   （slideStyle 双相提交，见其注释）；首开走 revealMain 揭示路径
+ * - 主图展示源随视口断点重估：窄屏打开后视口跨过 1000px（进入全屏/拉宽
+ *   窗口/旋转屏幕）时升级为全宽大图，只升不降（见 displaySrc/refreshDisplaySrc）
  * - 辉光 activeGlow 编排（哪层随主图滑动/揭示、何时淡入）在本模块——
  *   层创建/就绪门控/淡入/剪枝仍在 lightbox-glow 模块
  * - 作品收集与邻居预载在 lightbox-collection 模块（无状态工具 + 预载缓存）；
@@ -34,9 +36,27 @@ export function initLightboxSwitch({
         if (photoReady) return;
         photoReady = true;
         if (onPhotoReady) onPhotoReady(currentIndex);
+        // 加载期间视口若已跨过窄屏断点（恰在点全屏后才载完），就绪后补升级
+        refreshDisplaySrc();
     };
 
     let switching = false; // 切换动画进行中（滑出/滑入期间 onLoad 不强制图片透明度，避免覆盖过渡）
+
+    // 主图展示源：窄屏（≤1000px）用降档宽度（photo.srcNarrow），宽屏用全宽
+    // （photo.src = data-full-src）。必须在赋值时求值而非 open 时固化——灯箱
+    // 打开期间视口可能跨过断点（进入全屏/拉宽窗口/旋转屏幕），固化值会让当前
+    // 照片停在窄版；主图显示尺寸又受自然尺寸封顶，窄版在放大的全屏里无法
+    // 随之铺满，而辉光层按容器铺满——形成「辉光全屏、主图仍小」的错位
+    //（2026-11-04）
+    const displaySrc = (photo) => (narrowLightbox.matches && photo.srcNarrow) || photo.src;
+
+    // 当前已赋给 <img> 的全尺寸源（升级判定用；缩放浮现阶段的缩略图、
+    // 全尺寸加载失败后保留的缩略图都不计入，保持空串）
+    let currentSrc = '';
+    const setMainSrc = (photo) => {
+        currentSrc = displaySrc(photo);
+        lightboxImg.src = currentSrc;
+    };
 
     // 滑动动画同时作用于主图与当前辉光层：辉光随主图一起移动与淡入淡出。
     // 主图位移百分比按**自身盒宽**解析（object-fit: contain 的照片盒，竖构图时
@@ -126,7 +146,17 @@ export function initLightboxSwitch({
         }
     };
 
-    // 五个在途监听槽一次作废（open 入口 / close 共用）：新增入口或调整动画时
+    // 展示源升级的在途监听（见 upgradeMainSrc）：换源后加载失败要回退窄版，
+    // 成功/失败成对管理——切图/关闭后陈旧闭包不得再回退当前照片的源
+    let pendingUpgrade = null;
+    const clearPendingUpgrade = () => {
+        if (!pendingUpgrade) return;
+        lightboxImg.removeEventListener('load', pendingUpgrade.load);
+        lightboxImg.removeEventListener('error', pendingUpgrade.error);
+        pendingUpgrade = null;
+    };
+
+    // 各在途监听槽一次作废（open 入口 / close 共用）：新增入口或调整动画时
     // 不必逐个记槽，避免漏清任一槽导致陈旧闭包在后续 open/切换中重放
     const clearAllPending = () => {
         clearPendingSwitch();
@@ -134,12 +164,59 @@ export function initLightboxSwitch({
         clearPendingSlideIn();
         clearPendingUnlock();
         clearPendingFirstLoad();
+        clearPendingUpgrade();
     };
 
     // 缩放浮现进行中：其揭示由 zoom.onDone 负责——常驻 error 监听不得在
     // 缩放途中提前 revealMain（非 AVIF 环境 thumb 回退重试时的 error 会
     // 触发提前揭示）
     let zoomPending = false;
+
+    // 展示源升级：只升不降——已载入的大图在窄窗口中同样受容器约束、观感一致，
+    // 回退只会多一次下载。浏览器在新图解码期间保留旧像素（无空白），解码完成
+    // 才按新自然尺寸重排；失败回退原窄版（多为 CDN 临时异常），避免把已显示
+    // 的主图换成破图。AVIF→WebP 兜底在途时不回退（捕获阶段已改写 src），
+    // 重挂错误监听等待兜底结果（同 lightbox-backdrop 口径）
+    function upgradeMainSrc(p) {
+        const desired = displaySrc(p);
+        if (imageWidth(desired) <= imageWidth(currentSrc)) return;
+        const revertTo = currentSrc;
+        clearPendingUpgrade();
+        currentSrc = desired;
+        // 清除上一张照片遗留的 AVIF 兜底标记（img 元素跨照片复用）：否则本次
+        // 首次错误会被误判为「兜底在途」，跳过回退
+        delete lightboxImg.dataset.avifRetry;
+        lightboxImg.src = desired;
+        const onLoad = () => { clearPendingUpgrade(); };
+        const onError = () => {
+            if (!pendingUpgrade) return; // 切图/关闭时已作废
+            if (lightboxImg.dataset.avifRetry) {
+                delete lightboxImg.dataset.avifRetry;
+                pendingUpgrade.error = onError;
+                lightboxImg.addEventListener('error', onError, { once: true });
+                return;
+            }
+            clearPendingUpgrade();
+            // 换源期间已切图/关闭：currentSrc 已被其它来源覆盖，不再回退
+            if (currentSrc !== desired) return;
+            currentSrc = revertTo;
+            lightboxImg.src = revertTo;
+        };
+        pendingUpgrade = { load: onLoad, error: onError };
+        lightboxImg.addEventListener('load', onLoad, { once: true });
+        lightboxImg.addEventListener('error', onError, { once: true });
+    }
+
+    // 当前照片展示源重估（窄屏断点变化触发）：进入全屏/拉宽窗口/旋转屏幕后
+    // 视口跨过 1000px 断点时，把打开时固化的窄版源换为全宽大图。加载/切图/
+    // 缩放进行中不换源（各自收尾路径会补调）；缩略图占位阶段（currentSrc 为
+    // 空）不升级——全尺寸加载失败时保留缩略图的既有行为（2026-11-04）
+    function refreshDisplaySrc() {
+        if (!lightbox.classList.contains('active')) return;
+        if (!photoReady || switching || zoomPending || !currentSrc) return;
+        if (currentIndex < 0 || currentIndex >= currentPhotos.length) return;
+        upgradeMainSrc(currentPhotos[currentIndex]);
+    }
 
     let mainSlideStarted = false; // 主图是否已开始滑入/揭示（辉光不得先于主图淡入）
     const slideTransition = reducedMotion ? 'none' : 'transform 0.25s ease, opacity 0.25s ease';
@@ -246,6 +323,7 @@ export function initLightboxSwitch({
             switching = false;
             lightboxImg.style.transform = '';
             lightboxImg.style.transition = '';
+            refreshDisplaySrc(); // 滑入期间视口跨过窄屏断点的补升级
             return;
         }
         lightboxImg.addEventListener('transitionend', pendingSlideIn = function slideInDone() {
@@ -263,18 +341,19 @@ export function initLightboxSwitch({
             lightboxImg.style.transform = '';
             lightboxImg.style.transition = '';
             lightboxImg.style.opacity = '1';
+            refreshDisplaySrc(); // 滑入期间视口跨过窄屏断点的补升级
         });
     }
 
-    // 切换作品分支（open 的 isSwitch 路径）：旧图滑出 → 换内容 → 新图滑入
-    function startSwitch(p, src, dir, fromPx) {
+    // 切换作品分支（open 的 isSwitch 路径）：旧图轻微滑出 → 换内容 → 新图滑入
+    function startSwitch(p, dir, fromPx) {
         // 切换作品：旧图轻微滑出（12%）并淡出 →
         // 换内容 → 新图从另一侧轻微滑入归位并淡入；
         // 毛玻璃背景在滑出开始即同步切换（对齐参考站：旧层立即淡出、
         // 新层就绪后淡入），背景变化贯穿整个切换过程。
         // 新图未缓存时浏览器在 src 加载期间仍显示旧图——隐藏图片并转圈，
         // 加载完成后再滑入（与瀑布流加载指示器同款）
-        const cached = collection.isCached(src);
+        const cached = collection.isCached(displaySrc(p));
 
         // 切换开始即复位主图揭示标志：滑出期间辉光就绪只登记、不得淡入——
         // 否则缓存命中的新辉光会在旧图滑出途中就地显现（switching 要等
@@ -321,7 +400,8 @@ export function initLightboxSwitch({
         const swapIn = () => {
             switching = true; // 滑入期间 onLoad 不强制透明度
             slideStyle(dir * 12, '0', 'none');
-            lightboxImg.src = src;
+            // 赋值时求值（非 open 快照）：滑出 0.25s 期间视口可能已跨过断点
+            setMainSrc(p);
             lightboxImg.alt = p.alt;
             renderPanel(p);
             lightboxImg.offsetHeight; // 强制 reflow
@@ -429,6 +509,7 @@ export function initLightboxSwitch({
                 zoomPending = false;
                 lightbox.style.transition = ''; // 恢复容器淡入淡出（关闭保留淡出）
                 revealMain(); // 面板文字与辉光随缩放完成淡入
+                refreshDisplaySrc(); // 缩放期间视口跨过窄屏断点的补升级
             }, maxW, maxH);
             // 全尺寸预载自点击瞬间启动（与旧流程同窗）：带宽不再被推迟到
             // 动画结束后、与 w_800 分析探测错峰；就绪即换源（无需等动画
@@ -440,7 +521,9 @@ export function initLightboxSwitch({
             loadWithAvifFallback(full); // 游离 Image 不进 document 捕获监听：实例级 AVIF 兜底
             full.onload = () => {
                 if (openToken !== token) return;
-                lightboxImg.src = src;
+                // 赋值时求值：预载期间视口可能已跨过窄屏断点（点全屏后
+                // 窄版预载才完成），直接换入全宽源
+                setMainSrc(p);
                 clearPendingUnlock();
                 // 换入主图后要等当前 <img> 真正加载完成（不是预载 Image）：
                 // 自动播放据此计时，加载期间不算入当前图片的播放时长
@@ -462,7 +545,7 @@ export function initLightboxSwitch({
             };
             full.src = src;
         } else {
-            lightboxImg.src = src;
+            setMainSrc(p);
             lightboxImg.alt = p.alt;
             backdrop.open(p.thumb || p.src);
             activateDialog();
@@ -500,8 +583,9 @@ export function initLightboxSwitch({
         swipe.reset(); // 复位滑动内联残留（拖动中关闭后重开图片错位的根源）
         zoom.cancel(); // 作废在途缩放动画（含布局盒 width/height 锁与收尾回调残留）
         lightbox.style.transition = ''; // 缩放路径的容器直显内联残留（关闭淡出依赖样式表过渡）
-        // 五个在途监听槽一次作废：滑入/滑出收尾、换源摘锁、首开 load、切图 load/error——
-        // 防陈旧闭包在本次打开/切换中重放（快速同向连切不重放旧作品）
+        // 各在途监听槽一次作废：滑入/滑出收尾、换源摘锁、首开 load、切图
+        // load/error、展示源升级——防陈旧闭包在本次打开/切换中重放
+        //（快速同向连切不重放旧作品）
         clearAllPending();
         zoomPending = false; // 缩放进行标志复位（切换/普通首开路径不置位）
         openToken++;
@@ -511,6 +595,7 @@ export function initLightboxSwitch({
         const dir = isSwitch ? dirHint : 1;
         currentIndex = index;
         photoReady = false; // 新照片主图尚未就绪；加载完成/失败后由 notifyPhotoReady 标记
+        currentSrc = ''; // 展示源槽位随照片重置（缩略图阶段不计入，见 displaySrc 注释）
         const p = currentPhotos[index];
         // 底部缩略图条同步（首开构建 + 当前项高亮/滚动）：先于动画与尺寸测量，
         // 条的出现/隐藏带来的内容区高度变化在动画开始前落定
@@ -520,8 +605,8 @@ export function initLightboxSwitch({
         collection.syncPhotoUrl(p.slug, isSwitch);
         // 窄屏（≤1000px，与抽屉断点一致）灯箱主图改用 imageSizes.lightboxNarrow：
         // 手机屏约 1080px 宽、观感无差；大图宽度的首次光栅化与背景淡入同窗争抢合成器是旧版
-        // Chromium 暗角恢复卡顿的剩余尖峰——桌面保持 w_1920
-        const displaySrc = (photo) => (narrowLightbox.matches && photo.srcNarrow) || photo.src;
+        // Chromium 暗角恢复卡顿的剩余尖峰——桌面保持 w_1920。此处只用快照
+        // 预载邻居；真正赋值见 setMainSrc（按赋值时断点求值）
         const src = displaySrc(p);
 
         if (currentPhotos.length > 1) {
@@ -555,7 +640,7 @@ export function initLightboxSwitch({
             prefetchAnalysis(analysisPhotos);
         }
 
-        if (isSwitch) startSwitch(p, src, dir, fromPx);
+        if (isSwitch) startSwitch(p, dir, fromPx);
         else startFirstOpen(p, src, zoomFrom);
         updateArrows();
     }
@@ -690,6 +775,11 @@ export function initLightboxSwitch({
             ? rect : null;
         open(idx, undefined, zoomFrom);
     };
+
+    // 视口跨过窄屏断点（进入全屏/拉宽窗口/旋转屏幕）时重估当前照片展示源：
+    // 灯箱壳与入口随首次打开注入一次，监听随页面生命周期存在（SPA 换页保留
+    // 灯箱与骨架，无需清理）
+    narrowLightbox.addEventListener('change', refreshDisplaySrc);
 
     return {
         open, close, prev, next, openByImg, openAt,
