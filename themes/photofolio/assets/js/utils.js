@@ -151,9 +151,14 @@ export function fillTemplate(template, values) {
 // 开合内容高度变化时把控件钉在屏幕位置（2026-11-02 用户方案）：每帧按控件
 // 视口位移补偿容器 scrollTop；edge='bottom' 用于收起方向（锚定可折叠容器
 // 的底边，避免收起按钮被裁剪后的布局位置失真）。滚到容器上/下尽头即停止
-// 锚定，让内容随整体移动（例如详情栏上/下方已无可滚动内容）
+// 锚定，让内容随整体移动（例如详情栏上/下方已无可滚动内容）。
+// 同一时间只允许一个锚定；切图/隐藏/断点/用户指针、键盘、滚轮输入都取消，
+// 避免旧 rAF 或两个折叠区互相抢写 scrollTop（2026-11-03 审查修复）
+let activeAnchorCancel = null;
+
 export function anchorWhile(el, container, duration, edge = 'top') {
     if (!el || !container) return () => {};
+    if (activeAnchorCancel) activeAnchorCancel();
     const read = () => {
         const r = el.getBoundingClientRect();
         return edge === 'bottom' ? r.bottom : r.top;
@@ -161,24 +166,46 @@ export function anchorWhile(el, container, duration, edge = 'top') {
     const anchorPos = read();
     const start = performance.now();
     let raf = 0;
-    let canceled = false;
+    let stopped = false;
+    const stop = () => {
+        if (stopped) return;
+        stopped = true;
+        cancelAnimationFrame(raf);
+        document.removeEventListener('pointerdown', stop, true);
+        document.removeEventListener('keydown', stop, true);
+        document.removeEventListener('wheel', stop);
+        window.removeEventListener('resize', stop);
+        if (activeAnchorCancel === stop) activeAnchorCancel = null;
+    };
     const step = () => {
-        if (canceled) return;
+        if (stopped) return;
+        // 锚点被隐藏/移除（如切到非观鸟照片后图鉴块 hidden）：立即停止
+        if (!el.isConnected || el.getClientRects().length === 0) {
+            stop();
+            return;
+        }
         const delta = read() - anchorPos;
         if (Math.abs(delta) > 0.5) {
             const before = container.scrollTop;
             const max = Math.max(0, container.scrollHeight - container.clientHeight);
             const next = Math.max(0, Math.min(max, before + delta));
             container.scrollTop = next;
-            if (Math.abs(next - before) < 0.5 && Math.abs(delta) > 1) return; // 滚动尽头
+            if (Math.abs(next - before) < 0.5 && Math.abs(delta) > 1) { // 滚动尽头
+                stop();
+                return;
+            }
         }
         if (performance.now() - start < duration + 60) raf = requestAnimationFrame(step);
+        else stop();
     };
+    // 任何后续用户输入/视口变化都让位（初始触发事件已派发完毕）
+    document.addEventListener('pointerdown', stop, { capture: true, once: true });
+    document.addEventListener('keydown', stop, { capture: true, once: true });
+    document.addEventListener('wheel', stop, { passive: true, once: true });
+    window.addEventListener('resize', stop, { once: true });
+    activeAnchorCancel = stop;
     raf = requestAnimationFrame(step);
-    return () => {
-        canceled = true;
-        cancelAnimationFrame(raf);
-    };
+    return stop;
 }
 
 // 裸元素层栈（灯箱背景层与辉光层共用）：最新层 = 末位；剪枝只留末层

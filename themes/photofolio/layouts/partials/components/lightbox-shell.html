@@ -1,5 +1,6 @@
-    {{- /* 构建期校验 photo.toml 的 species 引用与 birds.toml 条目（页面无关，缓存一次） */ -}}
-    {{- $_ := partialCached "utils/bird-registry.html" "birds" "birds" -}}
+    {{- /* 构建期校验 photo.toml 的 species 引用、bird_series 匹配与保育等级 i18n
+           （页面无关，缓存一次；返回值提供等级文案与系列名） */ -}}
+    {{- $birdRegistry := partialCached "utils/bird-registry.html" "birds" "birds" -}}
     <!-- Lightbox 全局容器（dialog 语义：读屏器视作模态对话框、背景 inert 由 JS 管理） -->
     {{/* 对话框名称随照片变化：aria-labelledby 指向当前照片标题（打开即填充）；
         标题为空时回落 aria-label 静态名（acccname 计算规则） */}}
@@ -217,13 +218,10 @@
                                         {{/* 物种名作为图鉴标题：展开后才随内容出现；右侧为保育等级标签 */}}
                                         <div class="lightbox-bird-heading">
                                             <h4 class="lightbox-section-title lightbox-bird-name" id="lightbox-bird-name"></h4>
+                                            {{/* 保育等级文案由 bird-registry 按唯一等级清单生成（JSON），
+                                                 shell 不再逐级硬编码 data-label-* */}}
                                             <span class="lightbox-bird-status" id="lightbox-bird-status" hidden
-                                                data-label-lc="{{ i18n "bird_conservation_lc" }}"
-                                                data-label-nt="{{ i18n "bird_conservation_nt" }}"
-                                                data-label-vu="{{ i18n "bird_conservation_vu" }}"
-                                                data-label-en="{{ i18n "bird_conservation_en" }}"
-                                                data-label-cr="{{ i18n "bird_conservation_cr" }}"
-                                                data-label-domestic="{{ i18n "bird_conservation_domestic" }}"></span>
+                                                data-labels="{{ $birdRegistry.labels | jsonify }}"></span>
                                         </div>
                                         <dl class="lightbox-bird-taxonomy">
                                             <div class="lightbox-bird-rank">

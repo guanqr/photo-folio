@@ -1,3 +1,5 @@
+@use "../base/base" as *;
+
 /* ===== Lightbox 觀鳥圖鑑 ===== */
 /* slot 恒为详情区末子块（无鸟种时块 hidden、slot 高度 0）——保留详情区
    「末子块 auto 边距」居中规则，不用为隐藏尾块改选择器。块默认收起，
@@ -11,45 +13,24 @@
     }
 }
 
+/* slot 由 revealSynced 写 opacity 随图片同步揭示：没有过渡时首次打开鸟照
+   会瞬显、不与其他详情块一起淡入（2026-11-03 审查修复） */
+.lightbox-bird-slot {
+    transition: opacity var(--transition-fade);
+}
+
 .lightbox-bird-trigger {
-    display: flex;
-    align-items: center;
-    gap: 0.4em;
-    /* 与图像分析触发行完全一致：上边距/内边距/最大高度/过渡同值，
-       展开后边距与内边距一并归零（border-box 下 max-height 无法压缩 padding） */
-    margin-top: 1.1em;
-    padding: 0.2em 0;
-    max-height: 2em;
-    overflow: hidden;
-    background: none;
-    border: none;
-    color: var(--color-text-muted);
-    font-family: var(--font-meta);
-    font-size: 0.85em;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    transition: opacity var(--transition-fade), color var(--transition-fade),
-        max-height 0.6s ease, margin-top 0.6s ease, padding 0.6s ease;
+    /* 与图像分析触发行共用样式（见 base/_base.scss 的
+       lightbox-detail-trigger mixin），svg 额外禁止收缩 */
+    @include lightbox-detail-trigger;
 
     svg {
-        width: 0.85em;
-        height: 0.85em;
         flex: none;
-        transition: transform var(--transition-spring);
-    }
-
-    &:hover {
-        color: var(--color-text-secondary);
     }
 }
 
 .lightbox-bird.is-open .lightbox-bird-trigger {
-    max-height: 0;
-    margin-top: 0;
-    padding-top: 0;
-    padding-bottom: 0;
-    opacity: 0;
-    visibility: hidden;
+    @include lightbox-detail-trigger-collapsed;
 }
 
 /* 开合：grid 行 0fr↔1fr 过渡，内容高度未知也无需 JS 测量；内层裁剪溢出 */
@@ -114,28 +95,14 @@
     border-color: hsla(var(--color-bird-status-#{$name}-h), var(--color-bird-status-#{$name}-s), var(--color-bird-status-#{$name}-l), 0.45);
 }
 
-.lightbox-bird-status.is-lc {
-    @include bird-status-color(lc);
-}
+/* 等级名单与 bird-registry.html 的 $levels 对应；新增等级需同时补 i18n 文案
+   （构建期 errorf）与此处配色——漏配色只回落默认色，标签不会消失 */
+$bird-levels: lc, nt, vu, en, cr, domestic;
 
-.lightbox-bird-status.is-nt {
-    @include bird-status-color(nt);
-}
-
-.lightbox-bird-status.is-vu {
-    @include bird-status-color(vu);
-}
-
-.lightbox-bird-status.is-en {
-    @include bird-status-color(en);
-}
-
-.lightbox-bird-status.is-cr {
-    @include bird-status-color(cr);
-}
-
-.lightbox-bird-status.is-domestic {
-    @include bird-status-color(domestic);
+@each $level in $bird-levels {
+    .lightbox-bird-status.is-#{$level} {
+        @include bird-status-color($level);
+    }
 }
 
 .lightbox-bird-taxonomy {
@@ -170,11 +137,8 @@
 }
 
 .lightbox-bird-text {
-    margin: 0;
-    /* 与「背後的故事」正文同字号/颜色（故事为 0.9em / text-secondary） */
-    font-size: 0.9em;
-    line-height: 1.8;
-    color: var(--color-text-secondary);
+    /* 与「背後的故事」正文共用字号/行高/颜色（见 lightbox-detail-text mixin） */
+    @include lightbox-detail-text;
 }
 
 .lightbox-bird-sources {
@@ -197,30 +161,13 @@
     margin-right: 0.4em;
 }
 
-/* 收起入口：内容最底部的安静文字（上箭头），与图像分析底部收起按钮同款 */
+/* 收起入口：内容最底部的安静文字（上箭头），与图像分析底部收起按钮共用
+   （见 base/_base.scss 的 lightbox-detail-collapse mixin） */
 .lightbox-bird-collapse {
-    display: flex;
-    align-items: center;
-    gap: 0.4em;
-    margin: 1.1em 0 0;
-    padding: 0.2em 0;
-    background: none;
-    border: none;
-    color: var(--color-text-muted);
-    font-family: var(--font-meta);
-    font-size: 0.85em;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    transition: color var(--transition-fade);
+    @include lightbox-detail-collapse;
 
     svg {
-        width: 0.85em;
-        height: 0.85em;
         flex: none;
-    }
-
-    &:hover {
-        color: var(--color-text-secondary);
     }
 }
 

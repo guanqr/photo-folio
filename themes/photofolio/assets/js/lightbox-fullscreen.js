@@ -27,11 +27,22 @@ export function initLightboxFullscreen({ lightbox, button, onExit }) {
     let idleTimer = null;
     const canNative = typeof lightbox.requestFullscreen === 'function';
     const isOpen = () => lightbox.classList.contains('active');
+    const idleInertRoots = [
+        lightbox.querySelector('.lightbox-topbar'),
+        lightbox.querySelector('.lightbox-arrows')
+    ].filter(Boolean);
 
     function setIdle(next) {
         if (idle === next) return;
         idle = next;
         lightbox.classList.toggle('is-idle', next);
+        // 隐藏的顶栏/箭头移出 Tab 序与读屏树；否则焦点仍在不可见按钮上，
+        // Enter/Space 会激活隐藏控件（2026-11-03 审查修复）
+        idleInertRoots.forEach((el) => { el.inert = next; });
+        if (next && document.activeElement &&
+            idleInertRoots.some((el) => el.contains(document.activeElement))) {
+            document.activeElement.blur();
+        }
     }
 
     function stopIdleTimer() {
@@ -51,9 +62,12 @@ export function initLightboxFullscreen({ lightbox, button, onExit }) {
         }, IDLE_HIDE_MS);
     }
 
-    // 手动活动：摘除闲置态（控件淡入）并重新计时
+    // 手动活动：摘除闲置态（控件淡入）并重新计时。关闭流程已先摘 .active，
+    // 关闭淡出期间的 pointermove/pointerdown/wheel 不得把 is-idle 摘掉——
+    // 否则隐藏的顶栏/箭头会在淡出途中被唤醒；is-idle 保留到下次 reset
+    // （2026-11-03 审查修复）
     function wake() {
-        if (!active) return;
+        if (!active || !isOpen()) return;
         setIdle(false);
         scheduleIdle();
     }

@@ -1,6 +1,8 @@
 {{- /* 鸟种数据注册表与构建期校验（唯一实现）：
        data/birds.toml 的 id 必须唯一且字段完整；photo.toml 中带 species 的照片
-       必须能反查到条目。页面无关，调用方用 partialCached（variant "birds"）只跑一次。 */ -}}
+       必须能反查到条目；bird_series 必须匹配真实系列；保育等级必须有 i18n 文案。
+       页面无关，调用方用 partialCached（variant "birds"）只跑一次；返回值供
+       灯箱壳（labels）与照片卡片（series）复用。 */ -}}
 {{- $birds := slice -}}
 {{- $birdSeries := "" -}}
 {{- with hugo.Data.birds -}}
@@ -13,6 +15,14 @@
 {{- $ids := slice -}}
 {{- $required := slice "name" "latin" "order" "order_latin" "family" "family_latin" "genus" "genus_latin" "distribution" "habitat" "habits" "conservation_level" -}}
 {{- $levels := slice "lc" "nt" "vu" "en" "cr" "domestic" -}}
+{{- $labels := dict -}}
+{{- range $level := $levels -}}
+    {{- $label := i18n (printf "bird_conservation_%s" $level) -}}
+    {{- if not $label -}}
+        {{- errorf "i18n 缺少保育等级 %q 的文案（bird_conservation_%s）" $level $level -}}
+    {{- end -}}
+    {{- $labels = merge $labels (dict $level $label) -}}
+{{- end -}}
 {{- range $bird := $birds -}}
     {{- $id := $bird.id | default "" -}}
     {{- if not $id }}{{ errorf "data/birds.toml 存在缺少 id 的鸟种条目" }}{{ end -}}
@@ -30,8 +40,16 @@
     {{- end -}}
     {{- $ids = $ids | append $id -}}
 {{- end -}}
+{{- $seriesMatched := false -}}
 {{- range $photo := hugo.Data.photo.photo -}}
     {{- with $photo.species -}}
         {{- if not (in $ids .) }}{{ errorf "photo.toml 照片 %q 的 species %q 未在 data/birds.toml 建档" $photo.src . }}{{ end -}}
     {{- end -}}
+    {{- if and $birdSeries (eq ($photo.series | default "") $birdSeries) -}}
+        {{- $seriesMatched = true -}}
+    {{- end -}}
 {{- end -}}
+{{- if and $birdSeries (not $seriesMatched) -}}
+    {{- errorf "data/birds.toml 的 bird_series %q 未匹配 photo.toml 中任何照片的 series（拼写错误或系列改名后会静默失去图鉴开关）" $birdSeries -}}
+{{- end -}}
+{{- return (dict "series" $birdSeries "levels" $levels "labels" $labels) -}}

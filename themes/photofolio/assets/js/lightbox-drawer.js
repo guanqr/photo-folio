@@ -93,11 +93,17 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
     }
 
     // 窄屏自定义滚动条：轨道高度对齐详情可视区，滑块按 scrollTop 比例移动；
-    // 桌面由原生常显滚动条负责（CSS 隐藏本覆盖层）
+    // 桌面由原生常显滚动条负责（CSS 隐藏本覆盖层）。仅抽屉全开（level≈1）
+    // 时可用——部分展开阶段详情区仍由抽屉虚拟位置模型接管，scrollTop 必须为 0
+    const scrollbarAvailable = () => narrowMedia.matches
+        && lightbox.classList.contains('active')
+        && !isFullscreen()
+        && panel.classList.contains('is-open')
+        && level >= 0.999;
+
     function updateScrollbar() {
         if (!scrollbarEl || !scrollbarThumb) return;
-        if (!narrowMedia.matches || !lightbox.classList.contains('active') ||
-            isFullscreen() || !panel.classList.contains('is-open')) {
+        if (!scrollbarAvailable()) {
             scrollbarEl.hidden = true;
             return;
         }
@@ -142,9 +148,11 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
 
     if (scrollbarEl && scrollbarThumb) {
         scrollbarEl.addEventListener('pointerdown', (e) => {
-            if (!narrowMedia.matches || !lightbox.classList.contains('active') ||
-                isFullscreen() || !panel.classList.contains('is-open')) return;
+            if (!scrollbarAvailable()) return;
+            if (inputHold) return; // 分析收起编排期间挂起输入
             if (e.pointerType === 'mouse' && e.button !== 0) return;
+            // stopPropagation 会跳过 lightbox 级 pointerdown；自行取消在途平滑滚底
+            cancelScrollAnim();
             e.preventDefault();
             e.stopPropagation();
             const thumbRect = scrollbarThumb.getBoundingClientRect();

@@ -1,3 +1,5 @@
+@use "../base/base" as *;
+
 /* ===== Lightbox 分析图表（影調 / 色卡 / 飽和度 / 色相）与故事 ===== */
 
 /* 分析加载失败/观鸟图鉴缺少资料提示：借用 .empty-state 的虚线框与图标/标题配色、无底色，
@@ -264,10 +266,7 @@
 }
 
 .lightbox-story {
-    font-size: 0.9em;
-    line-height: 1.8;
-    color: var(--color-text-secondary);
-    margin: 0;
+    @include lightbox-detail-text;
     transition: color var(--transition-fade);
 }
 

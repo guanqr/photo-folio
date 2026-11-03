@@ -41,9 +41,10 @@
 {{ $categoryKey := $photo.category }}
 {{ $seriesName := $photo.series }}
 {{/* 观鸟图鉴开关：带 species 或属于 birds.toml 配置的观鸟系列（缺 species 也显示，
-   展开后由 lightbox-bird.js 提示缺少资料） */}}
-{{ $birdSeries := "" }}
-{{ with hugo.Data.birds }}{{ $birdSeries = .bird_series | default "" }}{{ end }}
+   展开后由 lightbox-bird.js 提示缺少资料）；系列名取自 bird-registry 的返回值，
+   与构建期校验共用同一份数据 */}}
+{{ $birdRegistry := partialCached "utils/bird-registry.html" "birds" "birds" }}
+{{ $birdSeries := $birdRegistry.series }}
 {{ $showBirdGuide := or $photo.species (and $photo.series $birdSeries (eq $photo.series $birdSeries)) }}
 
 {{/* 构图方向：一律由真实宽高推导（宽 ≥ 高含相等 = landscape）；orientation 字段已废弃 */}}

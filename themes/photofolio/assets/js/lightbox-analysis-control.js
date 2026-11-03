@@ -19,6 +19,7 @@
  *   分析本体为管线预计算结果拉取与渲染，见 lightbox-analysis.js）
  */
 import { anchorWhile } from './utils.js';
+import { createPanelCenterComp } from './lightbox-panel-comp.js';
 
 export function initLightboxAnalysisControl({
     trigger, wrap, caption, tagsEl, panelDetails, panel,
@@ -28,16 +29,18 @@ export function initLightboxAnalysisControl({
     // 这里返回空实现，避免 getComputedStyle(null) 抛错中断 initLightbox
     // 后续的 masonry / 筛选等页面模块
     if (!trigger || !wrap) {
-        return { setOpen() {}, reset() {}, cancelCenterComp() {} };
+        return { setOpen() {}, reset() {}, cancelCenterComp() {}, cancelAnchor() {} };
     }
-    // 同窗居中下滑载体：标题/标签/详情区的 transform 过渡（合成器驱动、零
-    // 逐帧重排——margin 版每帧整面板 reflow，与滚动/收缩叠加成重绘抖动、
-    // 观感残影）；transform 会扩展祖先 scrollable overflow，交换时刻必须
-    // 先清 transform 再翻转（见 transitionend 处理：同任务无绘制、视觉连续
-    // 且 is-fit 判定读到干净布局）
-    const compEls = [caption, tagsEl, panelDetails].filter(Boolean);
-    function cancelCenterComp() {
-        compEls.forEach((el) => { el.style.transition = ''; el.style.transform = ''; });
+    // 收起居中补偿与觀鳥圖鑑共用（见 lightbox-panel-comp.js）：标题/胶囊/
+    // 详情区的 transform 下滑与翻转残余补偿都收在 helper 内，本模块只负责
+    // 计算最终详情区高度并调用 begin/finish
+    const centerComp = createPanelCenterComp({ panel, panelDetails, caption, tagsEl, drawer });
+    const cancelCenterComp = () => centerComp.cancel();
+    function cancelAnchor() {
+        if (anchorCancel) {
+            anchorCancel();
+            anchorCancel = null;
+        }
     }
     // 触发行的收起态完整足迹（内容高 + margin + padding）：模块初始化时分析区
     // 处于收起态、触发行完整可见——一次性实测缓存供收起路径的组高预测使用；
@@ -125,12 +128,10 @@ export function initLightboxAnalysisControl({
                 // 归零（桌面）、并驱动抽屉 level 拉低（窄屏），刻意编排不被
                 // 旧手势接管（2026-10-21；finish/展开/reset 解除）
                 drawer.setInputHold(true);
-                // 居中偏移按最终组高推导（与 updateFit 翻转判定同口径，2026-10-21）：
-                // 当前详情区 scrollHeight（含边距）− wrap 当前高 + 触发行最终足迹 −
-                // 触发行当前盒（is-open 刚摘、过渡起点值 ≈ 0）——与翻转实测同一组量、
-                // 残余归零（原 offsetHeight 逐块求和漏外边距、整数取整，差值经 0.3s
-                // 补偿吸收呈「滑过头再上移」）；预测仅作滑行引导，终态由交换时刻的
-                // 实测残余校正兜底
+                // 最终详情区高度按最终组高推导（与 updateFit 翻转判定同口径，
+                // 2026-10-21）：当前详情区 scrollHeight（含边距）− wrap 当前高 +
+                // 触发行最终足迹 − 触发行当前盒（is-open 刚摘、过渡起点值 ≈ 0）；
+                // 居中下滑与残余校正由共享 helper 完成
                 if (panelDetails) {
                     const cs = getComputedStyle(trigger);
                     const finalDetailsH = panelDetails.scrollHeight
@@ -138,18 +139,7 @@ export function initLightboxAnalysisControl({
                         + (triggerFootprint - trigger.offsetHeight
                             - parseFloat(cs.marginTop)
                             - parseFloat(cs.marginBottom));
-                    const totalHFinal = panel.scrollHeight - panelDetails.clientHeight + finalDetailsH;
-                    const free = panel.clientHeight - totalHFinal;
-                    const dy = free > 0 ? free / 2 : 0;
-                    // 下滑仅桌面生效（窄屏 is-fit 永不翻转、下滑只会被残余补偿弹回）
-                    // 且仅当收起前未居中（已 is-fit 时整组本就居中，下滑会滑过头
-                    // 再回弹）（2026-10-21 审查修复 #1/#9）
-                    if (dy > 0 && drawer.fitApplicable() && !panel.classList.contains('is-fit')) {
-                        compEls.forEach((el) => {
-                            el.style.transition = 'transform 0.6s ease'; // 与收缩/滚动同曲线同时长（0.6s 全窗，2026-10-20 按用户要求放缓）
-                            el.style.transform = `translateY(${dy}px)`;
-                        });
-                    }
+                    centerComp.begin(finalDetailsH);
                 }
                 // 收尾（幂等、槽位可拆）：释放冻结 → 交换为真实 is-fit 居中。
                 // 触发源三个：max-height 的 transitionend、transitioncancel
@@ -159,30 +149,7 @@ export function initLightboxAnalysisControl({
                 const finish = () => {
                     teardownCollapseEnd();
                     wrap.style.maxHeight = ''; // 清除内联、恢复 class 的 0 基线
-                    drawer.setInputHold(false); // 解除输入挂起（与释放冻结同任务，无中途派发）
-                    drawer.setFitAdjuster(false); // 释放冻结
-                    // 交换：先清 transform（判定读干净布局）→ 翻转到居中；滑行
-                    // 预测的残余经实测校正——翻转前记视觉位、翻转后以残余
-                    // transform 拉回（同任务无绘制、零瞬跳），再 0.3s 平滑吸收
-                    const visualBefore = caption ? caption.getBoundingClientRect().top : 0;
-                    cancelCenterComp();
-                    if (panelDetails) panelDetails.classList.remove('no-margin-center');
-                    drawer.flipFitNow(); // 翻转 is-fit（整组居中）
-                    if (caption) {
-                        const residual = visualBefore - caption.getBoundingClientRect().top;
-                        if (Math.abs(residual) > 0.5) {
-                            compEls.forEach((el) => {
-                                el.style.transition = 'none';
-                                el.style.transform = `translateY(${residual}px)`;
-                            });
-                            void caption.offsetHeight; // 提交起点
-                            compEls.forEach((el) => {
-                                el.style.transition = 'transform 0.3s ease';
-                                el.style.transform = '';
-                            });
-                        }
-                    }
-                    drawer.refresh(); // 内容高度已变：窄屏抽屉箭头状态补判（t=0 时高度未变、判的是旧态）
+                    centerComp.finish(); // 释放冻结/输入挂起、翻转 is-fit 并做残余补偿
                 };
                 collapseEndHandler = (e) => {
                     // 只认分析容器自身的 max-height 过渡：transitionend/cancel 会冒泡，
@@ -223,11 +190,8 @@ export function initLightboxAnalysisControl({
         if (panelDetails) panelDetails.classList.remove('no-margin-center'); // 关闭清除收起窗口的顶对齐态
         drawer.setInputHold(false); // 关闭中断在途收起：解除输入挂起
         drawer.setFitAdjuster(false);
-        if (anchorCancel) {
-            anchorCancel();
-            anchorCancel = null;
-        }
+        cancelAnchor();
     }
 
-    return { setOpen, reset, cancelCenterComp };
+    return { setOpen, reset, cancelCenterComp, cancelAnchor };
 }

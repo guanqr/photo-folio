@@ -113,14 +113,17 @@
     opacity: 0;
     transition: max-height 0.4s ease, opacity 0.3s ease;
     padding-right: 0.5em; /* 内容与滚动条之间留出间距（窄屏） */
-    /* 分析/图鉴开合改变内容高度时滚动位置由 JS/抽屉统一接管；禁用浏览器
-       滚动锚定，避免收起时视口被锚定到下方内容、看起来被拉到底部 */
-    overflow-anchor: none;
     /* 统一细滚动条：常显，不随滚动空闲隐藏；scrollbar-gutter 始终预留空间，
-       滚动条出现/消失不引起文字横向移动 */
-    scrollbar-width: thin;
+       滚动条出现/消失不引起文字横向移动。
+       标准属性仅 Firefox：Chrome 121+ 同时支持标准属性与 WebKit 伪元素且
+       前者优先——直接声明会压掉下方 0.375em 宽度与 hover muted（同
+       base/_scrollbar.scss 的口径） */
     scrollbar-gutter: stable;
-    scrollbar-color: var(--color-border) transparent;
+
+    @supports (-moz-appearance: none) {
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-border) transparent;
+    }
 
     &::-webkit-scrollbar {
         width: 0.375em;
@@ -145,6 +148,15 @@
         max-height: calc(50vh - 9em - var(--lightbox-strip-h, 0em));
         opacity: 1;
         overflow-y: auto;
+    }
+}
+
+/* 窄屏抽屉的内容高度由手势/程序化 scrollTop 接管：禁用浏览器滚动锚定，
+   避免收起时视口被锚定到下方内容；桌面保留原生锚定（异步图表/切图内容
+   高度变化时可见区不被推移） */
+@media (max-width: 1000px) {
+    .lightbox-panel-details {
+        overflow-anchor: none;
     }
 }
 
@@ -345,7 +357,6 @@
         flex-direction: column;
         overflow-y: auto;
         padding-right: 0.75em; /* 内容与滚动条之间留出间距（桌面） */
-        scrollbar-width: thin; /* 原生细滚动条常显 */
 
         /* 子块保持天然高度：内容超高时溢出滚动，而非被 flex 压缩（压缩会导致
            滚动失效） */

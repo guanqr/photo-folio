@@ -123,7 +123,12 @@ export function initLightbox() {
         img: lightboxImg,
         area: lightboxImgArea,
         getGlow: () => switchModule.getActiveGlow(),
-        onSwitch: (dir, dx) => { if (dir > 0) switchModule.next(dx); else switchModule.prev(dx); },
+        onSwitch: (dir, dx) => {
+            // 用户主动滑动切图属于手动导航：即使全屏闲置的首次按下被
+            // autoplay 豁免，也在此停止自动播放（2026-11-03 审查修复）
+            if (autoplay) autoplay.stop();
+            if (dir > 0) switchModule.next(dx); else switchModule.prev(dx);
+        },
         onTakeover: () => switchModule.cancelPendingSlides()
     });
 
@@ -140,7 +145,11 @@ export function initLightbox() {
     // 默认收起；开合状态跨切图保持，关闭灯箱复位
     const birdGuide = initLightboxBird({
         block: lightboxBird, trigger: lightboxBirdTrigger, body: lightboxBirdBody,
-        nameEl: lightboxBirdName, sourceList: lightboxBirdSources, drawer
+        nameEl: lightboxBirdName, sourceList: lightboxBirdSources, drawer,
+        // 桌面收起居中补偿与图像分析共用（标题/胶囊/详情区 + 面板）
+        panel, panelDetails, caption: lightboxCaption, tagsEl,
+        // 切到无图鉴的照片时，块内聚焦节点被隐藏，焦点交给常显的关闭按钮
+        fallbackFocus: lightboxClose
     });
 
     // 图片分析：色卡/影调与色彩（独立模块，见 lightbox-analysis.js；直方图
@@ -255,7 +264,12 @@ export function initLightbox() {
         prefetchAnalysis: (photos) => photos.forEach((p) => analysis.prefetch(p.slug, p.hash)),
         glow, backdrop, swipe, drawer,
         closeBtn: lightboxClose, pageRoots,
-        onSwitchStart: () => analysisControl.cancelCenterComp(),
+        // 切图前取消窄屏开合锚定：旧锚点/隐藏块不得继续改写新照片的 scrollTop
+        onSwitchStart: () => {
+            analysisControl.cancelCenterComp();
+            analysisControl.cancelAnchor();
+            birdGuide.cancelAnchor();
+        },
         onClose: () => {
             analysisControl.reset();
             birdGuide.reset();
