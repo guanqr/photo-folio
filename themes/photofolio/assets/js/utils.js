@@ -1,5 +1,5 @@
 // 全站共享小工具：记忆化 prefers-reduced-motion——
-// 原先在 masonry/carousel/mobile-nav/gallery-filter/series-ambient 五处各自实现，
+// 原先在 masonry/carousel/mobile-nav/gallery-filter 四处各自实现，
 // 统一收敛到此处，修改查询策略（如用户级动效开关）只动这一处。
 // FLIP 过渡时长/缓动（masonry 重排行与卡片网格换行共用）同理收敛至此。
 

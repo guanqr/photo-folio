@@ -88,12 +88,6 @@ async function initPageModules(isSpa = false) {
             map.initFootprintMap();
         }
 
-        if (document.querySelector('.series-ambient')) {
-            const series = await loadEntry('series');
-            if (gen !== pageGen) return;
-            series.initSeriesAmbient();
-        }
-
         if (document.getElementById('home-carousel')) {
             const home = await loadEntry('home');
             if (gen !== pageGen) return;
