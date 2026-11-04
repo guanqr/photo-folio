@@ -1,15 +1,11 @@
 {{/* 全站作品时间排序管线（唯一实现）：
-     返回按 time 排序的作品 slice（_sortKey 保证同日作品按数据文件顺序稳定排序）
-     调用：{{ $sorted := partialCached "utils/photo-sorted.html" . "desc" }}
-     （上下文可传页面，或用 dict "order" "asc" 指定升序——系列内页按拍摄顺序） */}}
-{{ $order := "desc" }}
-{{ if reflect.IsMap . }}
-    {{ with index . "order" }}{{ $order = . }}{{ end }}
-{{ end }}
+     返回按 time 降序的作品 slice（_sortKey 保证同日作品按数据文件顺序稳定排序）。
+     系列详情页与其他页面共用同一顺序，不再接受自定义 order 参数（2026-11-04）。
+     调用：{{ $sorted := partialCached "utils/photo-sorted.html" . "desc" }} */}}
 {{ $allPhotos := hugo.Data.photo.photo | default slice }}
 {{ $withKey := slice }}
 {{ range $idx, $p := $allPhotos }}
     {{ $t := $p.time | time.Format "2006-01-02 15:04:05" }}
     {{ $withKey = $withKey | append (merge $p (dict "_sortKey" (printf "%s-%06d" $t $idx))) }}
 {{ end }}
-{{ return (sort $withKey "_sortKey" $order) }}
+{{ return (sort $withKey "_sortKey" "desc") }}

@@ -197,7 +197,8 @@ export function initLightboxBird({
 
         if (contentEl) contentEl.hidden = false;
         if (missingEl) missingEl.hidden = true;
-        if (nameEl) nameEl.textContent = bird.name || '';
+        // 标题可用 display_name 覆盖（俗名）；分类「種」仍用 name（种名）
+        if (nameEl) nameEl.textContent = bird.display_name || bird.name || '';
         if (statusEl) {
             const level = bird.conservation_level || '';
             const label = level ? (labels[level] || '') : '';

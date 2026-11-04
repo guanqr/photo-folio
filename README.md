@@ -271,12 +271,11 @@ is_cover = false
 # ... 其他字段
 ```
 
-同时在 `content/series/` 目录下创建对应的 Markdown 文件（`photos` 列表决定详情页的展示顺序；front matter 统一 TOML 格式）：
+同时在 `content/series/` 目录下创建与系列同名的 Markdown 文件（front matter 统一 TOML 格式）。系列照片直接由 `photo.toml` 的 `series` 字段自动带出，按 `time` 降序展示，无需再维护文件名列表：
 
 ```markdown
 +++
 title = "割藺草"
-photos = ["割蔺草-1.jpg", "割蔺草-2.jpg", "割蔺草-3.jpg"]
 +++
 ```
 
@@ -290,7 +289,8 @@ bird_series = "觀鳥"
 
 [[bird]]
 id = "fairy-pitta"
-name = "仙八色鶇"
+name = "仙八色鶇"              # 种名：「種」行使用，也是标题缺省值
+display_name = "俗名（种名）"   # 可选：仅覆盖图鉴标题
 latin = "Pitta nympha"
 order = "雀形目"
 order_latin = "Passeriformes"
@@ -309,6 +309,7 @@ url = "https://example.com/source"
 ```
 
 - `id` 唯一；photo.toml 的 `species` 必须能在 birds.toml 找到；构建期校验字段完整性与引用，缺项会报错
+- 图鉴标题优先使用可选 `display_name`，缺省回落 `name`；分类「種」始终使用 `name`
 - 属于 `bird_series` 的照片即使没有 `species` 也会显示图鉴开关；展开显示「缺少鳥種圖鑑資料」空状态（与图像分析失败卡同款），补上 `species` 后显示图鉴
 - 物种名标题右侧显示保育等级标签：只维护 `conservation_level`（`lc` / `nt` / `vu` / `en` / `cr` / `domestic`），标签文案按等级从 i18n 取、底色按等级切换；构建期校验等级取值
 - `[[bird.source]]` 至少一条，灯箱内显示为外链；数据文本建议使用繁体中文

@@ -86,7 +86,8 @@ url = "https://en.wikipedia.org/wiki/Eastern_spot-billed_duck"
 
 [[bird]]
 id = "chinese-goose"
-name = "白鵝"
+name = "鴻雁"
+display_name = "白鵝（鴻雁）"
 latin = "Anser cygnoides"
 order = "雁形目"
 order_latin = "Anseriformes"
