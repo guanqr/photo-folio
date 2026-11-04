@@ -35,7 +35,10 @@
                             <span class="nav-caret">{{ partial "utils/icon.html" (dict "name" "arrow_down" "variant" "thick") }}</span>
                         </span>
                         {{ else }}
-                        <a href="{{ .URL }}" {{ if eq $.RelPermalink .URL }}class="active" aria-current="page"{{ end }}>
+                        {{/* 顶层菜单按 section 前缀保持高亮（如 /footprint/ 在地区详情页仍点亮）；
+                           '/' 只精确匹配，避免所有页面都点亮首頁；aria-current 仅精确页 */}}
+                        {{ $active := or (eq $.RelPermalink .URL) (and (ne .URL "/") (strings.HasPrefix $.RelPermalink .URL)) }}
+                        <a href="{{ .URL }}" {{ if $active }}class="active"{{ end }}{{ if eq $.RelPermalink .URL }} aria-current="page"{{ end }}>
                             {{ with .Params.icon }}
                                 <span class="nav-icon">{{ partial "utils/icon.html" (dict "name" .) }}</span>
                             {{ end }}

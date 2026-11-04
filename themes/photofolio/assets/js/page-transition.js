@@ -12,6 +12,12 @@ import { navTimeoutMs } from '@params';
 
 let reinitFn = null;
 
+// 当前已渲染内容的 URL（path + search，不含 hash）：用于区分「同文档 hash 导航」
+// 与跨页 back/forward。点击目录锚点会触发 fragment navigation（hash 变化），
+// Chrome 同时派发 popstate；旧逻辑一律 loadContent 并 scrollTo(0,0)，把原生
+// 锚点滚动重置回顶部（页面内锚点导航失效的根因，2026-11-04）
+let renderedPath = '';
+
 // 并发导航守卫代次：快速连点/加载中按 Back 会启动并行 loadContent——各自
 // fetch、各自写主内容区，最后 resolve 者胜（地址栏是 B、内容是 A 的错配）。
 // 代次在每次导航递增，各 await 恢复点校验、被取代的旧导航静默退出
@@ -77,6 +83,7 @@ function finishProgress() {
 
 export function initPageTransition(reinit) {
     reinitFn = reinit;
+    renderedPath = location.pathname + location.search;
 
     // 拦截站内链接点击
     document.addEventListener('click', e => {
@@ -100,6 +107,12 @@ export function initPageTransition(reinit) {
 
     // 浏览器前进/后退
     window.addEventListener('popstate', e => {
+        // 同文档 hash 导航（目录锚点、skip link、返回/前进到同页的 hash 条目）：
+        // 浏览器负责原生锚点滚动/位置恢复，不做 SPA 内容替换——否则 commitPage
+        // 的 scrollTo(0,0) 会把锚点滚动重置回顶部。必须要求目标带 hash：筛选
+        // 的 ?category= 前进/后退同样落在同一 path，但需要 loadContent 重新应用
+        // 筛选（2026-11-04）
+        if (location.hash && location.pathname + location.search === renderedPath) return;
         // 首次加载的页面（如首页）没有推入过状态（e.state 为 null）——
         // 此时按当前地址恢复（popstate 触发时 location 已指向目标页），否则无法返回首页
         loadContent(e.state && e.state.url ? e.state.url : location.href);
@@ -264,6 +277,10 @@ function commitPage(doc, url) {
     // 更新导航当前页高亮
     updateActiveNav(url);
 
+    // 记录已渲染内容的 URL（path + search）：popstate 据此区分同文档 hash 导航
+    const committed = new URL(url);
+    renderedPath = committed.pathname + committed.search;
+
     // 关闭移动端菜单（带动画收回），并同步清理 header 上的 menu-open 状态；
     // 子导航展开态一并重置——否则下次打开菜单时子导航仍是展开的
     const nav = document.getElementById('site-nav');
@@ -351,10 +368,19 @@ function updateActiveNav(url) {
     //（含 aria-current）全部熄灭（2026-10-18）
     const path = new URL(url).pathname;
     links.forEach(el => {
-        const match = el.tagName === 'A' && el.pathname === path;
+        if (el.tagName !== 'A') {
+            // 父项是 span（无 href），只负责清除，由匹配的子项回填高亮
+            el.classList.remove('active');
+            el.removeAttribute('aria-current');
+            return;
+        }
+        // 顶层与下拉子项按 section 前缀保持高亮（如 /footprint/ 在地区详情页仍点亮）；
+        // '/' 只精确匹配，否则所有页面都会点亮首頁
+        const exact = el.pathname === path;
+        const match = exact || (el.pathname !== '/' && path.startsWith(el.pathname));
         el.classList.toggle('active', match);
-        // aria-current 同步（读屏器当前页语义；父项是按钮不是链接、不设）
-        if (match) el.setAttribute('aria-current', 'page');
+        // aria-current 同步（读屏器当前页语义；section 前缀匹配不设）
+        if (exact) el.setAttribute('aria-current', 'page');
         else el.removeAttribute('aria-current');
         // 下拉子项匹配时，父级菜单项（如「作品」）一并高亮
         if (match && el.closest('.nav-dropdown')) {
