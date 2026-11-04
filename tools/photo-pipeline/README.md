@@ -53,6 +53,7 @@ python run.py --force    # 全量重跑（忽略 source_hash 增量检测）
 ## 处理内容
 
 - **缩放**：长边缩放至 1920px
+- **焦距**：优先读取 EXIF `FocalLengthIn35mmFilm`（35mm 等效焦距）；缺失或为 0 时回退 `FocalLength`，避免手机物理焦距（如 4mm）写入站点
 - **水印**：`Guanqr Photography @ 年份` 底部居中（年份从 EXIF 读取，颜色按水印文字实际区域明暗自动选黑白）
 - **压缩**：JPEG 质量循环递减，控制在 400KB 以内
 - **图像分析**：对全分辨率原图（加水印前）预计算统计——RGB/明度/饱和度/色相直方图、6 主色色卡、影调定性（九调/动态范围/剪裁警告/区域系统），结果写 `static/analysis/{文件名}.json`（含 v 算法版本号，当前 v5），灯箱直接加载渲染、不再在线采样（每张约 8KB、压缩后约 3.6KB；全分辨率逐像素只付一次，见下「增量处理」）
@@ -63,7 +64,7 @@ python run.py --force    # 全量重跑（忽略 source_hash 增量检测）
 
 | 字段 | 来源 |
 |------|------|
-| focus / iso / aperture / shutter / time | EXIF 自动提取 |
+| focus / iso / aperture / shutter / time | EXIF 自动提取（focus 为 35mm 等效焦距，缺失回退物理焦距） |
 | camera / lens | EXIF 自动提取 |
 | width / height | 处理后图片尺寸（从输出目录读取） |
 | hash | 处理后图片内容 MD5 前 8 位（图片 URL 的 `?v=` 缓存版本号） |

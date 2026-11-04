@@ -31,11 +31,15 @@ def get_exif_info(image_path):
             return info
 
         make = ""
+        focal_raw = None
+        focal_35mm = None
         for tag_id, value in exif_data.items():
             tag = TAGS.get(tag_id, tag_id)
             try:
                 if tag == "FocalLength":
-                    info["focus"] = str(round(float(value)))
+                    focal_raw = float(value)
+                elif tag == "FocalLengthIn35mmFilm" or tag_id == 41989:
+                    focal_35mm = float(value)
                 elif tag == "ISOSpeedRatings":
                     info["iso"] = str(int(value))
                 elif tag == "FNumber":
@@ -73,6 +77,13 @@ def get_exif_info(image_path):
                     info["lens"] = _clean(value)
             except Exception:
                 pass
+
+        # 焦距优先取 35mm 等效（FocalLengthIn35mmFilm，41989）：手机物理焦距
+        # 仅 4–15mm，与全画幅镜头不可比；缺失、为 0 或非法时回退物理焦距
+        # （FocalLength，37386）。两者都无效保持空串（2026-11-04）
+        focal = focal_35mm if focal_35mm and focal_35mm > 0 else focal_raw
+        if focal is not None and focal > 0:
+            info["focus"] = str(round(focal))
     except Exception:
         pass
     return info
