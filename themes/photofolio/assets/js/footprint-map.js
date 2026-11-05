@@ -259,7 +259,7 @@ async function build(root, points, locationData, statsByName) {
         inner.appendChild(halo);
         const dot = document.createElementNS(SVG_NS, 'circle');
         dot.setAttribute('class', 'fm-photo-dot');
-        dot.setAttribute('r', 2.5);
+        dot.setAttribute('r', 2);
         inner.appendChild(dot);
         dots.appendChild(inner);
         return { inner, lng: p.lng, lat: p.lat }; // 增量重投影时用于重定位
