@@ -52,12 +52,6 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None, forc
                 raise ValueError(
                     f"photo.toml 存在重复 src（拒绝重写，否则条目会被覆盖）：{entry['src']}")
             src_to_entry[entry["src"]] = entry
-        # 宽高始终以处理后的输出图为准（覆盖历史记录中可能存在的原始尺寸）
-        for src, entry in src_to_entry.items():
-            img_path = os.path.join(output_dir, os.path.basename(src))
-            if os.path.exists(img_path):
-                entry["width"], entry["height"] = _get_image_size(img_path)
-
     skipped = 0
     processed = 0
     analyzed = 0
@@ -142,7 +136,6 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None, forc
             # src 指向从未生成/上传的 CDN 文件，站点出现 404 卡片且每次运行
             # 重复报分析失败。输出存在且处理成功（或本就跳过）才建条目
             if is_new and processed_ok and os.path.exists(output_path):
-                width, height = _get_image_size(output_path)
                 new_entry = {
                     "src": src,
                     "alt": "",
@@ -154,8 +147,6 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None, forc
                     "time": exif_info["time"],
                     "place": "",
                     "location": "",
-                    "width": width,
-                    "height": height,
                     "camera": exif_info.get("camera", ""),
                     "lens": exif_info.get("lens", ""),
                     "source_hash": input_hash,
@@ -165,11 +156,14 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None, forc
                 print(f"🆕 新条目：{f}（请填写 alt/category/place/location 等手填字段）")
 
     if toml_path:
-        # 每次按输出图实际字节重算哈希：处理/跳过/新条目统一覆盖，避免增量运行
-        # 留下过期版本号（缺失输出文件的条目保留既有值，下次有文件时再补）
+        # 处理完成后按输出图统一刷新宽高与哈希：重新处理/跳过/新条目一次覆盖，
+        # 避免处理前预读旧输出图、同名换图改比例时把旧宽高写回（2026-11-05）；
+        # 缺失输出文件的条目保留既有值，下次有文件时再补。
+        # 哈希取输出图实际字节，避免增量运行留下过期版本号
         for src, entry in src_to_entry.items():
             img_path = os.path.join(output_dir, os.path.basename(src))
             if os.path.exists(img_path):
+                entry["width"], entry["height"] = _get_image_size(img_path)
                 try:
                     entry["hash"] = file_md5(img_path, 8)
                 except OSError as e:
