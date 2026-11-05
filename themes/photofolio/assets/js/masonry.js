@@ -29,6 +29,10 @@ const REVEAL_STAGGER = 60; // 逐张揭示间隔 ms
 const DEFAULT_ROW_LOAD_RATIO = 0.75; // 下一行至少 3/4 进入视口才补载，config 缺省值
 // 末行放大上限：铺满后行高最多比常规行最小实际行高高 10%（2026-11-01 用户裁定）
 const LAST_ROW_FILL_MAX_RATIO = 1.1;
+// 最窄档位正方形判定容差：正方形（1:1）只与竖构图并排，与横构图/正方形分行
+//（并排会把行高压得过小；2026-11-06 用户裁定）
+const SQUARE_RATIO_TOLERANCE = 0.02;
+const isSquareRatio = (ratio) => Math.abs(ratio - 1) <= SQUARE_RATIO_TOLERANCE;
 
 let resizeBound = false;
 let windowBound = false;
@@ -597,6 +601,7 @@ function getTargetRowHeight(containerWidth, gap, border2, tier) {
    逐张累加直到再加一张会低于参考值 H；
    超窄屏档位 0：每行最多 2 张——横构图（宽高比 ≥ 1）可独占一行；竖构图开头的行必须
    与下一张同行（绝不落单）；行内一张横构图后若下一张是最后一张竖构图，则并入本行；
+   正方形只与竖构图并排，与横构图/另一张正方形分行（否则行高过小，2026-11-06）；
    其余档位：边界处比较「停在此处 / 纳入下一张」，取行高最接近 H 者；
    最后一行（作品耗尽）可能标记 ragged：默认左对齐留白；≥2 张时以常规行最小
    实际行高为基准，放大不超过其 1.1 倍（见 planRowHeight / shouldFillLastRow） */
@@ -636,13 +641,20 @@ function partitionRows(ratios, W, H, gap, border2, refine, tier) {
             // 只有全局最后一行是 ragged，其余行都恰好铺满
             ragged = true;
         } else if (refine && count < maxPhotos) {
-            // 行边界微调：比较「停在此处 / 纳入下一张」，取行高最接近 H 者。
-            // 注意：不交换作品顺序（JS 数组换序会与 DOM 顺序脱节，导致行划分错位）
-            const hCur = hOf(count, sum);
-            const hNext = hOf(count + 1, sum + ratios[j]);
-            if (Math.abs(hNext - H) < Math.abs(hCur - H)) {
-                sum += ratios[j];
-                count++;
+            // 最窄档位：正方形只与竖构图并排——正方形 + 横构图（或另一张
+            // 正方形）分行；两者并排会把行高压得过小（2026-11-06 用户裁定）
+            const squarePairBlocked = isTier0 && count === 1 &&
+                ((isSquareRatio(ratios[i]) && ratios[j] >= 1) ||
+                 (isSquareRatio(ratios[j]) && ratios[i] >= 1));
+            if (!squarePairBlocked) {
+                // 行边界微调：比较「停在此处 / 纳入下一张」，取行高最接近 H 者。
+                // 注意：不交换作品顺序（JS 数组换序会与 DOM 顺序脱节，导致行划分错位）
+                const hCur = hOf(count, sum);
+                const hNext = hOf(count + 1, sum + ratios[j]);
+                if (Math.abs(hNext - H) < Math.abs(hCur - H)) {
+                    sum += ratios[j];
+                    count++;
+                }
             }
         }
 
