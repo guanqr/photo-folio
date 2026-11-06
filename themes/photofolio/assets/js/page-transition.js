@@ -244,9 +244,6 @@ function commitPage(doc, url) {
         const isData = type === 'application/json' || type === 'application/ld+json';
         if (!isData) s.remove();
     });
-    // 首载低清叠层只属于整页首载：SPA 换页内联脚本已被剥离，叠层不会自行
-    // 显示；直接移除，避免隐藏节点随换页累积
-    newMain.querySelectorAll('.grid-prerender').forEach((el) => el.remove());
     const stripInlineHandlers = (el) => {
         for (const attr of [...el.attributes]) {
             if (/^on/i.test(attr.name)) el.removeAttribute(attr.name);

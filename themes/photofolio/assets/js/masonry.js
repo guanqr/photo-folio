@@ -42,32 +42,6 @@ let gridObserver = null; // 每页只有一个网格；SPA 换页时断开旧观
 let restartFadeTimer = null;
 let restartFadeFinish = null; // 未执行筛选重启的收尾句柄（清 promise + 释放等待者）
 
-/* 首载低清叠层：至少展示 300ms，随后 0.4s 淡出并移除；重复加载/无叠层时
-   no-op。300ms 下限避免本机快速初始化时叠层一闪而过（2026-11-06） */
-function dismissPrerender() {
-    const el = document.getElementById('grid-prerender');
-    if (!el || el.hidden || el.classList.contains('is-off') || el.dataset.dismissing) return;
-    el.dataset.dismissing = '1';
-    const shownAt = Number(el.dataset.shownAt) || 0;
-    const minDelay = new Promise((resolve) => {
-        setTimeout(resolve, Math.max(0, 300 - (performance.now() - shownAt)));
-    });
-    // 等叠层的 32px LQIP 解码完再淡出：同一批 URL 已进缓存，真实网格接上时
-    // 直接显示低像素图而不是空白框；失败/超时 600ms 不阻塞
-    const decoded = Promise.all([...el.querySelectorAll('img')].map((img) => (
-        img.decode ? img.decode().catch(() => {}) : Promise.resolve()
-    )));
-    const imagesReady = Promise.race([
-        decoded,
-        new Promise((resolve) => setTimeout(resolve, 600)),
-    ]);
-    Promise.all([minDelay, imagesReady]).then(() => {
-        if (!el.isConnected) return;
-        el.classList.add('is-off');
-        setTimeout(() => el.remove(), 450);
-    });
-}
-
 export function initMasonry(skipInitialReveal = false) {
     // SPA 换页：上一页尚未执行的筛选重启作废（避免旧网格继续渲染/启动监听）
     cancelPendingRestart();
@@ -129,7 +103,6 @@ export function initMasonry(skipInitialReveal = false) {
     }
     grid.classList.add('masonry-ready');
     grid.classList.remove('is-masonry-pending'); // 真实高度已建立，解除两行占位
-    dismissPrerender();
 }
 
 /* ===== 行计划与窗口渲染 ===== */

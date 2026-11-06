@@ -12,7 +12,6 @@
    isset 而不是 default——default 会把合法的 0 当成无值（工程约定） */}}
 {{ $lcpPreload := 4 }}
 {{ if isset $gridCfg "lcpPreload" }}{{ $lcpPreload = int (index $gridCfg "lcpPreload") }}{{ end }}
-{{ if $photos }}{{ partial "components/masonry-prerender.html" (dict "photos" $photos "site" $site) }}{{ end }}
 <div class="masonry-grid" id="masonry-grid"
     data-row-load-ratio="{{ $rowLoadRatio }}">
     {{ range $index, $photo := $photos }}

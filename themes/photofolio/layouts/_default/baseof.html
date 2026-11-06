@@ -38,9 +38,6 @@
         }
         setTimeout(function() {
             if (!grid.isConnected || grid.classList.contains('masonry-ready')) return;
-            // 初始化失败：首载叠层必须同步移除，否则固定层会永久遮住兜底网格
-            var pre = document.getElementById('grid-prerender');
-            if (pre) pre.remove();
             // 兜底路径同样解除两行占位
             grid.classList.remove('is-masonry-pending');
             // 虚拟化初始化失败：行容器是绝对定位的，先拆回直属卡片再切兜底网格

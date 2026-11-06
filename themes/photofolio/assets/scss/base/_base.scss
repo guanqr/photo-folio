@@ -181,7 +181,6 @@ body {
     --z-back-to-top: 990;    /* 返回顶部（低于 Header） */
     --z-header: 1000;        /* 顶部导航栏 */
     --z-nav-toggle: 1002;    /* 汉堡按钮 */
-    --z-prerender: 1003;     /* 首载低清叠层（高于固定导航；低于进度条/灯箱） */
     --z-progress: 1005;      /* SPA 导航进度条（高于固定导航；导航会先关灯箱、不与灯箱叠层） */
     --z-lightbox: 9999;      /* 灯箱 */
     --z-lightbox-arrow: 10000; /* 灯箱箭头 */

@@ -19,7 +19,7 @@
 {{ $srcUrl := partial "utils/img-url-cached.html" (dict "src" $src "hash" ($photo.hash | default "") "site" $site "width" $thumbWidth "mode" "lfit" "format" "avif" "quality" $quality) }}
 {{ $fullUrl := partial "utils/img-url-cached.html" (dict "src" $src "hash" ($photo.hash | default "") "site" $site "width" $fullWidth "mode" "lfit" "format" "avif" "quality" $fullQuality) }}
 
-{{/* 模糊占位图（LQIP）：URL 构造与首载低清叠层共用 utils/photo-blur-url.html；
+{{/* 模糊占位图（LQIP）：URL 构造走 utils/photo-blur-url.html；
    主图未到前铺在卡片底层 */}}
 {{ $blurUrl := partial "utils/photo-blur-url.html" (dict "photo" $photo "site" $site) }}
 
