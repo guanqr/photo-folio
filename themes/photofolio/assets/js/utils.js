@@ -1,7 +1,6 @@
-// 全站共享小工具：记忆化 prefers-reduced-motion——
-// 原先在 masonry/carousel/mobile-nav/gallery-filter 四处各自实现，
-// 统一收敛到此处，修改查询策略（如用户级动效开关）只动这一处。
-// FLIP 过渡时长/缓动（masonry 重排行与卡片网格换行共用）同理收敛至此。
+// 全站共享小工具：prefers-reduced-motion、图片就绪/URL/宽度、缓动、URL 状态、
+// i18n 格式串、滚动锚定与灯箱层栈。断点见 breakpoints.js，FLIP 常量与 helper
+// 见 flip.js（2026-11-06 拆分）。
 
 let reducedMotionCached = null;
 
@@ -11,51 +10,6 @@ export function prefersReducedMotion() {
         reducedMotionCached = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     }
     return reducedMotionCached;
-}
-
-// 布局重排 FLIP 过渡（与足迹时间线列数切换一致；档位内冻结缩放保持实时无动画）
-// 时长单源：瀑布流跨档收尾定时器与新卡片淡入共用；缓动同时供 about-stats
-// 的 width/height 过渡复用（0.35s + 标准缓出，2026-11-01）
-export const FLIP_DURATION = 350;
-export const FLIP_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
-export const FLIP_TRANSITION = `transform ${FLIP_DURATION / 1000}s ${FLIP_EASE}`;
-
-// 换列 FLIP 滞回宽度（卡片网格/关于页统计共用）
-export const FLIP_HYSTERESIS = 20;
-
-// 卡片网格 2→3 列断点（与 _categories.scss @media min-width:1001 同源）
-export const BP_CARD_GRID_3COL_MIN = 1001;
-
-/* 换列 FLIP 共用工具：清内联属性、记录矩形、收尾定时器槽位（列数判定各组件保留） */
-export function clearFlipInline(elements, { size = false } = {}) {
-    elements.forEach((el) => {
-        el.style.transition = '';
-        el.style.transform = '';
-        el.style.transformOrigin = '';
-        if (size) {
-            el.style.width = '';
-            el.style.height = '';
-        }
-    });
-}
-
-export function recordFlipRects(root, selector) {
-    return [...root.querySelectorAll(selector)].map((el) => el.getBoundingClientRect());
-}
-
-export function resetFlipFinish(entry) {
-    if (entry.finishTimer) {
-        clearTimeout(entry.finishTimer);
-        entry.finishTimer = null;
-    }
-}
-
-export function scheduleFlipFinish(entry, finish, delay = FLIP_DURATION + 50) {
-    resetFlipFinish(entry);
-    entry.finishTimer = setTimeout(() => {
-        entry.finishTimer = null;
-        finish();
-    }, delay);
 }
 
 // OSS CDN 图片宽度段（w_<n>）改写/读取：灯箱集合窄屏主图、底部缩略图条与
@@ -107,17 +61,6 @@ export function loadWithAvifFallback(img) {
         img.src = src.replace('format,avif', 'format,webp');
     });
 }
-
-// 桌面断点单源（nav-dropdown 与 mobile-nav 共用）：与样式表 max-width: 768px
-// 严格互补——平板竖屏恰为 768px，JS 若用 min-width: 768 会与窄屏样式同时命中
-// （汉堡菜单已显示而点击被视为桌面端）。CSS 侧对应值见 _responsive.scss 的
-// @media (max-width: 768px)，两处改动必须同步
-export const BP_DESKTOP_MIN = 769;
-
-// 灯箱窄屏断点单源（lightbox.js 与 lightbox-drawer.js 共用）：≤1000px 抽屉模式、
-// 主图窄屏宽度降档（imageSizes.lightboxNarrow）与抽屉同界——改断点两处同步生效
-//（2026-10-18 自双份字面量收敛）
-export const BP_LIGHTBOX_NARROW = 1000;
 
 // URL 查询参数状态同步（灯箱 ?p= 与筛选 ?y=/?s=/?l=/?c= 共用）：
 // 克隆当前参数、按 updates 写/删（null/'' 删除），与当前 URL **规范化比较**

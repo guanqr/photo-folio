@@ -48,7 +48,7 @@ body {
     color: var(--color-bg-card);
     font-weight: 600;
     border-radius: var(--radius-sm);
-    transition: top 0.2s ease;
+    transition: top var(--transition-fast);
 
     &:focus {
         top: 1em;
@@ -156,15 +156,24 @@ body {
        是浅色，图片加载/交叉淡化时会透出白底、顶部强制白字导航不可读） */
     --color-carousel-bg: var(--dark-card);
 
-    --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-35: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-    /* 图表过渡（曝光灰階括号/占比条/JS 曲线形变共用）：时长与缓动单源——
-       JS 端 tweenMulti 初始化时解析此变量，与 CSS 过渡同源同节奏 */
-    --transition-chart: 0.4s cubic-bezier(0.215, 0.61, 0.355, 1); /* easeOutCubic */
-    --transition-spring: 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
-    /* 渐隐过渡（原 color/bg/border/opacity 四变量同值、合并单源）——
-       主题切换与一般颜色/透明度过渡共用 */
-    --transition-fade: 0.3s ease;
+    /* 缓动曲线单源：transition 与 animation 共用，避免各模块重复 cubic-bezier */
+    --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-chart: cubic-bezier(0.215, 0.61, 0.355, 1); /* easeOutCubic */
+
+    /* 过渡语义组（时长 + 曲线单源） */
+    --transition: 0.3s var(--ease-standard);            /* 标准交互/组合过渡 */
+    --transition-fast: 0.2s ease;                       /* 微交互/按压/短淡入 */
+    --transition-fade: 0.3s ease;                       /* 颜色/边框/背景/透明度 */
+    --transition-layout: 0.35s var(--ease-standard);    /* 尺寸/展开/轮播几何/FLIP */
+    --transition-spring: 0.5s var(--ease-spring);       /* hover/按压抬升 */
+    --transition-reveal: 0.6s ease;                     /* 图片/占位图/面板入场 */
+    --transition-reveal-fast: 0.4s ease;                /* 行/小元素入场 */
+    --transition-image-color: 1.4s var(--ease-standard);/* 照片黑白→彩色 */
+    --transition-page: 0.35s var(--ease-expo);          /* 页面/菜单滑动 */
+    --transition-chart: 0.4s var(--ease-chart);         /* 图表 */
 
     /* z-index 层级体系（跨组件竞争时统一引用，组件内部局部层级不受影响） */
     --z-underlay: -1;        /* 窄屏菜单面板（垫在导航栏内容之下） */
@@ -172,6 +181,7 @@ body {
     --z-back-to-top: 990;    /* 返回顶部（低于 Header） */
     --z-header: 1000;        /* 顶部导航栏 */
     --z-nav-toggle: 1002;    /* 汉堡按钮 */
+    --z-prerender: 1003;     /* 首载低清叠层（高于固定导航；低于进度条/灯箱） */
     --z-progress: 1005;      /* SPA 导航进度条（高于固定导航；导航会先关灯箱、不与灯箱叠层） */
     --z-lightbox: 9999;      /* 灯箱 */
     --z-lightbox-arrow: 10000; /* 灯箱箭头 */
@@ -301,7 +311,7 @@ img { max-width: 100%; height: auto; display: block; }
 img[loading="lazy"] {
     filter: blur(0.625em);
     opacity: 0.6;
-    transition: filter 0.4s ease, opacity 0.4s ease;
+    transition: filter var(--transition-reveal-fast), opacity var(--transition-reveal-fast);
 
     &.is-loaded {
         filter: blur(0);
@@ -419,7 +429,7 @@ ul { list-style: none; }
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     transition: opacity var(--transition-fade), color var(--transition-fade),
-        max-height 0.6s ease, margin-top 0.6s ease, padding 0.6s ease;
+        max-height var(--transition-reveal), margin-top var(--transition-reveal), padding var(--transition-reveal);
 
     svg {
         width: 0.85em;

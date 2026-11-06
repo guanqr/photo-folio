@@ -103,7 +103,7 @@
     overflow: hidden;
     opacity: 0.42;
     cursor: pointer;
-    transition: opacity 0.3s, border-color 0.3s, box-shadow 0.3s;
+    transition: opacity var(--transition-fade), border-color var(--transition-fade), box-shadow var(--transition-fade);
     -webkit-user-drag: none;
 
     img {

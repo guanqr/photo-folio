@@ -43,6 +43,10 @@ let progressResetTimer = null;
 // 防止旧淡入的 transitionend 清掉新导航刚写入的过渡
 let fadeCancel = null;
 
+// 瀑布流初始化前的两行占位兜底：新页网格先加 is-masonry-pending，
+// masonry-ready 由 masonry.js 移除；初始化失败时 4s 后兜底移除
+let masonryPendingTimer = null;
+
 function startProgress() {
     if (!progressEl) {
         progressEl = document.createElement('div');
@@ -53,7 +57,7 @@ function startProgress() {
     if (progressTimer) clearInterval(progressTimer);
     clearTimeout(progressFadeTimer);
     clearTimeout(progressResetTimer);
-    progressEl.style.transition = 'width 0.3s ease, opacity 0.2s ease';
+    progressEl.style.transition = 'width var(--transition-fade), opacity var(--transition-fast)';
     progressEl.style.opacity = '1';
     progressEl.style.width = '25%';
     let pct = 25;
@@ -240,6 +244,9 @@ function commitPage(doc, url) {
         const isData = type === 'application/json' || type === 'application/ld+json';
         if (!isData) s.remove();
     });
+    // 首载低清叠层只属于整页首载：SPA 换页内联脚本已被剥离，叠层不会自行
+    // 显示；直接移除，避免隐藏节点随换页累积
+    newMain.querySelectorAll('.grid-prerender').forEach((el) => el.remove());
     const stripInlineHandlers = (el) => {
         for (const attr of [...el.attributes]) {
             if (/^on/i.test(attr.name)) el.removeAttribute(attr.name);
@@ -247,6 +254,22 @@ function commitPage(doc, url) {
     };
     stripInlineHandlers(newMain);
     newMain.querySelectorAll('*').forEach(stripInlineHandlers);
+    // 新页有瀑布流：网格先按两行高度占位，避免空网格把页尾联动区块顶进视口；
+    // 就绪由 masonry.js 移除标记，4s 兜底覆盖初始化失败。page-others 不隐藏，
+    // 保持原有懒加载/淡入
+    if (masonryPendingTimer) {
+        clearTimeout(masonryPendingTimer);
+        masonryPendingTimer = null;
+    }
+    const incomingGrid = newMain.querySelector('.masonry-grid');
+    if (incomingGrid && newMain.querySelector('.masonry-item')) {
+        incomingGrid.classList.add('is-masonry-pending');
+        masonryPendingTimer = setTimeout(() => {
+            const grid = main.querySelector('.masonry-grid');
+            if (grid) grid.classList.remove('is-masonry-pending');
+            masonryPendingTimer = null;
+        }, 4000);
+    }
     const fragment = document.createDocumentFragment();
     for (const node of newMain.childNodes) {
         fragment.appendChild(document.importNode(node, true));
@@ -286,7 +309,7 @@ function commitPage(doc, url) {
     const nav = document.getElementById('site-nav');
     const navBtn = document.getElementById('nav-toggle');
     if (nav && nav.classList.contains('active')) {
-        nav.style.transition = 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, visibility 0.3s';
+        nav.style.transition = 'transform var(--transition-page), opacity var(--transition-fade), visibility var(--transition-fade)';
         nav.classList.remove('active');
         if (navBtn) navBtn.classList.remove('active');
         if (headerEl) headerEl.classList.remove('menu-open');
@@ -343,7 +366,7 @@ function fadeOut(el) {
         el.style.opacity = '0';
         return Promise.resolve();
     }
-    el.style.transition = 'opacity 0.15s ease';
+    el.style.transition = 'opacity var(--transition-fast)';
     return runFade(el, '0', false);
 }
 
@@ -353,7 +376,7 @@ function fadeIn(el) {
         el.style.transition = '';
         return Promise.resolve();
     }
-    el.style.transition = 'opacity 0.15s ease';
+    el.style.transition = 'opacity var(--transition-fast)';
     el.style.opacity = '0';
     void el.offsetHeight;
     return runFade(el, '1', true);

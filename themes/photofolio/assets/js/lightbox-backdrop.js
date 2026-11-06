@@ -15,7 +15,7 @@ export function initLightboxBackdrop({ container, insertBefore, reducedMotion })
     const BACKDROP_MS = reducedMotion ? 0 : 700;
     const backdropTransition = reducedMotion
         ? 'opacity 0s'
-        : `opacity ${BACKDROP_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+        : `opacity ${BACKDROP_MS}ms var(--ease-standard)`;
     const backdropStack = createLayerStack(BACKDROP_MS + 50);
     const backdropLayers = backdropStack.layers;
 

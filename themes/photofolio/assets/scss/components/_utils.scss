@@ -61,7 +61,7 @@
     /* 初始隐藏状态 */
     opacity: 0;
     visibility: hidden;
-    transition: opacity var(--transition-fade), visibility 0.3s ease, bottom var(--transition-spring), background-color var(--transition-fade), color var(--transition-fade);
+    transition: opacity var(--transition-fade), visibility var(--transition-fade), bottom var(--transition-spring), background-color var(--transition-fade), color var(--transition-fade);
 
     &:hover {
         background-color: var(--color-accent);

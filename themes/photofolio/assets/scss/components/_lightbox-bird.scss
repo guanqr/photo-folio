@@ -14,9 +14,29 @@
 }
 
 /* slot 由 revealSynced 写 opacity 随图片同步揭示：没有过渡时首次打开鸟照
-   会瞬显、不与其他详情块一起淡入（2026-11-03 审查修复） */
+   会瞬显、不与其他详情块一起淡入（2026-11-03 审查修复）。
+   内层 grid 行负责“有鸟种↔无鸟种”的块高度与透明度过渡：切图时只让多出/
+   缺少的图鉴块展开/收起，详情文字不淡出（2026-11-06） */
 .lightbox-bird-slot {
     transition: opacity var(--transition-fade);
+}
+
+.lightbox-bird-slot-inner {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition: grid-template-rows var(--transition-reveal-fast),
+                opacity var(--transition-reveal-fast);
+}
+
+.lightbox-bird-slot.is-present .lightbox-bird-slot-inner {
+    grid-template-rows: 1fr;
+    opacity: 1;
+}
+
+.lightbox-bird-slot-inner > .lightbox-bird {
+    min-height: 0;
+    overflow: hidden;
 }
 
 .lightbox-bird-trigger {
@@ -39,7 +59,7 @@
     grid-template-rows: 0fr;
     opacity: 0;
     /* 透明度与高度收起同长，避免内容先淡出留下短暂空白 */
-    transition: grid-template-rows 0.4s ease, opacity 0.4s ease;
+    transition: grid-template-rows var(--transition-reveal-fast), opacity var(--transition-reveal-fast);
 }
 
 .lightbox-bird.is-open .lightbox-bird-body {
@@ -173,7 +193,8 @@ $bird-levels: lc, nt, vu, en, cr, domestic;
 
 @media (prefers-reduced-motion: reduce) {
     .lightbox-bird-body,
-    .lightbox-bird-trigger {
+    .lightbox-bird-trigger,
+    .lightbox-bird-slot-inner {
         transition: none;
     }
 }

@@ -14,9 +14,13 @@
  *   照片切换与主图加载就绪经 onPhotoOpen/onPhotoReady 钩子交给调用方
  *   （缩略图条/自动播放）；分析区开合经 onSwitchStart/onClose 钩子交给
  *   调用方接线（本模块不认识分析控制模块）
+ * - 异步生命周期：切图/滑入/滑出/摘锁/首开/升级的监听与定时器统一经
+ *   lightbox-lifecycle.js 的命名组注册，open/close begin() 一次作废；新增
+ *   异步不再维护槽位/clear 列表
  */
 import { isImageReady, loadWithAvifFallback, imageWidth } from './utils.js';
 import { initLightboxZoom } from './lightbox-zoom.js';
+import { createLifecycle } from './lightbox-lifecycle.js';
 
 export function initLightboxSwitch({
     lightbox, lightboxImg, lightboxImgLoading, lightboxImgArea,
@@ -90,81 +94,17 @@ export function initLightboxSwitch({
         }
     };
 
-    // 在途切图监听（load/error 同生共死、成对管理）：新切换前先摘除，避免陈旧闭包重放
-    let pendingSwitch = null; // { load, error }
-    const clearPendingSwitch = () => {
-        if (!pendingSwitch) return;
-        lightboxImg.removeEventListener('load', pendingSwitch.load);
-        lightboxImg.removeEventListener('error', pendingSwitch.error);
-        pendingSwitch = null;
-    };
-
-    // 在途滑出结束监听：快速同向连切时（0.25s 滑出动画内再次切换），第二次
-    // slideStyle 写入相同 transform 不会重启过渡、旧监听照常触发——旧闭包会用
-    // 上一张作品重放 src/面板；新切换开始时先摘除旧监听，仅最新一次切换生效
-    let pendingSlideOut = null;
-    const clearPendingSlideOut = () => {
-        if (pendingSlideOut) {
-            lightboxImg.removeEventListener('transitionend', pendingSlideOut);
-            pendingSlideOut = null;
-        }
-    };
-
-    // 在途滑入结束监听（与滑出监听同槽位管理）：滑入 0.25s 内快速连切/关闭时
-    // 陈旧监听会残留到下一次滑出/滑入的 transitionend——误触发会提前恢复裁剪、
-    // 提前置 switching=false 并清空 transform 造成闪帧
-    let pendingSlideIn = null;
-    const clearPendingSlideIn = () => {
-        if (pendingSlideIn) {
-            lightboxImg.removeEventListener('transitionend', pendingSlideIn);
-            pendingSlideIn = null;
-        }
-    };
-
-    // 缩放换源后的 width/height 锁摘除监听（load）：换源后 load 事件为独立任务、
-    // 与关闭/重开窗口竞态——摘除槽位防陈旧监听在下次打开时摘掉新锁；
-    // once 触发即自摘除：若只清槽位不摘监听，幽灵监听会残留在 img 上、
-    // 在后续打开/切图的每个 load 事件上重复摘锁（新开照片缩略图 load
-    // 时锁刚上好即被摘掉——「打开显示小图、大图就绪后跳变」的根因）
-    let pendingUnlock = null;
-    const clearPendingUnlock = () => {
-        if (pendingUnlock) {
-            lightboxImg.removeEventListener('load', pendingUnlock);
-            lightboxImg.removeEventListener('error', pendingUnlock);
-            pendingUnlock = null;
-        }
-    };
-
-    // 首开（非缩放路径）图片 load 监听：关闭后触发会把已关灯箱的透明度拨回、
-    // 并在下次打开时提前揭示——槽位管理防残留
-    let pendingFirstLoad = null;
-    const clearPendingFirstLoad = () => {
-        if (pendingFirstLoad) {
-            lightboxImg.removeEventListener('load', pendingFirstLoad);
-            lightboxImg.removeEventListener('error', pendingFirstLoad);
-            pendingFirstLoad = null;
-        }
-    };
-
-    // 展示源升级的在途监听（见 upgradeMainSrc）：换源后加载失败要回退窄版，
-    // 成功/失败成对管理——切图/关闭后陈旧闭包不得再回退当前照片的源
-    let pendingUpgrade = null;
-    const clearPendingUpgrade = () => {
-        if (!pendingUpgrade) return;
-        lightboxImg.removeEventListener('load', pendingUpgrade.load);
-        lightboxImg.removeEventListener('error', pendingUpgrade.error);
-        pendingUpgrade = null;
-    };
-
-    // 各在途监听槽一次作废（open 入口 / close 共用）：新增入口或调整动画时
-    // 不必逐个记槽，避免漏清任一槽导致陈旧闭包在后续 open/切换中重放
-    const clearAllPending = () => {
-        clearPendingSwitch();
-        clearPendingSlideOut();
-        clearPendingSlideIn();
-        clearPendingUnlock();
-        clearPendingFirstLoad();
-        clearPendingUpgrade();
+    // 灯箱异步生命周期：switch 切图 load/error、slide-out/slide-in 过渡收尾、
+    // unlock 缩放换源摘锁、first-load 首开普通路径、upgrade 展示源升级统一为
+    // 命名组；open/close 调 begin() 一次作废全部，新增异步只需 listen/after。
+    const lifecycle = createLifecycle();
+    const GROUP = {
+        switchImage: 'switch',
+        slideOut: 'slide-out',
+        slideIn: 'slide-in',
+        unlock: 'unlock',
+        firstLoad: 'first-load',
+        upgrade: 'upgrade',
     };
 
     // 缩放浮现进行中：其揭示由 zoom.onDone 负责——常驻 error 监听不得在
@@ -181,30 +121,29 @@ export function initLightboxSwitch({
         const desired = displaySrc(p);
         if (imageWidth(desired) <= imageWidth(currentSrc)) return;
         const revertTo = currentSrc;
-        clearPendingUpgrade();
+        lifecycle.clear(GROUP.upgrade);
         currentSrc = desired;
         // 清除上一张照片遗留的 AVIF 兜底标记（img 元素跨照片复用）：否则本次
         // 首次错误会被误判为「兜底在途」，跳过回退
         delete lightboxImg.dataset.avifRetry;
         lightboxImg.src = desired;
-        const onLoad = () => { clearPendingUpgrade(); };
+        const onLoad = () => { lifecycle.clear(GROUP.upgrade); };
         const onError = () => {
-            if (!pendingUpgrade) return; // 切图/关闭时已作废
+            if (!lifecycle.has(GROUP.upgrade)) return; // 切图/关闭/新一轮升级已作废
             if (lightboxImg.dataset.avifRetry) {
                 delete lightboxImg.dataset.avifRetry;
-                pendingUpgrade.error = onError;
-                lightboxImg.addEventListener('error', onError, { once: true });
+                // 同一组内补挂 error；onLoad 仍在组内
+                lifecycle.listen(GROUP.upgrade, lightboxImg, 'error', onError, { once: true });
                 return;
             }
-            clearPendingUpgrade();
+            lifecycle.clear(GROUP.upgrade);
             // 换源期间已切图/关闭：currentSrc 已被其它来源覆盖，不再回退
             if (currentSrc !== desired) return;
             currentSrc = revertTo;
             lightboxImg.src = revertTo;
         };
-        pendingUpgrade = { load: onLoad, error: onError };
-        lightboxImg.addEventListener('load', onLoad, { once: true });
-        lightboxImg.addEventListener('error', onError, { once: true });
+        lifecycle.listen(GROUP.upgrade, lightboxImg, 'load', onLoad, { once: true });
+        lifecycle.listen(GROUP.upgrade, lightboxImg, 'error', onError, { once: true });
     }
 
     // 当前照片展示源重估（窄屏断点变化触发）：进入全屏/拉宽窗口/旋转屏幕后
@@ -219,7 +158,7 @@ export function initLightboxSwitch({
     }
 
     let mainSlideStarted = false; // 主图是否已开始滑入/揭示（辉光不得先于主图淡入）
-    const slideTransition = reducedMotion ? 'none' : 'transform 0.25s ease, opacity 0.25s ease';
+    const slideTransition = reducedMotion ? 'none' : 'transform var(--transition-fade), opacity var(--transition-fade)';
 
     // iOS 上跳过辉光层（对齐参考站做法）：iOS Safari 对带 filter 的 img 换源/
     // 合成有一系列缺陷（闪帧、错位），逐案修补成本高且不稳定——照片无光晕
@@ -242,10 +181,6 @@ export function initLightboxSwitch({
     // 首开缩放浮现动画（独立模块见 lightbox-zoom.js）：主图从缩略图视口矩形
     // FLIP 放大到居中布局位——start/cancel 由 open/close 编排
     const zoom = initLightboxZoom({ img: lightboxImg, area: lightboxImgArea, reducedMotion });
-
-    // 打开代次：缩放浮现完成后的全尺寸换源前校验（快速连切/关闭期间
-    // 换源作废，防旧照片覆盖当前显示）
-    let openToken = 0;
 
     // dialog 语义：打开时焦点移入关闭按钮、背景页 inert（头部/主内容/页脚——
     // 灯箱在壳层不属其内）；关闭时先恢复背景、再把焦点还原到触发卡片
@@ -326,9 +261,9 @@ export function initLightboxSwitch({
             refreshDisplaySrc(); // 滑入期间视口跨过窄屏断点的补升级
             return;
         }
-        lightboxImg.addEventListener('transitionend', pendingSlideIn = function slideInDone() {
-            lightboxImg.removeEventListener('transitionend', slideInDone);
-            pendingSlideIn = null;
+        lifecycle.clear(GROUP.slideIn);
+        lifecycle.listen(GROUP.slideIn, lightboxImg, 'transitionend', function slideInDone() {
+            lifecycle.clear(GROUP.slideIn);
             switching = false;
             if (lightboxImgArea) lightboxImgArea.style.overflow = ''; // 恢复裁剪（见 open 的 isSwitch 分支）
             // 主图滑入完成：辉光就绪则淡入（就绪晚到的由 attachGlowReady 补淡）
@@ -387,7 +322,7 @@ export function initLightboxSwitch({
         // 贯穿整个切换过程
         backdrop.switchTo(p.thumb || p.src);
 
-        // 新建辉光层（在滑出开始即创建：0 态在 0.25s 滑出期间提交、解码
+        // 新建辉光层（在滑出开始即创建：0 态在 0.3s 滑出期间提交、解码
         // 提前开始；旧辉光层已随滑出淡出，新层就绪后随主图淡入、旧层剪枝；
         // iOS 跳过辉光——见 iOSGlowDisabled）
         if (lightboxImgArea && !iOSGlowDisabled) {
@@ -400,7 +335,7 @@ export function initLightboxSwitch({
         const swapIn = () => {
             switching = true; // 滑入期间 onLoad 不强制透明度
             slideStyle(dir * 12, '0', 'none');
-            // 赋值时求值（非 open 快照）：滑出 0.25s 期间视口可能已跨过断点
+            // 赋值时求值（非 open 快照）：滑出 0.3s 期间视口可能已跨过断点
             setMainSrc(p);
             lightboxImg.alt = p.alt;
             renderPanel(p);
@@ -413,24 +348,22 @@ export function initLightboxSwitch({
                 startSlideIn(p);
             } else {
                 // 未就绪：隐藏图片（仍在显示旧图）并转圈，加载完成后再滑入。
-                // 监听以模块级引用登记：新切换/关闭灯箱时先摘除旧对，防止陈旧
-                // 闭包用旧作品重放滑入
-                clearPendingSwitch();
+                // 监听登记到 switch 组：新切换/关闭灯箱时 begin/clear 统一作废，
+                // 防止陈旧闭包用旧作品重放滑入
+                lifecycle.clear(GROUP.switchImage);
                 lightboxImg.style.opacity = '0';
                 if (!cached) showImgLoading(); // HTTP 未就绪才转圈；已缓存仅等解码
-                pendingSwitch = {
-                    load: () => {
-                        clearPendingSwitch();
-                        startSlideIn(p);
-                    },
-                    error: () => {
-                        clearPendingSwitch();
-                        hideImgLoading();
-                        startSlideIn(p); // 加载失败：元信息照常，滑入后显示失败占位
-                    }
+                const onSwitchLoad = () => {
+                    lifecycle.clear(GROUP.switchImage);
+                    startSlideIn(p);
                 };
-                lightboxImg.addEventListener('load', pendingSwitch.load);
-                lightboxImg.addEventListener('error', pendingSwitch.error);
+                const onSwitchError = () => {
+                    lifecycle.clear(GROUP.switchImage);
+                    hideImgLoading();
+                    startSlideIn(p); // 加载失败：元信息照常，滑入后显示失败占位
+                };
+                lifecycle.listen(GROUP.switchImage, lightboxImg, 'load', onSwitchLoad, { once: true });
+                lifecycle.listen(GROUP.switchImage, lightboxImg, 'error', onSwitchError, { once: true });
             }
         };
 
@@ -439,9 +372,9 @@ export function initLightboxSwitch({
             // 等待直接换图；滑出位移从未渲染（同一任务内完成换图）
             swapIn();
         } else {
-            lightboxImg.addEventListener('transitionend', pendingSlideOut = function slideOutDone() {
-                lightboxImg.removeEventListener('transitionend', slideOutDone);
-                pendingSlideOut = null;
+            lifecycle.clear(GROUP.slideOut);
+            lifecycle.listen(GROUP.slideOut, lightboxImg, 'transitionend', function slideOutDone() {
+                lifecycle.clear(GROUP.slideOut);
                 swapIn();
             });
         }
@@ -486,17 +419,18 @@ export function initLightboxSwitch({
                 lightboxImg.style.opacity = '0';
                 showImgLoading();
             }
-            // 恢复监听入 pendingFirstLoad 槽位（open 顶部已清同槽位残留）：
-            // 关闭/重开/切图时被摘除，防陈旧监听跨打开重放
-            lightboxImg.addEventListener('load', pendingFirstLoad = () => {
-                pendingFirstLoad = null;
+            // 监听登记到 first-load 组；open/close 的 begin() 统一作废，
+            // 防陈旧监听跨打开/切图重放
+            lifecycle.clear(GROUP.firstLoad);
+            lifecycle.listen(GROUP.firstLoad, lightboxImg, 'load', () => {
+                lifecycle.clear(GROUP.firstLoad);
                 lightboxImg.style.opacity = '1';
                 hideImgLoading();
             }, { once: true });
             backdrop.open(p.thumb || p.src);
             lightbox.style.transition = 'none';
             activateDialog();
-            const token = openToken;
+            const token = lifecycle.token();
             zoomPending = true; // 揭示交由 zoom.onDone；error 监听不提前揭示
             // 展示图自然尺寸上限：OSS lfit 仅按宽度封顶（大图/窄屏宽度来自
             // params.imageSizes，高度随比例）——超宽屏 contain 拟合大于自然尺寸时，缩放目标
@@ -520,25 +454,24 @@ export function initLightboxSwitch({
             const full = new Image();
             loadWithAvifFallback(full); // 游离 Image 不进 document 捕获监听：实例级 AVIF 兜底
             full.onload = () => {
-                if (openToken !== token) return;
+                if (!lifecycle.isCurrent(token)) return;
                 // 赋值时求值：预载期间视口可能已跨过窄屏断点（点全屏后
                 // 窄版预载才完成），直接换入全宽源
                 setMainSrc(p);
-                clearPendingUnlock();
+                lifecycle.clear(GROUP.unlock);
                 // 换入主图后要等当前 <img> 真正加载完成（不是预载 Image）：
                 // 自动播放据此计时，加载期间不算入当前图片的播放时长
                 const onFullReady = () => {
-                    clearPendingUnlock();
+                    lifecycle.clear(GROUP.unlock);
                     lightboxImg.style.width = '';
                     lightboxImg.style.height = '';
                     notifyPhotoReady();
                 };
-                pendingUnlock = onFullReady;
-                lightboxImg.addEventListener('load', onFullReady, { once: true });
-                lightboxImg.addEventListener('error', onFullReady, { once: true });
+                lifecycle.listen(GROUP.unlock, lightboxImg, 'load', onFullReady, { once: true });
+                lifecycle.listen(GROUP.unlock, lightboxImg, 'error', onFullReady, { once: true });
             };
             full.onerror = () => {
-                if (openToken !== token) return; // 旧打开的失败不得影响当前打开
+                if (!lifecycle.isCurrent(token)) return; // 旧打开/切换/关闭的失败不得影响当前
                 // 失败保留缩略图：锁保持（见上方注释），无需动作；
                 // 自动播放不能为加载失败的图片永久停摆，按就绪继续
                 notifyPhotoReady();
@@ -560,9 +493,9 @@ export function initLightboxSwitch({
                 revealMain();
                 notifyPhotoReady();
             } else {
-                clearPendingFirstLoad(); // 作废上一次的同槽位监听（重开路径）
+                lifecycle.clear(GROUP.firstLoad); // 作废上一次的同组监听（重开路径）
                 const onFirstReady = () => {
-                    clearPendingFirstLoad(); // 成功/失败都摘掉另一个方向的监听
+                    lifecycle.clear(GROUP.firstLoad); // 成功/失败都摘掉另一方向
                     // 切换动画进行中不强制透明度（slideIn 过渡会将其归位）——
                     // 否则慢图恰在滑出期间加载完成时会闪一下满透明覆盖过渡
                     if (!switching) lightboxImg.style.opacity = '1';
@@ -570,9 +503,8 @@ export function initLightboxSwitch({
                     revealMain();
                     notifyPhotoReady();
                 };
-                pendingFirstLoad = onFirstReady;
-                lightboxImg.addEventListener('load', onFirstReady, { once: true });
-                lightboxImg.addEventListener('error', onFirstReady, { once: true });
+                lifecycle.listen(GROUP.firstLoad, lightboxImg, 'load', onFirstReady, { once: true });
+                lifecycle.listen(GROUP.firstLoad, lightboxImg, 'error', onFirstReady, { once: true });
             }
         }
     }
@@ -583,12 +515,11 @@ export function initLightboxSwitch({
         swipe.reset(); // 复位滑动内联残留（拖动中关闭后重开图片错位的根源）
         zoom.cancel(); // 作废在途缩放动画（含布局盒 width/height 锁与收尾回调残留）
         lightbox.style.transition = ''; // 缩放路径的容器直显内联残留（关闭淡出依赖样式表过渡）
-        // 各在途监听槽一次作废：滑入/滑出收尾、换源摘锁、首开 load、切图
-        // load/error、展示源升级——防陈旧闭包在本次打开/切换中重放
+        // 生命周期换代：滑入/滑出收尾、换源摘锁、首开 load、切图 load/error、
+        // 展示源升级一次作废——防陈旧闭包在本次打开/切换中重放
         //（快速同向连切不重放旧作品）
-        clearAllPending();
+        lifecycle.begin();
         zoomPending = false; // 缩放进行标志复位（切换/普通首开路径不置位）
-        openToken++;
         const isSwitch = lightbox.classList.contains('active');
         // 方向由调用方显式给出（prev -1 / next +1）：恰好 2 张时 prev 与 next
         // 的目标是同一张、索引反推恒判正向（2026-10-21）；首开 dir 恒 1
@@ -663,18 +594,17 @@ export function initLightboxSwitch({
             return r;
         })();
         if (collapseRect) {
-            // 容器淡出与缩小同时长——样式表 0.3s 的 visibility 翻转须一并覆盖，
+            // 容器淡出与缩小同时长——visibility 翻转须用同一档（0.4s），
             // 否则 visibility 提前翻转、缩小动画尾部被切断（此前同任务内即被
             // 清空、覆盖从未生效——清除移入下方 collapse 收尾，2026-10-18）
-            lightbox.style.transition = 'opacity 0.35s ease, visibility 0.35s';
+            lightbox.style.transition = 'opacity var(--transition-reveal-fast), visibility var(--transition-reveal-fast)';
         }
         lightbox.classList.remove('active');
         exitDialog(!keepUrl); // 恢复背景 inert 并还原焦点（SPA 导航关闭不还原，见 exitDialog 注释）
         zoom.cancel(); // 作废在途缩放动画（含容器直显内联残留）
         zoomPending = false;
-        openToken++; // 缩放浮现后的全尺寸换源作废
-        // 五个在途监听槽一次作废（含切图/滑出：关闭后不再有收尾重放）
-        clearAllPending();
+        // 换代作废全部在途监听（含切图/滑出：关闭后不再有收尾重放）
+        lifecycle.begin();
         // 摘除打开时写入的无过渡内联（未走到揭示就关闭时，残留会破坏
         // 分析触发行等元素的开合过渡）
         revealSynced.forEach((el) => { el.style.transition = ''; });
@@ -790,8 +720,8 @@ export function initLightboxSwitch({
         // 监听——过渡被接管取消后其 transitionend 永不触发，残留监听会在
         // 后续过渡结束时重放收尾（2026-10-18）
         cancelPendingSlides: () => {
-            clearPendingSlideOut();
-            clearPendingSlideIn();
+            lifecycle.clear(GROUP.slideOut);
+            lifecycle.clear(GROUP.slideIn);
         }
     };
 }

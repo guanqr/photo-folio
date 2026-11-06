@@ -52,7 +52,7 @@
     flex-direction: column;
     border-radius: var(--radius-card);
     overflow: hidden;
-    transition: transform var(--transition-spring), border-color var(--transition), box-shadow var(--transition), background-color var(--transition-fade), opacity 0.45s ease;
+    transition: transform var(--transition-spring), border-color var(--transition), box-shadow var(--transition), background-color var(--transition-fade), opacity var(--transition-reveal);
 
     &:hover {
         @include card-hover(-0.35em, var(--shadow-pop));

@@ -16,7 +16,7 @@
  *   （打开动画的逆过程；目标矩形可见性由调用方校验，不可用时退化淡出）；
  *   与 start 共用 pendingDone 槽位
  */
-import { FLIP_TRANSITION } from './utils.js';
+import { FLIP_TRANSITION } from './flip.js';
 
 export function initLightboxZoom({ img, area, reducedMotion }) {
     let pendingDone = null; // 在途 transitionend 监听（start 前作废旧动画）

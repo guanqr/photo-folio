@@ -35,7 +35,7 @@ export function createPanelCenterComp({ panel, panelDetails, caption, tagsEl, dr
         const dy = free > 0 ? free / 2 : 0;
         if (dy > 0 && drawer && drawer.fitApplicable() && !panel.classList.contains('is-fit')) {
             compEls.forEach((el) => {
-                el.style.transition = 'transform 0.6s ease'; // 与内容收缩同曲线同时长
+                el.style.transition = 'transform var(--transition-reveal)'; // 与内容收缩同曲线同时长
                 el.style.transform = `translateY(${dy}px)`;
             });
         }
@@ -62,7 +62,7 @@ export function createPanelCenterComp({ panel, panelDetails, caption, tagsEl, dr
                 });
                 void caption.offsetHeight; // 提交起点
                 compEls.forEach((el) => {
-                    el.style.transition = 'transform 0.3s ease';
+                    el.style.transition = 'transform var(--transition-fade)';
                     el.style.transform = '';
                 });
             }

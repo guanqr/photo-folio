@@ -47,7 +47,7 @@ export function initLightboxSwipe({ img, area, getGlow, onSwitch, onTakeover }) 
     const snapBack = () => {
         // 未达阈值：回弹归位（reduced-motion 直切）
         const reduced = prefersReducedMotion();
-        const tr = reduced ? 'none' : 'transform 0.2s ease';
+        const tr = reduced ? 'none' : 'transform var(--transition-fast)';
         // 无位移（键盘切图等非拖拽路径）时写入不产生过渡与 transitionend——
         // 直接同步收尾：否则幽灵监听残留，会在下次切换的滑出 transitionend 上
         // 提前恢复图片区裁剪

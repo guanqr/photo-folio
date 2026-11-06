@@ -17,7 +17,7 @@
     /* 触屏滑动手势由 JS（lightbox-swipe）接管，禁浏览器原生手势
        （原生滚动/捏合会触发 pointercancel 打断拖拽） */
     touch-action: none;
-    transition: padding 0.4s ease; /* 断点切换时左侧留白平滑过渡 */
+    transition: padding var(--transition-reveal-fast); /* 断点切换时左侧留白平滑过渡 */
     position: relative; /* 转圈指示的定位包含块 */
 
     > * {
@@ -59,7 +59,7 @@
     border-radius: var(--radius-xs);
     filter: blur(0.5em) saturate(1.1);
     transform: scale(2);
-    transition: opacity 0.25s ease;
+    transition: opacity var(--transition-fade);
     pointer-events: none;
 }
 

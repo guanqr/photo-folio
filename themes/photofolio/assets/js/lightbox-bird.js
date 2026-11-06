@@ -48,6 +48,11 @@ export function initLightboxBird({
     })();
     const collapseBtn = document.getElementById('lightbox-bird-collapse');
     const slotEl = document.getElementById('lightbox-bird-slot');
+    // 图鉴块存在性交给 slot 内层 grid 过渡（见 _lightbox-bird.scss）：
+    // 块本身不再用 hidden 切换，否则 display:none 无法做高度过渡
+    block.hidden = false;
+    block.inert = true;
+    block.setAttribute('aria-hidden', 'true');
     const scrollContainer = panelDetails || body.closest('.lightbox-panel-details');
     const panelEl = panel || (scrollContainer && scrollContainer.closest('.lightbox-panel'));
     // 收起居中补偿与图像分析共用（见 lightbox-panel-comp.js）
@@ -93,6 +98,14 @@ export function initLightboxBird({
         trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
         body.setAttribute('aria-hidden', open ? 'false' : 'true');
         body.inert = !open;
+    };
+
+    // 有/无鸟种只切换 slot 的 is-present（内层 0fr↔1fr + opacity 过渡）；
+    // 隐藏态用 inert/aria-hidden，保留布局以便高度过渡
+    const setPresent = (present) => {
+        if (slotEl) slotEl.classList.toggle('is-present', present);
+        block.inert = !present;
+        block.setAttribute('aria-hidden', present ? 'false' : 'true');
     };
 
     const cancelAnchor = () => {
@@ -171,14 +184,14 @@ export function initLightboxBird({
 
         // 开关显示条件：带 species 或属于观鸟系列（缺 species 也显示）
         if (!photo || (!photo.species && !photo.birdGuide)) {
-            block.hidden = true;
+            setPresent(false);
             cancelAnchor();
             // 聚焦节点随块隐藏时焦点会落回 body：交给常显的关闭按钮承接
             if (focusInBlock && fallbackFocus) fallbackFocus.focus({ preventScroll: true });
             return;
         }
 
-        block.hidden = false;
+        setPresent(true);
         // 收起补偿的最终组高需要图鉴收起时的 slot 占位（含触发行外边距）；
         // 块可见且收起时缓存（首张鸟照渲染即处于收起态）
         if (!open && slotEl) closedSlotHeight = slotEl.offsetHeight;
@@ -263,7 +276,7 @@ export function initLightboxBird({
         // 关闭灯箱静默复位（下次打开默认收起，与图像分析一致）
         reset() {
             open = false;
-            block.hidden = true;
+            setPresent(false);
             cancelAnchor();
             clearFitFreeze();
             centerComp.cancel();

@@ -11,9 +11,9 @@
 import { isImageReady, createLayerStack } from './utils.js';
 
 export function initLightboxGlow({ reducedMotion }) {
-    const glowStack = createLayerStack((reducedMotion ? 0 : 250) + 50); // 0.25s 淡入 + 50ms 余量
+    const glowStack = createLayerStack((reducedMotion ? 0 : 300) + 50); // 0.3s 淡入 + 50ms 余量
     const layers = glowStack.layers;
-    const glowTransition = reducedMotion ? 'none' : 'opacity 0.25s ease';
+    const glowTransition = reducedMotion ? 'none' : 'opacity var(--transition-fade)';
 
     const createEl = () => {
         const el = document.createElement('img');

@@ -31,11 +31,18 @@
         if (!grid) return;
         var items = grid.querySelectorAll('.masonry-item');
         if (!items.length) return;
+        // 网格高度尚未建立：按两行照片高度占位，避免空网格把下方标题顶进视口
+        grid.classList.add('is-masonry-pending');
         for (var i = 0; i < items.length; i++) {
             items[i].classList.add('is-hidden');
         }
         setTimeout(function() {
             if (!grid.isConnected || grid.classList.contains('masonry-ready')) return;
+            // 初始化失败：首载叠层必须同步移除，否则固定层会永久遮住兜底网格
+            var pre = document.getElementById('grid-prerender');
+            if (pre) pre.remove();
+            // 兜底路径同样解除两行占位
+            grid.classList.remove('is-masonry-pending');
             // 虚拟化初始化失败：行容器是绝对定位的，先拆回直属卡片再切兜底网格
             var rows = grid.querySelectorAll('.masonry-row');
             for (var r = 0; r < rows.length; r++) {

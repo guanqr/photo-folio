@@ -22,7 +22,8 @@
  *   动画、新进入视口的卡片按旧行计划位置移入，换行有平滑过渡
  */
 
-import { prefersReducedMotion, markImageLoaded, FLIP_TRANSITION, FLIP_DURATION } from './utils.js';
+import { prefersReducedMotion, markImageLoaded } from './utils.js';
+import { FLIP_TRANSITION, FLIP_DURATION } from './flip.js';
 
 const DEFAULT_RATIO = 1.5; // 图片宽高比读取失败时的兜底值（3:2）
 const REVEAL_STAGGER = 60; // 逐张揭示间隔 ms
@@ -40,6 +41,32 @@ let windowRaf = 0;
 let gridObserver = null; // 每页只有一个网格；SPA 换页时断开旧观察，避免持有已脱离文档的整棵网格子树
 let restartFadeTimer = null;
 let restartFadeFinish = null; // 未执行筛选重启的收尾句柄（清 promise + 释放等待者）
+
+/* 首载低清叠层：至少展示 300ms，随后 0.4s 淡出并移除；重复加载/无叠层时
+   no-op。300ms 下限避免本机快速初始化时叠层一闪而过（2026-11-06） */
+function dismissPrerender() {
+    const el = document.getElementById('grid-prerender');
+    if (!el || el.hidden || el.classList.contains('is-off') || el.dataset.dismissing) return;
+    el.dataset.dismissing = '1';
+    const shownAt = Number(el.dataset.shownAt) || 0;
+    const minDelay = new Promise((resolve) => {
+        setTimeout(resolve, Math.max(0, 300 - (performance.now() - shownAt)));
+    });
+    // 等叠层的 32px LQIP 解码完再淡出：同一批 URL 已进缓存，真实网格接上时
+    // 直接显示低像素图而不是空白框；失败/超时 600ms 不阻塞
+    const decoded = Promise.all([...el.querySelectorAll('img')].map((img) => (
+        img.decode ? img.decode().catch(() => {}) : Promise.resolve()
+    )));
+    const imagesReady = Promise.race([
+        decoded,
+        new Promise((resolve) => setTimeout(resolve, 600)),
+    ]);
+    Promise.all([minDelay, imagesReady]).then(() => {
+        if (!el.isConnected) return;
+        el.classList.add('is-off');
+        setTimeout(() => el.remove(), 450);
+    });
+}
 
 export function initMasonry(skipInitialReveal = false) {
     // SPA 换页：上一页尚未执行的筛选重启作废（避免旧网格继续渲染/启动监听）
@@ -101,6 +128,8 @@ export function initMasonry(skipInitialReveal = false) {
         updateRowsOnScroll(grid);
     }
     grid.classList.add('masonry-ready');
+    grid.classList.remove('is-masonry-pending'); // 真实高度已建立，解除两行占位
+    dismissPrerender();
 }
 
 /* ===== 行计划与窗口渲染 ===== */
@@ -671,7 +700,7 @@ function rowCellAbsorbs(row, k) {
 
 /* 行内第 k 张图片的宽度（applyRows 与 itemRectInPlan 共用，避免跨档 FLIP
    起点与实际布局各算一套而脱节）：普通行/判定铺满的 ragged 行末张向下取整
-   吸收余量、整行恰好铺满；其余四舍五入（误差正负分布，末张 floor 已使行宽
+   吸收余量、整行恰好铺满；其余四舍五入（误差正负分布、末张 floor 已使行宽
    总和精确 ≤ W）。ragged 非铺满的末张按自然宽度参与四舍五入（右侧留白） */
 function rowCellWidth(row, k, remaining, ratio, h, border2) {
     if (rowCellAbsorbs(row, k)) {
@@ -878,7 +907,7 @@ function applyRenderedRows(grid) {
 }
 
 /* ===== 跨档位重排 FLIP ===== */
-/* 时长/缓动见 utils.js 的 FLIP_TRANSITION；同档位的冻结缩放保持实时无动画 */
+/* 时长/缓动见 flip.js 的 FLIP_TRANSITION；同档位的冻结缩放保持实时无动画 */
 
 /* 清除上一次未完成的 FLIP 残留（内联 transform/transition/transform-origin）——
    残留会使 First 测量包含旧位移，导致新一轮动画起点错位 */

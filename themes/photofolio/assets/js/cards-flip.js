@@ -7,10 +7,9 @@
 //   这正是瀑布流照片稳定的根本原因
 // - 档位内随意缩放：列数不变，网格自然伸缩，无重排无动画
 
-import {
-    prefersReducedMotion, FLIP_TRANSITION, BP_DESKTOP_MIN, BP_CARD_GRID_3COL_MIN,
-    FLIP_HYSTERESIS, clearFlipInline, recordFlipRects, resetFlipFinish, scheduleFlipFinish
-} from './utils.js';
+import { prefersReducedMotion } from './utils.js';
+import { FLIP_TRANSITION, FLIP_HYSTERESIS, clearFlipInline, recordFlipRects, resetFlipFinish, scheduleFlipFinish } from './flip.js';
+import { BP_DESKTOP_MIN, BP_CARD_GRID_3COL_MIN } from './breakpoints.js';
 
 const TIER_1_TO_2 = BP_DESKTOP_MIN;       // 1→2 列阈值（与汉堡断点单源）
 const TIER_2_TO_3 = BP_CARD_GRID_3COL_MIN; // 2→3 列阈值（与 _categories.scss 同源）

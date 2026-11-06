@@ -10,10 +10,8 @@
  * - 懒加载：IntersectionObserver rootMargin 600px 进入视口才构建
  * - SPA 页面切换重跑 initFootprintMap：同一节点幂等，旧状态（observers）先销毁
  */
-import {
-    prefersReducedMotion, FLIP_TRANSITION,
-    clearFlipInline, resetFlipFinish, scheduleFlipFinish
-} from './utils.js';
+import { prefersReducedMotion } from './utils.js';
+import { FLIP_TRANSITION, clearFlipInline, resetFlipFinish, scheduleFlipFinish } from './flip.js';
 import {
     SVG_NS, VIEW_W, targetHForWidth, fitProjection, project, matrixFrom,
     buildGrid, buildLand, buildRegionLayer, computeBounds

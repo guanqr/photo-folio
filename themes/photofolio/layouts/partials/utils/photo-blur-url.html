@@ -1,0 +1,15 @@
+{{/* 照片 LQIP 占位图 URL（photo-card 与首载低清叠层共用）：
+   OSS 端缩小并烘焙高斯模糊，固定 WebP（同尺寸体积小于 AVIF，且不触发
+   AVIF→WebP 兜底分支）；无 CDN 或 src 为绝对 URL 时返回空——img-url 对
+   绝对 URL 原样返回，占位图会退化为全尺寸原图，不如不请求。 */}}
+{{- $photo := .photo -}}
+{{- $site := .site -}}
+{{- $cfg := $site.Params.imageSizes | default dict -}}
+{{- $blurWidth := $cfg.placeholder | default 64 -}}
+{{- $blurQuality := $cfg.placeholderQuality | default 30 -}}
+{{- $blurRadius := $cfg.placeholderBlur | default 3 -}}
+{{- $blurUrl := "" -}}
+{{- if and $site.Params.imageCDN (not (strings.HasPrefix $photo.src "http")) -}}
+    {{- $blurUrl = partial "utils/img-url-cached.html" (dict "src" $photo.src "hash" ($photo.hash | default "") "site" $site "width" $blurWidth "mode" "lfit" "format" "webp" "quality" $blurQuality "blur" $blurRadius) -}}
+{{- end -}}
+{{- return $blurUrl -}}

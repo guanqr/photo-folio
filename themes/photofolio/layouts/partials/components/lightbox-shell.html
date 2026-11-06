@@ -51,7 +51,9 @@
                     {{ $lbCfg := merge (dict "meta" true "exif" true "palette" true "story" true "tonal" true "saturation" true "hue" true) (default dict site.Params.lightbox) }}
                     <div class="lightbox-caption" id="lightbox-caption"></div>
                     {{/* 标题下方：分类/系列胶囊行（JS 填充，点击跳转对应页面） */}}
-                    <div class="lightbox-tags" id="lightbox-tags"></div>
+                    <div class="lightbox-tags" id="lightbox-tags">
+                        <div class="lightbox-tags-inner" id="lightbox-tags-inner"></div>
+                    </div>
                     <div class="lightbox-panel-details" id="lightbox-panel-details">
                         {{ if $lbCfg.meta }}
                         <div class="lightbox-meta" id="lightbox-meta">
@@ -199,13 +201,16 @@
                         {{ end }}
                         {{ if $lbCfg.story }}
                         <div class="lightbox-story-wrap" id="lightbox-story-wrap">
-                            <h4 class="lightbox-section-title">{{ i18n "lightbox_story" }}</h4>
-                            <p class="lightbox-story" id="lightbox-story"></p>
+                            <div class="lightbox-story-inner">
+                                <h4 class="lightbox-section-title">{{ i18n "lightbox_story" }}</h4>
+                                <p class="lightbox-story" id="lightbox-story"></p>
+                            </div>
                         </div>
                         {{ end }}
                         {{/* 觀鳥圖鑑：仅带 species 的照片显示；空 slot 恒为详情区末子块，
                             让「末子块 auto 边距」居中规则无需改动（块隐藏时 slot 高度为 0） */}}
                         <div class="lightbox-bird-slot" id="lightbox-bird-slot">
+                            <div class="lightbox-bird-slot-inner">
                             <section class="lightbox-bird" id="lightbox-bird" hidden>
                                 <button class="lightbox-bird-trigger" id="lightbox-bird-trigger" type="button"
                                     aria-expanded="false" aria-controls="lightbox-bird-body">
@@ -269,6 +274,7 @@
                                     </div>
                                 </div>
                             </section>
+                            </div>
                         </div>
                     </div>
                     {{/* 窄屏详情滚动条：抽屉原生滚动条被手势模型隐藏，这里用覆盖层常显

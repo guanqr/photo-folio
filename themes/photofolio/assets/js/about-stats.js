@@ -10,13 +10,11 @@
 //   RO 回调在布局切换之后，First 基准须用「上一帧持续刷新的基准位置」回放
 //   （动画期间暂停刷新，避免把变换中的位置当基准——与足迹地图 flipLayout 同款经验）
 
-import {
-    prefersReducedMotion, FLIP_TRANSITION, FLIP_DURATION, FLIP_EASE,
-    BP_DESKTOP_MIN, FLIP_HYSTERESIS,
-    clearFlipInline, recordFlipRects, resetFlipFinish, scheduleFlipFinish
-} from './utils.js';
+import { prefersReducedMotion } from './utils.js';
+import { FLIP_TRANSITION, FLIP_DURATION, FLIP_EASE, FLIP_HYSTERESIS, clearFlipInline, recordFlipRects, resetFlipFinish, scheduleFlipFinish } from './flip.js';
+import { BP_DESKTOP_MIN } from './breakpoints.js';
 
-const TIER = BP_DESKTOP_MIN; // ≥769 兩列 / <769 單列（與 CSS max-width:768px 互補；單源見 utils.js）
+const TIER = BP_DESKTOP_MIN; // ≥769 兩列 / <769 單列（與 CSS max-width:768px 互補；單源見 breakpoints.js）
 // 頭部橫排↔豎排斷點：768 = BP_DESKTOP_MIN − 1（與全站窄屏上限嚴格互補，經單源推導不寫死）
 const MQ_NARROW = window.matchMedia(`(max-width: ${BP_DESKTOP_MIN - 1}px)`);
 

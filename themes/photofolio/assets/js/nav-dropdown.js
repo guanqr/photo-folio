@@ -5,7 +5,7 @@
  *   进入宽屏时禁用门控，首次真实鼠标移动（pointermove）或键盘聚焦（focusin）后恢复
  * - 跨断点进入宽屏时自动重置展开态与门控（避免回到窄屏时菜单残留打开）
  */
-import { BP_DESKTOP_MIN } from './utils.js';
+import { BP_DESKTOP_MIN } from './breakpoints.js';
 
 // 待命恢复 hover-ready 的监听：pointermove/focusin 共用 AbortController，
 // 任一触发即作废另一个，跨断点不残留 once 监听（旧写法只把变量置空，
@@ -16,7 +16,7 @@ export function initNavDropdown() {
     const nav = document.getElementById('site-nav');
     if (!nav) return;
 
-    // 桌面断点单源（见 utils.js BP_DESKTOP_MIN，与样式表 max-width: 768px
+    // 桌面断点单源（见 breakpoints.js BP_DESKTOP_MIN，与样式表 max-width: 768px
     // 严格互补——平板竖屏恰为 768px，两态重叠会致手风琴点不开）
     const mqDesktop = window.matchMedia(`(min-width: ${BP_DESKTOP_MIN}px)`);
     // 纯触屏设备（无悬停能力）：桌面模式也允许点击切换——悬停展开依赖

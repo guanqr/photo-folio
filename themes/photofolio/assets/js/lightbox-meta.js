@@ -66,21 +66,55 @@ export function initLightboxMeta({ tagsEl, metaEl, metaPlaceEl, metaDateEl, exif
         });
     }
 
-    // 标题下方的分类/系列胶囊（点击跳转对应页面）
+    // 标题下方的分类/系列胶囊（点击跳转对应页面）：常驻标签保留，仅对新增/
+    // 删除的标签做淡入淡出；标签行本身从空↔有高度折叠（见 _lightbox-panel.scss）
+    const tagsInner = tagsEl ? (tagsEl.querySelector('.lightbox-tags-inner') || tagsEl) : null;
+
+    function makeTag(t) {
+        const a = document.createElement('a');
+        a.className = 'lightbox-tag';
+        a.href = t.url;
+        a.textContent = t.text;
+        a.dataset.tagKey = t.key;
+        return a;
+    }
+
     function renderTags(p) {
-        if (!tagsEl) return;
-        tagsEl.innerHTML = '';
+        if (!tagsEl || !tagsInner) return;
+        // key 用标签类型而非值：分类值变化只更新文字（文字不淡出），
+        // 只有系列标签等“整类标签有↔无”才走淡入/淡出
         const pills = [];
-        if (p.category && p.categoryUrl) pills.push({ text: p.category, url: p.categoryUrl });
-        if (p.series && p.seriesUrl) pills.push({ text: p.series, url: p.seriesUrl });
-        pills.forEach((t) => {
-            const a = document.createElement('a');
-            a.className = 'lightbox-tag';
-            a.href = t.url;
-            a.textContent = t.text;
-            tagsEl.appendChild(a);
+        if (p.category && p.categoryUrl) pills.push({ key: 'category', text: p.category, url: p.categoryUrl });
+        if (p.series && p.seriesUrl) pills.push({ key: 'series', text: p.series, url: p.seriesUrl });
+        const wanted = new Set(pills.map((t) => t.key));
+
+        // 整类标签不再存在：先淡出；延时移除与 --transition-fade 同长
+        Array.from(tagsInner.children).forEach((el) => {
+            if (!el.dataset.tagKey || wanted.has(el.dataset.tagKey)) return;
+            if (el.classList.contains('is-leaving')) return;
+            el.classList.add('is-leaving');
+            el.setAttribute('aria-hidden', 'true');
+            el.tabIndex = -1;
+            setTimeout(() => { if (el.isConnected) el.remove(); }, 320);
         });
-        tagsEl.style.display = pills.length ? '' : 'none';
+
+        // 同类型标签复用并原位更新文字；整类新增才插入并淡入
+        pills.forEach((t, i) => {
+            let el = Array.from(tagsInner.children).find((node) => (
+                node.dataset.tagKey === t.key && !node.classList.contains('is-leaving')
+            ));
+            if (!el) {
+                el = makeTag(t);
+                el.classList.add('is-entering');
+                tagsInner.insertBefore(el, tagsInner.children[i] || null);
+                void el.offsetWidth; // 先提交 entering 起点，再移除 class 触发过渡
+                requestAnimationFrame(() => el.classList.remove('is-entering'));
+            } else {
+                if (el.getAttribute('href') !== t.url) el.href = t.url;
+                if (el.textContent !== t.text) el.textContent = t.text;
+            }
+        });
+        tagsEl.classList.toggle('is-visible', pills.length > 0);
     }
 
     return {

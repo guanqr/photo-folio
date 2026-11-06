@@ -12,7 +12,8 @@
  * 分析区收起期间输入挂起（setInputHold，由开合控制模块置位）：wheel 整链
  * 早退，旧手势惯性尾不接管在途回滚/抽屉 level。
  */
-import { prefersReducedMotion, BP_LIGHTBOX_NARROW, BP_DESKTOP_MIN } from './utils.js';
+import { prefersReducedMotion } from './utils.js';
+import { BP_LIGHTBOX_NARROW, BP_DESKTOP_MIN } from './breakpoints.js';
 
 export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle, metaEl, dirVerdict, reservedBottom }) {
     const narrowMedia = window.matchMedia(`(max-width: ${BP_LIGHTBOX_NARROW}px)`);
@@ -65,7 +66,7 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
 
     function apply(px, animate) {
         panelDetails.style.transition = animate
-            ? 'max-height 0.4s ease, opacity 0.3s ease'
+            ? 'max-height var(--transition-reveal-fast), opacity var(--transition-fade)'
             : 'none';
         panelDetails.style.maxHeight = px + 'px';
         // 溢出始终 hidden（窄屏滚动完全由手势/滚轮模型接管，程序化 scrollTop 不受影响）——

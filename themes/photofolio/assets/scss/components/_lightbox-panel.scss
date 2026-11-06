@@ -30,17 +30,27 @@
     transition: opacity var(--transition-fade);
 }
 
-/* 标题下方分类/系列胶囊行（抽屉头部固定，随标题常显；JS 填充，点击跳转对应页面） */
+/* 标签行：行高/下边距折叠负责空↔有；具体标签的增删由 .lightbox-tag 的
+   is-entering/is-leaving 淡入淡出，常驻的分类标签不参与动画（2026-11-06） */
 .lightbox-tags {
+    display: grid;
+    grid-template-rows: 0fr;
+    margin-bottom: 0;
+    transition: grid-template-rows var(--transition-reveal-fast),
+                margin-bottom var(--transition-fade);
+}
+
+.lightbox-tags.is-visible {
+    grid-template-rows: 1fr;
+    margin-bottom: 0.6em;
+}
+
+.lightbox-tags-inner {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5em;
-    margin-bottom: 0.6em;
-    transition: opacity var(--transition-fade); /* 随图片同步淡入 */
-
-    &:empty {
-        display: none; /* 无分类/系列时整行隐藏 */
-    }
+    min-height: 0;
+    overflow: hidden;
 }
 
 .lightbox-tag {
@@ -51,7 +61,14 @@
     font-size: var(--size-meta);
     color: var(--color-accent);
     background: transparent;
-    transition: background-color var(--transition-fade), border-color var(--transition-fade), color var(--transition-fade);
+    transition: background-color var(--transition-fade), border-color var(--transition-fade),
+        color var(--transition-fade), opacity var(--transition-fade);
+
+    &.is-entering,
+    &.is-leaving {
+        opacity: 0;
+        pointer-events: none;
+    }
 
     &:hover {
         /* 填充绿色背景，文字换灯箱文字白（--color-text 在灯箱内固定为 91% 白）——
@@ -111,7 +128,7 @@
     overflow: hidden;
     max-height: 0;
     opacity: 0;
-    transition: max-height 0.4s ease, opacity 0.3s ease;
+    transition: max-height var(--transition-reveal-fast), opacity var(--transition-fade);
     padding-right: 0.5em; /* 内容与滚动条之间留出间距（窄屏） */
     /* 统一细滚动条：常显，不随滚动空闲隐藏；scrollbar-gutter 始终预留空间，
        滚动条出现/消失不引起文字横向移动。
@@ -217,7 +234,7 @@
     cursor: pointer;
     padding: 0.2em 1em;
     -webkit-tap-highlight-color: transparent;
-    transition: color 0.2s;
+    transition: color var(--transition-fast);
 
     &:hover { color: var(--color-lightbox-ctrl-text-hover); }
 

@@ -12,7 +12,8 @@ import { initLightboxFullscreen } from './lightbox-fullscreen.js';
 import { initLightboxSwitch } from './lightbox-switch.js';
 import { initLightboxAnalysisControl } from './lightbox-analysis-control.js';
 import { initLightboxBird } from './lightbox-bird.js';
-import { prefersReducedMotion, BP_LIGHTBOX_NARROW } from './utils.js';
+import { prefersReducedMotion } from './utils.js';
+import { BP_LIGHTBOX_NARROW } from './breakpoints.js';
 import { revealUpToItem } from './masonry.js';
 import { setLightboxClose as setCloseBridge } from './lightbox-bridge.js';
 
@@ -96,7 +97,7 @@ export function initLightbox() {
     const analysisWrap = document.getElementById('lightbox-analysis');
     const analysisCollapse = document.getElementById('lightbox-analysis-collapse');
     // 窄屏灯箱主图降档判定（宽度取 params.imageSizes.lightboxNarrow，默认
-    // 1280）：与抽屉断点一致（单源见 utils.js）——初始化时创建一次
+    // 1280）：与抽屉断点一致（单源见 breakpoints.js）——初始化时创建一次
     const narrowLightbox = window.matchMedia(`(max-width: ${BP_LIGHTBOX_NARROW}px)`);
     const narrowWidth = parseInt(lightbox.dataset.narrowWidth, 10) || 1280;
 
@@ -225,10 +226,17 @@ export function initLightbox() {
     function renderPanel(p) {
         if (lightboxCaption) lightboxCaption.textContent = p.title;
         meta.render(p);
-        // 故事块隐藏用 hidden 属性（而非 display:none）：详情区「末可见子块
-        // auto 边距」的居中判定依赖 [hidden] 选择器（见 _lightbox-panel.scss）
-        if (storyWrap) storyWrap.hidden = !p.description;
-        if (storyEl) storyEl.textContent = p.description || '';
+        // 故事块与图鉴/标签同规则：有/无描述时只折叠该块（grid 行 + 内层淡入），
+        // 文字直接更新；移除时保留旧文本随内层淡出，隐藏后 aria-hidden/inert
+        const hasStory = !!p.description;
+        if (storyWrap) {
+            if (hasStory && storyEl) storyEl.textContent = p.description;
+            storyWrap.classList.toggle('is-present', hasStory);
+            storyWrap.inert = !hasStory;
+            storyWrap.setAttribute('aria-hidden', hasStory ? 'false' : 'true');
+        } else if (storyEl) {
+            storyEl.textContent = p.description || '';
+        }
         // 分析只在展开态渲染（收起态只由切换管线预取数据、不绘制）；展开切图
         // 时旧图表保持显示，新数据就绪后按既有形变过渡替换
         if (analysisWrap && analysisWrap.classList.contains('is-open')) {

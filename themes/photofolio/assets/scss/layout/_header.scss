@@ -29,7 +29,7 @@
 /* 进入宽屏：导航文字从右侧向左滑回原位（类由 JS 在断点跨越时添加，时长与首页进度条标题切换一致） */
 @media (min-width: 769px) {
     .site-nav.nav-slide-in {
-        animation: nav-slide-in 0.6s ease both;
+        animation: nav-slide-in var(--transition-reveal) both;
     }
 }
 
@@ -169,7 +169,7 @@
         box-shadow: var(--shadow-pop);
         opacity: 0;
         visibility: hidden;
-        transition: opacity var(--transition), visibility 0.3s, margin-top var(--transition),
+        transition: opacity var(--transition), visibility var(--transition-fade), margin-top var(--transition),
                     border-color var(--transition-fade), background-color var(--transition-fade);
 
         a {
@@ -259,7 +259,7 @@
     display: none;
     visibility: hidden;
     opacity: 0;
-    transition: opacity var(--transition-fade), visibility 0.3s;
+    transition: opacity var(--transition-fade), visibility var(--transition-fade);
 
     span {
         position: absolute;
@@ -418,7 +418,7 @@
    旧态组缩放淡出、新态组缩放淡入——重现原元素级过渡的形态动画（组级近似：
    光线与核心同一缩放节奏，8 条光线各自缩至 0 的逐条节奏无法在组级区分）；
    透明侧（旧态的隐藏图标）组动画无可见内容、天然静默；时长/曲线与全站
-   --transition 同长、与 root 组 0.3s ease 同步（_base.scss 互指） */
+   --transition 同长、与 root 组 var(--transition-fade) 同步（_base.scss 互指） */
 @keyframes theme-toggle-icon-out {
     from { opacity: 1; transform: scale(1); }
     to { opacity: 0; transform: scale(0.6); }

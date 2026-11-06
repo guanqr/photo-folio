@@ -30,7 +30,7 @@
     flex-direction: column; /* 上下分区：顶部关闭栏、下方主区 */
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.3s, visibility 0.3s;
+    transition: opacity var(--transition-fade), visibility var(--transition-fade);
 
     /* 桌面端右侧元信息面板宽度（箭头按钮右移避让用同一变量） */
     --lightbox-panel-w: 22em;
@@ -131,7 +131,7 @@
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    transition: background 0.2s, color 0.2s;
+    transition: background var(--transition-fast), color var(--transition-fast);
     -webkit-tap-highlight-color: transparent;
 
     svg {
@@ -185,7 +185,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: opacity 0.2s ease, transform var(--transition-spring);
+        transition: opacity var(--transition-fast), transform var(--transition-spring);
     }
 
     .lightbox-autoplay-play {
@@ -229,7 +229,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: opacity 0.2s ease, transform var(--transition-spring);
+        transition: opacity var(--transition-fast), transform var(--transition-spring);
     }
 
     .lightbox-fullscreen-enter {
@@ -266,7 +266,7 @@
     z-index: 5;
     background: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.1);
     opacity: 0;
-    transition: opacity 0.2s ease;
+    transition: opacity var(--transition-fast);
     pointer-events: none;
 
     &.is-visible {
@@ -298,7 +298,7 @@
     transform: translateY(-50%);
     pointer-events: auto;
     /* 覆盖基类 transition：补 transform 过渡（旋转/缩放） */
-    transition: background 0.2s, color 0.2s, transform var(--transition-35);
+    transition: background var(--transition-fast), color var(--transition-fast), transform var(--transition-layout);
     z-index: var(--z-lightbox-arrow);
 
     &:active {
@@ -322,16 +322,16 @@
    prefers-reduced-motion 时关闭 */
 @media (prefers-reduced-motion: no-preference) {
     .lightbox.is-layout-switching .lightbox-panel {
-        animation: panel-layout-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+        animation: panel-layout-in 0.55s var(--ease-soft) both;
     }
 
     .lightbox.is-layout-switching .lightbox-img-area {
-        animation: img-layout-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+        animation: img-layout-in 0.55s var(--ease-soft) both;
     }
 
     /* 窄屏抽屉内双列↔单列转换（768px）：仅面板轻量淡入滑动，不扰动图片区 */
     .lightbox.is-layout-switching-inner .lightbox-panel {
-        animation: panel-inner-layout-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+        animation: panel-inner-layout-in 0.4s var(--ease-soft) both;
     }
 }
 

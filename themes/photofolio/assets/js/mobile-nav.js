@@ -5,7 +5,8 @@
  * - 子导航手风琴与桌面悬停门控见 nav-dropdown.js
  */
 import { resetSubMenus } from './nav-dropdown.js';
-import { prefersReducedMotion, BP_DESKTOP_MIN } from './utils.js';
+import { prefersReducedMotion } from './utils.js';
+import { BP_DESKTOP_MIN } from './breakpoints.js';
 
 export function initMobileNav() {
     const btn = document.getElementById('nav-toggle');
@@ -16,15 +17,15 @@ export function initMobileNav() {
 
     // 开合过渡公共前缀：位移/淡入/可见性（两变体共用，避免逐字重复）
     const TRANSITION_BASE =
-        'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, visibility 0.3s, ';
+        'transform var(--transition-page), opacity var(--transition-fade), visibility var(--transition-fade), ';
 
     const TRANSITION_STYLE =
-        TRANSITION_BASE + 'background 0.3s ease, backdrop-filter 0.3s ease, -webkit-backdrop-filter 0.3s ease, box-shadow 0.3s ease';
+        TRANSITION_BASE + 'background var(--transition-fade), backdrop-filter var(--transition-fade), -webkit-backdrop-filter var(--transition-fade), box-shadow var(--transition-fade)';
 
     // 仅位移/淡入的过渡（页面已滚动时用：面板直接不透明打开，不做背景渐变；
     // 底部阴影仍随开合渐入渐出，与未滚动态一致）
     const TRANSITION_STYLE_NO_BG =
-        TRANSITION_BASE + 'box-shadow 0.3s ease';
+        TRANSITION_BASE + 'box-shadow var(--transition-fade)';
 
     let pendingEnd = null; // 在途 transitionend 收尾槽位（开合前作废旧监听，防幽灵收尾）
 
@@ -92,7 +93,7 @@ export function initMobileNav() {
     //    旋转导致的断点跨越不播放：该动画为「absolute + transform + 时长>0」，
     //    恰是 WebKit 旋转后 clientWidth 永久取旧值（Bug 287042）的触发模式——
     //    旋转时跳过动画、样式直接切换（桌面窗口缩放跨越断点仍保留动画）
-    // 桌面断点单源（见 utils.js BP_DESKTOP_MIN，与样式表 max-width: 768px
+    // 桌面断点单源（见 breakpoints.js BP_DESKTOP_MIN，与样式表 max-width: 768px
     // 严格互补——平板竖屏恰为 768px，两态重叠会致断点行为错位）
     const mqDesktop = window.matchMedia(`(min-width: ${BP_DESKTOP_MIN}px)`);
 
