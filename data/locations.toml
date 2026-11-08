@@ -47,6 +47,12 @@ lat = 31.23
 lng = 121.47
 
 [[location]]
+name = "江蘇"
+slug = "jiangsu"
+lat = 32.06
+lng = 118.80
+
+[[location]]
 name = "天津"
 slug = "tianjin"
 lat = 39.13
