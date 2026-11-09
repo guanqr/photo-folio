@@ -989,7 +989,9 @@ function bindFlipCleanup(grid) {
 /* 对重建后的可见作品执行 FLIP：Last 测量 → Invert 回旧位 → Play 过渡到新位。
    重建后未渲染（is-hidden）或被新视口排除的作品跳过 */
 function flipRebuild(grid, flip) {
-    const playing = [];
+    // 两趟循环：先量测全部 Last，再统一写 Invert——逐项 read→write 交错会让
+    // 每次量测先冲掉上一项写入的样式、逐项重复样式计算（2026-11-09）
+    const moves = [];
     flip.items.forEach((item, i) => {
         if (!item.isConnected || item.classList.contains('is-hidden')) return;
         const f = flip.rects[i];
@@ -1001,15 +1003,17 @@ function flipRebuild(grid, flip) {
         const sy = f.height / l.height;
         if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5 &&
             Math.abs(sx - 1) < 0.001 && Math.abs(sy - 1) < 0.001) return;
+        moves.push({ item, dx, dy, sx, sy });
+    });
+    if (!moves.length) return;
+    moves.forEach(({ item, dx, dy, sx, sy }) => {
         item.style.transition = 'none';
         item.style.transformOrigin = 'top left';
         item.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
-        playing.push(item);
     });
-    if (!playing.length) return;
     // 强制回流：单次布局读取即提交全部 Invert 起点（同一任务内完成换位与起播）
-    void playing[0].offsetHeight;
-    playing.forEach((item) => {
+    void moves[0].item.offsetHeight;
+    moves.forEach(({ item }) => {
         item.style.transition = FLIP_TRANSITION;
         item.style.transform = '';
     });
@@ -1020,7 +1024,7 @@ function flipRebuild(grid, flip) {
     clearTimeout(grid._flipCleanupTimer);
     grid._flipCleanupTimer = setTimeout(() => {
         grid._flipCleanupTimer = null;
-        playing.forEach((item) => {
+        moves.forEach(({ item }) => {
             if (!(item.style.transition || '').includes('transform')) return;
             item.style.transition = '';
             item.style.transformOrigin = '';

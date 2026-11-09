@@ -48,6 +48,12 @@ other = "全螢幕"
 [lightbox_fullscreen_exit]
 other = "退出全螢幕"
 
+[lightbox_zoom]
+other = "放大圖片"
+
+[lightbox_zoom_exit]
+other = "還原圖片"
+
 [scroll_down]
 other = "向下捲動"
 

@@ -35,6 +35,8 @@
     position: relative;
     z-index: 2; /* 与 .lightbox-content 同层，高于毛玻璃背景 */
     height: var(--lightbox-strip-h);
+    /* 主图缩放时淡出但保留布局（见 _lightbox-magnify.scss） */
+    transition: opacity var(--transition-layout), visibility var(--transition-layout);
     padding: 0 1em; /* 与顶栏/箭头边距一致 */
     box-sizing: border-box;
     display: flex;

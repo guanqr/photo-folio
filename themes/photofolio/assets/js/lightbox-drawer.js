@@ -20,6 +20,9 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
     // 全屏（沉浸）模式：面板 display:none，抽屉手势/布局重算一律暂停，
     // 退出时由 refreshLayout 在面板恢复可见后统一重算（见 lightbox-fullscreen.js）
     const isFullscreen = () => lightbox.classList.contains('is-fullscreen');
+    // 主图缩放（见 lightbox-magnify.js）：面板 visibility:hidden 但保留布局，
+    // 抽屉手势/重算一律暂停；退出时不需要重测（布局未变）
+    const isZoomed = () => lightbox.classList.contains('is-zoomed');
     // 窄屏详情自定义滚动条（抽屉原生滚动条被手势模型隐藏）
     const scrollbarEl = panel.querySelector('.lightbox-panel-scrollbar');
     const scrollbarThumb = scrollbarEl ? scrollbarEl.querySelector('.lightbox-panel-scrollbar-thumb') : null;
@@ -99,6 +102,7 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
     const scrollbarAvailable = () => narrowMedia.matches
         && lightbox.classList.contains('active')
         && !isFullscreen()
+        && !isZoomed()
         && panel.classList.contains('is-open')
         && level >= 0.999;
 
@@ -298,25 +302,47 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
         updateArrowState();
     }
 
+    // 断点切换入场动画类的收尾：动画用 fill: both，类若常驻，动画值会一直
+    // 覆盖面板/图片区的 opacity/transform——缩放时面板的 opacity 0/1 被动画值
+    // 压住、淡出淡入失效（2026-11-09）。动画结束后按类名摘除，下一次切换再重挂。
+    let layoutSwitchTimer = null;
+    let innerLayoutSwitchTimer = null;
+
     // 窄屏抽屉内的双列↔单列转换（768px 边界）：面板轻量淡入滑动柔化内部重排跳变；
     // 高度重测由 resize 处理器覆盖（媒体查询变化伴随 window resize）；
     // 768 = BP_DESKTOP_MIN - 1（与全站窄屏上限严格互补，经单源推导不写死）
     const singleColMedia = window.matchMedia(`(max-width: ${BP_DESKTOP_MIN - 1}px)`);
     singleColMedia.addEventListener('change', () => {
         if (!lightbox.classList.contains('active')) return;
+        if (isFullscreen()) return; // 隐藏态（display:none）不做入场动画
+        if (isZoomed()) return; // 缩放中面板 visibility:hidden：跳过只为柔化可见布局的动画
         lightbox.classList.remove('is-layout-switching-inner');
         void lightbox.offsetWidth; // 强制回流，重新触发动画
         lightbox.classList.add('is-layout-switching-inner');
+        clearTimeout(innerLayoutSwitchTimer);
+        innerLayoutSwitchTimer = setTimeout(() => {
+            innerLayoutSwitchTimer = null;
+            lightbox.classList.remove('is-layout-switching-inner');
+        }, 450); // 0.4s 动画 + 余量
     });
 
     // 灯箱打开期间跨断点：进窄屏重置抽屉、回宽屏清除内联样式恢复桌面布局；
     // 面板触发一次淡入动画柔化布局跳变（prefers-reduced-motion 时由 CSS 关闭）
     narrowMedia.addEventListener('change', (e) => {
         if (!lightbox.classList.contains('active')) return;
-        if (isFullscreen()) return; // 隐藏态不测量；退出时 refreshLayout 按新视口重算
-        lightbox.classList.remove('is-layout-switching');
-        void lightbox.offsetWidth; // 强制回流，重新触发动画
-        lightbox.classList.add('is-layout-switching');
+        if (isFullscreen()) return; // 全屏面板 display:none，无法测量；退出时 refreshLayout 重算
+        // 缩放期间面板仅 visibility:hidden、布局有效：仍要重置抽屉/清桌面内联，
+        // 但跳过只为可见布局服务的入场动画（否则动画填充值会干扰缩放淡入淡出）
+        if (!isZoomed()) {
+            lightbox.classList.remove('is-layout-switching');
+            void lightbox.offsetWidth; // 强制回流，重新触发动画
+            lightbox.classList.add('is-layout-switching');
+            clearTimeout(layoutSwitchTimer);
+            layoutSwitchTimer = setTimeout(() => {
+                layoutSwitchTimer = null;
+                lightbox.classList.remove('is-layout-switching');
+            }, 600); // 0.55s 动画 + 余量
+        }
         reset(true);
         if (!e.matches) panelDetails.scrollTop = 0;
     });
@@ -326,7 +352,8 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
     // 继续挤占图片区；头部与简行高度同步重测（标题行数 / 地点日期双列↔单列都会改变高度）
     window.addEventListener('resize', () => {
         if (!narrowMedia.matches || !lightbox.classList.contains('active')) return;
-        if (isFullscreen()) return; // 隐藏态不测量；退出时 refreshLayout 按新视口重算
+        if (isFullscreen()) return; // 全屏面板 display:none，无法测量；退出时 refreshLayout 重算
+        // 缩放中面板 visibility:hidden、但仍占布局：照常重测，退出缩放后尺寸才正确
         measure();
         if (level <= 0) {
             apply(minHeight, false); // 收起态高度随简行重测（双列↔单列切换）
@@ -395,7 +422,8 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
     // 面板与子块尺寸变化（内容渲染、切图、视口变化）→ 重判「放得下/放不下」
     if (typeof ResizeObserver !== 'undefined') {
         const fitObserver = new ResizeObserver(() => {
-            if (isFullscreen()) return; // 隐藏态不重判；退出时 refreshFit/refreshLayout 统一恢复
+            if (isFullscreen()) return; // 全屏面板 display:none，无法重判；退出时 refreshFit/refreshLayout 统一恢复
+            // 缩放中面板仍占布局（visibility:hidden）：照常重判，退出后 is-fit 才正确
             updateFit();
             // 窄屏：抽屉/内容高度变化（展开过渡、分析区开合、切图换内容）后
             // 重判箭头方向——高度过渡结束没有滚动事件，箭头不能停在旧状态
@@ -413,6 +441,7 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
     lightbox.addEventListener('wheel', (e) => {
         if (inputHold) return; // 收起编排挂起：点击收起后的旧手势惯性尾不接管（见 setInputHold）
         if (isFullscreen()) return; // 全屏：面板已隐藏，滚轮不驱动抽屉
+        if (isZoomed()) return; // 缩放：图片区滚轮已由 magnify 模块接管
         if (e.target.closest('.lightbox-strip')) return; // 底部缩略图条自行处理滚轮（横向滚动）
         // 新输入接管：中断在途回滚/滚底动画（用户中途滚轮时必须先摘除，
         // 否则动画逐帧覆盖滚动输入）
@@ -465,10 +494,12 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
     let dragStartY = null;
     let dragStartVirt = 0;
     let dragging = false;
+    let dragPointerId = null;
     let dragFromImgArea = false; // 拖拽起点是否在图片区——方向仲裁仅对图片区起手的手势生效
     lightbox.addEventListener('pointerdown', (e) => {
         if (!narrowMedia.matches || !lightbox.classList.contains('active')) return;
         if (isFullscreen()) return; // 全屏：不进入抽屉拖拽，触屏水平滑动切图由 swipe 模块接管
+        if (isZoomed()) return; // 缩放：单指拖动由 magnify 模块平移图片
         // 任何点按（含按钮/缩略图条）接管在途的 JS 回滚与原生平滑滚底
         cancelScrollAnim();
         if (e.target.closest('button') || e.target.closest('a')) return;
@@ -483,11 +514,12 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
         e.preventDefault(); // 阻止原生图片拖拽/文本选择抢走 pointermove
         if (maxHeight() - minHeight < 1) return; // 行程为零：拖拽无展开余地，不启动
         dragging = true;
+        dragPointerId = e.pointerId;
         lightbox.classList.add('is-dragging'); // 拖拽期间禁选中（见 _lightbox-panel.scss）
         dragFromImgArea = !!(e.target.closest && e.target.closest('.lightbox-img-area'));
         dragStartY = e.clientY;
         dragStartVirt = level * (maxHeight() - minHeight) + panelDetails.scrollTop;
-        lightbox.setPointerCapture(e.pointerId);
+        try { lightbox.setPointerCapture(e.pointerId); } catch (err) { /* 指针已释放/合成事件 */ }
     });
     // 虚拟位置统一落位（拖动中/接管回滚共用）：virt = 展开程度×行程 + 内容滚动
     const applyVirt = (virt) => {
@@ -530,13 +562,25 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
     const endDrag = () => {
         if (!dragging) return;
         dragging = false;
+        dragPointerId = null;
         lightbox.classList.remove('is-dragging'); // 拖拽结束恢复文字选择
+    };
+    // 双指捏合接管时取消在途抽屉拖拽（第二指落下时首指可能已开始拖动）：
+    // 释放指针捕获，避免抽屉继续跟随首指、与缩放抢手势
+    const cancelDrag = () => {
+        if (!dragging) return;
+        const id = dragPointerId;
+        endDrag();
+        if (id !== null) {
+            try { lightbox.releasePointerCapture(id); } catch (e) { /* 指针已释放 */ }
+        }
     };
     lightbox.addEventListener('pointerup', endDrag);
     lightbox.addEventListener('pointercancel', endDrag);
 
     return {
         reset,
+        cancelDrag,
         refresh: updateArrowState,
         // 取消在途回滚动画（分析区开合/用户滚动接管时调用：回滚仍在逐帧
         // 强制 scrollTop，会覆盖用户任何滚动输入，2026-10-18）
@@ -582,6 +626,10 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
         // 仅桌面生效，调用方以本函数门控（2026-10-21 审查修复：窄屏无门控
         // 时收起出现「先下滑再弹回」伪动效））
         fitApplicable: () => !narrowMedia.matches,
+        // 窄屏滚轮缩放的启用门：详情抽屉完全收起（仅标题/标签/地点日期，
+        // 此时图片最大）才允许滚轮缩放；未收起时滚轮只驱动抽屉。
+        // 桌面无抽屉、全屏面板隐藏，恒允许（2026-11-09）
+        wheelZoomAllowed: () => !narrowMedia.matches || isFullscreen() || level <= 0.001,
         // 释放冻结后的显式翻转入口（收起过渡结束时由调用方在位置补偿前调用；
         // 走 force：active 守卫此时必然通过、且强制重判语义与 refreshFit 一致）
         flipFitNow: () => updateFit(true),

@@ -1,0 +1,40 @@
+/* ===== Lightbox 主图缩放 ===== */
+/* is-zoomed：图片可越过原图片区绘制、灯箱统一裁切（由 lightbox-magnify.js
+   切换；辉光层由 JS 同步施加同一缩放变换，仍环绕主图）；is-zoom-panel-hidden：
+   信息面板/缩略图条/箭头淡出但保留布局——进出缩放不触发重排，抽屉无需重测。
+   两个类分开是为了退出时先让面板淡入、等图片归位动画结束再摘 is-zoomed
+   （期间仍允许图片越界绘制）。图片可越过隐藏的缩略图条/面板区域，以整个
+   灯箱（视口）为居中/钳制范围。 */
+
+.lightbox.is-zoomed {
+    /* 图片越过内容区（含隐藏的窄屏缩略图条空间）后由灯箱统一裁切；顶栏 z-index 更高 */
+    overflow: hidden;
+}
+
+.lightbox.is-zoomed .lightbox-img-area {
+    /* 图片可绘制到信息面板/缩略图条的占位区域；最终裁切由 .lightbox 负责 */
+    overflow: visible;
+}
+
+/* 未缩放时单击主图放大（触屏双击）：桌面用放大光标提示；触屏无光标 */
+.lightbox:not(.is-zoomed) .lightbox-img-area img:not(.lightbox-img-glow) {
+    cursor: zoom-in;
+}
+
+.lightbox.is-zoomed .lightbox-img-area,
+.lightbox.is-zoomed .lightbox-img-area img:not(.lightbox-img-glow) {
+    cursor: grab;
+}
+
+.lightbox.is-zoomed.is-panning .lightbox-img-area,
+.lightbox.is-zoomed.is-panning .lightbox-img-area img:not(.lightbox-img-glow) {
+    cursor: grabbing;
+}
+
+.lightbox.is-zoom-panel-hidden .lightbox-panel,
+.lightbox.is-zoom-panel-hidden .lightbox-strip,
+.lightbox.is-zoom-panel-hidden .lightbox-arrows {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}

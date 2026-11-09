@@ -166,8 +166,9 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    /* 全屏闲置隐藏时淡出（is-idle，见 _lightbox-fullscreen.scss） */
-    transition: opacity var(--transition-fade);
+    /* 全屏闲置隐藏时淡出（is-idle，见 _lightbox-fullscreen.scss）；
+       缩放时与面板一起隐藏（visibility 在淡出结束后才翻转） */
+    transition: opacity var(--transition-fade), visibility var(--transition-fade);
 }
 
 /* 自动播放开关：与关闭/全屏按钮同行，位于全屏按钮左侧；play/pause 图标随
@@ -176,7 +177,7 @@
 .lightbox-autoplay {
     @extend %lightbox-ctrl;
     top: calc(50% - 1.5em); /* 与关闭按钮同高同中线（见上） */
-    right: 8em; /* 全屏按钮 3em + 关闭按钮 3em + 两个 0.5em 间距 */
+    right: 11.5em; /* 全屏 3em + 放大镜 3em + 关闭 3em + 三个 0.5em 间距 */
 
     .lightbox-autoplay-play,
     .lightbox-autoplay-pause {
@@ -215,12 +216,12 @@
     }
 }
 
-/* 全屏（沉浸）开关：位于播放按钮右侧、关闭按钮左侧，展开/收拢图标
+/* 全屏（沉浸）开关：位于播放按钮右侧、放大镜按钮左侧，展开/收拢图标
    交叉淡入 + 缩放 */
 .lightbox-fullscreen {
     @extend %lightbox-ctrl;
     top: calc(50% - 1.5em);
-    right: 4.5em; /* 关闭按钮 3em + 0.5em 间距 */
+    right: 8em; /* 放大镜 3em + 关闭 3em + 两个 0.5em 间距 */
 
     .lightbox-fullscreen-enter,
     .lightbox-fullscreen-exit {
@@ -249,6 +250,46 @@
         }
 
         .lightbox-fullscreen-exit {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+}
+
+/* 主图缩放（放大镜）：位于全屏按钮右侧、关闭按钮左侧；放大/还原图标
+   交叉淡入 + 缩放，aria-pressed 同步状态 */
+.lightbox-magnify {
+    @extend %lightbox-ctrl;
+    top: calc(50% - 1.5em);
+    right: 4.5em; /* 关闭按钮 3em + 0.5em 间距 */
+
+    .lightbox-magnify-in,
+    .lightbox-magnify-out {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity var(--transition-fast), transform var(--transition-spring);
+    }
+
+    .lightbox-magnify-in {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    .lightbox-magnify-out {
+        opacity: 0;
+        transform: scale(0.6);
+    }
+
+    &[aria-pressed="true"] {
+        .lightbox-magnify-in {
+            opacity: 0;
+            transform: scale(0.6);
+        }
+
+        .lightbox-magnify-out {
             opacity: 1;
             transform: scale(1);
         }

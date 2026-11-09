@@ -2,9 +2,10 @@
  * 灯箱毛玻璃背景层栈（独立模块；集成见 lightbox.js，机制对齐参考站灯箱）
  *
  * - 每张作品一层 <img>（thumb 源 + blur 压暗）；首开一层淡入（随灯箱容器
- *   0.3s 一同淡入），切图旧层**立即**淡出 0.7s（不等新层就绪——加载慢时
- *   背景短暂为纯黑底）、新层就绪后淡入 0.7s；新层淡入后约 750ms 移除旧层
- *   （时长 + 50ms 余量）
+ *   0.3s 一同淡入）。切图由调用方按主图就绪状态分两段驱动：主图未就绪先
+ *   fadeOut 把旧层淡化到黑（不建新层），主图就绪后 switchTo 创建新层、
+ *   旧层淡出 0.7s、新层就绪后淡入 0.7s；新层淡入后约 750ms 移除旧层
+ *   （时长 + 50ms 余量）——背景不会先于主图显示下一张（2026-11-09）
  * - 层按 DOM 顺序叠放（新层在后、天然压在上层），回调只操作本层元素——
  *   无跨层状态可翻转，快速连切/关闭重开不会串层
  * - 层栈（数组/剪枝定时/全清）与辉光层共用 createLayerStack 工具
@@ -44,11 +45,23 @@ export function initLightboxBackdrop({ container, insertBefore, reducedMotion })
         backdropLayers.push(el);
     }
 
-    // 切图：旧层立即淡出 0.7s、新层就绪后淡入 0.7s——淡出与图片切换同刻开始，
-    // 背景变化贯穿整个切换过程；新层加载失败时丢弃该层并让上一层淡回显示。
+    // 切图（主图就绪后由调用方触发）：旧层淡出 0.7s、新层就绪后淡入 0.7s——
+    // 未就绪期间调用方已先 fadeOut 到黑，此处从黑淡入新层；
+    // 新层加载失败时丢弃该层并让上一层淡回显示。
     // 层模型为裸元素数组（最新层即数组末位），唯一状态标志是元素的 _shown
     // （是否已完成过淡入）——show 守卫 = 「仍是最新层且未显示过」，被更新的
     // 切换取代或已被剪枝的层自然失效
+    // 主图未就绪：只把现有层淡化到黑，不创建/加载新层——新层等主图就绪后
+    // 由 switchTo 创建（背景与主图异步，避免背景先于主图显示下一张）。
+    // 不提前剪枝：保留最后一层供新层加载失败时回退
+    function fadeOut() {
+        backdropStack.cancelPrune();
+        backdropLayers.forEach((layerEl) => {
+            layerEl.style.transition = backdropTransition;
+            layerEl.style.opacity = '0';
+        });
+    }
+
     function switchTo(src) {
         backdropStack.cancelPrune();
         backdropLayers.forEach((layerEl) => {
@@ -113,6 +126,7 @@ export function initLightboxBackdrop({ container, insertBefore, reducedMotion })
 
     return {
         open,
+        fadeOut,
         switchTo,
         clear: () => backdropStack.clear()
     };

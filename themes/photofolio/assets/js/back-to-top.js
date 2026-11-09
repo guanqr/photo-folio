@@ -1,3 +1,5 @@
+import { prefersReducedMotion } from './utils.js';
+
 let scrollHandler = null;
 let clickHandler = null;
 let clickBtn = null;
@@ -31,7 +33,8 @@ export function initBackToTop() {
     window.addEventListener('scroll', scrollHandler, { passive: true });
 
     clickHandler = () => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // 减弱动态下瞬时回顶：CSS 媒体查询管不到 JS 的 scroll behavior（2026-11-09）
+        window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
     };
     clickBtn = btn;
     btn.addEventListener('click', clickHandler);

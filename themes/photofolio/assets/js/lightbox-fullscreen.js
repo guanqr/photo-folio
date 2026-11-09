@@ -2,8 +2,9 @@
  * 灯箱全屏（沉浸）模式（独立模块；集成见 lightbox.js）
  *
  * - 真全屏：按钮经浏览器 Fullscreen API 让灯箱元素进入全屏（隐藏浏览器
- *   chrome），同时切换 is-fullscreen 隐藏底部缩略图条与信息面板、主图占满
- *   内容区并居中；顶栏编号/按钮与左右箭头保留（布局见 _lightbox-fullscreen.scss）
+ *   chrome），同时切换 is-fullscreen 隐藏底部缩略图条、信息面板与放大镜
+ *   （主图缩放禁用，进入时经 onEnter 复位），主图占满内容区并居中；顶栏
+ *   编号/播放/全屏/关闭与左右箭头保留（布局见 _lightbox-fullscreen.scss）
  * - 全屏闲置隐藏控件：静置 IDLE_HIDE_MS 后顶栏（编号/播放/全屏/关闭）、左右
  *   箭头与自动播放进度条一起淡出、光标隐藏，只留主图；指针/滚轮/键盘活动
  *   立即恢复并重新计时。纯视觉状态——进度条动画与自动播放计时照常推进，
@@ -19,7 +20,7 @@
 // 闲置隐藏的等待时长：以最后一次指针/触屏/键盘操作为起点（2026-11-01）
 const IDLE_HIDE_MS = 3000;
 
-export function initLightboxFullscreen({ lightbox, button, onExit }) {
+export function initLightboxFullscreen({ lightbox, button, onEnter, onExit }) {
     if (!lightbox || !button) return { reset() {}, exit() {}, exitNative() {} };
 
     let active = false;
@@ -85,6 +86,8 @@ export function initLightboxFullscreen({ lightbox, button, onExit }) {
         active = next;
         render();
         if (active) {
+            // 进入全屏：主图缩放禁用并复位（按钮隐藏见 _lightbox-fullscreen.scss）
+            if (onEnter) onEnter();
             setIdle(false);
             scheduleIdle();
         } else {

@@ -36,6 +36,15 @@
                 <span class="lightbox-fullscreen-enter">{{ partial "utils/icon.html" (dict "name" "fullscreen") }}</span>
                 <span class="lightbox-fullscreen-exit">{{ partial "utils/icon.html" (dict "name" "fullscreen_exit") }}</span>
             </button>
+            {{/* 主图缩放（放大镜）：默认放大到 2× 并隐藏信息面板/缩略图条；
+                滚轮、双指捏合可继续在 1×–4× 间缩放，缩放后可拖动平移 */}}
+            <button class="lightbox-magnify" id="lightbox-magnify" type="button"
+                aria-label="{{ i18n "lightbox_zoom" }}" aria-pressed="false"
+                data-enter-label="{{ i18n "lightbox_zoom" }}"
+                data-exit-label="{{ i18n "lightbox_zoom_exit" }}">
+                <span class="lightbox-magnify-in">{{ partial "utils/icon.html" (dict "name" "zoom_in") }}</span>
+                <span class="lightbox-magnify-out">{{ partial "utils/icon.html" (dict "name" "zoom_out") }}</span>
+            </button>
             <button class="lightbox-close" id="lightbox-close" aria-label="{{ i18n "close" }}">
                 {{ partial "utils/icon.html" (dict "name" "x") }}
             </button>

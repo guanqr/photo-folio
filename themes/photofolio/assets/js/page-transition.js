@@ -311,10 +311,23 @@ function commitPage(doc, url) {
         if (navBtn) navBtn.classList.remove('active');
         if (headerEl) headerEl.classList.remove('menu-open');
         resetSubMenus(nav);
-        nav.addEventListener('transitionend', function handler() {
-            nav.removeEventListener('transitionend', handler);
-            nav.style.transition = '';
-        });
+        // 收尾等 transform（三属性中最长 0.35s）结束再清内联；过渡被全局压制
+        // （html.theme-switching）时没有 end 事件，必须有超时兜底——残留监听
+        // 会在下一次菜单过渡的 end 上误清当时的内联过渡（幽灵收尾，同
+        // mobile-nav 注释）；450ms = 0.35s + 余量（2026-11-09）
+        let navCloseTimer = null;
+        const finishNavClose = (e) => {
+            if (e && (e.target !== nav || e.propertyName !== 'transform')) return;
+            nav.removeEventListener('transitionend', finishNavClose);
+            clearTimeout(navCloseTimer);
+            // 期间菜单可能已重新打开并起播新过渡：仍有在跑动画时不清，
+            // 避免拦腰截断（残留内联由下次开合覆盖）
+            if (!nav.getAnimations().some((a) => a.playState === 'running')) {
+                nav.style.transition = '';
+            }
+        };
+        nav.addEventListener('transitionend', finishNavClose);
+        navCloseTimer = setTimeout(finishNavClose, 450);
     }
 
     // 滚动到顶部

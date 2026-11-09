@@ -29,7 +29,7 @@ export function initLightboxSwitch({
     onPhotoOpen, onPhotoReady,
     glow, backdrop, swipe, drawer,
     closeBtn, pageRoots,
-    onSwitchStart, onClose
+    onSwitchStart, onClose, onCloseStart
 }) {
     let currentPhotos = [];
     let currentIndex = -1;
@@ -159,6 +159,9 @@ export function initLightboxSwitch({
 
     let mainSlideStarted = false; // 主图是否已开始滑入/揭示（辉光不得先于主图淡入）
     const slideTransition = reducedMotion ? 'none' : 'transform var(--transition-fade), opacity var(--transition-fade)';
+    // 滑入/滑出收尾兜底：--transition-fade 为 0.3s，+100ms 余量。过渡被取消
+    // 或全局压制时 transitionend 不派发，超时按完成收尾（2026-11-09）
+    const SLIDE_FALLBACK_MS = 400;
 
     // iOS 上跳过辉光层（对齐参考站做法）：iOS Safari 对带 filter 的 img 换源/
     // 合成有一系列缺陷（闪帧、错位），逐案修补成本高且不稳定——照片无光晕
@@ -227,11 +230,13 @@ export function initLightboxSwitch({
         if (!zoomPending) revealMain();
     });
 
-    // 新图滑入归位并淡入（切换路径共用）；毛玻璃背景已在滑出开始同步切换
-    // （见 open 的 isSwitch 分支）：旧层淡出与图片切换同刻开始、新层就绪后
-    // 淡入，背景变化贯穿整个切换过程
+    // 新图滑入归位并淡入（切换路径共用）；背景层在此刻才切换——主图未就绪
+    // 时旧背景已先淡到黑，就绪后新背景加载并从黑淡入（见 swapIn 的未就绪分支）
     function startSlideIn(p) {
         notifyPhotoReady(); // 新图已就绪（或加载失败）：自动播放可开始计时
+        // 主图就绪：背景层此刻才开始加载/切换（未就绪期间已由 fadeOut 淡到
+        // 黑）——缩略图请求不再与主图加载竞争，也不会先于主图显示下一张
+        backdrop.switchTo(p.thumb || p.src);
         hideImgLoading();
         mainSlideStarted = true;
         // 主图滑入归位并淡入
@@ -262,7 +267,7 @@ export function initLightboxSwitch({
             return;
         }
         lifecycle.clear(GROUP.slideIn);
-        lifecycle.listen(GROUP.slideIn, lightboxImg, 'transitionend', function slideInDone() {
+        const slideInDone = () => {
             lifecycle.clear(GROUP.slideIn);
             switching = false;
             if (lightboxImgArea) lightboxImgArea.style.overflow = ''; // 恢复裁剪（见 open 的 isSwitch 分支）
@@ -277,15 +282,20 @@ export function initLightboxSwitch({
             lightboxImg.style.transition = '';
             lightboxImg.style.opacity = '1';
             refreshDisplaySrc(); // 滑入期间视口跨过窄屏断点的补升级
-        });
+        };
+        lifecycle.listen(GROUP.slideIn, lightboxImg, 'transitionend', slideInDone);
+        // 超时兜底：不监听 transitioncancel——旧过渡的 cancel 会在新过渡起播后
+        // 才派发，按事件收尾会误伤下一轮（同 masonry FLIP 注释）；过渡被压制/
+        // 取消且无 end 事件时由定时器按完成收尾，switching 不会永久卡住
+        lifecycle.after(GROUP.slideIn, slideInDone, SLIDE_FALLBACK_MS);
     }
 
     // 切换作品分支（open 的 isSwitch 路径）：旧图轻微滑出 → 换内容 → 新图滑入
     function startSwitch(p, dir, fromPx) {
         // 切换作品：旧图轻微滑出（12%）并淡出 →
         // 换内容 → 新图从另一侧轻微滑入归位并淡入；
-        // 毛玻璃背景在滑出开始即同步切换（对齐参考站：旧层立即淡出、
-        // 新层就绪后淡入），背景变化贯穿整个切换过程。
+        // 背景在换图时按新主图就绪状态切换：未就绪先淡到黑，就绪后与滑入
+        // 同刻交叉淡化（见 swapIn / startSlideIn）。
         // 新图未缓存时浏览器在 src 加载期间仍显示旧图——隐藏图片并转圈，
         // 加载完成后再滑入（与瀑布流加载指示器同款）
         const cached = collection.isCached(displaySrc(p));
@@ -317,10 +327,8 @@ export function initLightboxSwitch({
             lightboxImgArea.style.overflow = 'visible';
         }
 
-        // 背景毛玻璃随滑出开始切换（对齐参考站）：旧层立即淡出 0.7s、新层
-        // 就绪后淡入 0.7s——旧层不保持等待，背景变化与图片切换同刻开始、
-        // 贯穿整个切换过程
-        backdrop.switchTo(p.thumb || p.src);
+        // 背景不在此切换：等旧主图滑出后按新主图就绪状态决定（见 swapIn 与
+        // startSlideIn）——主图未就绪时背景先淡到黑，不先显示下一张
 
         // 新建辉光层（在滑出开始即创建：0 态在 0.3s 滑出期间提交、解码
         // 提前开始；旧辉光层已随滑出淡出，新层就绪后随主图淡入、旧层剪枝；
@@ -347,6 +355,9 @@ export function initLightboxSwitch({
             if (isImageReady(lightboxImg)) {
                 startSlideIn(p);
             } else {
+                // 主图未就绪：背景先淡到黑；新背景层等主图就绪后由
+                // startSlideIn 创建/加载，背景不先于主图显示下一张
+                backdrop.fadeOut();
                 // 未就绪：隐藏图片（仍在显示旧图）并转圈，加载完成后再滑入。
                 // 监听登记到 switch 组：新切换/关闭灯箱时 begin/clear 统一作废，
                 // 防止陈旧闭包用旧作品重放滑入
@@ -373,10 +384,14 @@ export function initLightboxSwitch({
             swapIn();
         } else {
             lifecycle.clear(GROUP.slideOut);
-            lifecycle.listen(GROUP.slideOut, lightboxImg, 'transitionend', function slideOutDone() {
+            const slideOutDone = () => {
                 lifecycle.clear(GROUP.slideOut);
                 swapIn();
-            });
+            };
+            lifecycle.listen(GROUP.slideOut, lightboxImg, 'transitionend', slideOutDone);
+            // 同 slideIn：无 end 事件（过渡被压制/取消）时超时直接换图，
+            // 不依赖迟到的 transitioncancel
+            lifecycle.after(GROUP.slideOut, slideOutDone, SLIDE_FALLBACK_MS);
         }
     }
 
@@ -580,6 +595,9 @@ export function initLightboxSwitch({
     // ?p=——前进/后退到 ?p= 条目后由 openLightboxFromUrl 恢复灯箱（无条件
     // 清理会把恢复条目的 p 抹掉并改写历史）；按钮/Escape/胶囊跳转关闭恒清理
     function close({ keepUrl = false } = {}) {
+        // 关闭前复位主图缩放（保留面板隐藏类到淡出结束，避免面板闪回）：
+        // 让下方的逆向 FLIP 从正常 fit 位置起算，缩放 transform 不污染收尾
+        if (onCloseStart) onCloseStart();
         // 关闭逆向 FLIP 目标：仅当当前照片的网格卡片仍在视口内（切图切到视口外
         // 照片时原路返回无意义）；SPA 导航关闭与减弱动态退化为普通淡出
         const collapseRect = (() => {
@@ -713,6 +731,8 @@ export function initLightboxSwitch({
 
     return {
         open, close, prev, next, openByImg, openAt,
+        // 主图缩放进入守卫：切图/缩放浮现/主图未就绪时不允许放大
+        isBusy: () => switching || zoomPending || !photoReady,
         getActiveGlow: () => activeGlow,
         current: () => (currentIndex >= 0 && currentIndex < currentPhotos.length)
             ? currentPhotos[currentIndex] : null,
@@ -722,6 +742,10 @@ export function initLightboxSwitch({
         cancelPendingSlides: () => {
             lifecycle.clear(GROUP.slideOut);
             lifecycle.clear(GROUP.slideIn);
+            // 滑入期间被滑动接管：slideInDone 永不执行，switching 必须在此复位——
+            // 否则 refreshDisplaySrc（跨断点全尺寸升级）与辉光就绪门控被永久挡住，
+            // 直到下一次切图（2026-11-09）
+            switching = false;
         }
     };
 }

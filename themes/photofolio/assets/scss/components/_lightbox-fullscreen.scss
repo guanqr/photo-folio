@@ -10,8 +10,19 @@
 }
 
 .lightbox.is-fullscreen .lightbox-strip,
-.lightbox.is-fullscreen .lightbox-panel {
+.lightbox.is-fullscreen .lightbox-panel,
+.lightbox.is-fullscreen .lightbox-magnify {
     display: none;
+}
+
+/* 放大镜隐藏后，全屏/自动播放按钮右移补位（沿用各自左侧按钮的右偏移），
+   顶栏右侧不留空档；退出全屏恢复普通视图位置 */
+.lightbox.is-fullscreen .lightbox-fullscreen {
+    right: 4.5em; /* = 普通视图放大镜位置：关闭按钮 3em + 0.5em 间距 */
+}
+
+.lightbox.is-fullscreen .lightbox-autoplay {
+    right: 8em; /* = 普通视图全屏按钮位置 */
 }
 
 /* 主图居中：全屏不受普通视图的 4em 顶栏留白限制（图片可延伸到顶栏浮层下方），

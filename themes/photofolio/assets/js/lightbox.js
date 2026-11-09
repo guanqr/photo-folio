@@ -9,6 +9,7 @@ import { initLightboxStrip } from './lightbox-strip.js';
 import { initLightboxAutoplay } from './lightbox-autoplay.js';
 import { initLightboxCounter } from './lightbox-counter.js';
 import { initLightboxFullscreen } from './lightbox-fullscreen.js';
+import { initLightboxMagnify } from './lightbox-magnify.js';
 import { initLightboxSwitch } from './lightbox-switch.js';
 import { initLightboxAnalysisControl } from './lightbox-analysis-control.js';
 import { initLightboxBird } from './lightbox-bird.js';
@@ -29,6 +30,7 @@ export function initLightbox() {
     const lightboxFullscreen = document.getElementById('lightbox-fullscreen');
     const lightboxCounter = document.getElementById('lightbox-counter');
     let autoplay = null; // 自动播放模块（switch 初始化后创建，钩子经闭包引用）
+    let magnify = null; // 主图缩放模块（switch 初始化后创建，onPhotoOpen/onCloseStart 经闭包引用）
     const lightboxImg = document.getElementById('lightbox-img');
     const lightboxImgArea = lightbox ? lightbox.querySelector('.lightbox-img-area') : null; // 辉光层插入点（主图之前；lightbox 缺失时保持 null——下方守卫兜底）
     const lightboxImgLoading = document.getElementById('lightbox-img-loading');
@@ -125,12 +127,15 @@ export function initLightbox() {
         area: lightboxImgArea,
         getGlow: () => switchModule.getActiveGlow(),
         onSwitch: (dir, dx) => {
+            if (lightbox.classList.contains('is-zoomed')) return; // 缩放中禁止切图
             // 用户主动滑动切图属于手动导航：即使全屏闲置的首次按下被
             // autoplay 豁免，也在此停止自动播放（2026-11-03 审查修复）
             if (autoplay) autoplay.stop();
             if (dir > 0) switchModule.next(dx); else switchModule.prev(dx);
         },
-        onTakeover: () => switchModule.cancelPendingSlides()
+        onTakeover: () => switchModule.cancelPendingSlides(),
+        // 缩放中单指/双指归 magnify 模块：swipe 不进入手势
+        isBlocked: () => lightbox.classList.contains('is-zoomed')
     });
 
     // 窄屏/中屏底部抽屉（≤1000px）：展开/收起、滚轮与拖动手势（独立模块，见 lightbox-drawer.js）；
@@ -203,7 +208,10 @@ export function initLightbox() {
             track: lightboxStripTrack,
             thumbWidth: parseInt(lightboxStrip.dataset.stripThumbWidth, 10) || 240,
             cellLabelTemplate: lightboxStrip.dataset.stripCellLabel || '',
-            onSelect: (index) => switchModule.openAt(index)
+            onSelect: (index) => {
+                if (lightbox.classList.contains('is-zoomed')) return; // 缩放中禁止切图
+                switchModule.openAt(index);
+            }
         })
         : null;
 
@@ -215,6 +223,8 @@ export function initLightbox() {
     // 退出时恢复抽屉布局、缩略图条当前项滚回中央
     const fullscreen = initLightboxFullscreen({
         lightbox, button: lightboxFullscreen,
+        // 进入全屏：主图缩放立即复位（全屏模式禁用缩放）
+        onEnter: () => { if (magnify) magnify.reset(); },
         onExit: () => {
             if (strip) strip.recenter();
             drawer.refreshLayout();
@@ -260,9 +270,12 @@ export function initLightbox() {
         // 照片集合/索引变化时同步底部缩略图条与自动播放按钮可用性
         // （open 唯一入口，含首开/切图/深链）
         onPhotoOpen: (photos, index) => {
-            // 上次关闭遗留的全屏态在首开（灯箱尚未激活）前复位：面板/条恢复
-            // 可见，后续 drawer.reset 测量与 strip.sync 居中才有效
-            if (!lightbox.classList.contains('active')) fullscreen.reset();
+            // 上次关闭遗留的全屏/缩放态在首开（灯箱尚未激活）前复位：面板/条
+            // 恢复可见，后续 drawer.reset 测量与 strip.sync 居中才有效
+            if (!lightbox.classList.contains('active')) {
+                fullscreen.reset();
+                if (magnify) magnify.reset();
+            }
             if (strip) strip.sync(photos, index);
             if (autoplay) autoplay.photoChanged(photos.length, index);
             counter.update(index, photos.length);
@@ -284,7 +297,26 @@ export function initLightbox() {
             if (autoplay) autoplay.stop();
             counter.reset();
             fullscreen.exitNative(); // 退出浏览器全屏；沉浸布局保留到关闭动画结束（下次首开 reset）
-        }
+        },
+        // 关闭前立即复位缩放（保留面板隐藏类到淡出结束，下一次首开 reset 摘除）
+        onCloseStart: () => { if (magnify) magnify.resetForClose(); }
+    });
+
+    // 主图缩放（独立模块见 lightbox-magnify.js）：放大镜按钮/图片区滚轮/双指
+    // 捏合，缩放后拖动平移；面板与缩略图条淡出但保留布局，不触发重排
+    magnify = initLightboxMagnify({
+        lightbox, img: lightboxImg, area: lightboxImgArea,
+        content: lightbox.querySelector('.lightbox-content'),
+        button: document.getElementById('lightbox-magnify'),
+        reducedMotion,
+        // 全屏模式禁用主图缩放：按钮隐藏、滚轮/捏合/点击/双击均不响应
+        isBlocked: () => !lightbox.classList.contains('active')
+            || lightbox.classList.contains('is-fullscreen')
+            || switchModule.isBusy(),
+        cancelSwipe: () => swipe.reset(),
+        cancelDrawerDrag: () => drawer.cancelDrag(),
+        // 窄屏滚轮缩放门：抽屉完全收起时才允许开始滚轮缩放（否则滚轮只驱动抽屉）
+        canStartWheelZoom: () => drawer.wheelZoomAllowed()
     });
 
     // 分析区开合控制（独立模块见 lightbox-analysis-control.js）：展开收起过渡、
@@ -306,7 +338,10 @@ export function initLightbox() {
         autoplay = initLightboxAutoplay({
             button: lightboxAutoplay,
             lightbox,
-            next: () => switchModule.next(),
+            next: () => {
+                if (lightbox.classList.contains('is-zoomed')) return; // 缩放中禁止自动切图
+                switchModule.next();
+            },
             intervalMs: parseInt(lightboxAutoplay.dataset.autoplayMs, 10) || 0
         });
     }
@@ -354,14 +389,27 @@ export function initLightbox() {
         });
     }
 
-    // 箭头按钮
-    if (btnPrev) btnPrev.addEventListener('click', e => { e.stopPropagation(); switchModule.prev(); });
-    if (btnNext) btnNext.addEventListener('click', e => { e.stopPropagation(); switchModule.next(); });
+    // 箭头按钮（缩放下禁用切图，需先退出缩放）
+    if (btnPrev) btnPrev.addEventListener('click', e => {
+        e.stopPropagation();
+        if (lightbox.classList.contains('is-zoomed')) return;
+        switchModule.prev();
+    });
+    if (btnNext) btnNext.addEventListener('click', e => {
+        e.stopPropagation();
+        if (lightbox.classList.contains('is-zoomed')) return;
+        switchModule.next();
+    });
 
     // 键盘
     document.addEventListener('keydown', e => {
         if (!lightbox.classList.contains('active')) return;
         if (e.key === 'Escape') {
+            // 缩放下 Esc 先还原图片（再按一次才退全屏/关闭）
+            if (magnify && magnify.isActive()) {
+                magnify.exit();
+                return;
+            }
             // 全屏/沉浸态下 Esc 先退出全屏（原生由 fullscreenchange 摘布局，
             // 降级模式直接摘布局），再按一次才关闭灯箱
             if (document.fullscreenElement || lightbox.classList.contains('is-fullscreen')) {
@@ -370,8 +418,16 @@ export function initLightbox() {
             }
             switchModule.close();
         }
-        if (e.key === 'ArrowLeft') { if (autoplay) autoplay.stop(); switchModule.prev(); }
-        if (e.key === 'ArrowRight') { if (autoplay) autoplay.stop(); switchModule.next(); }
+        if (e.key === 'ArrowLeft') {
+            if (lightbox.classList.contains('is-zoomed')) return;
+            if (autoplay) autoplay.stop();
+            switchModule.prev();
+        }
+        if (e.key === 'ArrowRight') {
+            if (lightbox.classList.contains('is-zoomed')) return;
+            if (autoplay) autoplay.stop();
+            switchModule.next();
+        }
     });
 
     // page-transition 经 bridge 关闭灯箱，避免静态 import 把整套灯箱代码拉回主 bundle

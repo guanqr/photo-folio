@@ -10,7 +10,11 @@
     display: flex;
     flex-direction: column;
     padding: 0.8em 1em; /* 上下留白对称 */
-    transition: border-color var(--transition-fade);
+    /* opacity/visibility：主图缩放时面板淡出但保留布局（图片可越过原图片区
+       绘制，见 _lightbox-magnify.scss）；visibility 在淡出结束后才翻转 */
+    transition: border-color var(--transition-fade),
+                opacity var(--transition-layout),
+                visibility var(--transition-layout);
     /* 文字选择仅在触屏拖拽期间禁用（.lightbox.is-dragging，由抽屉拖拽进入/
        结束时切换）：拖拽越过可选中文字时浏览器会发起选择并触发
        pointercancel 打断拖拽；鼠标不进入拖拽模型（滚轮覆盖展开路径）、

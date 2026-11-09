@@ -4,7 +4,7 @@
  * - 图片区水平滑动切换照片：跟随手指拖动，位移超过 100px 提交切图
  *   （右滑上一张、左滑下一张），未达阈值回弹归位；
  *   提交后直接交棒 open() 的 slideStyle 管线——与左右箭头同款动画
- *   （12% 滑出 + 淡出 + 毛玻璃背景渐变，当前拖动位置平滑过渡到目标）；
+ *   （12% 滑出 + 淡出，当前拖动位置平滑过渡到目标；背景在主图就绪后切换）；
  *   垂直滑动仍归窄屏抽屉展开/收起（水平接管前不拦截）
  * - 方向仲裁经 getVerdict 挂点驱动抽屉（见 lightbox-drawer.js dirVerdict）：
  *   未决期抽屉冻结、垂直交还、水平接管结束拖拽——抽屉在水平接管前
@@ -14,7 +14,7 @@
  */
 import { prefersReducedMotion } from './utils.js';
 
-export function initLightboxSwipe({ img, area, getGlow, onSwitch, onTakeover }) {
+export function initLightboxSwipe({ img, area, getGlow, onSwitch, onTakeover, isBlocked }) {
     if (!area) return { getVerdict: () => null, reset: () => {} };
 
     const SWIPE_TAKE_OVER = 20; // 滑动接管阈值 px（|dx| 且 |dx| > |dy|）——阈值过小
@@ -74,6 +74,7 @@ export function initLightboxSwipe({ img, area, getGlow, onSwitch, onTakeover }) 
 
     area.addEventListener('pointerdown', (e) => {
         if (e.pointerType !== 'touch' || gesture) return; // 单指触屏；已有候选时忽略后续手指
+        if (isBlocked && isBlocked()) return; // 主图缩放中：单指/双指归 magnify 模块
         verdict = null; // 新手势：方向重新仲裁
         gesture = {
             id: e.pointerId,
@@ -98,7 +99,7 @@ export function initLightboxSwipe({ img, area, getGlow, onSwitch, onTakeover }) 
             // 水平接管：跟随手指；后设的指针捕获覆盖抽屉对 lightbox 的捕获
             gesture.dx = dx;
             verdict = 'horizontal';
-            area.setPointerCapture(e.pointerId);
+            try { area.setPointerCapture(e.pointerId); } catch (err) { /* 指针已释放/合成事件 */ }
             img.style.transition = 'none';
             // 接管即作废在途的滑出/滑入自动动画：transition 被取消后其
             // transitionend 永不触发、收尾监听残留，会在回弹/下一次切图的
