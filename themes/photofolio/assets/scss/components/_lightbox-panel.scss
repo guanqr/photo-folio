@@ -41,7 +41,8 @@
     grid-template-rows: 0fr;
     margin-bottom: 0;
     transition: grid-template-rows var(--transition-reveal-fast),
-                margin-bottom var(--transition-fade);
+                margin-bottom var(--transition-fade),
+                opacity var(--transition-fade);
 }
 
 .lightbox-tags.is-visible {

@@ -298,7 +298,6 @@ export function initLightboxSwitch({
         // 同刻交叉淡化（见 swapIn / startSlideIn）。
         // 新图未缓存时浏览器在 src 加载期间仍显示旧图——隐藏图片并转圈，
         // 加载完成后再滑入（与瀑布流加载指示器同款）
-        const cached = collection.isCached(displaySrc(p));
 
         // 切换开始即复位主图揭示标志：滑出期间辉光就绪只登记、不得淡入——
         // 否则缓存命中的新辉光会在旧图滑出途中就地显现（switching 要等
@@ -345,6 +344,9 @@ export function initLightboxSwitch({
             slideStyle(dir * 12, '0', 'none');
             // 赋值时求值（非 open 快照）：滑出 0.3s 期间视口可能已跨过断点
             setMainSrc(p);
+            // 缓存判定必须与赋值的源同一时刻求值：滑出 0.3s 内跨 1000px 时
+            // 开头快照的窄/宽版与这里实际赋值可能不同，转圈会错误抑制/显示
+            const cached = collection.isCached(currentSrc);
             lightboxImg.alt = p.alt;
             renderPanel(p);
             lightboxImg.offsetHeight; // 强制 reflow
@@ -735,17 +737,6 @@ export function initLightboxSwitch({
         isBusy: () => switching || zoomPending || !photoReady,
         getActiveGlow: () => activeGlow,
         current: () => (currentIndex >= 0 && currentIndex < currentPhotos.length)
-            ? currentPhotos[currentIndex] : null,
-        // 滑动接管钩子（swipe 模块 onTakeover 调用）：作废在途滑出/滑入收尾
-        // 监听——过渡被接管取消后其 transitionend 永不触发，残留监听会在
-        // 后续过渡结束时重放收尾（2026-10-18）
-        cancelPendingSlides: () => {
-            lifecycle.clear(GROUP.slideOut);
-            lifecycle.clear(GROUP.slideIn);
-            // 滑入期间被滑动接管：slideInDone 永不执行，switching 必须在此复位——
-            // 否则 refreshDisplaySrc（跨断点全尺寸升级）与辉光就绪门控被永久挡住，
-            // 直到下一次切图（2026-11-09）
-            switching = false;
-        }
+            ? currentPhotos[currentIndex] : null
     };
 }

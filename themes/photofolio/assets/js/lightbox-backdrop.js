@@ -57,17 +57,16 @@ export function initLightboxBackdrop({ container, insertBefore, reducedMotion })
     function fadeOut() {
         backdropStack.cancelPrune();
         backdropLayers.forEach((layerEl) => {
+            // 作废仍在加载的层的 show：否则主图未就绪期间旧的 load 完成后
+            // 会把上一张背景从黑场重新淡回（2026-11-10 审查 #21）
+            layerEl._stale = true;
             layerEl.style.transition = backdropTransition;
             layerEl.style.opacity = '0';
         });
     }
 
     function switchTo(src) {
-        backdropStack.cancelPrune();
-        backdropLayers.forEach((layerEl) => {
-            layerEl.style.transition = backdropTransition;
-            layerEl.style.opacity = '0';
-        });
+        fadeOut();
         const el = createBackdropEl();
         el.style.transition = backdropTransition;
         el.style.opacity = '0';
@@ -76,9 +75,9 @@ export function initLightboxBackdrop({ container, insertBefore, reducedMotion })
         backdropLayers.push(el);
         backdropStack.cap(3); // 保留当前 + 两张淡出层；快速连切不随次数累积
         const show = () => {
-            // 守卫：已被更新的切换取代（不再是末位）或已显示过（首开/同步
-            // complete 路径）则不再执行——被剪枝的层同样不在数组中
-            if (el._shown || backdropLayers[backdropLayers.length - 1] !== el) return;
+            // 守卫：已被更新的切换取代（不再是末位）、已被 fadeOut 作废、或已
+            // 显示过（首开/同步 complete 路径）则不再执行——被剪枝的层同样不在数组中
+            if (el._stale || el._shown || backdropLayers[backdropLayers.length - 1] !== el) return;
             el._shown = true;
             // 强制 reflow 让 opacity 0 先生效：缓存图 complete 同步为真时（同一帧内
             // 0→1 变化不触发过渡）同样走 0.7s 淡入

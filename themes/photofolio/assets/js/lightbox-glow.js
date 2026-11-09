@@ -9,6 +9,12 @@
  *   由调用方传入：仍是最新可见层 && 主图已开始滑入 && 滑入已完成）
  */
 import { isImageReady, createLayerStack } from './utils.js';
+import { FLIP_TRANSITION } from './flip.js';
+
+// 辉光层跟随主图缩放时的临时过渡（平时只有 opacity 过渡）：位移与主图同一
+// 曲线/时长。由辉光模块持有、lightbox-magnify.js import——缩放模块不再自己
+// 拼一份（2026-11-10 审查 #11）
+export const GLOW_ZOOM_TRANSITION = `${FLIP_TRANSITION}, opacity var(--transition-fade)`;
 
 export function initLightboxGlow({ reducedMotion }) {
     const glowStack = createLayerStack((reducedMotion ? 0 : 300) + 50); // 0.3s 淡入 + 50ms 余量

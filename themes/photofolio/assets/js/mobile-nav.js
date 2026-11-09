@@ -8,6 +8,16 @@ import { resetSubMenus } from './nav-dropdown.js';
 import { prefersReducedMotion } from './utils.js';
 import { BP_DESKTOP_MIN } from './breakpoints.js';
 
+// 菜单收起入口（SPA 换页时由 page-transition 调用）：模块级持有初始化后的
+// 实现——开合过渡与收尾监听只有 mobile-nav 一个 owner，页面切换不再另建
+// 一套 transition/transitionend 收尾（双 owner 会在重开窗口内互清在途过渡，
+// 2026-11-10 审查 #14）
+let closeImpl = null;
+
+export function closeMobileNav() {
+    return closeImpl ? closeImpl() : false;
+}
+
 export function initMobileNav() {
     const btn = document.getElementById('nav-toggle');
     const nav = document.getElementById('site-nav');
@@ -69,6 +79,13 @@ export function initMobileNav() {
             header.classList.toggle('menu-open', nav.classList.contains('active'));
         }
     }
+
+    // 页面切换沿同一收尾（含子导航重置、header menu-open 同步与过渡清理）
+    closeImpl = () => {
+        if (!nav.classList.contains('active')) return false;
+        toggleMenu();
+        return true;
+    };
 
     // 1. 点击汉堡按钮切换菜单
     btn.addEventListener('click', (e) => {

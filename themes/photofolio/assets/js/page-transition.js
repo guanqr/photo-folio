@@ -5,7 +5,7 @@
  * 淡出 → 替换 → 淡入——不再在 fetch 之前固定等待 150ms。
  * 淡出/淡入用 transitionend + 超时兜底；`navSeq` 作废被取代的旧导航。
  */
-import { resetSubMenus } from './nav-dropdown.js';
+import { closeMobileNav } from './mobile-nav.js';
 import { closeLightbox } from './lightbox-bridge.js';
 import { prefersReducedMotion } from './utils.js';
 import { navTimeoutMs } from '@params';
@@ -88,6 +88,9 @@ function finishProgress() {
 export function initPageTransition(reinit) {
     reinitFn = reinit;
     renderedPath = location.pathname + location.search;
+    // pushQueryState（灯箱 ?p=、筛选）只改 URL、不换内容：同步已渲染路径，
+    // 否则后续同页 hash/后退判断会用旧 search 比较（2026-11-10 审查 #22）
+    window.addEventListener('pf:querystate', (e) => { renderedPath = e.detail; });
 
     // 拦截站内链接点击
     document.addEventListener('click', e => {
@@ -111,12 +114,12 @@ export function initPageTransition(reinit) {
 
     // 浏览器前进/后退
     window.addEventListener('popstate', e => {
-        // 同文档 hash 导航（目录锚点、skip link、返回/前进到同页的 hash 条目）：
-        // 浏览器负责原生锚点滚动/位置恢复，不做 SPA 内容替换——否则 commitPage
-        // 的 scrollTo(0,0) 会把锚点滚动重置回顶部。必须要求目标带 hash：筛选
-        // 的 ?category= 前进/后退同样落在同一 path，但需要 loadContent 重新应用
-        // 筛选（2026-11-04）
-        if (location.hash && location.pathname + location.search === renderedPath) return;
+        // 目标 path+search 就是当前已渲染内容：同文档 hash/滚动历史交给浏览器
+        // 原生锚点滚动/位置恢复，不做 SPA 内容替换——否则 commitPage 的滚动
+        // 会把锚点重置回顶部。不再要求带 hash（反向从 hash 条目后退到无 hash
+        // 条目同样不能重载）；search 由 pushQueryState 的 querystate 事件同步，
+        // 筛选/灯箱查询状态前进后退仍会因 search 不同而 loadContent（2026-11-10 #22）
+        if (location.pathname + location.search === renderedPath) return;
         // 首次加载的页面（如首页）没有推入过状态（e.state 为 null）——
         // 此时按当前地址恢复（popstate 触发时 location 已指向目标页），否则无法返回首页
         loadContent(e.state && e.state.url ? e.state.url : location.href);
@@ -301,37 +304,22 @@ function commitPage(doc, url) {
     const committed = new URL(url);
     renderedPath = committed.pathname + committed.search;
 
-    // 关闭移动端菜单（带动画收回），并同步清理 header 上的 menu-open 状态；
-    // 子导航展开态一并重置——否则下次打开菜单时子导航仍是展开的
-    const nav = document.getElementById('site-nav');
-    const navBtn = document.getElementById('nav-toggle');
-    if (nav && nav.classList.contains('active')) {
-        nav.style.transition = 'transform var(--transition-page), opacity var(--transition-fade), visibility var(--transition-fade)';
-        nav.classList.remove('active');
-        if (navBtn) navBtn.classList.remove('active');
-        if (headerEl) headerEl.classList.remove('menu-open');
-        resetSubMenus(nav);
-        // 收尾等 transform（三属性中最长 0.35s）结束再清内联；过渡被全局压制
-        // （html.theme-switching）时没有 end 事件，必须有超时兜底——残留监听
-        // 会在下一次菜单过渡的 end 上误清当时的内联过渡（幽灵收尾，同
-        // mobile-nav 注释）；450ms = 0.35s + 余量（2026-11-09）
-        let navCloseTimer = null;
-        const finishNavClose = (e) => {
-            if (e && (e.target !== nav || e.propertyName !== 'transform')) return;
-            nav.removeEventListener('transitionend', finishNavClose);
-            clearTimeout(navCloseTimer);
-            // 期间菜单可能已重新打开并起播新过渡：仍有在跑动画时不清，
-            // 避免拦腰截断（残留内联由下次开合覆盖）
-            if (!nav.getAnimations().some((a) => a.playState === 'running')) {
-                nav.style.transition = '';
-            }
-        };
-        nav.addEventListener('transitionend', finishNavClose);
-        navCloseTimer = setTimeout(finishNavClose, 450);
-    }
+    // 关闭移动端菜单（带动画收回）：过渡、子导航展开态重置与 header 的
+    // menu-open 同步统一由 mobile-nav 的 toggleMenu 负责——SPA 不再另建一套
+    // transition/transitionend 收尾（双 owner 会在重开窗口内互清在途过渡，
+    // 2026-11-10 审查 #14）
+    closeMobileNav();
 
-    // 滚动到顶部
-    window.scrollTo(0, 0);
+    // 目标带 hash：滚到锚点（SPA 换页/后退到带锚点条目）；否则回顶
+    const hash = new URL(url).hash;
+    let anchor = null;
+    if (hash) {
+        try {
+            anchor = document.getElementById(decodeURIComponent(hash.slice(1)));
+        } catch (err) { /* 非法百分号编码：按回顶处理 */ }
+    }
+    if (anchor) anchor.scrollIntoView();
+    else window.scrollTo(0, 0);
 
     // 重新初始化页面 JS（SPA 标记供入口加载期的网格兜底计时器使用）
     if (reinitFn) reinitFn(true);

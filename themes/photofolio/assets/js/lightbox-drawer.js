@@ -21,8 +21,17 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
     // 退出时由 refreshLayout 在面板恢复可见后统一重算（见 lightbox-fullscreen.js）
     const isFullscreen = () => lightbox.classList.contains('is-fullscreen');
     // 主图缩放（见 lightbox-magnify.js）：面板 visibility:hidden 但保留布局，
-    // 抽屉手势/重算一律暂停；退出时不需要重测（布局未变）
+    // 抽屉手势/重算一律暂停；退出缩放时由 magnify 的 onExit 调用 refreshLayout
+    // 统一重算（见 lightbox.js）
     const isZoomed = () => lightbox.classList.contains('is-zoomed');
+    // 断点入场动画时长与 SCSS 单源（--layout-switch-*，见 _lightbox-core.scss）：
+    // 收尾定时器 = 动画时长 + 50ms 余量；变量缺失/非法时按样式表旧值兜底
+    const layoutAnimMs = (name, fallback) => {
+        const raw = getComputedStyle(lightbox).getPropertyValue(name).trim();
+        const n = parseFloat(raw);
+        if (!Number.isFinite(n)) return fallback + 50;
+        return (raw.endsWith('ms') ? n : n * 1000) + 50;
+    };
     // 窄屏详情自定义滚动条（抽屉原生滚动条被手势模型隐藏）
     const scrollbarEl = panel.querySelector('.lightbox-panel-scrollbar');
     const scrollbarThumb = scrollbarEl ? scrollbarEl.querySelector('.lightbox-panel-scrollbar-thumb') : null;
@@ -99,10 +108,11 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
     // 窄屏自定义滚动条：轨道高度对齐详情可视区，滑块按 scrollTop 比例移动；
     // 桌面由原生常显滚动条负责（CSS 隐藏本覆盖层）。仅抽屉全开（level≈1）
     // 时可用——部分展开阶段详情区仍由抽屉虚拟位置模型接管，scrollTop 必须为 0
+    // 缩放中面板 visibility:hidden，不必单独隐藏滚动条（退出缩放后仍应可见）；
+    // 若在此排除 isZoomed，缩放中的 resize/RO 会把滚动条置 hidden 且退出后无更新
     const scrollbarAvailable = () => narrowMedia.matches
         && lightbox.classList.contains('active')
         && !isFullscreen()
-        && !isZoomed()
         && panel.classList.contains('is-open')
         && level >= 0.999;
 
@@ -167,7 +177,7 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
                 grabOffset: onThumb ? e.clientY - thumbRect.top : thumbRect.height / 2
             };
             if (!onThumb) scrollToScrollbarPointer(e.clientY); // 轨道点击：滑块中心跳到点击处
-            scrollbarEl.setPointerCapture(e.pointerId);
+            try { scrollbarEl.setPointerCapture(e.pointerId); } catch (err) { /* 指针已释放/合成事件 */ }
         });
         scrollbarEl.addEventListener('pointermove', (e) => {
             if (!scrollbarDrag || e.pointerId !== scrollbarDrag.pointerId) return;
@@ -323,7 +333,7 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
         innerLayoutSwitchTimer = setTimeout(() => {
             innerLayoutSwitchTimer = null;
             lightbox.classList.remove('is-layout-switching-inner');
-        }, 450); // 0.4s 动画 + 余量
+        }, layoutAnimMs('--layout-switch-inner-duration', 400));
     });
 
     // 灯箱打开期间跨断点：进窄屏重置抽屉、回宽屏清除内联样式恢复桌面布局；
@@ -341,7 +351,7 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
             layoutSwitchTimer = setTimeout(() => {
                 layoutSwitchTimer = null;
                 lightbox.classList.remove('is-layout-switching');
-            }, 600); // 0.55s 动画 + 余量
+            }, layoutAnimMs('--layout-switch-duration', 550));
         }
         reset(true);
         if (!e.matches) panelDetails.scrollTop = 0;
@@ -353,7 +363,9 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
     window.addEventListener('resize', () => {
         if (!narrowMedia.matches || !lightbox.classList.contains('active')) return;
         if (isFullscreen()) return; // 全屏面板 display:none，无法测量；退出时 refreshLayout 重算
-        // 缩放中面板 visibility:hidden、但仍占布局：照常重测，退出缩放后尺寸才正确
+        // 缩放中面板 visibility:hidden：跳过逐次 measure/apply/inert 遍历，
+        // 退出缩放时由 magnify 的 onExit 统一 refreshLayout 重算（2026-11-10 #8）
+        if (isZoomed()) return;
         measure();
         if (level <= 0) {
             apply(minHeight, false); // 收起态高度随简行重测（双列↔单列切换）
@@ -628,8 +640,8 @@ export function initLightboxDrawer({ lightbox, panel, panelDetails, panelToggle,
         fitApplicable: () => !narrowMedia.matches,
         // 窄屏滚轮缩放的启用门：详情抽屉完全收起（仅标题/标签/地点日期，
         // 此时图片最大）才允许滚轮缩放；未收起时滚轮只驱动抽屉。
-        // 桌面无抽屉、全屏面板隐藏，恒允许（2026-11-09）
-        wheelZoomAllowed: () => !narrowMedia.matches || isFullscreen() || level <= 0.001,
+        // 桌面无抽屉恒允许；全屏由 magnify 的 isBlocked 先拒绝，不在此判断（2026-11-10）
+        wheelZoomAllowed: () => !narrowMedia.matches || level <= 0.001,
         // 释放冻结后的显式翻转入口（收起过渡结束时由调用方在位置补偿前调用；
         // 走 force：active 守卫此时必然通过、且强制重判语义与 refreshFit 一致）
         flipFitNow: () => updateFit(true),

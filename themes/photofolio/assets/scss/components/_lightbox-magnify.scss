@@ -16,8 +16,9 @@
     overflow: visible;
 }
 
-/* 未缩放时单击主图放大（触屏双击）：桌面用放大光标提示；触屏无光标 */
-.lightbox:not(.is-zoomed) .lightbox-img-area img:not(.lightbox-img-glow) {
+/* 未缩放时单击主图放大（触屏双击）：桌面用放大光标提示；触屏无光标。
+   全屏模式缩放被禁用，排除之——否则 img 自身 cursor 会压过灯箱全屏闲置的 cursor:none */
+.lightbox:not(.is-zoomed):not(.is-fullscreen) .lightbox-img-area img:not(.lightbox-img-glow) {
     cursor: zoom-in;
 }
 

@@ -17,7 +17,7 @@ export function initLightboxBird({
     block, trigger, body, nameEl, sourceList, drawer, fallbackFocus,
     panel, panelDetails, caption, tagsEl
 }) {
-    if (!block || !trigger || !body) return { render() {}, reset() {} };
+    if (!block || !trigger || !body) return { render() {}, reset() {}, cancelAnchor() {}, cancelCenterComp() {} };
 
     const dataEl = document.getElementById('lightbox-birds-data');
     const birds = new Map();
@@ -55,9 +55,12 @@ export function initLightboxBird({
     block.setAttribute('aria-hidden', 'true');
     const scrollContainer = panelDetails || body.closest('.lightbox-panel-details');
     const panelEl = panel || (scrollContainer && scrollContainer.closest('.lightbox-panel'));
-    // 收起居中补偿与图像分析共用（见 lightbox-panel-comp.js）
+    // 收起居中补偿与图像分析共用（见 lightbox-panel-comp.js）；图鉴 body/slot
+    // 收起用 --transition-reveal-fast（0.4s），下滑同长、收尾定时器同步对齐
+    //（2026-11-10 审查 #29）
     const centerComp = createPanelCenterComp({
-        panel: panelEl, panelDetails: scrollContainer, caption, tagsEl, drawer
+        panel: panelEl, panelDetails: scrollContainer, caption, tagsEl, drawer,
+        slideTransition: 'var(--transition-reveal-fast)'
     });
     let open = false;
     let renderedId = null; // 已构建資料來源链接的鸟种 id（同一鸟种不重建）
@@ -70,6 +73,13 @@ export function initLightboxBird({
             clearTimeout(fitFreezeTimer);
             fitFreezeTimer = null;
         }
+    };
+
+    // 切图/重置前作废图鉴收起：清定时器与补偿 transform；冻结/输入挂起/
+    // 顶对齐由 panel-comp 的引用计数释放，不在此直接清零（2026-11-10 #20）
+    const cancelCenterComp = () => {
+        clearFitFreeze();
+        centerComp.cancel();
     };
 
     // 收起补偿需要精确的最终 slot 占位：缓存值可能因字体加载/布局模式与实际
@@ -129,24 +139,23 @@ export function initLightboxBird({
         if (drawer && drawer.fitApplicable() && panelEl && scrollContainer) {
             clearFitFreeze();
             if (next) {
-                centerComp.cancel();
-                if (scrollContainer) scrollContainer.classList.remove('no-margin-center');
-                drawer.setFitAdjuster(false);
-                drawer.setInputHold(false);
+                centerComp.cancel(); // 释放本侧收起冻结（引用计数）
                 drawer.cancelScroll();
             } else {
+                // 顶对齐 + 冻结/输入挂起由 centerComp.begin 的引用计数接管
+                //（多个收起并行时只有最后一个结束才释放，2026-11-10 #20）
                 if (scrollContainer) scrollContainer.classList.add('no-margin-center');
-                drawer.setFitAdjuster(true);
-                drawer.setInputHold(true);
                 const currentSlotH = slotEl ? slotEl.offsetHeight : 0;
                 const finalDetailsH = scrollContainer
                     ? scrollContainer.scrollHeight - currentSlotH + measureClosedSlotHeight()
                     : 0;
                 if (!prefersReducedMotion()) centerComp.begin(finalDetailsH);
+                // 0.4s 收起过渡 + 50ms 余量（与 slideTransition 同长，不再等 650ms
+                // 造成「先滑到位再停一拍」的两段式，2026-11-10 审查 #29）
                 fitFreezeTimer = setTimeout(() => {
                     fitFreezeTimer = null;
                     centerComp.finish();
-                }, prefersReducedMotion() ? 0 : 650);
+                }, prefersReducedMotion() ? 0 : 450);
             }
         }
         open = next;
@@ -273,18 +282,13 @@ export function initLightboxBird({
     return {
         render,
         cancelAnchor,
+        cancelCenterComp,
         // 关闭灯箱静默复位（下次打开默认收起，与图像分析一致）
         reset() {
             open = false;
             setPresent(false);
             cancelAnchor();
-            clearFitFreeze();
-            centerComp.cancel();
-            if (scrollContainer) scrollContainer.classList.remove('no-margin-center');
-            if (drawer) {
-                drawer.setInputHold(false);
-                drawer.setFitAdjuster(false);
-            }
+            cancelCenterComp();
             syncOpen();
         }
     };

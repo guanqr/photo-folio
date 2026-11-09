@@ -81,7 +81,9 @@ export function initLightboxAutoplay({ button, lightbox, next, intervalMs }) {
     };
 
     const start = () => {
-        if (playing || interval <= 0 || button.hidden || !lightbox.classList.contains('active')) return;
+        // 缩放中禁止启动：切图被守卫拦截、next() 会直接 return 导致播放态卡死
+        if (playing || interval <= 0 || button.hidden || !lightbox.classList.contains('active')
+            || lightbox.classList.contains('is-zoomed')) return;
         playing = true;
         syncButton();
         // 当前图片尚未加载完成：不计时，等 photoReady 再开始

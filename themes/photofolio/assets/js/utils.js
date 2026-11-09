@@ -82,6 +82,9 @@ export function pushQueryState(updates, { replace = false } = {}) {
     const url = location.pathname + (qs ? '?' + qs : '');
     if (replace) history.replaceState({ url: location.origin + url }, '', url);
     else history.pushState({ url: location.origin + url }, '', url);
+    // 通知 SPA（page-transition）：已渲染内容的 path+search 随查询状态改写。
+    // 不换内容、只改 URL——同页 hash/后退判断以此为准（2026-11-10 审查 #22）
+    window.dispatchEvent(new CustomEvent('pf:querystate', { detail: url }));
 }
 
 // i18n 格式串填充：统一 %KEY% 占位（%CUR%/%TOTAL%、%N%、%COUNT%/%MIN%/%MAX%、

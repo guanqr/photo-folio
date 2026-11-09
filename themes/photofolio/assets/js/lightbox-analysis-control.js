@@ -35,7 +35,13 @@ export function initLightboxAnalysisControl({
     // 详情区的 transform 下滑与翻转残余补偿都收在 helper 内，本模块只负责
     // 计算最终详情区高度并调用 begin/finish
     const centerComp = createPanelCenterComp({ panel, panelDetails, caption, tagsEl, drawer });
-    const cancelCenterComp = () => centerComp.cancel();
+    // 切图/展开/重置前作废在途收起：除清除补偿 transform 外，必须同时摘掉
+    // 收起收尾监听/定时器；冻结/输入挂起/顶对齐由 panel-comp 的引用计数释放，
+    // 不在此直接清零（否则会提前解冻另一侧仍在进行的收起，2026-11-10 #20）
+    const cancelCenterComp = () => {
+        teardownCollapseEnd();
+        centerComp.cancel();
+    };
     function cancelAnchor() {
         if (anchorCancel) {
             anchorCancel();
@@ -91,11 +97,7 @@ export function initLightboxAnalysisControl({
             // 窄屏记录展开前的滚动位置，收起时恢复（桌面由 is-fit 居中复位）
             // 图表区照常展示（空图表框即占位，不额外显示加载指示），数据就绪后填充；
             // 触发行随开合平滑收拢（纯 CSS），展开方向无 t=0 布局跳变
-            teardownCollapseEnd(); // 收起中途再展开：作废在途收尾（否则在展开过渡结束时重放）
-            drawer.setFitAdjuster(false); // 清除收起窗口的冻结，按实际高度逐帧重判
-            drawer.setInputHold(false); // 收起中途再展开：一并解除输入挂起
-            cancelCenterComp(); // 停止滑入/补偿、摘除 transform
-            if (panelDetails) panelDetails.classList.remove('no-margin-center'); // 展开清除收起窗口的顶对齐态
+            cancelCenterComp(); // 停止滑入/补偿、摘除 transform、释放本侧收起冻结
             drawer.cancelScroll(); // 取消在途回滚/滚底动画，避免展开期间逐帧强制 scrollTop 覆盖用户滚动
             wrap.style.maxHeight = '';
             wrap.classList.add('is-open');
@@ -108,7 +110,7 @@ export function initLightboxAnalysisControl({
             if (reducedMotion) {
                 wrap.style.maxHeight = '';
                 wrap.classList.remove('is-open');
-                drawer.setFitAdjuster(false);
+                cancelCenterComp();
             } else {
                 teardownCollapseEnd(); // 快速连点：作废上一轮的收尾再开始新一轮
                 wrap.style.maxHeight = wrap.clientHeight + 'px';
@@ -120,14 +122,9 @@ export function initLightboxAnalysisControl({
                 // （no-margin-center——内部边距居中会让 EXIF 出现先居中再上跳
                 // 的两段运动）；同时整组以最终居中偏移 transform 下滑（与收缩
                 // 同曲线同时长）；过渡结束同帧交换为真实 is-fit 居中（相消零跳变）
+                // 顶对齐 + 冻结/输入挂起：由 centerComp.begin 的引用计数接管
+                //（多个收起并行时只有最后一个结束才释放，2026-11-10 #20）
                 if (panelDetails) panelDetails.classList.add('no-margin-center');
-                // 冻结 is-fit 翻转（布尔语义，见 drawer.setFitAdjuster）
-                drawer.setFitAdjuster(true);
-                // 挂起滚轮输入：收起编排期间 wheel 整链早退——点击收起后
-                // 仍在到达的旧手势惯性尾会经 cancelScrollAnim 把在途回滚瞬跳
-                // 归零（桌面）、并驱动抽屉 level 拉低（窄屏），刻意编排不被
-                // 旧手势接管（2026-10-21；finish/展开/reset 解除）
-                drawer.setInputHold(true);
                 // 最终详情区高度按最终组高推导（与 updateFit 翻转判定同口径，
                 // 2026-10-21）：当前详情区 scrollHeight（含边距）− wrap 当前高 +
                 // 触发行最终足迹 − 触发行当前盒（is-open 刚摘、过渡起点值 ≈ 0）；
@@ -186,10 +183,7 @@ export function initLightboxAnalysisControl({
         wrap.classList.remove('is-open');
         wrap.style.maxHeight = ''; // 清除开合残留内联
         teardownCollapseEnd(); // 关闭中断在途收尾
-        cancelCenterComp(); // 关闭中断在途的滑入/补偿
-        if (panelDetails) panelDetails.classList.remove('no-margin-center'); // 关闭清除收起窗口的顶对齐态
-        drawer.setInputHold(false); // 关闭中断在途收起：解除输入挂起
-        drawer.setFitAdjuster(false);
+        cancelCenterComp(); // 关闭中断在途的滑入/补偿并释放本侧收起冻结
         cancelAnchor();
     }
 

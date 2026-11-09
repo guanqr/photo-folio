@@ -133,9 +133,9 @@ export function initLightbox() {
             if (autoplay) autoplay.stop();
             if (dir > 0) switchModule.next(dx); else switchModule.prev(dx);
         },
-        onTakeover: () => switchModule.cancelPendingSlides(),
-        // 缩放中单指/双指归 magnify 模块：swipe 不进入手势
-        isBlocked: () => lightbox.classList.contains('is-zoomed')
+        // 缩放中单指/双指归 magnify 模块；切图动画/主图加载中也禁止接管
+        //（2026-11-10 审查 #18：接管会取消 swapIn，但 open 已提交索引/URL）
+        isBlocked: () => lightbox.classList.contains('is-zoomed') || switchModule.isBusy()
     });
 
     // 窄屏/中屏底部抽屉（≤1000px）：展开/收起、滚轮与拖动手势（独立模块，见 lightbox-drawer.js）；
@@ -223,8 +223,9 @@ export function initLightbox() {
     // 退出时恢复抽屉布局、缩略图条当前项滚回中央
     const fullscreen = initLightboxFullscreen({
         lightbox, button: lightboxFullscreen,
-        // 进入全屏：主图缩放立即复位（全屏模式禁用缩放）
-        onEnter: () => { if (magnify) magnify.reset(); },
+        // 进入全屏：仅在实际缩放中才复位（全屏模式禁用缩放）；未缩放时不触碰
+        // 主图内联 transform/transition，避免切图滑出/滑入途中点全屏把过渡清掉
+        onEnter: () => { if (magnify && magnify.isActive()) magnify.reset(); },
         onExit: () => {
             if (strip) strip.recenter();
             drawer.refreshLayout();
@@ -289,6 +290,7 @@ export function initLightbox() {
         onSwitchStart: () => {
             analysisControl.cancelCenterComp();
             analysisControl.cancelAnchor();
+            birdGuide.cancelCenterComp();
             birdGuide.cancelAnchor();
         },
         onClose: () => {
@@ -316,7 +318,12 @@ export function initLightbox() {
         cancelSwipe: () => swipe.reset(),
         cancelDrawerDrag: () => drawer.cancelDrag(),
         // 窄屏滚轮缩放门：抽屉完全收起时才允许开始滚轮缩放（否则滚轮只驱动抽屉）
-        canStartWheelZoom: () => drawer.wheelZoomAllowed()
+        canStartWheelZoom: () => drawer.wheelZoomAllowed(),
+        // 退出缩放：缩放期间 drawer 的 window resize 重算被跳过，这里统一补一次
+        onExit: () => {
+            drawer.refreshLayout();
+            drawer.refreshFit();
+        }
     });
 
     // 分析区开合控制（独立模块见 lightbox-analysis-control.js）：展开收起过渡、

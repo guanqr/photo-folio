@@ -118,6 +118,26 @@
     pointer-events: none;
 }
 
+/* 顶栏右侧按钮组：按钮按文档顺序 flex 排布，右缘与箭头/叉号同列（right: 1em）；
+   全屏隐藏放大镜后其余按钮自动补位，不必再按彼此宽度累加 right 偏移
+   （2026-11-10 审查 #15） */
+.lightbox-topbar-actions {
+    position: absolute;
+    top: 50%;
+    right: 1em;
+    display: flex;
+    gap: 0.5em;
+    transform: translateY(-50%);
+}
+
+/* 组内按钮覆盖基类的绝对定位（%lightbox-ctrl 的绝对定位供左右箭头使用）；
+   垂直居中由容器负责 */
+.lightbox-topbar-actions > button {
+    position: relative;
+    top: auto;
+    right: auto;
+}
+
 /* 灯箱控件按钮基类（关闭/左右箭头共用）：3em 圆形 + 半透底色 + hover 反馈 */
 %lightbox-ctrl {
     position: absolute;
@@ -146,10 +166,8 @@
 }
 
 .lightbox-close {
-    /* 与左右箭头同一套定位机制：绝对定位 + right: 1em，保证与箭头严格同列 */
+    /* 位于顶栏按钮组末位：组容器 right: 1em，保证与左右箭头严格同列 */
     @extend %lightbox-ctrl;
-    top: calc(50% - 1.5em); /* 按按钮自身高度居中：button 不继承 topbar 字号，3em 高度以自身 em 计 */
-    right: 1em;
 
     svg {
         transition: transform var(--transition-spring);
@@ -176,8 +194,6 @@
    减弱动态由全局归零 */
 .lightbox-autoplay {
     @extend %lightbox-ctrl;
-    top: calc(50% - 1.5em); /* 与关闭按钮同高同中线（见上） */
-    right: 11.5em; /* 全屏 3em + 放大镜 3em + 关闭 3em + 三个 0.5em 间距 */
 
     .lightbox-autoplay-play,
     .lightbox-autoplay-pause {
@@ -220,8 +236,6 @@
    交叉淡入 + 缩放 */
 .lightbox-fullscreen {
     @extend %lightbox-ctrl;
-    top: calc(50% - 1.5em);
-    right: 8em; /* 放大镜 3em + 关闭 3em + 两个 0.5em 间距 */
 
     .lightbox-fullscreen-enter,
     .lightbox-fullscreen-exit {
@@ -260,8 +274,6 @@
    交叉淡入 + 缩放，aria-pressed 同步状态 */
 .lightbox-magnify {
     @extend %lightbox-ctrl;
-    top: calc(50% - 1.5em);
-    right: 4.5em; /* 关闭按钮 3em + 0.5em 间距 */
 
     .lightbox-magnify-in,
     .lightbox-magnify-out {
@@ -360,19 +372,26 @@
 }
 
 /* 断点切换过渡：布局方向（列↔行）是离散跳变，用面板/图片区的动画柔化；
-   prefers-reduced-motion 时关闭 */
+   prefers-reduced-motion 时关闭。时长经 CSS 变量单源——lightbox-drawer.js
+   的收尾定时器读取同一变量（+余量），不再与样式表各写一份数字
+   （2026-11-10 审查 #9） */
+.lightbox {
+    --layout-switch-duration: 0.55s;
+    --layout-switch-inner-duration: 0.4s;
+}
+
 @media (prefers-reduced-motion: no-preference) {
     .lightbox.is-layout-switching .lightbox-panel {
-        animation: panel-layout-in 0.55s var(--ease-soft) both;
+        animation: panel-layout-in var(--layout-switch-duration) var(--ease-soft) both;
     }
 
     .lightbox.is-layout-switching .lightbox-img-area {
-        animation: img-layout-in 0.55s var(--ease-soft) both;
+        animation: img-layout-in var(--layout-switch-duration) var(--ease-soft) both;
     }
 
     /* 窄屏抽屉内双列↔单列转换（768px）：仅面板轻量淡入滑动，不扰动图片区 */
     .lightbox.is-layout-switching-inner .lightbox-panel {
-        animation: panel-inner-layout-in 0.4s var(--ease-soft) both;
+        animation: panel-inner-layout-in var(--layout-switch-inner-duration) var(--ease-soft) both;
     }
 }
 

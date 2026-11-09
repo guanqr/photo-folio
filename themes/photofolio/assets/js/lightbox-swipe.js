@@ -14,7 +14,7 @@
  */
 import { prefersReducedMotion } from './utils.js';
 
-export function initLightboxSwipe({ img, area, getGlow, onSwitch, onTakeover, isBlocked }) {
+export function initLightboxSwipe({ img, area, getGlow, onSwitch, isBlocked }) {
     if (!area) return { getVerdict: () => null, reset: () => {} };
 
     const SWIPE_TAKE_OVER = 20; // 滑动接管阈值 px（|dx| 且 |dx| > |dy|）——阈值过小
@@ -96,16 +96,19 @@ export function initLightboxSwipe({ img, area, getGlow, onSwitch, onTakeover, is
         const dx = e.clientX - gesture.startX;
         const dy = e.clientY - gesture.startY;
         if (Math.abs(dx) > SWIPE_TAKE_OVER && Math.abs(dx) > Math.abs(dy)) {
+            // 切图动画/主图加载/缩放中禁止接管（2026-11-10 审查 #18）：放弃本次
+            // 手势、不触碰主图与图片区裁剪，让 switch 的在途滑出/加载自行完成；
+            // pointerdown 已拦截新起手，这里兜住「手势先起手、随后开始切图」
+            if (isBlocked && isBlocked()) {
+                gesture = null;
+                verdict = null;
+                return;
+            }
             // 水平接管：跟随手指；后设的指针捕获覆盖抽屉对 lightbox 的捕获
             gesture.dx = dx;
             verdict = 'horizontal';
             try { area.setPointerCapture(e.pointerId); } catch (err) { /* 指针已释放/合成事件 */ }
             img.style.transition = 'none';
-            // 接管即作废在途的滑出/滑入自动动画：transition 被取消后其
-            // transitionend 永不触发、收尾监听残留，会在回弹/下一次切图的
-            // transitionend 上重放收尾（幽灵换图/提前恢复裁剪）——经钩子
-            // 交 switch 模块摘除（2026-10-18）
-            if (onTakeover) onTakeover();
             setOverflowVisible(true); // 拖拽越过面板区域不裁剪（面板文字浮于图片之上）
             applyFollow(dx);
         } else if (Math.abs(dy) > SWIPE_ABANDON && Math.abs(dy) > Math.abs(dx)) {

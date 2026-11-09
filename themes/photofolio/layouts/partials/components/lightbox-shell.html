@@ -17,37 +17,41 @@
             <span class="lightbox-counter" id="lightbox-counter"
                 data-format='{{ i18n "lightbox_counter" (dict "Current" "%CUR%" "Total" "%TOTAL%") }}'
                 data-label-format='{{ i18n "lightbox_counter_label" (dict "Current" "%CUR%" "Total" "%TOTAL%") }}'></span>
-            {{/* 自动播放开关（默认关闭；集合 ≥2 且间隔 >0 时由 JS 显示）——
-                play/pause 图标并置、aria-pressed 同步状态 */}}
-            <button class="lightbox-autoplay" id="lightbox-autoplay" type="button" hidden
-                aria-label="{{ i18n "lightbox_play" }}" aria-pressed="false"
-                data-play-label="{{ i18n "lightbox_play" }}"
-                data-pause-label="{{ i18n "lightbox_pause" }}"
-                data-autoplay-ms="{{ site.Params.lightboxAutoplay }}">
-                <span class="lightbox-autoplay-play">{{ partial "utils/icon.html" (dict "name" "play") }}</span>
-                <span class="lightbox-autoplay-pause">{{ partial "utils/icon.html" (dict "name" "pause") }}</span>
-            </button>
-            {{/* 全屏（沉浸）开关：隐藏底部缩略图条与信息面板，只留主图、编号、
-                顶栏按钮与左右箭头；展开/收拢图标并置、aria-pressed 同步状态 */}}
-            <button class="lightbox-fullscreen" id="lightbox-fullscreen" type="button"
-                aria-label="{{ i18n "lightbox_fullscreen" }}" aria-pressed="false"
-                data-enter-label="{{ i18n "lightbox_fullscreen" }}"
-                data-exit-label="{{ i18n "lightbox_fullscreen_exit" }}">
-                <span class="lightbox-fullscreen-enter">{{ partial "utils/icon.html" (dict "name" "fullscreen") }}</span>
-                <span class="lightbox-fullscreen-exit">{{ partial "utils/icon.html" (dict "name" "fullscreen_exit") }}</span>
-            </button>
-            {{/* 主图缩放（放大镜）：默认放大到 2× 并隐藏信息面板/缩略图条；
-                滚轮、双指捏合可继续在 1×–4× 间缩放，缩放后可拖动平移 */}}
-            <button class="lightbox-magnify" id="lightbox-magnify" type="button"
-                aria-label="{{ i18n "lightbox_zoom" }}" aria-pressed="false"
-                data-enter-label="{{ i18n "lightbox_zoom" }}"
-                data-exit-label="{{ i18n "lightbox_zoom_exit" }}">
-                <span class="lightbox-magnify-in">{{ partial "utils/icon.html" (dict "name" "zoom_in") }}</span>
-                <span class="lightbox-magnify-out">{{ partial "utils/icon.html" (dict "name" "zoom_out") }}</span>
-            </button>
-            <button class="lightbox-close" id="lightbox-close" aria-label="{{ i18n "close" }}">
-                {{ partial "utils/icon.html" (dict "name" "x") }}
-            </button>
+            {{/* 顶栏右侧按钮组：flex 自然排布（0.5em 间距），全屏隐藏放大镜后
+                其余按钮自动补位——不再按彼此宽度累加 right 偏移 */}}
+            <div class="lightbox-topbar-actions">
+                {{/* 自动播放开关（默认关闭；集合 ≥2 且间隔 >0 时由 JS 显示）——
+                    play/pause 图标并置、aria-pressed 同步状态 */}}
+                <button class="lightbox-autoplay" id="lightbox-autoplay" type="button" hidden
+                    aria-label="{{ i18n "lightbox_play" }}" aria-pressed="false"
+                    data-play-label="{{ i18n "lightbox_play" }}"
+                    data-pause-label="{{ i18n "lightbox_pause" }}"
+                    data-autoplay-ms="{{ site.Params.lightboxAutoplay }}">
+                    <span class="lightbox-autoplay-play">{{ partial "utils/icon.html" (dict "name" "play") }}</span>
+                    <span class="lightbox-autoplay-pause">{{ partial "utils/icon.html" (dict "name" "pause") }}</span>
+                </button>
+                {{/* 全屏（沉浸）开关：隐藏底部缩略图条与信息面板，只留主图、编号、
+                    顶栏按钮与左右箭头；展开/收拢图标并置、aria-pressed 同步状态 */}}
+                <button class="lightbox-fullscreen" id="lightbox-fullscreen" type="button"
+                    aria-label="{{ i18n "lightbox_fullscreen" }}" aria-pressed="false"
+                    data-enter-label="{{ i18n "lightbox_fullscreen" }}"
+                    data-exit-label="{{ i18n "lightbox_fullscreen_exit" }}">
+                    <span class="lightbox-fullscreen-enter">{{ partial "utils/icon.html" (dict "name" "fullscreen") }}</span>
+                    <span class="lightbox-fullscreen-exit">{{ partial "utils/icon.html" (dict "name" "fullscreen_exit") }}</span>
+                </button>
+                {{/* 主图缩放（放大镜）：默认放大到 2× 并隐藏信息面板/缩略图条；
+                    滚轮、双指捏合可继续在 1×–4× 间缩放，缩放后可拖动平移 */}}
+                <button class="lightbox-magnify" id="lightbox-magnify" type="button"
+                    aria-label="{{ i18n "lightbox_zoom" }}" aria-pressed="false"
+                    data-enter-label="{{ i18n "lightbox_zoom" }}"
+                    data-exit-label="{{ i18n "lightbox_zoom_exit" }}">
+                    <span class="lightbox-magnify-in">{{ partial "utils/icon.html" (dict "name" "zoom_in") }}</span>
+                    <span class="lightbox-magnify-out">{{ partial "utils/icon.html" (dict "name" "zoom_out") }}</span>
+                </button>
+                <button class="lightbox-close" id="lightbox-close" aria-label="{{ i18n "close" }}">
+                    {{ partial "utils/icon.html" (dict "name" "x") }}
+                </button>
+            </div>
         </div>
         <div class="lightbox-content">
             <div class="lightbox-main">
