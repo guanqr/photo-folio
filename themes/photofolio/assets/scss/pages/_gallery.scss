@@ -116,22 +116,43 @@
     }
 }
 
-/* 主图入场：未就绪时透明并带全灰/压暗；加载完成（is-loaded）后 0.6s 柔和
-   显形，再由主图自身用 1.4s 平滑曲线从全灰过渡到全彩——起点与黑白 LQIP
-   同为灰色，避免主图一出现就带色造成“突然变彩”；慢速单层彩色化，避免
-   双图长时间叠影；不做缩放。占位层同步 0.6s 退场（见下）。filter 覆盖 base
-   中 img[loading="lazy"] 的 blur；img.photo-img 与其同权重（0,1,1），靠后导入
-   的 gallery 覆盖；is-loaded 变体与 base 的 img[loading="lazy"].is-loaded
-   同特异性、同样靠后，压掉 blur(0) */
+/* 主图入场（参考实现 2026-11-12）：未就绪时透明并带全灰/压暗；is-loaded 后
+   播放一次 slowFadeIn——0→15%（0.21s）快速浮现，同时 blur 从 1.25em 收到
+   0.625em、brightness 冲到 2 倍形成过曝辉光；15%→100% 缓慢去模糊、降回正常
+   亮度并完成灰度→全彩，1.4s 时完全清晰；占位层同步 1.4s 退场，不做缩放。
+   显形用 animation 而非 transition：masonry 揭示缓存命中的图片时
+   display:none → 显示与 is-loaded 同帧完成，transition 没有可比初始样式会
+   直出全彩；关键帧在元素首次可见时从起始帧播放，淡入可靠。filter 完全由
+   关键帧驱动（不再单独 transition 颜色），is-loaded 的 filter:none 仅作动画
+   不可用时的兜底；filter 覆盖 base 中 img[loading="lazy"] 的 blur（同权重、
+   靠后导入的 gallery 覆盖）。20px/10px 按 16px 基准折算 em；模糊只在入场瞬间
+   存在，加载态的模糊仍由服务端 LQIP 承担 */
+@keyframes slowFadeIn {
+    0% {
+        opacity: 0;
+        filter: grayscale(1) brightness(1) blur(1.25em);
+    }
+    15% {
+        opacity: 1;
+        filter: grayscale(1) brightness(2) blur(0.625em);
+    }
+    100% {
+        opacity: 1;
+        filter: grayscale(0) brightness(1) blur(0);
+    }
+}
+
 img.photo-img {
     filter: grayscale(1) brightness(0.8) contrast(0.9);
     opacity: 0;
-    transition: opacity var(--transition-reveal),
-                filter var(--transition-image-color);
+    /* 动画与 transition 互斥：显式清掉 base 中 img[loading="lazy"] 的过渡，
+       避免动画结束后 filter/opacity 再被 0.4s 过渡接管（2026-11-12） */
+    transition: none;
 
     &.is-loaded {
         filter: none;
         opacity: 1;
+        animation: slowFadeIn var(--transition-image-reveal) ease both;
     }
 }
 
@@ -147,7 +168,8 @@ img.photo-img {
 /* 黑白低清占位层：背景图仍来自 --photo-blur（OSS 端烘焙模糊），只在本层叠
    grayscale；独立伪元素避免 filter 连带主图（filter 作用于子树）。z-index -1
    在 isolation 建立的层叠上下文内位于内容之下、wrapper 背景之上；主图加载后
-   同步 0.6s 淡出（:has 感知子图 is-loaded） */
+   同步 1.4s 淡出（:has 感知子图 is-loaded），与主图淡入交叉衔接，避免中间
+   透出底色 */
 .photo-wrapper::before {
     content: "";
     position: absolute;
@@ -158,7 +180,7 @@ img.photo-img {
     background-position: center;
     filter: grayscale(1);
     opacity: 1;
-    transition: opacity var(--transition-reveal);
+    transition: opacity var(--transition-image-reveal) ease;
 }
 
 .photo-wrapper:has(> img.photo-img.is-loaded)::before {

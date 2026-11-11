@@ -171,7 +171,7 @@ body {
     --transition-spring: 0.5s var(--ease-spring);       /* hover/按压抬升 */
     --transition-reveal: 0.6s ease;                     /* 图片/占位图/面板入场 */
     --transition-reveal-fast: 0.4s ease;                /* 行/小元素入场 */
-    --transition-image-color: 1.4s var(--ease-standard);/* 照片黑白→彩色 */
+    --transition-image-reveal: 1.4s;                    /* 照片 slowFadeIn 显形/占位退场时长（2026-11-12） */
     --transition-page: 0.35s var(--ease-expo);          /* 页面/菜单滑动 */
     --transition-chart: 0.4s var(--ease-chart);         /* 图表 */
 
