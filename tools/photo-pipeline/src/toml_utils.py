@@ -17,7 +17,9 @@ FIELDS = [
     "camera", "lens", "hash", "source_hash",
 ]
 # 有值才写的字段
-CONDITIONAL_FIELDS = ("description", "series", "species", "is_cover", "featured")
+# published = 条目首次写入时的时间戳（main.py 生成，RSS 按此排序；重跑/换图不变），
+# 旧条目没有该字段时站点回退拍摄时间（2026-11-12）
+CONDITIONAL_FIELDS = ("description", "published", "series", "species", "is_cover", "featured")
 KNOWN_FIELDS = set(FIELDS) | set(CONDITIONAL_FIELDS)
 
 
@@ -106,6 +108,8 @@ def write_toml(toml_path, entries):
             lines.append(f'{f} = "{_tostr(entry.get(f, ""))}"')
         if entry.get("description"):
             lines.append(f'description = "{_tostr(entry["description"])}"')
+        if entry.get("published"):
+            lines.append(f'published = "{_tostr(entry["published"])}"')
         if entry.get("series"):
             lines.append(f'series = "{_tostr(entry["series"])}"')
         if entry.get("species"):

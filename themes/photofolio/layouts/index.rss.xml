@@ -1,20 +1,23 @@
-{{- /* 摄影作品订阅源（RSS 2.0，/index.xml）：作品来自 data/photo.toml，
-       按拍摄日期分组——每组一条 entry，标题告知当日发布张数，
-       正文以纯文字列出每张作品的作品名 / 拍摄地点 / 拍摄日期（不放图片）；
-       只输出最近 feedCount 组（hugo.toml [params].feedCount，默认 20）。 */ -}}
+{{- /* 摄影作品订阅源（RSS 2.0，/index.xml）：每张作品一条，按发布时间倒序，
+       只输出最近 feedCount 条（hugo.toml [params].feedCount，默认 20）。
+       published 由管线在条目首次写入时记录，旧数据缺该字段时回退拍摄时间。
+       GUID 用作品 src（稳定唯一）——此前按拍摄日期分组、GUID=日期，已有日期
+       或早于最近 20 天窗口的新作品永远不会成为新条目，订阅器收不到更新
+       （2026-11-12）。 */ -}}
 {{- $feedCount := site.Params.feedCount | default 20 -}}
 {{- $sorted := partialCached "utils/photo-sorted.html" . "desc" -}}
-{{- /* 按拍摄日期分组（sorted 已按时间倒序，$days 保持倒序） */ -}}
-{{- $byDay := dict -}}
-{{- $days := slice -}}
+{{- /* 排序键 = 发布时间 Unix 秒 + 拍摄时间：整数/字符串比较，避免模板 sort
+       直接比较 time 类型；同批次内按拍摄时间降序保持稳定 */ -}}
+{{- $entries := slice -}}
 {{- range $sorted -}}
-    {{- $day := .time | time.Format "2006-01-02" -}}
-    {{- $list := index $byDay $day | default slice -}}
-    {{- if eq (len $list) 0 -}}
-        {{- $days = $days | append $day -}}
+    {{- $at := .time | time.AsTime -}}
+    {{- with .published -}}
+        {{- $at = . | time.AsTime -}}
     {{- end -}}
-    {{- $byDay = merge $byDay (dict $day ($list | append .)) -}}
+    {{- $key := printf "%020d|%s" $at.Unix .time -}}
+    {{- $entries = $entries | append (dict "photo" . "at" $at "key" $key) -}}
 {{- end -}}
+{{- $entries = sort $entries "key" "desc" -}}
 <?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
 <channel>
@@ -24,29 +27,18 @@
     <language>{{ site.Language.Lang }}</language>
     <lastBuildDate>{{ now.Format "Mon, 02 Jan 2006 15:04:05 -0700" }}</lastBuildDate>
     <atom:link href="{{ "index.xml" | absURL }}" rel="self" type="application/rss+xml" />
-    {{- $shown := 0 -}}
-    {{- range $days -}}
-        {{- if ge $shown $feedCount -}}
-            {{- break -}}
-        {{- end -}}
-        {{- $photos := index $byDay . -}}
-        {{- $p0 := index $photos 0 -}}
-        {{- $shown = add $shown 1 -}}
+    {{- range first $feedCount $entries -}}
+        {{- $p := .photo -}}
+        {{- $slug := $p.src | path.Base | strings.TrimSuffix (path.Ext $p.src) -}}
+        {{- /* 展示文本一律走 i18n；空标题回退 i18n 占位 */ -}}
+        {{- $title := $p.alt | default (i18n "feed_untitled") -}}
+        {{- $desc := i18n "feed_photo_meta" (dict "Place" (default $p.location $p.place) "Date" $p.time) -}}
     <item>
-        <title>{{ i18n "feed_batch_title" (dict "Count" (len $photos) "Day" .) | transform.XMLEscape }}</title>
-        <link>{{ printf "/gallery/?y=%s" ($p0.time | time.Format "2006") | absURL }}</link>
-        <guid isPermaLink="false">{{ . }}</guid>
-        {{- $p0t := time.AsTime $p0.time -}}
-        <pubDate>{{ $p0t.Format "Mon, 02 Jan 2006 15:04:05 -0700" }}</pubDate>
-        {{- /* CDATA 内的自由文本（alt/地点）转义 ]]>：含该序列会提前闭合 CDATA
-               注入 XML（isPlainText 输出格式下 Hugo 不自动转义）；按标准拆段法
-               替换为 ]]]]><![CDATA[> */ -}}
-        <description><![CDATA[
-        {{- range $photos -}}
-{{- $line := i18n "feed_photo_line" (dict "Title" .alt "Place" (default .location .place) "Date" .time) -}}
-<p>{{ replace $line "]]>" "]]]]><![CDATA[>" }}</p>
-        {{- end -}}
-        ]]></description>
+        <title>{{ $title | transform.XMLEscape }}</title>
+        <link>{{ printf "%sgallery/?p=%s" site.Home.Permalink ($slug | urlquery) }}</link>
+        <guid isPermaLink="false">{{ $p.src | transform.XMLEscape }}</guid>
+        <pubDate>{{ .at.Format "Mon, 02 Jan 2006 15:04:05 -0700" }}</pubDate>
+        <description>{{ $desc | transform.XMLEscape }}</description>
     </item>
     {{- end -}}
 </channel>

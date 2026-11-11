@@ -108,9 +108,6 @@ other = " · "
 [footprint_region_label]
 other = "{{ .Name }}，{{ .Count }}"
 
-[feed_photo_line]
-other = "《{{ .Title }}》{{ with .Place }} · {{ . }}{{ end }}{{ with .Date }} · {{ . }}{{ end }}"
-
 [lightbox_place]
 other = "地點"
 
@@ -361,10 +358,13 @@ other = "下一張"
 other = "返回首頁"
 
 [feed_description]
-other = "最新發布的攝影作品：按拍攝日期分組，每次更新告知發布張數，並附每張作品的拍攝地點與日期"
+other = "最新發布的攝影作品：按發布時間倒序，每張作品一條，附拍攝地點與拍攝日期"
 
-[feed_batch_title]
-other = "新發布 {{ .Count }} 張作品（{{ .Day }}）"
+[feed_untitled]
+other = "未命名作品"
+
+[feed_photo_meta]
+other = "{{ if .Place }}{{ .Place }}{{ end }}{{ if and .Place .Date }} · {{ end }}{{ if .Date }}{{ .Date }}{{ end }}"
 
 [categories_title]
 other = "分類"

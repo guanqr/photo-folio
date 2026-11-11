@@ -9,6 +9,7 @@ tools/photo-pipeline/
 ├── run.py                   # 入口（python run.py）
 ├── backfill_camera_lens.py  # 一次性回填相机/镜头（历史数据迁移）
 ├── backfill_source_hash.py  # 一次性回填输入图 source_hash（接入换图检测前）
+├── backfill_published.py    # 一次性按 git 历史回填发布时间 published
 ├── src/                     # 源代码
 │   ├── main.py              # 调度逻辑 + 路径配置读取
 │   ├── compat.py            # Windows stdout UTF-8 / 原子写 / JS 取整
@@ -66,6 +67,7 @@ python run.py --force    # 全量重跑（忽略 source_hash 增量检测）
 |------|------|
 | focus / iso / aperture / shutter / time | EXIF 自动提取（focus 为 35mm 等效焦距，缺失回退物理焦距） |
 | camera / lens | EXIF 自动提取 |
+| published | 条目首次写入时的时间戳（RSS 按发布时间排序；重跑/同名换图不变，旧条目缺省时站点回退拍摄时间） |
 | width / height | 处理后图片尺寸（从输出目录读取） |
 | hash | 处理后图片内容 MD5 前 8 位（图片 URL 的 `?v=` 缓存版本号） |
 | alt / category / place / location / description / address | 留空，手动填写 |
@@ -81,6 +83,16 @@ python backfill_camera_lens.py <original_photos目录> <photo.toml路径>
 ```
 
 脚本只读取 EXIF 并更新 `photo.toml` 的 `camera`/`lens` 字段，不处理图片、不上传 OSS。
+
+### 回填发布时间
+
+旧数据没有 `published` 时（RSS 会回退拍摄时间），可按 git 提交历史一次性回填：
+
+```bash
+python backfill_published.py <photo.toml路径>
+```
+
+以每张作品的 `src` 首次出现在 `photo.toml` 的提交时间为发布时间；已有 `published` 不覆盖，无法溯源的条目保留空值。只读 git 历史、只改 toml，不做图片处理/上传/分析。
 
 ## OSS 孤儿对象核对（只读）
 

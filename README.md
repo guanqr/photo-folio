@@ -38,7 +38,7 @@
 
 ### 订阅与图片基建
 
-- **摄影作品订阅源** — RSS 2.0（`/index.xml`），按拍摄日期分组通知新发布作品（张数/作品名/地点/日期），批次数量由 `feedCount` 配置
+- **摄影作品订阅源** — RSS 2.0（`/index.xml`），每张作品一条、按发布时间倒序（`published` 缺失回退拍摄时间），条目数由 `feedCount` 配置；`guid` 用作品 `src`，补发旧拍摄日期的作品也能通知订阅者
 - **图片 CDN** — 阿里云 OSS 实时处理管线：AVIF/WebP 多尺寸多质量按需生成（缩略图 w_800 / 灯箱 w_1920 / 窄屏灯箱 w_1280 / 缩略图条 w_240 / 封面 w_1000 等，边缘缓存），不支持 AVIF 的环境自动回退 WebP；OG/社交抓取图保持 WebP
 
 ## 📐 瀑布流排布算法说明
@@ -331,7 +331,7 @@ url = "https://example.com/source"
 | `params.lightboxAutoplay` | 灯箱自动播放间隔（毫秒，默认 5000；0 禁用并隐藏播放按钮；打开灯箱默认不自动播放） |
 | `params.carouselCount` | 首页轮播精选图数量（1–12 张） |
 | `params.categoryCover` | 首页/分类目录卡片封面策略：`custom`（仅自定义封面）/ `latest-landscape`（默认，取最新横构图作品） |
-| `params.feedCount` | 摄影作品订阅源（`/index.xml`）输出的更新批次数 |
+| `params.feedCount` | 摄影作品订阅源（`/index.xml`）输出的作品条数（按发布时间倒序） |
 | `params.lightbox` | 灯箱信息区块开关：`meta` / `exif` / `palette` / `story` / `tonal`（影調，含合并直方图）/ `saturation`（飽和度分布）/ `hue`（色相分布）（缺省全开） |
 | `params.enableServiceWorker` | 启用 PWA Service Worker |
 | `params.enableInstantPage` | Instant.page 预加载开关（站点关闭：SPA 已自行 fetch，SW NetworkFirst 使预取无法复用） |

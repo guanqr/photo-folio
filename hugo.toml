@@ -55,7 +55,7 @@ defaultContentLanguage = "zh-hant"
     # 自定义底部版权文字 (支持 HTML 标签，如 <a> 链接)
     copyrightText = ""
 
-    # 摄影作品订阅源（/index.xml，RSS 2.0）：最近按拍摄日期分组的更新批次数
+    # 摄影作品订阅源（/index.xml，RSS 2.0）：最近发布的作品条数（按发布时间倒序）
     feedCount = 20
 
     # 首页分类卡片封面策略（两种模式互斥）：

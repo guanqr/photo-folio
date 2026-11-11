@@ -2,6 +2,7 @@
 """摄影作品批量处理 — 入口与调度"""
 import os
 import sys
+from datetime import datetime
 
 from compat import setup_windows_stdout
 setup_windows_stdout()
@@ -33,6 +34,11 @@ def _get_image_size(path):
 def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None, force=False):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
+
+    # 发布时间：新建条目时写入一次（同一趟处理共用同一时间戳 = 一次发布批次），
+    # 重跑/--force/同名换图都不改——RSS 按此排序，补发旧拍摄日期的作品也能
+    # 成为新条目（2026-11-12）
+    published_now = datetime.now().astimezone().isoformat(timespec="seconds")
 
     # 分析常量单源：Python 常量 -> 主题 JS module（灯箱 import）。
     # 以 photo.toml 所在仓库根定位主题资源；路径不存在时告警不中断。
@@ -150,6 +156,7 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None, forc
                     "camera": exif_info.get("camera", ""),
                     "lens": exif_info.get("lens", ""),
                     "source_hash": input_hash,
+                    "published": published_now,
                 }
                 src_to_entry[src] = new_entry
                 new_entries.append(f)
