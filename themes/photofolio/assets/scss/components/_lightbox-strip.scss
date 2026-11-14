@@ -37,7 +37,7 @@
     height: var(--lightbox-strip-h);
     /* 主图缩放时淡出但保留布局（见 _lightbox-magnify.scss） */
     transition: opacity var(--transition-layout), visibility var(--transition-layout);
-    padding: 0 1em; /* 与顶栏/箭头边距一致 */
+    padding: 0 var(--space-16); /* 与顶栏/箭头边距一致 */
     box-sizing: border-box;
     display: flex;
     align-items: center;
@@ -59,12 +59,12 @@
     }
 
     .lightbox-img-area {
-        padding-bottom: calc(1em + var(--lightbox-strip-h, 0em));
+        padding-bottom: calc(var(--space-16) + var(--lightbox-strip-h, 0em));
     }
 
     .lightbox-panel {
         /* 与图片区底部同值：内容底边与照片底边对齐（顶部同为 4em 顶栏留白） */
-        padding-bottom: calc(1em + var(--lightbox-strip-h, 0em));
+        padding-bottom: calc(var(--space-16) + var(--lightbox-strip-h, 0em));
     }
 }
 
@@ -73,8 +73,8 @@
     height: 100%;
     display: flex;
     align-items: center;
-    gap: 0.375em;
-    padding: 0 0.125em;
+    gap: var(--space-8);
+    padding: 0 0.125em; /* 2px 边缘发丝（发丝级特例，不并入间距标尺） */
     box-sizing: border-box;
     overflow-x: auto;
     overflow-y: hidden;

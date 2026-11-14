@@ -11,11 +11,11 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.25em;
-    padding: 0.75em 1.25em;
-    /* 上边距与正常图表区块一致（1.1em、与 EXIF 保持同距）；下边距为 0——
-       底部收起按钮自带 1.1em 上边距，与图表加载态的间距完全同构 */
-    margin: 1.1em 0 0;
+    gap: var(--space-4);
+    padding: var(--space-12) var(--space-20);
+    /* 上边距与正常图表区块一致（1em、与 EXIF 保持同距）；下边距为 0——
+       底部收起按钮自带 1em 上边距，与图表加载态的间距完全同构 */
+    margin: var(--space-16) 0 0;
     background: transparent;
     /* 虚线框提亮：灯箱内 --color-border 固定为暗色边框（暗面板上不可见），
        取与图标同调的 --color-text-muted */
@@ -23,13 +23,13 @@
     grid-column: 1 / -1; /* 中屏双列网格：提示占满整行 */
 
     .empty-icon {
-        font-size: 3.2em;
-        margin-bottom: -0.25em;
+        font-size: 3em;
+        margin-bottom: calc(var(--space-4) * -1);
         color: var(--color-text-secondary); /* 与标题文字同色（基类为 text-muted 更暗一档） */
     }
 
     h3 {
-        font-size: 0.8em;
+        font-size: var(--size-small);
         margin-bottom: 0;
     }
 }
@@ -52,12 +52,12 @@
 
 /* 影调与色彩分析：区块标题与结论同处一行（同字号、仅颜色区分）；
    明度直方图（三分区底色 + P50 标记 + 剪裁标记）、區域系統 11 级灰阶、
-   三区占比条、饱和度/色相直方图——全部文字采用霞鹜（--font-meta）、字号 0.9em */
+   三区占比条、饱和度/色相直方图——全部文字采用霞鹜（--font-meta）、字号 0.875em */
 .lightbox-tonal-wrap,
 .lightbox-sat-wrap,
 .lightbox-hue-wrap,
 .lightbox-palette-wrap {
-    margin-top: 1.1em;
+    margin-top: var(--space-16);
     transition: opacity var(--transition-fade); /* 随图片同步淡入 */
 }
 
@@ -74,7 +74,7 @@
 
 .lightbox-story-wrap.is-present {
     grid-template-rows: 1fr;
-    margin-top: 1.1em;
+    margin-top: var(--space-16);
 }
 
 .lightbox-story-inner {
@@ -91,7 +91,7 @@
 .lightbox-tonal-name,
 .lightbox-sat-name,
 .lightbox-hue-name {
-    margin-left: 0.6em;
+    margin-left: var(--space-8);
     font-family: var(--font-meta);
     color: var(--color-accent);
 }
@@ -104,20 +104,20 @@
     height: 6em;
     border-radius: var(--radius-xs);
     background: var(--color-lightbox-ctrl-bg);
-    margin-top: 0.5em;
+    margin-top: var(--space-8);
 }
 
-/* 图表标注共用样式：霞鹜 0.8em 灰字（说明文字/图例/轴标注） */
+/* 图表标注共用样式：霞鹜 0.875em 灰字（说明文字/图例/轴标注） */
 %chart-note {
     font-family: var(--font-meta);
-    font-size: 0.8em;
+    font-size: var(--size-small);
     color: var(--color-text-secondary);
 }
 
 /* 图表说明文字：位于图表上方的小号灰色标注（如「直方圖」「區域系統 0–X」） */
 .lightbox-chart-caption {
     @extend %chart-note;
-    margin: 0.55em 0 0.3em;
+    margin: var(--space-8) 0 var(--space-4);
 }
 
 /* 直方图图例：通道色圆点 + 名称（R/G/B/明度） */
@@ -125,13 +125,13 @@
     @extend %chart-note;
     display: flex;
     flex-wrap: wrap;
-    gap: 0.3em 1em;
-    margin-top: 0.3em;
+    gap: var(--space-4) var(--space-16);
+    margin-top: var(--space-4);
 
     > span {
         display: flex;
         align-items: center;
-        gap: 0.35em;
+        gap: var(--space-4);
     }
 
     i {
@@ -153,15 +153,15 @@
     @extend %chart-note;
     display: flex;
     justify-content: space-between;
-    margin-top: 0.25em;
+    margin-top: var(--space-4);
 }
 
 /* 區域系統标尺：11 级灰阶（0 纯黑 → X 纯白，感知均匀，JS 生成色阶），
    括号标记照片占據區域 */
 .lightbox-zone-strip {
     display: flex;
-    gap: 0.125em;
-    margin-top: 0.4em;
+    gap: 0.125em; /* 11 级灰阶之间的 2px 发丝缝（发丝级特例） */
+    margin-top: var(--space-8);
     position: relative;
 
     > span:not(.lightbox-zone-bracket) {
@@ -189,7 +189,7 @@
     height: 0.55em;
     border-radius: var(--radius-pill);
     overflow: hidden;
-    margin-top: 0.5em;
+    margin-top: var(--space-8);
     background: var(--color-lightbox-ctrl-bg);
 }
 
@@ -208,10 +208,10 @@
 .lightbox-tonal-stats {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.3em 1em;
-    margin-top: 0.45em;
+    gap: var(--space-4) var(--space-16);
+    margin-top: var(--space-8);
     font-family: var(--font-meta);
-    font-size: 0.9em;
+    font-size: var(--size-small);
     color: var(--color-text-secondary); /* 与色卡灰色一致 */
 
     /* 窄屏（移动优先基础态）：三区占比文字独占一行，動態範圍/明度中位數
@@ -224,7 +224,7 @@
 .lightbox-tonal-stat {
     display: flex;
     align-items: baseline;
-    gap: 0.4em;
+    gap: var(--space-8);
 }
 
 .lightbox-tonal-stat-value {
@@ -235,16 +235,16 @@
 .lightbox-palette {
     display: flex;
     flex-direction: column;
-    gap: 0.6em;
-    margin-top: 0.5em;
+    gap: var(--space-8);
+    margin-top: var(--space-8);
 }
 
 .lightbox-palette-row {
     display: flex;
     align-items: center;
-    gap: 0.5em;
+    gap: var(--space-8);
     font-family: var(--font-meta);
-    font-size: 0.8em;
+    font-size: var(--size-small);
 }
 
 .lightbox-palette-swatch {
@@ -284,10 +284,10 @@
 /* 作品背后的故事 / 直方图 等区块标题（与 EXIF 标签同款：白色、同字号） */
 .lightbox-section-title {
     font-family: var(--font-meta);
-    font-size: 0.9em;
+    font-size: var(--size-small);
     font-weight: 400;
     color: var(--color-text);
-    margin-bottom: 0.5em;
+    margin-bottom: var(--space-8);
     transition: color var(--transition-fade);
 }
 
@@ -306,7 +306,7 @@
     .lightbox-charts {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        column-gap: 4.5em;
+        column-gap: 4.5em; /* 与 EXIF 的 4.5rem 同一 72px 口径（对齐例外，不并入间距标尺） */
         position: relative;
     }
 

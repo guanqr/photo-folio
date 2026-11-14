@@ -4,6 +4,8 @@
 {{- if .hasCards -}}
 <div class="container section-list-grid page-others">
     <h2 class="page-others-title">{{ i18n .titleKey }}</h2>
-    {{ partial .cardPartial .cardCtx }}
+    {{/* gridClass：底部入口用独立网格（叠字小卡），避免复用首页 .grid 被
+         cards-flip 接管列数、也避免其大卡尺寸压过上方瀑布流作品（2026-11-14） */}}
+    {{ partial .cardPartial (merge .cardCtx (dict "gridClass" "page-others-grid")) }}
 </div>
 {{- end -}}

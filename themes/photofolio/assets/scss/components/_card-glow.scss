@@ -1,0 +1,30 @@
+@use "../base/base" as *;
+
+/* ===== 光标跟随的卡片边框高亮（参考 GitHub 首页卡片，2026-11-14）=====
+   悬停时把边框本身画成高亮，而不是在边框内侧另加一圈：
+   1) 透明边框 → 让背景层从边框环透出；
+   2) 第一层：卡底实色，clip 到 padding-box——盖住内部，只给边框环让位；
+   3) 第二层：径向光晕，clip 到 border-box——位置与半径由 card-glow.js 写入
+      --card-glow-x/y（卡片内坐标）与 --card-glow-r（取卡片短边：光标到
+      最近边框的距离与半径同比例，不同尺寸卡片的边框亮度才一致）；
+   4) 第三层：整圈 accent-30 打底，光晕远端渐隐回它。
+   背景的裁剪边界就是边框线，因此高亮与边框完全重合。
+   此前用 ::after 内描边环：绝对定位相对 padding box，环落在边框内侧，
+   必然多出一道平行线（2026-11-14 修正）。
+   背景图像不可过渡：悬停瞬间出现；离开时边框色按原过渡淡回中性色。 */
+@media (hover: hover) {
+    .photo-card:hover,
+    .category-card:hover {
+        border-color: transparent;
+        background-image:
+            linear-gradient(var(--color-bg-card), var(--color-bg-card)),
+            radial-gradient(
+                circle var(--card-glow-r, 12em) at var(--card-glow-x, 50%) var(--card-glow-y, 50%),
+                var(--color-accent),
+                transparent
+            ),
+            linear-gradient(var(--color-accent-30), var(--color-accent-30));
+        background-clip: padding-box, border-box, border-box;
+        background-origin: border-box, border-box, border-box;
+    }
+}

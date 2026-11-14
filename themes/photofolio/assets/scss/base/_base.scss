@@ -43,7 +43,7 @@ body {
     top: -100%;
     left: 1em;
     z-index: var(--z-skip-link);
-    padding: 0.75em 1.5em;
+    padding: var(--space-12) var(--space-24);
     background: var(--color-accent);
     color: var(--color-bg-card);
     font-weight: 600;
@@ -171,7 +171,7 @@ body {
     --transition-spring: 0.5s var(--ease-spring);       /* hover/按压抬升 */
     --transition-reveal: 0.6s ease;                     /* 图片/占位图/面板入场 */
     --transition-reveal-fast: 0.4s ease;                /* 行/小元素入场 */
-    --transition-image-reveal: 1.4s;                    /* 照片 slowFadeIn 显形/占位退场时长（2026-11-12） */
+    --transition-image-reveal: 1.0s;                    /* 照片 slowFadeIn 显形/占位退场时长（2026-11-13 由 1.4s 压缩：入场整体偏长） */
     --transition-page: 0.35s var(--ease-expo);          /* 页面/菜单滑动 */
     --transition-chart: 0.4s var(--ease-chart);         /* 图表 */
 
@@ -191,6 +191,21 @@ body {
     --space-footer-gap: 1.5em;
     /* 页面头与固定导航栏的间距（画廊/关于/足迹等页面统一） */
     --space-page-top: 4.5em;
+
+    /* ═══ 间距标尺（4px 基准的 em 档位，名称即设计像素值）═══
+       margin/padding/gap 统一从这里取，避免再出现 1.6em/1.7em/2.6em 这类
+       随手值或字号换算沉淀值；新增间距先在此登记（2026-11-14） */
+    --space-4: 0.25em;   /* 4px */
+    --space-8: 0.5em;    /* 8px */
+    --space-12: 0.75em;  /* 12px */
+    --space-16: 1em;     /* 16px */
+    --space-20: 1.25em;  /* 20px */
+    --space-24: 1.5em;   /* 24px */
+    --space-32: 2em;     /* 32px */
+    --space-40: 2.5em;   /* 40px */
+    --space-48: 3em;     /* 48px */
+    --space-64: 4em;     /* 64px */
+    --space-96: 6em;     /* 96px */
 
     /* 阴影梯度（与圆角梯度同法）：卡片悬停 / 浮层弹层 */
     --shadow-card: 0 0.25em 0.75em hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.15);
@@ -323,7 +338,7 @@ ul { list-style: none; }
 .container {
     max-width: var(--container-width);
     margin: 0 auto;
-    padding: 0 1em; /* 与窄屏一致的最小边距 */
+    padding: 0 var(--space-16); /* 与窄屏一致的最小边距 */
 }
 
 .icon {
@@ -361,10 +376,12 @@ ul { list-style: none; }
     border: 0.0625em solid var(--color-border);
 }
 
-/* 卡片悬停抬升：上移 + 强调描边 + 阴影（抬升量与阴影 token 由使用方传入） */
+/* 卡片悬停抬升：上移 + 阴影（抬升量与阴影 token 由使用方传入）。
+   边框高亮不再在此改 border-color：统一由 card-glow 以背景层绘制
+   （透明边框 + 光晕），否则高特异性 hover 规则会盖掉透明边框、
+   令部分卡片只剩整圈强调色、与照片卡亮度不一致（2026-11-14） */
 @mixin card-hover($lift, $shadow) {
     transform: translateY($lift);
-    border-color: var(--color-accent-30);
     box-shadow: $shadow;
 }
 
@@ -415,16 +432,16 @@ ul { list-style: none; }
 @mixin lightbox-detail-trigger {
     display: flex;
     align-items: center;
-    gap: 0.4em;
-    margin-top: 1.1em;
-    padding: 0.2em 0;
-    max-height: 2em; /* 略高于自然高度（一行 0.85em + 0.4em 边距） */
+    gap: var(--space-8);
+    margin-top: var(--space-16);
+    padding: var(--space-4) 0;
+    max-height: 2em; /* 略高于自然高度（一行 0.875em + 0.5em 边距） */
     overflow: hidden;
     background: none;
     border: none;
     color: var(--color-text-muted);
     font-family: var(--font-meta);
-    font-size: 0.85em;
+    font-size: var(--size-small);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     transition: opacity var(--transition-fade), color var(--transition-fade),
@@ -456,14 +473,14 @@ ul { list-style: none; }
 @mixin lightbox-detail-collapse {
     display: flex;
     align-items: center;
-    gap: 0.4em;
-    margin: 1.1em 0 0;
-    padding: 0.2em 0;
+    gap: var(--space-8);
+    margin: var(--space-16) 0 0;
+    padding: var(--space-4) 0;
     background: none;
     border: none;
     color: var(--color-text-muted);
     font-family: var(--font-meta);
-    font-size: 0.85em;
+    font-size: var(--size-small);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     transition: color var(--transition-fade);
@@ -481,7 +498,7 @@ ul { list-style: none; }
 /* 详情区正文：背後的故事与觀鳥圖鑑正文共用 */
 @mixin lightbox-detail-text {
     margin: 0;
-    font-size: 0.9em;
+    font-size: var(--size-small);
     line-height: 1.8;
     color: var(--color-text-secondary);
 }

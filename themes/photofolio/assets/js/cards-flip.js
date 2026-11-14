@@ -1,5 +1,7 @@
 // 卡片网格换行 FLIP（完全参考 masonry.js 的档位滞回经验）：
 // - 列数档位由 JS 驱动（CSS 媒体查询保留为无 JS 降级，内联样式优先级更高）
+// - 两档列数基准：首页/目录卡 1/2/3 列；页面底端「其他分類/系列」入口
+//   （page-others-grid）从 2 列起 → 2/3/4 列，窄屏也不退成单列大卡
 // - 滞回：升档需越过阈值 20px、降档需低于阈值 20px——断点边界来回抖动不会反复切换，
 //   与瀑布流的档位滞回（masonry.js updateTier）同一思想
 // - 档位切换时做受控 FLIP：先记 First → 改列数 → 强制回流 → 记 Last → 位移+缩放回放。
@@ -14,21 +16,41 @@ import { BP_DESKTOP_MIN, BP_CARD_GRID_3COL_MIN } from './breakpoints.js';
 const TIER_1_TO_2 = BP_DESKTOP_MIN;       // 1→2 列阈值（与汉堡断点单源）
 const TIER_2_TO_3 = BP_CARD_GRID_3COL_MIN; // 2→3 列阈值（与 _categories.scss 同源）
 
-function initialCols(width) {
-    if (width >= TIER_2_TO_3) return 3;
-    if (width >= TIER_1_TO_2) return 2;
-    return 1;
+// 列数基准：入口网格从 2 列起（2/3/4 列），首页/目录卡从 1 列起（1/2/3 列）。
+// 两个阈值不变，只平移列数——入口卡必须小于瀑布流作品，窄屏退成单列会
+// 重新变成大卡（2026-11-14）
+function colsBase(grid) {
+    return grid.classList.contains('page-others-grid') ? 2 : 1;
+}
+
+// 档位判定用宽度：入口网格按视口宽度（= CSS 媒体查询口径），与瀑布流档位
+// 同步切换——网格宽度恒比视口少容器左右 1em 边距，若沿用网格宽度，入口会
+// 比瀑布流晚约 32px 才升到满列，中间那段入口卡比作品还大（2026-11-14）。
+// 首页/目录卡沿用网格宽度（现有行为不变）
+function tierWidth(grid, base) {
+    if (base === 2) {
+        return window.innerWidth || document.documentElement.clientWidth;
+    }
+    return grid.getBoundingClientRect().width;
+}
+
+function initialCols(width, base) {
+    if (width >= TIER_2_TO_3) return base + 2;
+    if (width >= TIER_1_TO_2) return base + 1;
+    return base;
 }
 
 // 带滞回的目标列数：从当前档位出发，升档需越过阈值 + 滞回、降档需低于阈值 − 滞回
-function desiredCols(width, current) {
-    if (current === 1) return width >= TIER_1_TO_2 + FLIP_HYSTERESIS ? 2 : 1;
-    if (current === 2) {
-        if (width >= TIER_2_TO_3 + FLIP_HYSTERESIS) return 3;
-        if (width < TIER_1_TO_2 - FLIP_HYSTERESIS) return 1;
-        return 2;
+function desiredCols(width, current, base) {
+    if (current === base) {
+        return width >= TIER_1_TO_2 + FLIP_HYSTERESIS ? base + 1 : base;
     }
-    return width < TIER_2_TO_3 - FLIP_HYSTERESIS ? 2 : 3;
+    if (current === base + 1) {
+        if (width >= TIER_2_TO_3 + FLIP_HYSTERESIS) return base + 2;
+        if (width < TIER_1_TO_2 - FLIP_HYSTERESIS) return base;
+        return base + 1;
+    }
+    return width < TIER_2_TO_3 - FLIP_HYSTERESIS ? base + 1 : base + 2;
 }
 
 const observed = new Map(); // grid → { ro, cols }
@@ -99,10 +121,11 @@ export function initCardsFlip() {
         }
     }
 
-    document.querySelectorAll('.grid').forEach((grid) => {
+    document.querySelectorAll('.grid, .page-others-grid').forEach((grid) => {
         if (observed.has(grid)) return;
         const entry = { ro: null, cols: null, finishTimer: null };
-        entry.cols = initialCols(grid.getBoundingClientRect().width);
+        entry.base = colsBase(grid);
+        entry.cols = initialCols(tierWidth(grid, entry.base), entry.base);
         applyCols(grid, entry.cols); // 立即接管列数（内联样式覆盖 CSS 媒体查询降级）
         if ('ResizeObserver' in window) {
             let pending = false;
@@ -112,7 +135,7 @@ export function initCardsFlip() {
                 requestAnimationFrame(() => {
                     pending = false;
                     if (!grid.isConnected) return;
-                    const next = desiredCols(grid.getBoundingClientRect().width, entry.cols);
+                    const next = desiredCols(tierWidth(grid, entry.base), entry.cols, entry.base);
                     if (next !== entry.cols) flipColumns(grid, entry, next);
                 });
             });

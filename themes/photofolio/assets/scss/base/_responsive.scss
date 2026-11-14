@@ -3,19 +3,14 @@
 @media (max-width: 768px) {
     .header-inner,
     .footer-inner {
-        padding: 0 1em;
+        padding: 0 var(--space-16);
     }
 
     /* .container 的窄屏横向留白已在 _base 统一为 1em，此处无需再声明 */
 
-    .masonry-container {
-        /* 顶部对齐宽屏（2em）：筛选栏与上方横线间距宽窄屏一致；底部与宽屏一致（--space-footer-gap） */
-        padding: 2em 1em var(--space-footer-gap);
-    }
-
     .footer-inner {
         flex-direction: column;
-        gap: 1em;
+        gap: var(--space-16);
         text-align: center;
     }
 
@@ -37,8 +32,8 @@
         background: transparent;
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
-        /* 内容下移避开顶部导航栏（4.5em）+ 原 2em 间距；左右 1em 页边距与窄屏 header-inner 一致 */
-        padding: 6.5em 1em 2em;
+        /* 内容下移避开顶部导航栏（--space-page-top）+ 2em 间距；左右 1em 页边距与窄屏 header-inner 一致 */
+        padding: calc(var(--space-page-top) + var(--space-32)) 1em var(--space-32);
 
         /* 页面已滚动时：面板直接以不透明打开，不做背景渐变 */
         &.nav-solid {
@@ -70,13 +65,13 @@
         ul {
             display: flex;
             flex-direction: column;
-            gap: 1em;
+            gap: var(--space-16);
             align-items: stretch; /* 整行拉伸：文字固定最左、圆点可定位到最右 */
         }
 
         a, .nav-parent {
             position: relative;
-            font-size: 1.25em;
+            font-size: var(--size-lead);
             font-weight: 500;
             display: flex;
             align-items: center;
@@ -145,14 +140,14 @@
             min-height: 0;
             display: flex;
             flex-direction: column;
-            gap: 0.2em;
-            padding: 0 0 0 1.5em; /* 只保留左右缩进，不增加上下行距 */
+            gap: var(--space-4);
+            padding: 0 0 0 var(--space-24); /* 只保留左右缩进，不增加上下行距 */
             align-items: stretch; /* 子项整行拉伸：文字保持缩进、圆点贴屏幕最右 */
         }
 
         .nav-dropdown a {
-            font-size: 1em;
-            padding: 0.2em 0;
+            font-size: var(--size-body);
+            padding: var(--space-4) 0;
         }
 
         /* 窄屏箭头旋转只跟随 sub-open——触屏点击后 :hover 粘性保持，
@@ -207,13 +202,13 @@
 
         ul {
             flex-direction: row;
-            gap: 2em;
+            gap: var(--space-32);
             align-items: center;
             white-space: nowrap;
         }
 
         a {
-            font-size: 1em;
+            font-size: var(--size-body);
             white-space: nowrap;
         }
 
@@ -224,7 +219,7 @@
     }
 
     .back-to-top {
-        right: 1.5em;
+        right: var(--space-24);
         width: 2.75em;
         height: 2.75em;
     }
@@ -232,11 +227,11 @@
     /* 可见位置只挂 active：挂在基础规则上会压过隐藏态的 bottom:-4em、
        入场动画退化为原地浮出 */
     .back-to-top.active {
-        bottom: 1.5em;
+        bottom: var(--space-24);
     }
 
     .header-actions {
-        gap: 0.75em;
+        gap: var(--space-12);
     }
 
     .theme-toggle {
@@ -251,7 +246,7 @@
     .about-header {
         flex-direction: column;
         text-align: center;
-        gap: 1em;
+        gap: var(--space-16);
     }
     .about-avatar {
         width: 5em;

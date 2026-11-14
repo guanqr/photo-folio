@@ -110,7 +110,7 @@
     left: 1em;
     transform: translateY(-50%);
     font-family: var(--font-meta);
-    font-size: 1em;
+    font-size: var(--size-body);
     font-variant-numeric: tabular-nums;
     line-height: 1;
     color: var(--color-lightbox-ctrl-text);
@@ -126,7 +126,7 @@
     top: 50%;
     right: 1em;
     display: flex;
-    gap: 0.5em;
+    gap: var(--space-8);
     transform: translateY(-50%);
 }
 

@@ -150,14 +150,17 @@ defaultContentLanguage = "zh-hant"
     metaFont = "Glyph Correction, LXGW WenKai TC"
 
     # 基础字号 (这些是纯数字+单位，不会触发 ZgotmplZ)
+    # 字号标尺：H1 2.5 / H2 2 / H3 1.5 / lead 1.25 / body 1 / small 0.875 / meta 0.75；
+    # footer 与 small 同值（合并重复档位，2026-11-14）
     baseFontSize = "16px"
     sizeH1 = "2.5em"
     sizeH2 = "2em"
     sizeH3 = "1.5em"
+    sizeLead = "1.25em"
     sizeBody = "1em"
     sizeSmall = "0.875em"
-    sizeMeta = "0.8em"
-    sizeFooter = "0.85em"
+    sizeMeta = "0.75em"
+    sizeFooter = "0.875em"
 
 [menu]
     [[menu.main]]

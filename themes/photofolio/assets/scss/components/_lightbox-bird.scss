@@ -79,8 +79,8 @@
 .lightbox-bird-heading {
     display: flex;
     align-items: center;
-    gap: 0.6em;
-    margin: 0.9em 0 0.5em;
+    gap: var(--space-8);
+    margin: var(--space-16) 0 var(--space-8);
 }
 
 .lightbox-bird-heading .lightbox-bird-name {
@@ -93,11 +93,11 @@
     flex: none;
     display: inline-flex;
     align-items: center;
-    padding: 0.1em 0.55em;
+    padding: var(--space-4) var(--space-8);
     border: 0.0625em solid transparent;
     border-radius: var(--radius-pill);
     font-family: var(--font-meta);
-    font-size: 0.72em;
+    font-size: var(--size-meta);
     line-height: 1.6;
     white-space: nowrap;
     transition: color var(--transition-fade), background-color var(--transition-fade),
@@ -127,15 +127,15 @@ $bird-levels: lc, nt, vu, en, cr, domestic;
 
 .lightbox-bird-taxonomy {
     display: grid;
-    gap: 0.35em;
+    gap: var(--space-4);
     margin: 0;
-    font-size: 0.85em;
+    font-size: var(--size-small);
     line-height: 1.7;
 }
 
 .lightbox-bird-rank {
     display: flex;
-    gap: 0.6em;
+    gap: var(--space-8);
 
     dt {
         flex: none;
@@ -153,7 +153,7 @@ $bird-levels: lc, nt, vu, en, cr, domestic;
 }
 
 .lightbox-bird-section {
-    margin-top: 1em;
+    margin-top: var(--space-16);
 }
 
 .lightbox-bird-text {
@@ -162,8 +162,8 @@ $bird-levels: lc, nt, vu, en, cr, domestic;
 }
 
 .lightbox-bird-sources {
-    margin: 1.1em 0 0;
-    font-size: 0.75em;
+    margin: var(--space-16) 0 0;
+    font-size: var(--size-meta);
     line-height: 1.7;
     color: var(--color-text-muted);
 
@@ -178,7 +178,7 @@ $bird-levels: lc, nt, vu, en, cr, domestic;
 }
 
 .lightbox-bird-sources-label {
-    margin-right: 0.4em;
+    margin-right: var(--space-8);
 }
 
 /* 收起入口：内容最底部的安静文字（上箭头），与图像分析底部收起按钮共用

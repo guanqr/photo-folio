@@ -1,39 +1,39 @@
 /* ===== Empty State & Placeholder ===== */
 .empty-state {
     text-align: center;
-    padding: 4em 2em;
+    padding: var(--space-64) var(--space-32);
     background: var(--color-bg-secondary);
     border-radius: var(--radius-card);
     border: 0.0625em dashed var(--color-border);
-    margin: 2em 0;
+    margin: var(--space-32) 0;
 
     .empty-icon {
         font-size: 3em;
         color: var(--color-text-muted);
-        margin-bottom: 0.5em;
+        margin-bottom: var(--space-8);
     }
 
     h3 {
         font-family: var(--font-heading);
         font-size: var(--size-h3);
-        margin-bottom: 1em;
+        margin-bottom: var(--space-16);
         color: var(--color-text-secondary);
     }
 
     .empty-hint {
-        margin-top: 1em;
+        margin-top: var(--space-16);
         color: var(--color-text-muted);
-        font-size: 0.9em;
+        font-size: var(--size-small);
         transition: color var(--transition-fade);
     }
 
     code {
         font-family: var(--font-meta);
         background: var(--color-bg-card);
-        padding: 0.1em 0.4em;
+        padding: var(--space-4) var(--space-8);
         border-radius: var(--radius-xs);
         color: var(--color-accent);
-        font-size: 0.9em;
+        font-size: var(--size-small);
     }
 }
 

@@ -31,6 +31,8 @@ chevron_left = '<svg width="24" height="24"><polyline points="15 18 9 12 15 6"/>
 
 chevron_right = '<svg width="24" height="24"><polyline points="9 18 15 12 9 6"/></svg>'
 
+arrow_up_right = '<svg width="24" height="24"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>'
+
 play = '<svg width="24" height="24"><polygon points="5 3 19 12 5 21 5 3"/></svg>'
 
 pause = '<svg width="24" height="24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>'

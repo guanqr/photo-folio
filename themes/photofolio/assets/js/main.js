@@ -6,6 +6,7 @@ import { initNavDropdown } from './nav-dropdown.js';
 import { initBackToTop } from './back-to-top.js';
 import { initThemeToggle } from './theme-toggle.js';
 import { initCardsFlip } from './cards-flip.js';
+import { initCardGlow } from './card-glow.js';
 import { initCategoryReveal } from './category-reveal.js';
 import { initPageTransition } from './page-transition.js';
 import { initAvifFallback } from './avif-fallback.js';
@@ -63,6 +64,7 @@ async function initPageModules(isSpa = false) {
     initLazyLoad();
     initBackToTop();
     initCardsFlip();
+    initCardGlow();
     // 分类/系列卡片共用 .category-card：首页、分类目录、系列列表与详情页
     // 「其他」区块都需要滚动揭示，不能只在首页轮播页初始化（2026-11-01）。
     // 无卡页面由模块自身断开旧观察器后早退

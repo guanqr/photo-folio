@@ -32,6 +32,7 @@
 @use "components/lightbox-analysis-control";
 @use "components/lightbox-bird";
 @use "components/lightbox-charts";
+@use "components/card-glow";
 @use "components/utils";
 
 // 5. 响应式覆盖 (必须最后引入，确保优先级最高)

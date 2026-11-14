@@ -7,26 +7,23 @@
 .series-story {
     display: flex;
     flex-direction: column;
-    gap: 1em; /* 有正文时文字栏与作品瀑布流的间距；无正文不渲染文字栏，gap 不产生空白 */
+    gap: var(--space-16); /* 有正文时文字栏与作品瀑布流的间距；无正文不渲染文字栏，gap 不产生空白 */
     max-width: var(--container-width); /* 与全部作品页同宽 */
     margin: 0 auto;
-    padding: 1em 1em var(--space-footer-gap); /* 底部与页脚间距统一（--space-footer-gap） */
-
-    @media (min-width: 769px) {
-        padding: 2em 1em var(--space-footer-gap); /* 横向最小边距与窄屏一致（1em） */
-    }
+    /* 顶部与全站页面内容一致（2em）；此前窄屏 1em、桌面 2em 两档并存（2026-11-14 统一） */
+    padding: var(--space-32) 1em var(--space-footer-gap); /* 底部与页脚间距统一（--space-footer-gap） */
 }
 
 /* 文字栏：全宽 */
 .story-text-col {
     width: 100%;
-    font-size: 1.05em;
+    font-size: var(--size-body);
     line-height: 1.9;
     color: var(--color-text);
     transition: color var(--transition-fade);
 
     p {
-        margin-bottom: 1.2em;
+        margin-bottom: var(--space-20);
     }
 }
 
@@ -39,16 +36,17 @@
    底部留白与页脚间距统一（--space-footer-gap）；
    系列/分类详情页「其他系列/分類」区块复用本类、一并对齐 */
 .section-list-grid {
-    padding-top: 2.5em;
+    /* 顶部与全站页面内容一致（2em；原 2.5em，2026-11-14 统一） */
+    padding-top: var(--space-32);
     padding-bottom: var(--space-footer-gap);
 }
 
 /* 系列/分类详情页底端「其他系列/分類」联动入口：与目录页同款卡片，顶部加分隔线。
-   分隔线上方与页脚横线对齐：页脚 margin-top 2em 按其 0.85em 字号计算为 1.7em，
-   此前缺这一段导致系列/分类页瀑布流到横线比全部作品/足迹地区页短（2026-10-31） */
+   原 margin-top 1.7em 是按页脚 0.85em 字号换算出的派生值；统一间距标尺后
+   取 --space-24（1.5em，2026-11-14） */
 .page-others {
-    margin-top: 1.7em;
-    padding-top: 3em;
+    margin-top: var(--space-24);
+    padding-top: var(--space-48);
     border-top: 0.0625em solid var(--color-border);
     transition: border-color var(--transition-fade);
 }
@@ -57,5 +55,118 @@
 .page-others-title {
     @extend %section-heading;
     font-size: var(--size-h2);
-    margin-bottom: 1.25em;
+    margin-bottom: var(--space-20);
+}
+
+/* ===== 底端「其他系列/分類」入口：封面叠字小卡（2026-11-14）=====
+   复用首页目录卡会把 3 列大卡（宽≈447px、高≈370px）压到瀑布流作品
+   （≈337×225）下方，入口比作品还大、喧宾夺主。这里改为与瀑布流同节奏：
+   >1000px 时 4 列、0.5em 间距、3:2 封面，信息压在封面底部渐变上，
+   卡片高度与照片一致。网格不挂 .grid，用独立类由 cards-flip.js 单独接管：
+   列数基准 2 → 2/3/4 列，跨档换列与首页/目录卡共用同一套 FLIP 与滞回；
+   下列媒体查询保留为无 JS 降级（JS 内联列数优先级更高）。
+   窄屏保持两列：入口不得退成单列大卡 */
+.page-others-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-8);
+
+    @media (min-width: 769px) {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    @media (min-width: 1001px) {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .category-card {
+        position: relative;
+        display: block;
+        aspect-ratio: 3 / 2;
+        border-radius: var(--radius-xs); /* 与瀑布流作品卡一致 */
+        overflow: hidden;
+
+        /* 悬停幅度与照片卡对齐（首页大卡是 -0.35em，此处不沿用） */
+        &:hover {
+            @include card-hover(-0.15em, var(--shadow-card));
+        }
+    }
+
+    .category-image {
+        position: absolute;
+        inset: 0;
+        aspect-ratio: auto;
+
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+    }
+
+    /* 标签常显（不是 hover 层）：底部渐变压暗保证可读，与照片悬停信息同一套 token */
+    /* 两行文字 + 右侧箭头：标题第一行、张数第二行，箭头跨两行垂直居中。
+       基础规则是 flex column（上图下文大卡），这里整体改为 grid 接管 */
+    .category-info {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-rows: auto auto;
+        column-gap: var(--space-8);
+        row-gap: var(--space-4);
+        align-items: start;
+        padding: var(--space-24) var(--space-12) var(--space-8);
+        background: var(--photo-hover-overlay);
+    }
+
+    .category-title {
+        grid-column: 1;
+        grid-row: 1;
+        min-width: 0; /* 允许收缩，长系列名走省略号 */
+        font-family: var(--font-body);
+        font-size: var(--size-small);
+        font-weight: 500;
+        line-height: 1.3;
+        color: var(--color-photo-hover-title);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .category-count {
+        grid-column: 1;
+        grid-row: 2;
+        font-family: var(--font-meta);
+        font-size: var(--size-meta);
+        line-height: 1.3;
+        color: var(--color-photo-hover-meta);
+        white-space: nowrap;
+    }
+
+    /* 右侧大箭头：跨标题/张数两行垂直居中、贴右边缘；悬停时轻移 */
+    .category-arrow {
+        grid-column: 2;
+        grid-row: 1 / span 2;
+        align-self: center;
+        display: inline-flex;
+        font-size: var(--size-lead);
+        line-height: 0; /* 仅 SVG 有尺寸，避免行盒把信息条撑高 */
+        color: var(--color-photo-hover-meta);
+        transition: color var(--transition-fade), transform var(--transition-fast);
+
+        svg {
+            display: block;
+            width: 1em;
+            height: 1em;
+        }
+    }
+
+    .category-card:hover .category-arrow {
+        color: var(--color-photo-hover-title);
+        transform: translate(0.12em, -0.12em); /* ↗ 方向轻移 */
+    }
+
 }

@@ -7,7 +7,10 @@
     {{- end -}}
 {{- end -}}
 {{- $cfg := site.Params.imageSizes | default dict -}}
-<div class="grid">
+{{- /* gridClass：默认 .grid（首页/目录页，列数由 cards-flip 接管）；
+       底部「其他系列」入口传 page-others-grid，见 page-others.html */ -}}
+{{- $gridClass := .gridClass | default "grid" -}}
+<div class="{{ $gridClass }}">
     {{- range .covers -}}
         <a href="{{ partial "utils/series-url.html" .series }}" class="category-card">
             <div class="category-image">
@@ -17,6 +20,10 @@
             <div class="category-info">
                 <h3 class="category-title">{{ .series }}</h3>
                 <p class="category-count">{{ i18n "photo_count" (dict "Count" (index $seriesCounts .series)) }}</p>
+                {{- /* 底部入口卡右侧箭头：标示可跳转（首页/目录大卡不加） */ -}}
+                {{- if eq $gridClass "page-others-grid" -}}
+                    <span class="category-arrow" aria-hidden="true">{{ partial "utils/icon.html" (dict "name" "arrow_up_right") }}</span>
+                {{- end -}}
             </div>
         </a>
     {{- end -}}

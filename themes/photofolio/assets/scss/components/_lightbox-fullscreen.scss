@@ -21,13 +21,13 @@
 /* 主图居中：全屏不受普通视图的 4em 顶栏留白限制（图片可延伸到顶栏浮层下方），
    上下左右对称 1em */
 .lightbox.is-fullscreen .lightbox-main .lightbox-img-area {
-    padding: 1em;
+    padding: var(--space-16);
 }
 
 @media (min-width: 1001px) {
     /* 桌面端左右对称留出箭头列（与常规视图左侧留白一致），主图水平居中 */
     .lightbox.is-fullscreen .lightbox-main .lightbox-img-area {
-        padding: 1em 5.5em;
+        padding: var(--space-16) 5.5em; /* 左右 5.5em 为箭头列让位（几何值，不并入标尺） */
     }
 }
 

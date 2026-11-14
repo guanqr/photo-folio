@@ -61,7 +61,7 @@
 .header-inner {
     max-width: var(--container-width);
     margin: 0 auto;
-    padding: 0 1em; /* 与窄屏一致的最小边距 */
+    padding: 0 var(--space-16); /* 与窄屏一致的最小边距 */
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -70,7 +70,7 @@
 
 .logo-text {
     font-family: var(--font-heading);
-    font-size: 2em;
+    font-size: var(--size-h2);
     font-weight: 700;
     letter-spacing: -0.02em;
     color: var(--color-text);
@@ -80,7 +80,7 @@
 .site-nav {
     > ul {
         display: flex;
-        gap: 2em;
+        gap: var(--space-32);
 
         > li {
             position: relative; /* 下拉菜单定位锚点 */
@@ -88,9 +88,9 @@
     }
 
     a, .nav-parent {
-        font-size: 1em;
+        font-size: var(--size-body);
         color: var(--color-text-secondary);
-        padding: 0.25em 0;
+        padding: var(--space-4) 0;
         display: flex;
         align-items: center;
         /* 颜色过渡：a 链接由 _base 全局规则提供，span 父项（.nav-parent）无——
@@ -129,7 +129,7 @@
         display: inline-flex;
         width: 0.7em;
         height: 0.7em;
-        margin-left: 0.35em;
+        margin-left: var(--space-4);
         transition: transform var(--transition);
 
         svg {
@@ -162,9 +162,9 @@
         left: -2.3em;
         /* 入场位移用 margin 而非 transform：absolute + transform + 过渡时长>0 是
            WebKit 旋转后视口宽度永久取旧值（Bug 287042）的触发模式（见下注释） */
-        margin-top: 0.1em;
+        margin-top: var(--space-4);
         min-width: 0;
-        padding: 0.25em 0; /* 上下留白收紧，只保留左右边距 */
+        padding: var(--space-4) 0; /* 上下留白收紧，只保留左右边距 */
         border-radius: var(--radius-xs); /* 与瀑布流作品卡同档 */
         box-shadow: var(--shadow-pop);
         opacity: 0;
@@ -175,9 +175,9 @@
         a {
             display: flex;
             align-items: center;
-            padding: 0.5em 1.2em 0.5em 1em;
+            padding: var(--space-8) var(--space-20) var(--space-8) var(--space-16);
             white-space: nowrap;
-            font-size: 0.95em;
+            font-size: var(--size-body);
         }
 
         /* 内层容器：桌面纵向排列；窄屏作为 0fr↔1fr 过渡的单一子项 */
@@ -191,7 +191,7 @@
             align-items: center;
             width: 0.8em;
             height: 0.8em;
-            margin-right: 0.5em; /* 图标与文字间距 */
+            margin-right: var(--space-8); /* 图标与文字间距 */
             flex: none;
         }
     }
@@ -209,7 +209,7 @@
         &.sub-open .nav-dropdown {
             opacity: 1;
             visibility: visible;
-            margin-top: 0.5em;
+            margin-top: var(--space-8);
         }
     }
 
@@ -224,7 +224,7 @@
             &.hover-ready:focus-within .nav-dropdown {
                 opacity: 1;
                 visibility: visible;
-                margin-top: 0.5em;
+                margin-top: var(--space-8);
             }
         }
     }
@@ -235,7 +235,7 @@
     display: none;
     width: 0.85em;
     height: 0.85em;
-    margin-right: 0.5em;
+    margin-right: var(--space-8);
     flex-shrink: 0;
 
     svg {
@@ -268,6 +268,7 @@
         display: block;
         width: 1.5em;
         height: 0.125em;
+        /* 汉堡三横线几何居中：线高 0.125em 的一半、宽度 1.5em 的一半（配对值，不随间距标尺） */
         margin-top: -0.0625em;
         margin-left: -0.75em;
         background: var(--color-text);
@@ -303,7 +304,7 @@
     position: relative;
     display: flex;
     align-items: center;
-    gap: 1.5em;
+    gap: var(--space-24);
 }
 
 /* 亮色主题首页：顶部透明阶段（轮播暗色遮罩上）导航文字保持白色——

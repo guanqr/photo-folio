@@ -2,11 +2,13 @@
        输入：.sections（分类 Section 集合，按 weight 排序）、.allPhotos（全站时间排序作品集）、
        .coverMode（custom / latest-landscape，见 hugo.toml [params].categoryCover，互斥） */ -}}
 {{- $cfg := site.Params.imageSizes | default dict -}}
-<div class="grid">
+{{- /* gridClass：默认 .grid（首页/目录页，列数由 cards-flip 接管）；
+       底部「其他分類」入口传 page-others-grid，见 page-others.html */ -}}
+{{- $gridClass := .gridClass | default "grid" -}}
+<div class="{{ $gridClass }}">
     {{- range .sections -}}
         {{- $sectionName := .File.ContentBaseName -}}
         {{- $cardTitle := .Title -}}
-        {{- $cardDesc := .Params.description -}}
         {{- $cardLink := .RelPermalink -}}
         {{- $categoryPhotos := where $.allPhotos "category" $sectionName -}}
         {{- $photoCount := len $categoryPhotos -}}
@@ -35,8 +37,9 @@
             <div class="category-info">
                 <h3 class="category-title">{{ $cardTitle }}</h3>
                 <p class="category-count">{{ i18n "photo_count" (dict "Count" $photoCount) }}</p>
-                {{- with $cardDesc -}}
-                    <p class="category-desc">{{ . }}</p>
+                {{- /* 底部入口卡右侧箭头：标示可跳转（首页/目录大卡不加） */ -}}
+                {{- if eq $gridClass "page-others-grid" -}}
+                    <span class="category-arrow" aria-hidden="true">{{ partial "utils/icon.html" (dict "name" "arrow_up_right") }}</span>
                 {{- end -}}
             </div>
         </a>

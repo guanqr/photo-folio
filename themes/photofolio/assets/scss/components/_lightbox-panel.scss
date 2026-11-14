@@ -9,7 +9,7 @@
     width: 100%;
     display: flex;
     flex-direction: column;
-    padding: 0.8em 1em; /* 上下留白对称 */
+    padding: var(--space-12) var(--space-16); /* 上下留白对称 */
     /* opacity/visibility：主图缩放时面板淡出但保留布局（图片可越过原图片区
        绘制，见 _lightbox-magnify.scss）；visibility 在淡出结束后才翻转 */
     transition: border-color var(--transition-fade),
@@ -28,9 +28,9 @@
 .lightbox-caption {
     color: var(--color-text);
     font-family: var(--font-heading);
-    font-size: 1.2em;
+    font-size: var(--size-lead);
     font-weight: 400;
-    margin-bottom: 0.35em;
+    margin-bottom: var(--space-4);
     transition: opacity var(--transition-fade);
 }
 
@@ -47,20 +47,20 @@
 
 .lightbox-tags.is-visible {
     grid-template-rows: 1fr;
-    margin-bottom: 0.6em;
+    margin-bottom: var(--space-8);
 }
 
 .lightbox-tags-inner {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5em;
+    gap: var(--space-8);
     min-height: 0;
     overflow: hidden;
 }
 
 .lightbox-tag {
     @extend %pill;
-    padding: 0.2em 0.8em;
+    padding: var(--space-4) var(--space-12);
     border-color: var(--color-accent); /* 默认绿色描边 + 绿色文字 */
     font-family: var(--font-meta);
     font-size: var(--size-meta);
@@ -91,18 +91,18 @@
     flex-wrap: nowrap;
     flex-direction: column;
     align-items: stretch;
-    gap: 0.25em;
+    gap: var(--space-4);
     transition: opacity var(--transition-fade);
 }
 
 .lightbox-meta-group {
     display: flex;
     align-items: center;
-    gap: 0.5em; /* 与 EXIF 行一致：所有宽度下标签左缘对齐 */
+    gap: var(--space-8); /* 与 EXIF 行一致：所有宽度下标签左缘对齐 */
     white-space: nowrap; /* 组内不换行 */
     color: var(--color-text);
     font-family: var(--font-meta);
-    font-size: 0.9em;
+    font-size: var(--size-small);
 
     .lightbox-meta-label {
         color: var(--color-text);
@@ -134,7 +134,7 @@
     max-height: 0;
     opacity: 0;
     transition: max-height var(--transition-reveal-fast), opacity var(--transition-fade);
-    padding-right: 0.5em; /* 内容与滚动条之间留出间距（窄屏） */
+    padding-right: var(--space-8); /* 内容与滚动条之间留出间距（窄屏） */
     /* 统一细滚动条：常显，不随滚动空闲隐藏；scrollbar-gutter 始终预留空间，
        滚动条出现/消失不引起文字横向移动。
        标准属性仅 Firefox：Chrome 121+ 同时支持标准属性与 WebKit 伪元素且
@@ -237,7 +237,7 @@
     border: none;
     color: var(--color-lightbox-ctrl-text);
     cursor: pointer;
-    padding: 0.2em 1em;
+    padding: var(--space-4) var(--space-16);
     -webkit-tap-highlight-color: transparent;
     transition: color var(--transition-fast);
 
@@ -254,22 +254,22 @@
     }
 }
 
-/* EXIF 分行列表（图标/标签/值，行结构由模板渲染）；顶距与行距一致（0.45em），
+/* EXIF 分行列表（图标/标签/值，行结构由模板渲染）；顶距与行距一致（0.5em），
    与上方简行（日期）之间的间距不比其他行大 */
 .lightbox-exif {
     list-style: none;
-    margin-top: 0.45em;
+    margin-top: var(--space-8);
     display: flex;
     flex-direction: column;
-    gap: 0.45em;
+    gap: var(--space-8);
     transition: opacity var(--transition-fade); /* 随图片同步淡入 */
     font-family: var(--font-meta);
-    font-size: 0.9em;
+    font-size: var(--size-small);
 
     li {
         display: flex;
         align-items: center;
-        gap: 0.5em;
+        gap: var(--space-8);
     }
 
     .exif-icon {
@@ -362,8 +362,8 @@
         /* 顶部 4em = 顶栏高度：标题/EXIF 等信息不进入顶栏覆盖区（与图片区
            顶部留白一致）；底部 1em + 缩略图条高（见 strip 覆盖规则），与图片区
            底部对齐；右侧留出箭头按钮列；左侧 2em 与图片区辉光保持距离 */
-        padding: 4em 1.25em 1em 2em;
-        margin-right: 4.25em;
+        padding: var(--space-64) var(--space-20) var(--space-16) var(--space-32);
+        margin-right: 4.25em; /* 关闭按钮列让位（几何值，不并入间距标尺） */
     }
 
     .lightbox-panel-details {
@@ -378,7 +378,7 @@
         display: flex;
         flex-direction: column;
         overflow-y: auto;
-        padding-right: 0.75em; /* 内容与滚动条之间留出间距（桌面） */
+        padding-right: var(--space-12); /* 内容与滚动条之间留出间距（桌面） */
 
         /* 子块保持天然高度：内容超高时溢出滚动，而非被 flex 压缩（压缩会导致
            滚动失效） */

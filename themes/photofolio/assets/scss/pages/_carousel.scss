@@ -70,7 +70,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.5em;
+    gap: var(--space-8);
 
     h2 { animation: hero-rise 0.6s var(--ease-soft) 0.05s both; }
     p  { animation: hero-rise 0.6s var(--ease-soft) 0.15s both; }
@@ -83,20 +83,20 @@
 .carousel-hero-title {
     font-family: var(--font-heading);
     /* 窄屏字号稍小，跨断点平滑过渡 */
-    font-size: 2.6em;
+    font-size: var(--size-h1);
     font-weight: 700;
     color: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.95);
     text-shadow: var(--carousel-text-shadow);
     transition: font-size var(--transition-layout);
 
     @media (min-width: 769px) {
-        font-size: 3.2em;
+        font-size: 3em; /* 大屏展示档（无对应语义 token） */
     }
 }
 
 .carousel-hero-subtitle {
     /* 窄屏字号稍小，跨断点平滑过渡 */
-    font-size: 1.1em;
+    font-size: var(--size-lead);
     font-weight: 300;
     letter-spacing: 0.08em;
     color: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.9);
@@ -104,29 +104,29 @@
     transition: font-size var(--transition-layout);
 
     @media (min-width: 769px) {
-        font-size: 1.35em;
+        font-size: var(--size-h3);
     }
 }
 
 /* 大字下方的胶囊按钮组（overlay 整体不响应指针，此处单独恢复点击） */
 .carousel-actions {
     display: flex;
-    gap: 1em;
-    margin-top: 1.2em;
+    gap: var(--space-16);
+    margin-top: var(--space-20);
     pointer-events: auto;
 }
 
 .carousel-action-btn {
     @extend %pill;
     display: inline-block;
-    padding: 0.55em 1.6em;
+    padding: var(--space-8) var(--space-24);
     border-color: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.65);
     background: hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.2);
     backdrop-filter: blur(0.375em);
     -webkit-backdrop-filter: blur(0.375em);
     color: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.95);
     font-family: var(--font-body);
-    font-size: 1em;
+    font-size: var(--size-body);
     letter-spacing: 0.08em;
     text-shadow: var(--carousel-text-shadow);
     transition: border-color var(--transition-fade);
@@ -229,7 +229,7 @@
     flex-direction: column;
     align-items: flex-end;
     /* 窄屏屏幕小：收紧行间距 */
-    gap: 0.35em;
+    gap: var(--space-4);
     /* 跨断点切换时位置与行距平滑过渡 */
     transition: right var(--transition-layout), gap var(--transition-layout);
 
@@ -244,17 +244,17 @@
     align-items: center;
     justify-content: flex-end;
     /* 窄屏文字与圆点间距稍大 */
-    gap: 0.8em;
+    gap: var(--space-12);
     /* 窄屏字号更小；横向内边距扩大圆点的点按区域。纵向内边距 + 负外边距：
        点按区域向上下各扩 0.7em（总高约 29px，原仅进度条高约 6px）而
        视觉位置不变（负边距抵消、行间距仍由容器 gap 决定） */
-    padding: 0.7em 0.5em;
-    margin: -0.7em 0;
+    padding: var(--space-12) var(--space-8);
+    margin: calc(var(--space-12) * -1) 0;
     border: none;
     background: transparent;
     color: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.9);
     font-family: var(--font-meta);
-    font-size: 0.7em;
+    font-size: var(--size-meta);
     text-shadow: 0 0.1em 0.5em hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.5);
     text-align: right;
     cursor: pointer;
@@ -267,9 +267,9 @@
 
     /* 未播放项 hover：进度条变亮、稍长，并显示标题（仅桌面端，窄屏无 hover） */
     @media (min-width: 769px) {
-        padding: 0.7em 0; /* 纵向点按区域扩大与窄屏同法（负边距在基础态、断点通用） */
-        font-size: 0.85em;
-        gap: 0.5em;
+        padding: var(--space-12) 0; /* 纵向点按区域扩大与窄屏同法（负边距在基础态、断点通用） */
+        font-size: var(--size-small);
+        gap: var(--space-8);
 
         &:not(.active):hover,
         &:not(.active):focus-visible {

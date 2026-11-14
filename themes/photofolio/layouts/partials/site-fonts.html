@@ -62,10 +62,11 @@
             (dict "param" "sizeH1" "var" "--size-h1" "default" "2.5em")
             (dict "param" "sizeH2" "var" "--size-h2" "default" "2em")
             (dict "param" "sizeH3" "var" "--size-h3" "default" "1.5em")
+            (dict "param" "sizeLead" "var" "--size-lead" "default" "1.25em")
             (dict "param" "sizeBody" "var" "--size-body" "default" "1em")
             (dict "param" "sizeSmall" "var" "--size-small" "default" "0.875em")
-            (dict "param" "sizeMeta" "var" "--size-meta" "default" "0.8em")
-            (dict "param" "sizeFooter" "var" "--size-footer" "default" "0.85em")
+            (dict "param" "sizeMeta" "var" "--size-meta" "default" "0.75em")
+            (dict "param" "sizeFooter" "var" "--size-footer" "default" "0.875em")
         }}
         {{ range $s := $sizeVars }}
             {{ with index $typo $s.param | default $s.default }}
