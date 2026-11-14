@@ -75,3 +75,141 @@ name = "日本"
 slug = "japan"
 lat = 35.68
 lng = 139.76
+
+[[location]]
+name = "河北"
+slug = "hebei"
+lat = 40.70
+lng = 117.25
+
+[[location]]
+name = "北京"
+slug = "beijing"
+lat = 39.90
+lng = 116.41
+
+[[location]]
+name = "重慶"
+slug = "chongqing"
+lat = 29.56
+lng = 106.55
+
+[[location]]
+name = "山西"
+slug = "shanxi"
+lat = 37.87
+lng = 112.55
+
+[[location]]
+name = "遼寧"
+slug = "liaoning"
+lat = 41.80
+lng = 123.43
+
+[[location]]
+name = "吉林"
+slug = "jilin"
+lat = 43.82
+lng = 125.32
+
+[[location]]
+name = "黑龍江"
+slug = "heilongjiang"
+lat = 45.80
+lng = 126.53
+
+[[location]]
+name = "山東"
+slug = "shandong"
+lat = 36.65
+lng = 117.12
+
+[[location]]
+name = "河南"
+slug = "henan"
+lat = 34.75
+lng = 113.62
+
+[[location]]
+name = "湖北"
+slug = "hubei"
+lat = 30.59
+lng = 114.30
+
+[[location]]
+name = "湖南"
+slug = "hunan"
+lat = 28.23
+lng = 112.94
+
+[[location]]
+name = "廣西"
+slug = "guangxi"
+lat = 22.82
+lng = 108.37
+
+[[location]]
+name = "海南"
+slug = "hainan"
+lat = 20.04
+lng = 110.32
+
+[[location]]
+name = "四川"
+slug = "sichuan"
+lat = 30.57
+lng = 104.07
+
+[[location]]
+name = "貴州"
+slug = "guizhou"
+lat = 26.65
+lng = 106.63
+
+[[location]]
+name = "西藏"
+slug = "tibet"
+lat = 29.65
+lng = 91.14
+
+[[location]]
+name = "陝西"
+slug = "shaanxi"
+lat = 34.34
+lng = 108.94
+
+[[location]]
+name = "甘肅"
+slug = "gansu"
+lat = 36.06
+lng = 103.83
+
+[[location]]
+name = "寧夏"
+slug = "ningxia"
+lat = 38.49
+lng = 106.23
+
+[[location]]
+name = "新疆"
+slug = "xinjiang"
+lat = 43.83
+lng = 87.62
+
+[[location]]
+name = "台灣"
+slug = "taiwan"
+lat = 25.03
+lng = 121.56
+
+[[location]]
+name = "香港"
+slug = "hong-kong"
+lat = 22.32
+lng = 114.17
+
+[[location]]
+name = "澳門"
+slug = "macau"
+lat = 22.20
+lng = 113.54

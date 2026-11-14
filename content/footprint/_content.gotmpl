@@ -1,5 +1,10 @@
 {{- /* 地点页内容适配器（Hugo 0.126+）：构建期从 data/locations.toml 生成 /footprint/<slug>/ 虚拟页面，
-       不再需要手工维护 content/footprint/<slug>.md；新增地点只需在 locations.toml 加一条（name/slug/lat/lng）。 */}}
+       不再需要手工维护 content/footprint/<slug>.md。locations.toml 预登记全部省级地区，
+       只为照片实际使用的地点生成页面——预留但无照片的地区不产生空页（2026-11-15）。 */}}
+{{- $used := dict }}
+{{- range hugo.Data.photo.photo }}
+    {{- with .location }}{{ $used = merge $used (dict . true) }}{{ end }}
+{{- end }}
 {{- $seen := dict }}
 {{- $registered := dict }}
 {{- range hugo.Data.locations.location }}
@@ -7,13 +12,15 @@
     {{- if isset $seen .slug }}{{ errorf "locations.toml slug %q 重复（地点页 URL 冲突）" .slug }}{{ end }}
     {{- $seen = merge $seen (dict .slug true) }}
     {{- $registered = merge $registered (dict .name true) }}
-    {{- $page := dict
-        "kind" "page"
-        "path" .slug
-        "title" .name
-        "params" (dict "description" "人世幾回傷往事，山形依舊枕寒流")
-    }}
-    {{- $.AddPage $page }}
+    {{- if isset $used .name }}
+        {{- $page := dict
+            "kind" "page"
+            "path" .slug
+            "title" .name
+            "params" (dict "description" "人世幾回傷往事，山形依舊枕寒流")
+        }}
+        {{- $.AddPage $page }}
+    {{- end }}
 {{- end }}
 {{- /* 照片地点必须登记：未登记时足迹聚合仍收录并回退 urlize URL，但地点页不存在
        （时间线/地图点击 404）——构建期报错，宁可失败也不发布死链 */}}
