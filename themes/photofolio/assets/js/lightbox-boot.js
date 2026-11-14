@@ -98,4 +98,20 @@ export function initLightboxBoot() {
             .then(() => card.querySelector('.photo-wrapper')?.click())
             .catch((err) => console.error('[lightbox] lazy boot failed', err));
     }, true);
+
+    // 预启动：指针悬停作品卡（桌面）或键盘聚焦时，后台完成骨架注入与入口加载，
+    // 真正点击时灯箱已就绪；没打算打开灯箱的访客不会触发。失败不提示，
+    // 点击路径照常重试（2026-11-14）
+    document.addEventListener('pointerover', (e) => {
+        if (booted || bootPromise) return;
+        if (e.pointerType && e.pointerType !== 'mouse') return;
+        if (!e.target.closest('.photo-wrapper')) return;
+        bootLightbox().catch(() => { /* 留给点击重试 */ });
+    }, { passive: true });
+
+    document.addEventListener('focusin', (e) => {
+        if (booted || bootPromise) return;
+        if (!e.target.closest('.photo-card')) return;
+        bootLightbox().catch(() => { /* 留给点击重试 */ });
+    });
 }
