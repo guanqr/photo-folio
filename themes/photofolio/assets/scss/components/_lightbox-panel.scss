@@ -148,7 +148,7 @@
     }
 
     &::-webkit-scrollbar {
-        width: 0.375em;
+        width: 0.375em; /* style-lint-ignore：自定义滚动条宽度 */
     }
 
     &::-webkit-scrollbar-thumb {
@@ -189,7 +189,7 @@
         position: absolute;
         right: var(--space-16);
         /* 视觉与桌面原生细滚动条一致：透明轨道、border 色滑块、悬停 muted */
-        width: 0.375em;
+        width: 0.375em; /* style-lint-ignore：自定义滚动条宽度 */
         z-index: 2;
         /* 可点击/拖动的自定义滚动条：单独处理指针事件，不触发抽屉拖拽 */
         pointer-events: auto;
@@ -328,7 +328,7 @@
             top: 0;
             bottom: 0;
             left: 50%;
-            width: 0.0625rem;
+            width: 0.0625rem; /* style-lint-ignore：竖分隔线（发丝） */
             transform: translateX(-50%);
             background: var(--color-border);
         }
@@ -340,7 +340,7 @@
     /* 简行与 EXIF 之间的竖线衔接成连续一段：EXIF 的线向上延伸 0.45em
        补上自身的外边距缺口，与简行线相接 */
     .lightbox-exif::before {
-        top: -0.45em;
+        top: -0.45em; /* style-lint-ignore：EXIF 竖线延伸（几何） */
     }
 
     /* 网格项关闭自动最小尺寸（最长的地名/镜头型号也不足单元格一半，无溢出风险） */

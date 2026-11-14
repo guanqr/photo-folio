@@ -19,8 +19,8 @@
 }
 
 .about-avatar {
-    width: 6em;
-    height: 6em;
+    width: 6em; /* style-lint-ignore：头像尺寸 */
+    height: 6em; /* style-lint-ignore：头像尺寸 */
     border-radius: 50%;
     object-fit: cover;
     border: 0.1875em solid var(--color-border);
@@ -139,7 +139,7 @@
 }
 
 .stats-bar-wrap {
-    height: 0.45em;
+    height: 0.45em; /* style-lint-ignore：统计条高度（数据可视化） */
     border-radius: var(--radius-xs);
     background: var(--color-overlay-subtle);
     overflow: hidden;
@@ -183,8 +183,8 @@
 
 .stats-fold-toggle {
     position: absolute;
-    width: 0.0625em;
-    height: 0.0625em;
+    width: 0.0625em; /* style-lint-ignore：隐藏输入框尺寸 */
+    height: 0.0625em; /* style-lint-ignore：隐藏输入框尺寸 */
     opacity: 0;
     pointer-events: none;
 }

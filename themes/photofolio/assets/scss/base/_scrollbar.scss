@@ -5,8 +5,8 @@
    互不干扰 */
 
 ::-webkit-scrollbar {
-    width: 0.5em;
-    height: 0.5em;
+    width: var(--space-8);
+    height: var(--space-8);
 }
 
 ::-webkit-scrollbar-track {

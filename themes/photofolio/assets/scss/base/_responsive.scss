@@ -95,8 +95,8 @@
             right: 0;
             bottom: auto;
             top: 50%;
-            width: 0.4em;
-            height: 0.4em;
+            width: 0.4em; /* style-lint-ignore：导航圆点尺寸 */
+            height: 0.4em; /* style-lint-ignore：导航圆点尺寸 */
             border-radius: 50%;
             transform: translateY(-50%) scale(0);
         }
@@ -249,7 +249,7 @@
         gap: var(--space-16);
     }
     .about-avatar {
-        width: 5em;
-        height: 5em;
+        width: 5em; /* style-lint-ignore：移动端头像尺寸 */
+        height: 5em; /* style-lint-ignore：移动端头像尺寸 */
     }
 }

@@ -39,7 +39,7 @@
 .lightbox-histogram {
     display: block;
     width: 100%;
-    height: 6em;
+    height: 6em; /* style-lint-ignore：图表高度（媒体尺寸） */
     border-radius: var(--radius-xs);
     background: var(--color-lightbox-ctrl-bg);
 
@@ -101,7 +101,7 @@
 .lightbox-hue-hist {
     display: block;
     width: 100%;
-    height: 6em;
+    height: 6em; /* style-lint-ignore：图表高度（媒体尺寸） */
     border-radius: var(--radius-xs);
     background: var(--color-lightbox-ctrl-bg);
     margin-top: var(--space-8);
@@ -166,14 +166,14 @@
 
     > span:not(.lightbox-zone-bracket) {
         flex: 1;
-        height: 0.9em;
+        height: 0.9em; /* style-lint-ignore：灰阶色块高度（数据可视化） */
         border-radius: var(--radius-2xs);
     }
 
     .lightbox-zone-bracket {
         position: absolute;
-        top: -0.25em;
-        bottom: -0.25em;
+        top: calc(var(--space-4) * -1);
+        bottom: calc(var(--space-4) * -1);
         left: 0;
         width: 0;
         border: 0.0625em solid var(--color-accent);
@@ -186,7 +186,7 @@
 /* 三区占比条：陰影/中間調/高光三段堆叠 */
 .lightbox-tone-ratio {
     display: flex;
-    height: 0.55em;
+    height: 0.55em; /* style-lint-ignore：占比条高度（数据可视化） */
     border-radius: var(--radius-pill);
     overflow: hidden;
     margin-top: var(--space-8);
@@ -248,8 +248,8 @@
 }
 
 .lightbox-palette-swatch {
-    width: 3em;
-    height: 3em;
+    width: 3em; /* style-lint-ignore：色卡方块尺寸（数据可视化） */
+    height: 3em; /* style-lint-ignore：色卡方块尺寸（数据可视化） */
     flex: none;
     border-radius: var(--radius-sm); /* 圆角正方形 */
     border: 0.0625em solid var(--color-overlay-subtle);
@@ -318,8 +318,8 @@
         top: 0;
         bottom: 0;
         /* 列间距（4.5em）的一半再左移半个线宽：竖线恰居两列正中 */
-        left: calc(-2.25em - 0.03125em);
-        width: 0.0625em;
+        left: calc(-2.25em - 0.03125em); /* style-lint-ignore：灰阶括号定位（几何） */
+        width: 0.0625em; /* style-lint-ignore：发丝分隔线 */
         background: var(--color-border);
     }
 
@@ -334,7 +334,7 @@
 
     .lightbox-histogram {
         flex: 1 1 auto;
-        height: 4.5em;
+        height: 4.5em; /* style-lint-ignore：双列图表高度（媒体尺寸） */
     }
 
     /* 网格项关闭自动最小尺寸（色卡行不足单元格一半，无溢出风险） */

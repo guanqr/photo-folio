@@ -205,8 +205,8 @@
     transition: color var(--transition-fade);
 
     .legend-dot {
-        width: 0.625em;
-        height: 0.625em;
+        width: 0.625em; /* style-lint-ignore：图例圆点尺寸 */
+        height: 0.625em; /* style-lint-ignore：图例圆点尺寸 */
         border-radius: 50%;
         background: var(--color-accent);
         box-shadow: 0 0 0.6em var(--color-accent-30);

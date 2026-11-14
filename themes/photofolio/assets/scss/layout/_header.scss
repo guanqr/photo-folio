@@ -65,7 +65,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 4.5em;
+    height: 4.5em; /* style-lint-ignore：导航栏高度 */
 }
 
 .logo-text {
@@ -112,9 +112,9 @@
         &::after {
             content: '';
             position: absolute;
-            bottom: -0.125em;
+            bottom: -0.125em; /* style-lint-ignore：下划线偏移（发丝） */
             left: 0; right: 0;
-            height: 0.1em;
+            height: 0.1em; /* style-lint-ignore：下划线粗细（发丝） */
             background: var(--color-accent);
             transform: scaleX(0);
             transform-origin: center;
@@ -146,7 +146,7 @@
         top: 100%;
         left: 0;
         right: 0;
-        height: 0.5em;
+        height: var(--space-8);
     }
 
     /* 下拉菜单：悬停/键盘聚焦展开（面板是 li 的子元素，指针移入面板不丢失悬停）；
@@ -159,7 +159,7 @@
         @extend %card-surface;
         position: absolute;
         top: 100%;
-        left: -2.3em;
+        left: -2.3em; /* style-lint-ignore：下拉面板对齐偏移（几何推导） */
         /* 入场位移用 margin 而非 transform：absolute + transform + 过渡时长>0 是
            WebKit 旋转后视口宽度永久取旧值（Bug 287042）的触发模式（见下注释） */
         margin-top: var(--space-4);
@@ -266,8 +266,8 @@
         top: 50%;
         left: 50%;
         display: block;
-        width: 1.5em;
-        height: 0.125em;
+        width: 1.5em; /* style-lint-ignore：汉堡横线宽度 */
+        height: 0.125em; /* style-lint-ignore：汉堡横线粗细（发丝） */
         /* 汉堡三横线几何居中：线高 0.125em 的一半、宽度 1.5em 的一半（配对值，不随间距标尺） */
         margin-top: -0.0625em; /* 线高一半（几何配对值，style-lint-ignore） */
         margin-left: -0.75em;  /* 宽度一半（几何配对值，style-lint-ignore） */

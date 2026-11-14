@@ -266,22 +266,41 @@ function renderZoneStrip(tone, stripEl, bracketEl) {
     }
 }
 
-/* 饱和度直方图：0–100% 分布曲线（100 点固定结构，连续形变过渡）+ 均值标记
-   + 低/中/高分界线（数值来自 JSON satBounds，避免与管线阈值脱钩）。
+/* 饱和度直方图：0–100% 分布曲线（100 点固定结构，连续形变过渡）
+   + 低/中/高分区底色（分段值来自 JSON satBounds，与管线阈值同源）+ 均值虚线。
+   分区用色块而非分界虚线，与明度直方图的三分区底色同一套视觉语言。
    目标 y 数组在拉取后一次算好入缓存，此处只做骨架与过渡 */
 function paintSatHistogram(sat, satYs, svg) {
     if (!svg) return;
     const W = 100;
     const H = 48;
     if (!svg._built) {
-        const guides = (sat.satBounds || []).map((x) =>
-            `<line class="sat-threshold" x1="${x}" x2="${x}" y1="2" y2="${H - 2}" stroke="var(--color-text-muted)" stroke-width="1" stroke-dasharray="2 3" opacity="0.7" vector-effect="non-scaling-stroke"></line>`).join('');
-        svg.innerHTML = guides
+        svg.innerHTML =
+            `<rect class="sat-zone-low" y="0" height="${H}" fill="var(--color-sat-zone-low-bg)"></rect>`
+            + `<rect class="sat-zone-mid" y="0" height="${H}" fill="var(--color-sat-zone-mid-bg)"></rect>`
+            + `<rect class="sat-zone-high" y="0" height="${H}" fill="var(--color-sat-zone-high-bg)"></rect>`
             + `<path class="sat-curve" fill="none" stroke="var(--color-sat-curve)" stroke-width="1.5" vector-effect="non-scaling-stroke"></path>`
             + `<line class="sat-mean" y1="2" y2="${H - 2}" stroke="var(--color-accent)" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"></line>`;
-        svg._els = { curve: svg.querySelector('.sat-curve'), mean: svg.querySelector('.sat-mean') };
+        svg._els = {
+            curve: svg.querySelector('.sat-curve'),
+            mean: svg.querySelector('.sat-mean'),
+            zones: [
+                svg.querySelector('.sat-zone-low'),
+                svg.querySelector('.sat-zone-mid'),
+                svg.querySelector('.sat-zone-high'),
+            ],
+        };
         svg._built = true;
     }
+    // 分区边界逐次写入：当前 satBounds 是管线全局常量，保留响应数据变化的能力
+    const [b0, b1] = sat.satBounds || [18, 45];
+    const setZone = (rect, x, w) => {
+        rect.setAttribute('x', x);
+        rect.setAttribute('width', Math.max(0, w));
+    };
+    setZone(svg._els.zones[0], 0, b0);
+    setZone(svg._els.zones[1], b0, b1 - b0);
+    setZone(svg._els.zones[2], b1, W - b1);
     const apply = (arrs) => {
         const ys = arrs[0];
         let d = '';

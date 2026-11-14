@@ -10,9 +10,12 @@
     --color-accent: var(--dark-accent);
     --color-accent-15: hsla(var(--dark-accent-h), var(--dark-accent-s), var(--dark-accent-l), 0.15);
     --color-accent-30: hsla(var(--dark-accent-h), var(--dark-accent-s), var(--dark-accent-l), 0.3);
-    --color-zone-shadow-bg: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.05);
-    --color-zone-mid-bg: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.1);
-    --color-zone-high-bg: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.05);
+    --color-zone-shadow-bg: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.06);
+    --color-zone-mid-bg: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.12);
+    --color-zone-high-bg: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.06);
+    --color-sat-zone-low-bg: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.04);
+    --color-sat-zone-mid-bg: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.08);
+    --color-sat-zone-high-bg: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.12);
     --color-zone-shadow-fg: var(--dark-text-muted);
     --color-zone-mid-fg: var(--dark-text-secondary);
     --color-zone-high-fg: var(--color-white);
@@ -97,7 +100,7 @@
     left: 0;
     right: 0;
     z-index: 3;
-    height: 4em;
+    height: 4em; /* style-lint-ignore：灯箱顶栏高度 */
     /* 全屏闲置隐藏时淡出（is-idle，见 _lightbox-fullscreen.scss） */
     transition: opacity var(--transition-fade);
 }
@@ -315,7 +318,7 @@
     top: 0;
     left: 0;
     right: 0;
-    height: 0.125em;
+    height: 0.125em; /* style-lint-ignore：自动播放进度条发丝高度 */
     z-index: 5;
     background: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.1);
     opacity: 0;

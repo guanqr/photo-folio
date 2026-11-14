@@ -117,10 +117,14 @@ body {
     --color-accent-75: hsla(var(--color-accent-h), var(--color-accent-s), var(--color-accent-l), 0.75); /* 滚动条 thumb active */
 
     /* 影调分析图表配色：明度直方图三分区底色 / 占比条三段（陰影·中間調·高光）、
-       明度曲线、饱和度曲线、剪裁标记（暗色白基，亮色黑基见 [data-theme="light"]） */
-    --color-zone-shadow-bg: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.05);
-    --color-zone-mid-bg: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.1);
-    --color-zone-high-bg: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.05);
+       明度曲线、饱和度曲线、剪裁标记（暗色白基，亮色黑基见 [data-theme="light"]）。
+       饱和度分区底色按饱和度递增，三档彼此可区分（2026-11-14） */
+    --color-zone-shadow-bg: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.06);
+    --color-zone-mid-bg: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.12);
+    --color-zone-high-bg: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.06);
+    --color-sat-zone-low-bg: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.04);
+    --color-sat-zone-mid-bg: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.08);
+    --color-sat-zone-high-bg: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.12);
     --color-zone-shadow-fg: var(--color-text-muted);
     --color-zone-mid-fg: var(--color-text-secondary);
     --color-zone-high-fg: var(--color-white);
@@ -210,8 +214,8 @@ body {
 
     /* ═══ 组件尺寸标尺（图标/控件）═══
        图标 0.75 / 0.875 / 1 / 1.25 / 1.5em 五档；控件 2.5 / 3em 两档
-       （返回顶部、主题切换、汉堡、灯箱圆形按钮统一 3em；2.75 的缩略图高
-       属媒体尺寸，不在此列） */
+       （返回顶部、主题切换、汉堡、灯箱圆形按钮统一 3em；缩略图高、图表高、
+       色卡、头像、统计列宽等媒体/数据尺寸不在此列，例外须加 style-lint-ignore） */
     --icon-xs: 0.75em;
     --icon-sm: 0.875em;
     --icon-md: 1em;
@@ -292,7 +296,7 @@ html.theme-switching *::after {
     position: fixed;
     top: 0;
     left: 0;
-    height: 0.125em;
+    height: 0.125em; /* style-lint-ignore：SPA 进度条发丝高度 */
     background: var(--color-accent);
     z-index: var(--z-progress);
     pointer-events: none;
@@ -315,8 +319,11 @@ html.theme-switching *::after {
 
     /* 影调分析图表配色（亮色主题：黑基阴影、白基高光） */
     --color-zone-shadow-bg: hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.12);
-    --color-zone-mid-bg: hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.05);
+    --color-zone-mid-bg: hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.06);
     --color-zone-high-bg: hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.12);
+    --color-sat-zone-low-bg: hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.05);
+    --color-sat-zone-mid-bg: hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.09);
+    --color-sat-zone-high-bg: hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.13);
     --color-zone-shadow-fg: var(--color-text-secondary);
     --color-zone-mid-fg: var(--color-text-muted);
     --color-zone-high-fg: var(--color-text);

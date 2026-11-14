@@ -39,7 +39,7 @@
     top: 0;
     left: 0;
     right: 0;
-    height: 10em;
+    height: 10em; /* style-lint-ignore：顶部渐变遮罩高度 */
     z-index: 1;
     background: var(--carousel-top-overlay);
     pointer-events: none;
@@ -143,7 +143,7 @@
 .carousel-scroll-down {
     position: absolute;
     /* 视口锚定的固定偏移：不随元素字号缩放（rem 正当例外，与灯箱面板间距单位同因） */
-    bottom: 2rem;
+    bottom: 2rem; /* style-lint-ignore：视口锚定 rem 例外 */
     left: 50%;
     transform: translateX(-50%);
     z-index: 2;
@@ -222,8 +222,8 @@
     /* 底部高度宽窄屏固定不变；视口锚定的固定偏移不随组件字号（0.7em）缩放——
        em 会使偏移随字号缩小（如 5rem=80px 变 5em=56px、位置漂移），
        rem 为正当例外（与灯箱面板间距单位同因） */
-    bottom: 5rem;
-    right: 1.25rem;
+    bottom: 5rem; /* style-lint-ignore：视口锚定 rem 例外 */
+    right: 1.25rem; /* style-lint-ignore：视口锚定 rem 例外 */
     z-index: 2;
     display: flex;
     flex-direction: column;
@@ -234,7 +234,7 @@
     transition: right var(--transition-layout), gap var(--transition-layout);
 
     @media (min-width: 769px) {
-        right: 2.5rem;
+        right: 2.5rem; /* style-lint-ignore：视口锚定 rem 例外 */
         gap: 0.625rem; /* 视口锚定 rem 例外（style-lint-ignore） */
     }
 }
@@ -274,7 +274,7 @@
         &:not(.active):hover,
         &:not(.active):focus-visible {
             .carousel-dot-bar {
-                width: 2.5em;
+                width: 2.5em; /* style-lint-ignore：指示器进度条宽度（数据可视化） */
                 background: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.6);
             }
 
@@ -314,8 +314,8 @@
 
 /* 窄屏：小圆点指示器，正在播放的圆点为绿色并以弹簧曲线弹入放大，切换动画更明显 */
 .carousel-dot-bar {
-    width: 0.4em;
-    height: 0.4em;
+    width: 0.4em; /* style-lint-ignore：指示圆点尺寸 */
+    height: 0.4em; /* style-lint-ignore：指示圆点尺寸 */
     border-radius: 50%;
     background: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.4);
     flex-shrink: 0;
@@ -341,8 +341,8 @@
 /* 桌面端（≥769px）：恢复横条进度条样式 */
 @media (min-width: 769px) {
     .carousel-dot-bar {
-        width: 2em;
-        height: 0.2em;
+        width: 2em; /* style-lint-ignore：进度条轨道尺寸（数据可视化） */
+        height: 0.2em; /* style-lint-ignore：进度条轨道尺寸（数据可视化） */
         border-radius: 0.1em; /* 细条端点不在圆角梯度内（--radius-xs 大于条高会成全圆头胶囊） */
         background: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.35);
         overflow: hidden;
@@ -357,7 +357,7 @@
 
     /* 正在播放的项：进度条最长，hover 无样式变化 */
     .carousel-dot.active .carousel-dot-bar {
-        width: 4em;
+        width: 4em; /* style-lint-ignore：进度条宽度（数据可视化） */
         background: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.35);
         transform: none;
     }
