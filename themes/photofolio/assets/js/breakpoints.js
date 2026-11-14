@@ -6,9 +6,19 @@
 // （汉堡菜单已显示而点击被视为桌面端）。CSS 见 _responsive.scss，两处同步
 export const BP_DESKTOP_MIN = 769;
 
-// 卡片网格 2→3 列断点（与 _categories.scss @media min-width: 1001 同源）
-export const BP_CARD_GRID_3COL_MIN = 1001;
-
 // 灯箱窄屏断点（lightbox.js 与 lightbox-drawer.js 共用）：≤1000px 抽屉模式、
 // 主图窄屏宽度降档（imageSizes.lightboxNarrow）与抽屉同界
 export const BP_LIGHTBOX_NARROW = 1000;
+
+/* 读取 :root 的 CSS 档位（0: ≤500 / 1: 501-768 / 2: 769-1000 / 3: >1000）。
+   卡片/统计网格至少按 1 档处理（0 与 1 档同义）。
+   不用 matchMedia/innerWidth：iPad Safari 旋转后这些值可能永久陈旧，
+   CSS 变量由媒体查询重新求值（2026-11-14） */
+export function readLayoutTiers() {
+    const style = getComputedStyle(document.documentElement);
+    const read = (name) => {
+        const v = parseInt(style.getPropertyValue(name), 10);
+        return Number.isFinite(v) ? Math.max(1, Math.min(3, v)) : 1;
+    };
+    return { tier: read('--layout-tier'), exit: read('--layout-tier-exit') };
+}

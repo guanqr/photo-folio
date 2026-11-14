@@ -13,6 +13,7 @@
 // - 档位内随意缩放：列数不变，网格自然伸缩，无重排无动画
 
 import { prefersReducedMotion } from './utils.js';
+import { readLayoutTiers } from './breakpoints.js';
 import { FLIP_TRANSITION, clearFlipInline, recordFlipRects, resetFlipFinish, scheduleFlipFinish } from './flip.js';
 
 // 列数基准：由网格的 data-cols-base 声明（入口网格 2 → 2/3/4 列；缺省 1 →
@@ -22,29 +23,18 @@ function colsBase(grid) {
     return Number.isFinite(base) ? base : 1;
 }
 
-/* 读取 CSS 档位（0: ≤500 / 1: 501-768 / 2: 769-1000 / 3: >1000）。
-   卡片网格至少 1 档（0 与 1 档都按 1 档处理：首页卡 1 列、入口卡 2 列） */
-function readTiers() {
-    const style = getComputedStyle(document.documentElement);
-    const read = (name) => {
-        const v = parseInt(style.getPropertyValue(name), 10);
-        return Number.isFinite(v) ? Math.max(1, Math.min(3, v)) : 1;
-    };
-    return { tier: read('--layout-tier'), exit: read('--layout-tier-exit') };
-}
-
 function colsForTier(tier, base) {
     return base + tier - 1;
 }
 
 function initialCols(base) {
-    return colsForTier(readTiers().tier, base);
+    return colsForTier(readLayoutTiers().tier, base);
 }
 
 // 带滞回的目标列数：升档需 exit 档位 > 当前档位；降档随基础档位立即生效
 function desiredCols(current, base) {
     const currentTier = current - base + 1;
-    const { tier, exit } = readTiers();
+    const { tier, exit } = readLayoutTiers();
     if (tier > currentTier && exit <= currentTier) return current;
     return colsForTier(tier, base);
 }

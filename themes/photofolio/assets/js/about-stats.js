@@ -1,7 +1,9 @@
 // 關於頁「拍攝檔案」統計卡片：跨 769px 斷點的兩列↔單列 FLIP（與分類/系列卡片同款機制，
-// 參考 cards-flip.js / masonry.js 的檔位滯回經驗）：
+// 參考 cards-flip.js / masonry.js 的檔位經驗）：
 // - 列數由 JS 驅動（內聯樣式覆蓋 CSS 媒體查詢——後者保留為無 JS 降級）
-// - 滯回：升檔需越過閾值 +20px、降檔需低於閾值 −20px，斷點邊界來回抖動不會反覆切換
+// - 檔位信號與瀑布流/卡片网格同源：只讀 :root 的 --layout-tier / --layout-tier-exit
+//   （CSS 媒體查詢寫入）；不用 matchMedia/innerWidth——iPad Safari 旋轉後可能陳舊
+// - 滯回：升档需 exit 档位 >= 2，降档随基础档位立即生效
 // - 斷點切換時做受控 FLIP：先記 First → 改列數 → 強制回流 → 記 Last → 位移回放 +
 //   真實寬高過渡（完全不用縮放——卡內文字絕不拉伸變形，寬高過渡每幀按真實佈局重排內容）。
 //   First/Last 在同一同步任務內量測（佈局變化由 JS 自己觸發），基準不會過期
@@ -11,12 +13,8 @@
 //   （动画期间暂停刷新，避免把变换中的位置当基准——与足迹地图 flipLayout 同款经验）
 
 import { prefersReducedMotion } from './utils.js';
-import { FLIP_TRANSITION, FLIP_DURATION, FLIP_EASE, FLIP_HYSTERESIS, clearFlipInline, recordFlipRects, resetFlipFinish, scheduleFlipFinish } from './flip.js';
-import { BP_DESKTOP_MIN } from './breakpoints.js';
-
-const TIER = BP_DESKTOP_MIN; // ≥769 兩列 / <769 單列（與 CSS max-width:768px 互補；單源見 breakpoints.js）
-// 頭部橫排↔豎排斷點：768 = BP_DESKTOP_MIN − 1（與全站窄屏上限嚴格互補，經單源推導不寫死）
-const MQ_NARROW = window.matchMedia(`(max-width: ${BP_DESKTOP_MIN - 1}px)`);
+import { readLayoutTiers } from './breakpoints.js';
+import { FLIP_TRANSITION, FLIP_DURATION, FLIP_EASE, clearFlipInline, recordFlipRects, resetFlipFinish, scheduleFlipFinish } from './flip.js';
 
 const observed = new Map(); // grid → { ro, two, headerNarrow, headerRects, headerAnimating }
 
@@ -24,10 +22,10 @@ function applyCols(grid, two) {
     grid.style.gridTemplateColumns = two ? '1fr 1fr' : '1fr';
 }
 
-// 帶滯回的目標列數：從當前狀態出發，升檔需越過閾值 + 滯回、降檔需低於閾值 − 滯回
-function desiredTwo(width, current) {
-    if (current) return width >= TIER - FLIP_HYSTERESIS;
-    return width >= TIER + FLIP_HYSTERESIS;
+// 帶滯回的目標列數：升档需 exit 档位 >= 2；降档随基础档位立即生效
+function desiredTwo(current, tiers) {
+    if (current) return tiers.tier >= 2;
+    return tiers.tier >= 2 && tiers.exit >= 2;
 }
 
 function flipColumns(grid, entry, nextTwo) {
@@ -129,7 +127,43 @@ function flipHeader(container, entry, fromRects, els) {
     }, FLIP_DURATION + 50);
 }
 
+/* 网格列数与头部布局的复核：ResizeObserver 与 orientationchange 共用。
+   头部横排/竖排由 CSS 切换，这里只比对档位并回放上一帧基准 */
+function recheck(grid, entry) {
+    if (!grid.isConnected) return;
+    const tiers = readLayoutTiers();
+    const next = desiredTwo(entry.two, tiers);
+    if (next !== entry.two) flipColumns(grid, entry, next);
+    const container = grid.closest('.about-container');
+    if (!container) return;
+    const els = headerEls(container);
+    const nowNarrow = tiers.tier < 2;
+    if (nowNarrow !== entry.headerNarrow && !entry.headerAnimating) {
+        flipHeader(container, entry, entry.headerRects || rectsOf(els), els);
+    }
+    entry.headerNarrow = nowNarrow;
+    // 基准位置每帧刷新（动画期间暂停，避免把变换中的位置当基准）
+    if (!entry.headerAnimating) entry.headerRects = rectsOf(els);
+}
+
+// 旋转等视口变化：CSS 档位已重估，但 ResizeObserver 可能因 iPad 视口陈旧未触发
+let viewportBound = false;
+
+function bindViewportRecheck() {
+    if (viewportBound) return;
+    viewportBound = true;
+    const onViewportChange = () => {
+        for (const [grid, entry] of observed) recheck(grid, entry);
+    };
+    window.addEventListener('orientationchange', onViewportChange);
+    if (window.screen && window.screen.orientation
+        && typeof window.screen.orientation.addEventListener === 'function') {
+        window.screen.orientation.addEventListener('change', onViewportChange);
+    }
+}
+
 export function initAboutStats() {
+    bindViewportRecheck();
     // 清理已脱离文档的旧网格观察器（SPA 换页）
     for (const [grid, entry] of observed) {
         if (!grid.isConnected) {
@@ -140,16 +174,17 @@ export function initAboutStats() {
 
     document.querySelectorAll('.about-stats').forEach((grid) => {
         if (observed.has(grid)) return;
+        const tiers = readLayoutTiers();
         const entry = {
             ro: null,
             two: null,
-            headerNarrow: MQ_NARROW.matches,
+            headerNarrow: tiers.tier < 2,
             headerRects: null,   // 头部元素上一帧基准位置（回放用）
             headerAnimating: false,
             finishTimer: null,       // 列翻转收尾定时器槽位
             headerFinishTimer: null, // 头部翻转收尾定时器槽位
         };
-        entry.two = grid.getBoundingClientRect().width >= TIER;
+        entry.two = tiers.tier >= 2;
         applyCols(grid, entry.two); // 立即接管列数（内联样式覆盖 CSS 媒体查询降级）
         if ('ResizeObserver' in window) {
             let pending = false;
@@ -158,22 +193,7 @@ export function initAboutStats() {
                 pending = true;
                 requestAnimationFrame(() => {
                     pending = false;
-                    if (!grid.isConnected) return;
-                    // 网格列数（滞回 + 受控 FLIP）
-                    const next = desiredTwo(grid.getBoundingClientRect().width, entry.two);
-                    if (next !== entry.two) flipColumns(grid, entry, next);
-                    // 头部布局：CSS 媒体查询已切换（RO 为后布局回调），检测翻转后从上一帧基准回放
-                    const container = grid.closest('.about-container');
-                    if (container) {
-                        const els = headerEls(container);
-                        const nowNarrow = MQ_NARROW.matches;
-                        if (nowNarrow !== entry.headerNarrow && !entry.headerAnimating) {
-                            flipHeader(container, entry, entry.headerRects || rectsOf(els), els);
-                        }
-                        entry.headerNarrow = nowNarrow;
-                        // 基准位置每帧刷新（动画期间暂停，避免把变换中的位置当基准）
-                        if (!entry.headerAnimating) entry.headerRects = rectsOf(els);
-                    }
+                    recheck(grid, entry);
                 });
             });
             entry.ro.observe(grid);

@@ -8,9 +8,6 @@ export const FLIP_DURATION = 350;
 export const FLIP_EASE = 'var(--ease-standard)';
 export const FLIP_TRANSITION = `transform ${FLIP_DURATION / 1000}s ${FLIP_EASE}`;
 
-// 换列 FLIP 滞回宽度（卡片网格/关于页统计共用）
-export const FLIP_HYSTERESIS = 20;
-
 /* 换列 FLIP 共用工具：清内联属性、记录矩形、收尾定时器槽位（列数判定各组件保留） */
 export function clearFlipInline(elements, { size = false } = {}) {
     elements.forEach((el) => {
