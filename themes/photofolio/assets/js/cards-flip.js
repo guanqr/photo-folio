@@ -1,56 +1,52 @@
-// 卡片网格换行 FLIP（完全参考 masonry.js 的档位滞回经验）：
+// 卡片网格换行 FLIP（参考 masonry.js 的档位滞回经验）：
 // - 列数档位由 JS 驱动（CSS 媒体查询保留为无 JS 降级，内联样式优先级更高）
+// - 档位信号与瀑布流同源：只读 :root 的 --layout-tier / --layout-tier-exit
+//   （CSS 媒体查询写入）。不用 window.innerWidth/matchMedia——iPad Safari 旋转后
+//   这些值可能永久陈旧，CSS 变量会随媒体查询重新求值（2026-11-14）
 // - 两档列数基准：首页/目录卡 1/2/3 列；页面底端「其他分類/系列」入口
 //   （page-others-grid）从 2 列起 → 2/3/4 列，窄屏也不退成单列大卡
-// - 滞回：升档需越过阈值 20px、降档需低于阈值 20px——断点边界来回抖动不会反复切换，
-//   与瀑布流的档位滞回（masonry.js updateTier）同一思想
+// - 滞回：升档需 exit 档位越过当前档位（比基础档位高 20px），降档按基础档位
+//   立即生效，与瀑布流 masonry.js updateTier 同一规则
 // - 档位切换时做受控 FLIP：先记 First → 改列数 → 强制回流 → 记 Last → 位移+缩放回放。
 //   First/Last 在同一同步任务内量测（布局变化由 JS 自己触发），不存在基准过期问题——
 //   这正是瀑布流照片稳定的根本原因
 // - 档位内随意缩放：列数不变，网格自然伸缩，无重排无动画
 
 import { prefersReducedMotion } from './utils.js';
-import { FLIP_TRANSITION, FLIP_HYSTERESIS, clearFlipInline, recordFlipRects, resetFlipFinish, scheduleFlipFinish } from './flip.js';
-import { BP_DESKTOP_MIN, BP_CARD_GRID_3COL_MIN } from './breakpoints.js';
+import { FLIP_TRANSITION, clearFlipInline, recordFlipRects, resetFlipFinish, scheduleFlipFinish } from './flip.js';
 
-const TIER_1_TO_2 = BP_DESKTOP_MIN;       // 1→2 列阈值（与汉堡断点单源）
-const TIER_2_TO_3 = BP_CARD_GRID_3COL_MIN; // 2→3 列阈值（与 _categories.scss 同源）
-
-// 列数基准：入口网格从 2 列起（2/3/4 列），首页/目录卡从 1 列起（1/2/3 列）。
-// 两个阈值不变，只平移列数——入口卡必须小于瀑布流作品，窄屏退成单列会
-// 重新变成大卡（2026-11-14）
+// 列数基准：由网格的 data-cols-base 声明（入口网格 2 → 2/3/4 列；缺省 1 →
+// 1/2/3 列）。入口卡必须小于瀑布流作品，窄屏退成单列会重新变成大卡（2026-11-14）
 function colsBase(grid) {
-    return grid.classList.contains('page-others-grid') ? 2 : 1;
+    const base = parseInt(grid.dataset.colsBase, 10);
+    return Number.isFinite(base) ? base : 1;
 }
 
-// 档位判定用宽度：入口网格按视口宽度（= CSS 媒体查询口径），与瀑布流档位
-// 同步切换——网格宽度恒比视口少容器左右 1em 边距，若沿用网格宽度，入口会
-// 比瀑布流晚约 32px 才升到满列，中间那段入口卡比作品还大（2026-11-14）。
-// 首页/目录卡沿用网格宽度（现有行为不变）
-function tierWidth(grid, base) {
-    if (base === 2) {
-        return window.innerWidth || document.documentElement.clientWidth;
-    }
-    return grid.getBoundingClientRect().width;
+/* 读取 CSS 档位（0: ≤500 / 1: 501-768 / 2: 769-1000 / 3: >1000）。
+   卡片网格至少 1 档（0 与 1 档都按 1 档处理：首页卡 1 列、入口卡 2 列） */
+function readTiers() {
+    const style = getComputedStyle(document.documentElement);
+    const read = (name) => {
+        const v = parseInt(style.getPropertyValue(name), 10);
+        return Number.isFinite(v) ? Math.max(1, Math.min(3, v)) : 1;
+    };
+    return { tier: read('--layout-tier'), exit: read('--layout-tier-exit') };
 }
 
-function initialCols(width, base) {
-    if (width >= TIER_2_TO_3) return base + 2;
-    if (width >= TIER_1_TO_2) return base + 1;
-    return base;
+function colsForTier(tier, base) {
+    return base + tier - 1;
 }
 
-// 带滞回的目标列数：从当前档位出发，升档需越过阈值 + 滞回、降档需低于阈值 − 滞回
-function desiredCols(width, current, base) {
-    if (current === base) {
-        return width >= TIER_1_TO_2 + FLIP_HYSTERESIS ? base + 1 : base;
-    }
-    if (current === base + 1) {
-        if (width >= TIER_2_TO_3 + FLIP_HYSTERESIS) return base + 2;
-        if (width < TIER_1_TO_2 - FLIP_HYSTERESIS) return base;
-        return base + 1;
-    }
-    return width < TIER_2_TO_3 - FLIP_HYSTERESIS ? base + 1 : base + 2;
+function initialCols(base) {
+    return colsForTier(readTiers().tier, base);
+}
+
+// 带滞回的目标列数：升档需 exit 档位 > 当前档位；降档随基础档位立即生效
+function desiredCols(current, base) {
+    const currentTier = current - base + 1;
+    const { tier, exit } = readTiers();
+    if (tier > currentTier && exit <= currentTier) return current;
+    return colsForTier(tier, base);
 }
 
 const observed = new Map(); // grid → { ro, cols }
@@ -112,7 +108,30 @@ function flipColumns(grid, entry, nextCols) {
     });
 }
 
+// 旋转等视口变化：CSS 档位可能已重估，但 ResizeObserver 因 iPad 的视口陈旧
+// 而未触发——补一次全网格复核（模块级只挂一次，SPA 换页不重复）
+let viewportBound = false;
+
+function recheckOnViewportChange() {
+    for (const [grid, entry] of observed) {
+        if (!grid.isConnected) continue;
+        const next = desiredCols(entry.cols, entry.base);
+        if (next !== entry.cols) flipColumns(grid, entry, next);
+    }
+}
+
+function bindViewportRecheck() {
+    if (viewportBound) return;
+    viewportBound = true;
+    window.addEventListener('orientationchange', recheckOnViewportChange);
+    if (window.screen && window.screen.orientation
+        && typeof window.screen.orientation.addEventListener === 'function') {
+        window.screen.orientation.addEventListener('change', recheckOnViewportChange);
+    }
+}
+
 export function initCardsFlip() {
+    bindViewportRecheck();
     // 清理已脱离文档的旧网格观察器（SPA 换页）
     for (const [grid, entry] of observed) {
         if (!grid.isConnected) {
@@ -125,7 +144,7 @@ export function initCardsFlip() {
         if (observed.has(grid)) return;
         const entry = { ro: null, cols: null, finishTimer: null };
         entry.base = colsBase(grid);
-        entry.cols = initialCols(tierWidth(grid, entry.base), entry.base);
+        entry.cols = initialCols(entry.base);
         applyCols(grid, entry.cols); // 立即接管列数（内联样式覆盖 CSS 媒体查询降级）
         if ('ResizeObserver' in window) {
             let pending = false;
@@ -135,7 +154,7 @@ export function initCardsFlip() {
                 requestAnimationFrame(() => {
                     pending = false;
                     if (!grid.isConnected) return;
-                    const next = desiredCols(tierWidth(grid, entry.base), entry.cols, entry.base);
+                    const next = desiredCols(entry.cols, entry.base);
                     if (next !== entry.cols) flipColumns(grid, entry, next);
                 });
             });

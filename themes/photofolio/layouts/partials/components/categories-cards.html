@@ -1,11 +1,15 @@
 {{- /* 分类目录卡片网格（首页分类区块与分類合集页共用）：
        输入：.sections（分类 Section 集合，按 weight 排序）、.allPhotos（全站时间排序作品集）、
-       .coverMode（custom / latest-landscape，见 hugo.toml [params].categoryCover，互斥） */ -}}
+       .coverMode（custom / latest-landscape，见 hugo.toml [params].categoryCover，互斥）、
+       .imageWidth（可选：封面取图宽度；底部入口卡传更小一档，见 page-others.html）、
+       .colsBase（可选：网格列数基准，写入 data-cols-base 供 cards-flip 读取） */ -}}
 {{- $cfg := site.Params.imageSizes | default dict -}}
+{{- $coverWidth := .imageWidth | default ($cfg.category | default 1000) -}}
 {{- /* gridClass：默认 .grid（首页/目录页，列数由 cards-flip 接管）；
        底部「其他分類」入口传 page-others-grid，见 page-others.html */ -}}
 {{- $gridClass := .gridClass | default "grid" -}}
-<div class="{{ $gridClass }}">
+{{- $colsBase := .colsBase -}}
+<div class="{{ $gridClass }}"{{ with $colsBase }} data-cols-base="{{ . }}"{{ end }}>
     {{- range .sections -}}
         {{- $sectionName := .File.ContentBaseName -}}
         {{- $cardTitle := .Title -}}
@@ -30,7 +34,7 @@
         <a href="{{ $cardLink }}" class="category-card">
             <div class="category-image">
                 {{- with $coverImg -}}
-                    {{ $coverUrl := partial "utils/img-url-cached.html" (dict "src" . "hash" ($coverHash | default "") "site" site "width" ($cfg.category | default 1000) "mode" "lfit" "format" "avif" "quality" ($cfg.quality | default 80)) }}
+                    {{ $coverUrl := partial "utils/img-url-cached.html" (dict "src" . "hash" ($coverHash | default "") "site" site "width" $coverWidth "mode" "lfit" "format" "avif" "quality" ($cfg.quality | default 80)) }}
                     <img src="{{ $coverUrl }}" alt="{{ $cardTitle }}" loading="lazy">
                 {{- end -}}
             </div>

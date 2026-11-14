@@ -1,5 +1,7 @@
 {{- /* 系列目录卡片网格（首页系列区块与系列合集页共用）：封面图 + 系列名 + 总张数
-       输入：.covers（series + is_cover 封面作品集）、.allPhotos（全站时间排序作品集，用于统计各系列总张数） */ -}}
+       输入：.covers（series + is_cover 封面作品集）、.allPhotos（全站时间排序作品集，用于统计各系列总张数）、
+       .imageWidth（可选：封面取图宽度；底部入口卡传更小一档，见 page-others.html）、
+       .colsBase（可选：网格列数基准，写入 data-cols-base 供 cards-flip 读取） */ -}}
 {{- $seriesCounts := dict -}}
 {{- range .allPhotos -}}
     {{- with .series -}}
@@ -7,14 +9,16 @@
     {{- end -}}
 {{- end -}}
 {{- $cfg := site.Params.imageSizes | default dict -}}
+{{- $coverWidth := .imageWidth | default ($cfg.category | default 1000) -}}
 {{- /* gridClass：默认 .grid（首页/目录页，列数由 cards-flip 接管）；
        底部「其他系列」入口传 page-others-grid，见 page-others.html */ -}}
 {{- $gridClass := .gridClass | default "grid" -}}
-<div class="{{ $gridClass }}">
+{{- $colsBase := .colsBase -}}
+<div class="{{ $gridClass }}"{{ with $colsBase }} data-cols-base="{{ . }}"{{ end }}>
     {{- range .covers -}}
         <a href="{{ partial "utils/series-url.html" .series }}" class="category-card">
             <div class="category-image">
-                {{ $coverUrl := partial "utils/img-url-cached.html" (dict "src" .src "hash" (.hash | default "") "site" site "width" ($cfg.category | default 1000) "mode" "lfit" "format" "avif" "quality" ($cfg.quality | default 80)) }}
+                {{ $coverUrl := partial "utils/img-url-cached.html" (dict "src" .src "hash" (.hash | default "") "site" site "width" $coverWidth "mode" "lfit" "format" "avif" "quality" ($cfg.quality | default 80)) }}
                 <img src="{{ $coverUrl }}" alt="{{ .series }}" loading="lazy">
             </div>
             <div class="category-info">

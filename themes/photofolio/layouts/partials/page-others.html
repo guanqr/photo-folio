@@ -5,7 +5,10 @@
 <div class="container section-list-grid page-others">
     <h2 class="page-others-title">{{ i18n .titleKey }}</h2>
     {{/* gridClass：底部入口用独立网格（叠字小卡），避免复用首页 .grid 被
-         cards-flip 接管列数、也避免其大卡尺寸压过上方瀑布流作品（2026-11-14） */}}
-    {{ partial .cardPartial (merge .cardCtx (dict "gridClass" "page-others-grid")) }}
+         cards-flip 接管列数、也避免其大卡尺寸压过上方瀑布流作品（2026-11-14）。
+         colsBase：列数基准由网格 data 属性声明，cards-flip 不再按类名特判。
+         imageWidth：入口卡最大显示约 337px，封面降一档取图（gallery=800） */}}
+    {{- $imgCfg := site.Params.imageSizes | default dict -}}
+    {{ partial .cardPartial (merge .cardCtx (dict "gridClass" "page-others-grid" "colsBase" 2 "imageWidth" ($imgCfg.gallery | default 800))) }}
 </div>
 {{- end -}}
