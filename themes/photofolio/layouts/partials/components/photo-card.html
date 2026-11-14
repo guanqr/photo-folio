@@ -45,8 +45,14 @@
     {{ $orientation = cond (ge (int $photo.width) (int $photo.height)) "landscape" "portrait" }}
 {{ end }}
 
-{{ $categoryPage := site.GetPage (printf "/categories/%s" $categoryKey) }}
-{{ $categoryTitle := $categoryPage.Title | default "" }}
+{{/* 分类页查找：空值/未知键不解析——空值会命中 /categories/ 分节页并生成错误胶囊，
+   未知键得到 nil 后取 .Title 会让构建失败；两者都按「无分类」处理（2026-11-14） */}}
+{{ $categoryPage := "" }}
+{{ $categoryTitle := "" }}
+{{ with $categoryKey }}
+    {{ $categoryPage = site.GetPage (printf "/categories/%s" .) }}
+    {{ with $categoryPage }}{{ $categoryTitle = .Title }}{{ end }}
+{{ end }}
 
 {{/* 反查系列的英文 URL（灯箱系列胶囊跳转用；见 series-url.html 唯一实现） */}}
 {{ $seriesUrl := "" }}

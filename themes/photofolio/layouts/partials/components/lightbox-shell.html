@@ -1,12 +1,12 @@
     {{- /* 构建期校验 photo.toml 的 species 引用、bird_series 匹配与保育等级 i18n
            （页面无关，缓存一次；返回值提供等级文案与系列名） */ -}}
     {{- $birdRegistry := partialCached "utils/bird-registry.html" "birds" "birds" -}}
-    <!-- Lightbox 全局容器（dialog 语义：读屏器视作模态对话框、背景 inert 由 JS 管理） -->
+    {{/* Lightbox 全局容器（dialog 语义：读屏器视作模态对话框、背景 inert 由 JS 管理） */}}
     {{/* 对话框名称随照片变化：aria-labelledby 指向当前照片标题（打开即填充）；
         标题为空时回落 aria-label 静态名（acccname 计算规则） */}}
     <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-labelledby="lightbox-caption" aria-label="{{ i18n "lightbox_dialog" }}"
         data-narrow-width="{{ site.Params.imageSizes.lightboxNarrow | default 1280 }}">
-        <!-- 毛玻璃背景层由 JS 动态创建（每张作品一层） -->
+        {{/* 毛玻璃背景层由 JS 动态创建（每张作品一层） */}}
         {{/* 自动播放时间进度条：灯箱最顶部细条，播放时按间隔填充、切图重置、停止隐藏 */}}
         <div class="lightbox-autoplay-progress" id="lightbox-autoplay-progress" aria-hidden="true">
             <span class="lightbox-autoplay-progress-fill"></span>

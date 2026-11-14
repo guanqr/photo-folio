@@ -11,14 +11,39 @@ export const BP_DESKTOP_MIN = 769;
 export const BP_LIGHTBOX_NARROW = 1000;
 
 /* 读取 :root 的 CSS 档位（0: ≤500 / 1: 501-768 / 2: 769-1000 / 3: >1000）。
-   卡片/统计网格至少按 1 档处理（0 与 1 档同义）。
+   默认按卡片/统计网格把 0 档并入 1 档；masonry 传 allowZero=true 保留 0 档
+   （超窄屏单张行基准）。
    不用 matchMedia/innerWidth：iPad Safari 旋转后这些值可能永久陈旧，
    CSS 变量由媒体查询重新求值（2026-11-14） */
-export function readLayoutTiers() {
+export function readLayoutTiers(allowZero = false) {
     const style = getComputedStyle(document.documentElement);
+    const min = allowZero ? 0 : 1;
     const read = (name) => {
         const v = parseInt(style.getPropertyValue(name), 10);
-        return Number.isFinite(v) ? Math.max(1, Math.min(3, v)) : 1;
+        return Number.isFinite(v) ? Math.max(min, Math.min(3, v)) : min;
     };
     return { tier: read('--layout-tier'), exit: read('--layout-tier-exit') };
+}
+
+/* 视口朝向变化订阅：orientationchange 与 screen.orientation 统一单点绑定，
+   多个模块共享（旋转后 CSS 档位已重估，但 ResizeObserver 可能因 iPad 视口陈旧
+   未触发）。重复订阅同一函数由 Set 去重，SPA 换页重复调用安全 */
+const orientationSubs = new Set();
+let orientationBound = false;
+
+function dispatchOrientationChange() {
+    orientationSubs.forEach((fn) => fn());
+}
+
+export function onOrientationChange(fn) {
+    if (!orientationBound) {
+        orientationBound = true;
+        window.addEventListener('orientationchange', dispatchOrientationChange);
+        if (window.screen && window.screen.orientation
+            && typeof window.screen.orientation.addEventListener === 'function') {
+            window.screen.orientation.addEventListener('change', dispatchOrientationChange);
+        }
+    }
+    orientationSubs.add(fn);
+    return () => orientationSubs.delete(fn);
 }

@@ -146,15 +146,29 @@ export function initMobileNav() {
 
     /* 主题按钮的位移差：宽屏 actions = [主题][导航]，窄屏 = [主题][汉堡]；
        文字右滑 W 的同时，主题按钮右移 W + 宽屏间距 − 汉堡宽 − 窄屏间距。
-       尺寸从 token 读取（--space-24 / --space-12 / --control-md），避免写死 */
+       间距/汉堡宽度用实测值（不重建 token 数值）：断点切换后先量当前态，
+       另一态的值来自上次在该态时的测量 */
+    const actions = themeBtn ? themeBtn.closest('.header-actions') : null;
+    let gapWide = null;
+    let gapNarrow = null;
+    let hamburgerW = null;
+
+    function measureHeaderDims() {
+        if (!actions) return;
+        const gap = parseFloat(getComputedStyle(actions).columnGap);
+        if (mqDesktop.matches) {
+            if (Number.isFinite(gap)) gapWide = gap;
+        } else {
+            if (Number.isFinite(gap)) gapNarrow = gap;
+            const w = btn.getBoundingClientRect().width;
+            if (w > 0) hamburgerW = w;
+        }
+    }
+    measureHeaderDims(); // 记录当前断点这一侧的实际尺寸
+
     function themeShift(navW) {
-        const style = getComputedStyle(document.documentElement);
-        const root = parseFloat(style.fontSize) || 16;
-        const em = (name) => {
-            const n = parseFloat(style.getPropertyValue(name));
-            return Number.isFinite(n) ? n * root : 0;
-        };
-        return navW + em('--space-24') - em('--control-md') - em('--space-12');
+        if (gapWide == null || gapNarrow == null || hamburgerW == null) return 0;
+        return navW + gapWide - hamburgerW - gapNarrow;
     }
 
     // 窄→宽时汉堡淡出的收尾（动画被取消/页面隐藏时由定时器兜底）
@@ -214,6 +228,8 @@ export function initMobileNav() {
             lastOrientationType = screen.orientation
                 ? screen.orientation.type
                 : lastOrientationType;
+            // 断点已切换：先量当前态的实际间距/汉堡宽度，供主题按钮 FLIP 使用
+            measureHeaderDims();
             if (!rotated) {
                 animateNavCrossing(e.matches);
             }

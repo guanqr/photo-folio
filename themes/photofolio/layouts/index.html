@@ -1,5 +1,5 @@
 {{ define "main" }}
-<!-- ================= 首页轮播：按时间排序最新的精选图，数量由 carouselCount 配置（1-12 张） ================= -->
+{{/* ================= 首页轮播：按时间排序最新的精选图，数量由 carouselCount 配置（1-12 张） ================= */}}
 <section class="carousel-section">
     {{ $sortedPhotos := partialCached "utils/photo-sorted.html" . "desc" }}
     {{ $featured := slice }}
@@ -64,7 +64,7 @@
         {{ end }}
 </section>
 
-<!-- ================= 分类入口（轮播图下方，下拉后可见） ================= -->
+{{/* ================= 分类入口（轮播图下方，下拉后可见） ================= */}}
 <section class="home-section" id="categories-grid">
     <div class="container">
         <h2 class="home-section-title">{{ i18n "categories_title" }}</h2>
@@ -76,7 +76,7 @@
     </div>
 </section>
 
-<!-- ================= 系列（系列封面卡片，分类下方） ================= -->
+{{/* ================= 系列（系列封面卡片，分类下方） ================= */}}
 {{ $coverPhotos := partial "components/series-covers.html" (dict "photos" $sortedPhotos) }}
 {{ if gt (len $coverPhotos) 0 }}
 <section class="home-section">

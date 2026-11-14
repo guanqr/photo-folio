@@ -9,6 +9,7 @@
  */
 
 import { fillTemplate } from './utils.js';
+import { BP_DESKTOP_MIN } from './breakpoints.js';
 
 const VIEW_W = 1000;       // 视图固定宽（SVG user 单位）
 const MIN_H = 400;         // 视图高下限（桌面 0.45 封顶须低于此值；退化守卫由 MIN_SPAN 承担）
@@ -25,7 +26,7 @@ export const SVG_NS = 'http://www.w3.org/2000/svg';
    不再随宽度变化）；768→1200px 线性插值到 0.45（一屏看全）；1200px 以上取 0.45 */
 const NARROW_MAP_RATIO = 0.75;
 const DESKTOP_MAP_RATIO = 0.45;
-const RATIO_MIN_W = 768;   // 窄屏区域起点：低于此宽度比例锁定
+const RATIO_MIN_W = BP_DESKTOP_MIN - 1; // 窄屏区域起点（768）：与全站窄屏上限互补，经单源推导
 const RATIO_MAX_W = 1200;
 
 export function targetHForWidth(width) {

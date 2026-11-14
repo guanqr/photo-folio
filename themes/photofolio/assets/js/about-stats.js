@@ -13,7 +13,7 @@
 //   （动画期间暂停刷新，避免把变换中的位置当基准——与足迹地图 flipLayout 同款经验）
 
 import { prefersReducedMotion } from './utils.js';
-import { readLayoutTiers } from './breakpoints.js';
+import { readLayoutTiers, onOrientationChange } from './breakpoints.js';
 import { FLIP_TRANSITION, FLIP_DURATION, FLIP_EASE, clearFlipInline, recordFlipRects, resetFlipFinish, scheduleFlipFinish } from './flip.js';
 
 const observed = new Map(); // grid → { ro, two, headerNarrow, headerRects, headerAnimating }
@@ -147,23 +147,13 @@ function recheck(grid, entry) {
 }
 
 // 旋转等视口变化：CSS 档位已重估，但 ResizeObserver 可能因 iPad 视口陈旧未触发
-let viewportBound = false;
-
-function bindViewportRecheck() {
-    if (viewportBound) return;
-    viewportBound = true;
-    const onViewportChange = () => {
-        for (const [grid, entry] of observed) recheck(grid, entry);
-    };
-    window.addEventListener('orientationchange', onViewportChange);
-    if (window.screen && window.screen.orientation
-        && typeof window.screen.orientation.addEventListener === 'function') {
-        window.screen.orientation.addEventListener('change', onViewportChange);
-    }
+// （订阅收敛在 breakpoints.onOrientationChange）
+function recheckAll() {
+    for (const [grid, entry] of observed) recheck(grid, entry);
 }
 
 export function initAboutStats() {
-    bindViewportRecheck();
+    onOrientationChange(recheckAll);
     // 清理已脱离文档的旧网格观察器（SPA 换页）
     for (const [grid, entry] of observed) {
         if (!grid.isConnected) {

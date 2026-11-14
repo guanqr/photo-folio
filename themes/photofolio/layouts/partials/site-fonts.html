@@ -1,6 +1,6 @@
 {{/* 字体外链与排版变量注入：仅依赖 .Site.Params.typography、与页面无关——
      调用点用 partialCached，variant 含语言 */}}
-<!-- 动态引入字体外链 -->
+{{/* 动态引入字体外链 */}}
 {{ $typo := .Site.Params.typography }}
 {{ with $typo.fontLinks }}
     {{/* 遍历配置中的字体链接对象 */}}
@@ -22,7 +22,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/guanqr/fonts@build/css/lxgwwenkaitc.min.css" media="print" onload="this.media='all'">
 {{ end }}
 
-<!-- 动态注入排版变量 -->
+{{/* 动态注入排版变量 */}}
 {{ $typo := .Site.Params.typography }}
 <style>
     @font-face {

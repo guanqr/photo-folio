@@ -133,7 +133,9 @@
                         {{/* 绝对路径取页：相对名会按当前页（/gallery/）解析恒为 nil、
                             标题回退英文分类键（photo-card.html 同款先例） */}}
                         {{ $catPage := site.GetPage (printf "/categories/%s" .name) }}
-                        <button type="button" data-value="{{ .name }}" aria-pressed="false">{{ default .name $catPage.Title }}</button>
+                        {{ $catTitle := .name }}
+                        {{ with $catPage }}{{ $catTitle = .Title }}{{ end }}
+                        <button type="button" data-value="{{ .name }}" aria-pressed="false">{{ $catTitle }}</button>
                     {{ end }}
                 </div>
             </div>

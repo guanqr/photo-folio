@@ -65,11 +65,17 @@ export function initLightboxSwipe({ img, area, getGlow, onSwitch, isBlocked }) {
             img.style.transition = '';
             if (glow) glow.style.transition = '';
             setOverflowVisible(false); // 回弹归位：恢复图片区裁剪
-            img.removeEventListener('transitionend', cleanup);
+            img.removeEventListener('transitionend', onCleanup);
+        };
+        // 只认主图自身的 transform 收尾：不过滤会消费切图管线自己的
+        // transitionend，把刚写入的滑入过渡清掉、新图直接跳入（2026-11-14）
+        const onCleanup = (e) => {
+            if (e.target !== img || e.propertyName !== 'transform') return;
+            cleanup();
         };
         if (snapCleanup) img.removeEventListener('transitionend', snapCleanup);
         if (reduced || !moved) cleanup();
-        else img.addEventListener('transitionend', snapCleanup = cleanup);
+        else img.addEventListener('transitionend', snapCleanup = onCleanup);
     };
 
     area.addEventListener('pointerdown', (e) => {

@@ -23,6 +23,7 @@
  */
 
 import { prefersReducedMotion, markImageLoaded } from './utils.js';
+import { readLayoutTiers, onOrientationChange } from './breakpoints.js';
 import { FLIP_TRANSITION, FLIP_DURATION } from './flip.js';
 
 const DEFAULT_RATIO = 1.5; // 图片宽高比读取失败时的兜底值（3:2）
@@ -567,17 +568,15 @@ function getRowGap(grid) {
    1=窄屏 501-768px（每行 2 张 3:2 基准）、2=中屏 769-1000px（每行 3 张 3:2 基准）、
    3=宽屏 >1000px（每行 4 张 3:2 基准）
    档位信号唯一源在样式表（_base.scss）：--layout-tier 基础档位、--layout-tier-exit
-   为已越过的最高出口档位（520/788/1020 对应 1/2/3），JS 只读不持有阈值；
+   为已越过的最高出口档位（520/788/1020 对应 1/2/3）；读取统一走
+   breakpoints.readLayoutTiers(true)（保留 0 档），JS 只读不持有阈值；
    升档需 exitTier > grid._tier，降档随基础档位立即生效；返回档位是否变化。
-   iPad Safari 旋转后 JS matchMedia/clientWidth 可能永久陈旧——这里不再查询
+   iPad Safari 旋转后 JS matchMedia/clientWidth 可能永久陈旧——这里不查询
    matchMedia，改由 orientationchange/screen.orientation 触发重排（见 initMasonryResize） */
 function updateTier(grid) {
-    const style = getComputedStyle(document.documentElement);
-    const raw = parseInt(style.getPropertyValue('--layout-tier'), 10);
-    let tier = Number.isFinite(raw) ? Math.max(0, Math.min(3, raw)) : 0;
-    const exitRaw = parseInt(style.getPropertyValue('--layout-tier-exit'), 10);
-    if (grid._tier != null && tier > grid._tier
-        && Number.isFinite(exitRaw) && exitRaw <= grid._tier) {
+    const { tier: baseTier, exit } = readLayoutTiers(true);
+    let tier = baseTier;
+    if (grid._tier != null && tier > grid._tier && exit <= grid._tier) {
         tier = grid._tier;
     }
     const changed = tier !== grid._tier;
@@ -802,14 +801,10 @@ export function initMasonryResize() {
             }, ms));
         };
         window.addEventListener('resize', relayoutAfterViewportChange);
-        // 旋转信号补充：orientationchange 与 screen.orientation change 不依赖
-        // window resize，覆盖 iPad Safari 旋转后 resize 不派发的场景；
-        // 档位值仍只从 --layout-tier / --layout-tier-exit 读取
-        window.addEventListener('orientationchange', relayoutAfterViewportChange);
-        if (window.screen && window.screen.orientation
-            && typeof window.screen.orientation.addEventListener === 'function') {
-            window.screen.orientation.addEventListener('change', relayoutAfterViewportChange);
-        }
+        // 旋转信号补充：orientationchange 与 screen.orientation 统一经
+        // breakpoints.onOrientationChange 订阅（覆盖 iPad Safari 旋转后 resize
+        // 不派发的场景）；档位值仍只从 --layout-tier / --layout-tier-exit 读取
+        onOrientationChange(relayoutAfterViewportChange);
     }
 
     // 滚动窗口更新：rAF 节流；SPA 换页后读取当前文档中的网格（旧网格已脱离文档）

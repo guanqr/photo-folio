@@ -292,8 +292,10 @@ function paintSatHistogram(sat, satYs, svg) {
         };
         svg._built = true;
     }
-    // 分区边界逐次写入：当前 satBounds 是管线全局常量，保留响应数据变化的能力
-    const [b0, b1] = sat.satBounds || [18, 45];
+    // 分区边界逐次写入：satBounds 由 schema 校验保证为两项，不再保留 JS 本地回退常量
+    const bounds = sat.satBounds;
+    if (!Array.isArray(bounds) || bounds.length !== 2) return;
+    const [b0, b1] = bounds;
     const setZone = (rect, x, w) => {
         rect.setAttribute('x', x);
         rect.setAttribute('width', Math.max(0, w));

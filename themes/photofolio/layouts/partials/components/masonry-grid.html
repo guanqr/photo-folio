@@ -9,9 +9,10 @@
 {{ $rowLoadRatio := $gridCfg.rowLoadRatio | default 0.75 }}
 {{/* 首行 LCP 预载：前 N 张卡片在 HTML 里直接写 src（保留 data-src 供灯箱/懒载），
    让 preload scanner 在 defer bundle 执行前就发现图片；首张高优先级。0 = 关闭。
-   isset 而不是 default——default 会把合法的 0 当成无值（工程约定） */}}
+   isset 而不是 default——default 会把合法的 0 当成无值（工程约定）；
+   Hugo 把嵌套参数键统一小写，isset 大小写敏感，必须用小写键（2026-11-14） */}}
 {{ $lcpPreload := 4 }}
-{{ if isset $gridCfg "lcpPreload" }}{{ $lcpPreload = int (index $gridCfg "lcpPreload") }}{{ end }}
+{{ if isset $gridCfg "lcppreload" }}{{ $lcpPreload = int (index $gridCfg "lcppreload") }}{{ end }}
 <div class="masonry-grid" id="masonry-grid"
     data-row-load-ratio="{{ $rowLoadRatio }}">
     {{ range $index, $photo := $photos }}

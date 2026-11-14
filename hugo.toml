@@ -90,6 +90,7 @@ defaultContentLanguage = "zh-hant"
         strip = 240            # 灯箱底部缩略图条（小图，lazy 加载）
         carousel = 1920        # 首页轮播图回退宽度（无 srcset 环境）
         carouselWidths = [640, 960, 1280, 1920]  # 轮播 srcset 候选宽度
+        carouselQuality = 85   # 轮播画质（与社交预览 ogQuality 解耦）
         category = 1000        # 分类卡片封面
         lightbox = 1920        # 灯箱大图
         lightboxNarrow = 1280  # 窄屏（≤1000px）灯箱主图宽度

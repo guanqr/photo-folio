@@ -13,7 +13,7 @@
 // - 档位内随意缩放：列数不变，网格自然伸缩，无重排无动画
 
 import { prefersReducedMotion } from './utils.js';
-import { readLayoutTiers } from './breakpoints.js';
+import { readLayoutTiers, onOrientationChange } from './breakpoints.js';
 import { FLIP_TRANSITION, clearFlipInline, recordFlipRects, resetFlipFinish, scheduleFlipFinish } from './flip.js';
 
 // 列数基准：由网格的 data-cols-base 声明（入口网格 2 → 2/3/4 列；缺省 1 →
@@ -99,9 +99,7 @@ function flipColumns(grid, entry, nextCols) {
 }
 
 // 旋转等视口变化：CSS 档位可能已重估，但 ResizeObserver 因 iPad 的视口陈旧
-// 而未触发——补一次全网格复核（模块级只挂一次，SPA 换页不重复）
-let viewportBound = false;
-
+// 而未触发——补一次全网格复核（订阅收敛在 breakpoints.onOrientationChange）
 function recheckOnViewportChange() {
     for (const [grid, entry] of observed) {
         if (!grid.isConnected) continue;
@@ -110,18 +108,8 @@ function recheckOnViewportChange() {
     }
 }
 
-function bindViewportRecheck() {
-    if (viewportBound) return;
-    viewportBound = true;
-    window.addEventListener('orientationchange', recheckOnViewportChange);
-    if (window.screen && window.screen.orientation
-        && typeof window.screen.orientation.addEventListener === 'function') {
-        window.screen.orientation.addEventListener('change', recheckOnViewportChange);
-    }
-}
-
 export function initCardsFlip() {
-    bindViewportRecheck();
+    onOrientationChange(recheckOnViewportChange);
     // 清理已脱离文档的旧网格观察器（SPA 换页）
     for (const [grid, entry] of observed) {
         if (!grid.isConnected) {

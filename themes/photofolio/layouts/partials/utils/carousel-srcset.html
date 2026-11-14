@@ -6,7 +6,7 @@
 {{- $cfg := $site.Params.imageSizes | default dict -}}
 {{- $widths := $cfg.carouselWidths | default (slice 640 960 1280 1920) -}}
 {{- $fallbackWidth := $cfg.carousel | default 1920 -}}
-{{- $quality := $cfg.ogQuality | default 85 -}}
+{{- $quality := $cfg.carouselQuality | default 85 -}}
 {{- $entries := slice -}}
 {{- range $widths -}}
     {{- $url := partial "utils/img-url-cached.html" (dict "src" $photo.src "hash" ($photo.hash | default "") "site" $site "width" . "mode" "lfit" "format" "avif" "quality" $quality) -}}
