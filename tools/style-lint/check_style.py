@@ -26,6 +26,10 @@ SPACING_PROPS = {
     "padding", "padding-top", "padding-bottom", "padding-left", "padding-right",
     "gap", "row-gap", "column-gap",
 }
+# 组件尺寸与定位：走 --icon-* / --control-* / --space-* token；
+# 图表高、色卡、头像、缩略图高等媒体/数据尺寸属例外，加 style-lint-ignore
+GEOMETRY_PROPS = {"width", "height"}
+POSITION_PROPS = {"top", "right", "bottom", "left"}
 # 展示级字号白名单（与 CLAUDE.md 的「字号唯一标尺」例外一致）
 DISPLAY_FONT_SIZES = {"3em", "6em"}
 MARKER = "style-lint-ignore"
@@ -49,7 +53,7 @@ def check_file(path, errors):
         code = strip_comments(raw)
         for m in DECL_RE.finditer(code):
             prop, value = m.group(1), m.group(2).strip()
-            if prop in SPACING_PROPS:
+            if prop in SPACING_PROPS or prop in GEOMETRY_PROPS or prop in POSITION_PROPS:
                 # var(...) 内部的默认值不计入；剩余部分再找 em/rem 字面量
                 if UNIT_RE.search(VAR_RE.sub("", value)) and MARKER not in raw:
                     errors.append((path, idx, prop, value))

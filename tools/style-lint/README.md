@@ -10,6 +10,7 @@ python tools/style-lint/check_style.py <目录>      # 检查指定目录（可�
 规则：
 
 - `margin` / `padding` / `gap` 及其方向变体：值里不得出现 `em` / `rem` 字面量，只允许 `0`、`auto`、`var(...)`；`var(...)` 内的默认值不计
+- `width` / `height` / `top` / `right` / `bottom` / `left`：同样必须走 `--icon-*` / `--control-*` / `--space-*`；图表高、色卡、头像、缩略图高、数据条等媒体/数据尺寸属例外
 - `font-size`：只允许 `var(--size-*)` / `var(--base-font-size ...)`；展示级 `3em` / `6em` 为白名单
 - 确属几何/发丝级例外的行，在同一行注释里写 `style-lint-ignore`（备注原因）
 - 注释里的数值不参与检查
