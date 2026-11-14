@@ -24,7 +24,7 @@
 ### 足迹与統計
 
 - **足迹世界地图** — 足迹页全宽自绘 SVG 世界地图（Natural Earth 10m 精细陆地 + 中国省级边界 + 海外国家边界；省份/国家为独立可点击区块，桌面悬停/键盘聚焦弹层显示地名/张数/年份，触屏点按无弹层直接跳转），照片坐标形成点迹（光环 + 核心、错峰入场、纯展示），视图自动适配全部足迹；三份几何数据并行加载、Service Worker 走 SWR 回访即出缓存；点击区块经 SPA 直达地点详情页；地图高度随屏宽连续变化（≤768px 锁定 0.75、768→1200px 线性插值至 0.45 一屏看全）；明暗主题切换零光栅化负担
-- **足迹地点页** — 每处拍摄地点自动生成详情页（`data/locations.toml` 加一条即生效，`/footprint/<slug>/`），展示该地区全部作品（含系列内页）；足迹页地图区块点击直达
+- **足迹地点页** — 全国省级地区已在 `data/locations.toml` 预登记，有照片的地区自动生成详情页（`/footprint/<slug>/`），展示该地区全部作品（含系列内页）；足迹页地图区块点击直达
 - **拍攝檔案統計** — 關於頁照片參數統計：機身排行、焦距/光圈/快門/感光度分佈、年度拍攝走勢（兩列卡片等高、窄屏單列；構建期聚合、純 CSS 條形圖、零 JS）
 
 ### 站点体验
@@ -255,7 +255,7 @@ lat = 26.86       # 保留备用
 lng = 100.23
 ```
 
-- 照片的 `location` 未登记进 `locations.toml` 时构建会报错（地点页无法生成，地图/地点链接会 404）——新增拍摄地点时先加一条
+- 全国省级地区已在 `locations.toml` 预登记（含港澳台），新增国内照片无需再改注册表；只有**海外新国家/地区**需要加一条 `[[location]]`，并在 `tools/map-data/map_names.py` 的 `COUNTRY_NAMES` 登记后运行 `generate-maps.py --names-only`；照片的 `location` 未登记时构建会报错（避免地图/地点链接 404）
 - 地图陆地与省界几何为一次性生成的数据（`themes/photofolio/static/maps/land-10m.json` 世界陆地、`provinces.json` 中国省级边界线按省索引，含港澳台），如无特殊需要不必重新生成（管线：`python tools/map-data/generate-maps.py`）
 - **照片坐标字段**：为照片填 `address`（详细地址）后运行 `python tools/geocode/geocode-photos.py` 生成 `lat`/`lng`（需先申请高德开放平台「Web 服务」key，写在 `tools/geocode/config.json`（`{"amap_key": "..."}`，复制 config.example.json 填写，已 gitignore 不入库）或环境变量 `AMAP_KEY`；脚本按 350ms 间隔串行请求、可重复运行，坐标写入 address 行之后；高德无结果/网络异常时经 OSM Nominatim 兜底（海外地址），key 无效/配额耗尽等错误直接中止、不会把境内地址误交给境外服务）；**lat/lng 用于足迹地图点迹**（详情页不再展示小地图）
 

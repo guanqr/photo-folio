@@ -110,10 +110,10 @@ lat = 26.86      # 保留备用
 lng = 100.23
 ```
 
-- `name`/`slug` 生成地点页；照片 `location` 未登记进本表时内容适配器构建报错（避免地图/地点链接指向未生成页面）
+- 本表预登记全部 34 个省级地区（含港澳台）；内容适配器只为照片实际使用的地点生成 `/footprint/<slug>/` 页面，预留但无照片的地区不产生空页；照片 `location` 未登记进本表时构建报错（避免地图/地点链接指向未生成页面）
 - `lat/lng` 保留备用：当前地图点迹使用照片 `photo.lat/lng`，地点页不依赖坐标；注册表不再输出坐标
 - 地图陆地与省界几何为一次性生成数据（`themes/photofolio/static/maps/land-10m.json` 世界陆地 10m、`provinces.json` 中国省级边界线含港澳台——省界源要素需剔除无 adcode 的十段线/插图要素；管线 `python tools/map-data/generate-maps.py`，下载缓存 tools/map-data/vendor 不入库、临时文件原子替换写入、缓存损坏自动重下载）
-- 省/国名映射唯一源 `tools/map-data/map_names.py`（PROVINCE_NAMES/COUNTRY_NAMES）；`generate-maps.py` 直接 import 并生成 `themes/photofolio/assets/js/map-names.js`（渲染端 import、勿手改；`--names-only` 只刷新映射），新增省/国拍摄地只改 Python 一处
+- 省/国名映射唯一源 `tools/map-data/map_names.py`（PROVINCE_NAMES/COUNTRY_NAMES）；`generate-maps.py` 直接 import 并生成 `themes/photofolio/assets/js/map-names.js`（渲染端 import、勿手改；`--names-only` 只刷新映射）；PROVINCE_NAMES 已全量覆盖 34 个省级地区（新增国内拍摄地无需再改），新增海外国家仍需登记 COUNTRY_NAMES
 
 ### 排序规则
 - 按 `time` 降序排列（全站统一，含系列详情页；带时刻时按完整拍摄时刻比较）
