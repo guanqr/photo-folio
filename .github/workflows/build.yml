@@ -29,8 +29,11 @@ jobs:
         echo "/tmp/dart-sass" >> "$GITHUB_PATH"
         /tmp/dart-sass/sass --version
 
+    - name: Style lint
+      run: python3 tools/style-lint/check_style.py
+
     - name: Build
-      run: hugo --gc --minify --cleanDestinationDir
+      run: hugo --gc --minify --cleanDestinationDir --panicOnWarning
 
     - name: Deploy
       env:
