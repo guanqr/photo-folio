@@ -13,6 +13,23 @@ def _clean(value):
     return _CONTROL_RE.sub("", str(value)).strip()
 
 
+def _normalize_time(value):
+    """EXIF 日期时间 → "YYYY-MM-DD HH:MM:SS"（保留拍摄时刻，2026-11-14）。
+
+    此前只取前 10 位、时刻被丢弃，同日作品只能按 photo.toml 数组顺序排。
+    只替换日期段的前两个冒号；不足 19 位（仅日期）时退回日期串。
+    注意不能写成 "YYYY-MM-DD HH:MM"：Hugo 的 time 解析只认带秒的
+    "2006-01-02 15:04:05" 与纯日期，"15:04" 会直接报错（实测 0.169）。"""
+    s = _clean(value)
+    if len(s) < 10:
+        return ""
+    date = s[:10].replace(":", "-")
+    rest = s[10:19]
+    if len(rest) == 9 and rest[0] in (" ", "T") and rest[3] == ":":
+        return date + rest
+    return date
+
+
 def get_exif_info(image_path):
     """从 EXIF 中提取：focus, iso, aperture, shutter, time, camera, lens（宽高由 main.py 从处理后输出图读取）"""
     info = {
@@ -59,11 +76,13 @@ def get_exif_info(image_path):
                         frac = Fraction(v).limit_denominator(1000000)
                         info["shutter"] = f"{frac.numerator}/{frac.denominator}"
                 elif tag == "DateTimeOriginal":
-                    if value and len(str(value)) >= 10:
-                        info["time"] = str(value)[:10].replace(":", "-")
+                    t = _normalize_time(value)
+                    if t:
+                        info["time"] = t
                 elif tag == "DateTime" and not info["time"]:
-                    if value and len(str(value)) >= 10:
-                        info["time"] = str(value)[:10].replace(":", "-")
+                    t = _normalize_time(value)
+                    if t:
+                        info["time"] = t
                 elif tag == "Make":
                     make = _clean(value)
                 elif tag == "Model":

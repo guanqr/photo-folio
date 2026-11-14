@@ -32,7 +32,8 @@
         {{- $slug := $p.src | path.Base | strings.TrimSuffix (path.Ext $p.src) -}}
         {{- /* 展示文本一律走 i18n；空标题回退 i18n 占位 */ -}}
         {{- $title := $p.alt | default (i18n "feed_untitled") -}}
-        {{- $desc := i18n "feed_photo_meta" (dict "Place" (default $p.location $p.place) "Date" $p.time) -}}
+        {{- /* 拍摄时间自 2026-11-14 起带具体时刻；订阅描述仍只展示日期 */ -}}
+        {{- $desc := i18n "feed_photo_meta" (dict "Place" (default $p.location $p.place) "Date" ($p.time | time.Format "2006-01-02")) -}}
     <item>
         <title>{{ $title | transform.XMLEscape }}</title>
         <link>{{ printf "%sgallery/?p=%s" site.Home.Permalink ($slug | urlquery) }}</link>
