@@ -164,7 +164,10 @@ hugo server -D
 ### 构建
 
 ```bash
-hugo --gc --minify --cleanDestinationDir
+# 样式标尺自检（CI 构建前也会运行）
+python tools/style-lint/check_style.py
+
+hugo --gc --minify --cleanDestinationDir --panicOnWarning
 ```
 
 构建产物在 `public/` 目录。
@@ -191,7 +194,8 @@ photo-folio/
 │   ├── photo-pipeline/  # 照片水印/缩放/压缩处理管线（直写 data/photo.toml）
 │   ├── map-data/        # 足迹地图几何生成管线（generate-maps.py，陆地 10m + 省界）
 │   ├── geocode/         # 照片地址地理编码（geocode-photos.py + config.json）
-│   └── backfill/        # 照片宽高回填（backfill-dimensions.py）
+│   ├── backfill/        # 照片宽高回填（backfill-dimensions.py）
+│   └── style-lint/      # 样式标尺自检（check_style.py，CI 构建前运行）
 ├── static/              # 静态文件（CNAME、robots.txt 等）
 ├── themes/
 │   └── photofolio/      # 自定义主题
@@ -219,12 +223,14 @@ focus = "24"              # 焦距 (mm)
 iso = "100"
 aperture = "5.6"
 shutter = "1/250"
-time = "2025-10-05"
+time = "2025-10-05 15:33:52"  # 拍摄时刻（EXIF 原值；同日作品按秒级时间排序）
 place = "雲南麗江"
 location = "雲南"
 width = "1920"            # 宽高由预处理管线 tools/photo-pipeline/ 生成（取处理后输出图尺寸，横/竖构图据此推导）
 height = "1280"
 hash = "a1b2c3d4"         # 输出图内容哈希（管线自动生成；图片 URL 以 ?v= 拼接，换图即刷新缓存）
+source_hash = "…"         # 输入图内容 MD5（换图检测，站点不消费；管线自动生成）
+published = "2026-11-12T10:00:00+08:00"  # 发布时间（RSS 排序；管线新建条目时写入一次）
 camera = "NIKON Z 5"      # 机身（灯箱「機身」行展示，缺失时以删除线占位）
 address = "浙江省杭州市西湖区曲院风荷"  # 详细地址（选填；相机无 GPS，由 geocode-photos.py 转经纬度）
 lat = "30.2534"           # 纬度（选填，脚本从 address 生成，坐标字段保留备用）
@@ -249,7 +255,7 @@ lat = 26.86       # 保留备用
 lng = 100.23
 ```
 
-- 照片的 `location` 未登记进 `locations.toml` 时构建会报错（地点页无法生成，时间线/地图链接会 404）——新增拍摄地点时先加一条
+- 照片的 `location` 未登记进 `locations.toml` 时构建会报错（地点页无法生成，地图/地点链接会 404）——新增拍摄地点时先加一条
 - 地图陆地与省界几何为一次性生成的数据（`themes/photofolio/static/maps/land-10m.json` 世界陆地、`provinces.json` 中国省级边界线按省索引，含港澳台），如无特殊需要不必重新生成（管线：`python tools/map-data/generate-maps.py`）
 - **照片坐标字段**：为照片填 `address`（详细地址）后运行 `python tools/geocode/geocode-photos.py` 生成 `lat`/`lng`（需先申请高德开放平台「Web 服务」key，写在 `tools/geocode/config.json`（`{"amap_key": "..."}`，复制 config.example.json 填写，已 gitignore 不入库）或环境变量 `AMAP_KEY`；脚本按 350ms 间隔串行请求、可重复运行，坐标写入 address 行之后；高德无结果/网络异常时经 OSM Nominatim 兜底（海外地址），key 无效/配额耗尽等错误直接中止、不会把境内地址误交给境外服务）；**lat/lng 用于足迹地图点迹**（详情页不再展示小地图）
 

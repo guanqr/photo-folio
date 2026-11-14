@@ -40,7 +40,7 @@
 - 注释用「为什么 + 实测日期」的因果式写法；模板内注释一律 `{{/* */}}`，HTML 注释会输出进管线
 - 颜色规范：严禁硬编码颜色值（`#hex`、`rgb(数字)`），一律经 `var(--color-*)` / `var(--dark-*)` 引用；新增颜色先在 `:root` 经 `defineColorHSL` 定义为 HSL 四元组（主值 + -h/-s/-l 分量），再引用
 - SCSS：长度以 em 为单位（**rem 仅两类正当例外、须附因果注释**：视口锚定的固定偏移如轮播指示器；跨字号恒等的容器级间距如灯箱 EXIF 双列网格——无注释的 rem 一律转 em 或补注释，注意 em 转换可能改变渲染值、须核对值等价）；`transition` 不写 `all` 明确列出属性；`animation` 与 `transition` 互斥；入场动画仅 `opacity`；须支持 `prefers-reduced-motion` 降级
-- JS 断点单源：断点常量收敛 `breakpoints.js`（`BP_DESKTOP_MIN`=769、`BP_CARD_GRID_3COL_MIN`=1001、`BP_LIGHTBOX_NARROW`=1000），窄屏互补侧经 `BP_DESKTOP_MIN−1` 推导；CSS 侧对应值注释互指；换列 FLIP 滞回 `FLIP_HYSTERESIS`=20 与 FLIP 常量/四件套收敛 `flip.js`（about-stats 使用）；**cards-flip 不持像素阈值**，改读 `_base.scss` 的 `--layout-tier`/`--layout-tier-exit`（与 masonry 同一档位源，并监听 `orientationchange` 复核，规避 iPad 视口陈旧）；瀑布流档位阈值唯一源在 `_base.scss`（masonry 只读，不持数组）
+- JS 断点单源：断点常量收敛 `breakpoints.js`（`BP_DESKTOP_MIN`=769、`BP_LIGHTBOX_NARROW`=1000）与 `readLayoutTiers()`（读 `:root` 的 `--layout-tier`/`--layout-tier-exit`）；窄屏互补侧经 `BP_DESKTOP_MIN−1` 推导；CSS 侧对应值注释互指；FLIP 常量/四件套收敛 `flip.js`；**卡片网格与关于页统计不持像素阈值/滞回常量**，统一读 CSS 档位（升档看 exit 档位、降档随基础档位），并监听 `orientationchange` 复核，规避 iPad 视口陈旧；瀑布流档位阈值唯一源在 `_base.scss`（masonry 只读，不持数组）
 - 不写旧浏览器降级路径（目标受众使用现代浏览器）
 - 模板 dict 一律字符串键（整数键会转字符串）；`{{ with .X | default Y }}` 把 0/false/空 视为无值；partialCached 的 dict 输入必须传显式 variant（依赖默认缓存键会跨调用串内容）；页面无关 partial（site-style/site-fonts/site-meta/img-url-cached/photo-hash/photo-sorted/location-registry）一律 partialCached
 
@@ -48,7 +48,7 @@
 
 - Hugo ≥ 0.139（标准版；`silenceDeprecations` 自 0.139 起支持）+ Dart Sass 1.107.0 **独立版**（不要用 npm 版：纯 JS 构建不支持 Hugo dartsass 的 embedded 协议，会报 EOF）；CI（.github/workflows/build.yml）由 peaceiris/actions-hugo@v3 pin Hugo 0.169.0 标准版（无 sha256 校验——动作源即 pin 对象），另下载官方 Dart Sass standalone 压缩包并加入 PATH（2026-10-30）
 - 每次改动后至少跑一次 `hugo --cleanDestinationDir` 确认零警告零错误
-- **样式标尺自检**：`python tools/style-lint/check_style.py` 扫描 SCSS 的间距/字号字面量（例外须带 `style-lint-ignore` 注释）；CI 在构建前运行该检查，Hugo 构建带 `--panicOnWarning`（警告即失败）
+- **样式标尺自检**：`python tools/style-lint/check_style.py` 扫描 SCSS 的间距、字号、`width/height/top/right/bottom/left` 字面量（例外须带 `style-lint-ignore` 注释）；CI 在构建前运行该检查，Hugo 构建带 `--panicOnWarning`（警告即失败）
 - 验证构建用 `-d` 独立目录（如 `.verify-build`），不写入 public/——public/ 不会自动清理、历史残留会混淆对比
 - 编译产物抽查：JS 改动后查 bundle*.js（变量名被压缩，按语义模式匹配）；SCSS 改动后查 style*.css；怀疑回归用 `git worktree add` 构建旧版逐规则对比
 - i18n 目录残留 `*.tmp` 文件会导致构建失败，排查前先清理 tmp
@@ -276,7 +276,7 @@ url = "https://example.com/source"
 
 ## Lightbox
 
-- **懒加载**：灯箱骨架不随页面 HTML 输出，由独立 `/lightbox-shell/` 页面承载（`content/lightbox-shell.md`，`noindex`、不进 sitemap）；首次点击 `.photo-wrapper` 或带 `?p=` 深链时 `lightbox-boot.js` fetch 骨架注入并动态加载灯箱入口（`entries/lightbox.js`），随后重放点击；骨架/入口加载失败可重试，SPA 换页保留已注入骨架。灯箱样式仍随全站 CSS 输出
+- **懒加载**：灯箱骨架不随页面 HTML 输出，由独立 `/lightbox-shell/` 页面承载（`content/lightbox-shell.md`，`noindex`、不进 sitemap）；首次点击 `.photo-wrapper` 或带 `?p=` 深链时 `lightbox-boot.js` fetch 骨架注入并动态加载灯箱入口（`entries/lightbox.js`），随后重放点击；**指针悬停作品卡（桌面）或键盘聚焦时预启动**（后台完成同一流程，点击时已就绪；未悬停的触屏首点仍按懒启动），骨架/入口加载失败可重试，SPA 换页保留已注入骨架。灯箱样式仍随全站 CSS 输出
 - 全屏遮罩，点击 `.photo-wrapper` 触发；**背景为当前照片铺满屏幕的模糊毛玻璃**（`.lightbox-backdrop`：cover + `blur(40px) brightness(0.55)` 合成滤镜压暗 + scale 1.1，切换照片时随主图同步更换）；打开时滚动锁挂根元素（`documentElement` overflow hidden——只锁 body 不生效：`html { overflow-x: clip }` 阻断向视口传播），经典滚动条随灯箱隐藏、灯箱覆盖满视口，关闭恢复并保持滚动位置
 - 全局事件委托 `document.addEventListener('click', ...)`；**箭头覆盖当前页面全部照片**——集合按网格 `_planItems`（当前筛选结果、时间顺序）生成，含尚未渲染、留在隐藏池的卡片（灯箱直接读卡片的 `data-src` / `data-full-src` 与元信息，翻页不触碰网格、不触发任何行渲染）；筛选时只在当前筛选集合内循环；关闭后页面停留在打开前的滚动与已渲染状态
 - 图片切换：图片 + 标题 + 描述同步淡出 → 换内容 → 同步淡入（`opacity 0.3s ease`）
@@ -347,8 +347,8 @@ url = "https://example.com/source"
 - 长度以 `em` 为单位（基于 16px）
 - **间距唯一标尺**：`--space-4 … --space-96`（4px 基准，名称即设计像素值，见 `_base.scss`）是 margin/padding/gap 的唯一来源；新增间距先登记 token，禁止 1.6em/1.7em 这类字号换算沉淀值；页面内容顶部统一 `--space-32`（2em）
 - **字号唯一标尺**：H1 2.5 / H2 2 / H3 1.5 / lead 1.25 / body 1 / small 0.875 / meta 0.75（`--size-*`，footer 与 small 同值）；模板/样式不再写字面量字号，展示级 3em/6em（空状态图标、404 大字）为唯一例外
-- **标尺自检**：间距/字号字面量由 `tools/style-lint/check_style.py` 拦截；几何配对、发丝级等真例外在同一行注释写 `style-lint-ignore`，不允许无标记放行
-- **组件尺寸标尺**：图标 `--icon-xs/sm/md/lg/xl`（0.75/0.875/1/1.25/1.5em）、控件 `--control-sm/md`（2.5/3em）；缩略图高、图表高、色卡、头像、统计列宽等媒体/数据尺寸保留现值
+- **标尺自检**：间距、字号、`width/height/top/right/bottom/left` 的 `em/rem` 字面量由 `tools/style-lint/check_style.py` 拦截；几何配对、发丝级、媒体/数据尺寸等真例外在同一行注释写 `style-lint-ignore`，不允许无标记放行
+- **组件尺寸标尺**：图标 `--icon-xs/sm/md/lg/xl`（0.75/0.875/1/1.25/1.5em）、控件 `--control-sm/md`（2.5/3em）；定位偏移用 `--space-*`；缩略图高、图表高、色卡、头像、统计列宽等媒体/数据尺寸保留现值并标记例外
 - `transition` 不写 `all`，明确列出属性
 - 重复样式合并共享选择器
 - **严禁硬编码颜色值**（`#xxx`、`rgba(数字)`、`rgb(数字)`）——所有颜色必须通过 `var(--color-*)` / `var(--dark-*)` 引用
@@ -479,8 +479,8 @@ url = "https://example.com/source"
 | `avif-fallback.js` | AVIF→WebP 兜底 |
 | `page-transition.js` | SPA 页面切换：先 fetch、淡出淡入、节点导入替换主内容（保留 JSON/JSON-LD 数据脚本、移除可执行脚本与 on* 内联属性）、History API |
 | `sw.js` | Service Worker（PWA 离线缓存；哈希资源/分析 JSON/地图几何 SWR） |
-| `breakpoints.js` | JS 断点单源：`BP_DESKTOP_MIN` / `BP_CARD_GRID_3COL_MIN` / `BP_LIGHTBOX_NARROW` |
-| `flip.js` | FLIP 常量与四件套：`FLIP_DURATION/EASE/TRANSITION/HYSTERESIS`、`clearFlipInline` / `recordFlipRects` / `resetFlipFinish` / `scheduleFlipFinish` |
+| `breakpoints.js` | JS 断点单源：`BP_DESKTOP_MIN` / `BP_LIGHTBOX_NARROW` + `readLayoutTiers()`（读 CSS 档位变量） |
+| `flip.js` | FLIP 常量与四件套：`FLIP_DURATION/EASE/TRANSITION`、`clearFlipInline` / `recordFlipRects` / `resetFlipFinish` / `scheduleFlipFinish` |
 | `utils.js` | 共享工具：`prefersReducedMotion`、图片就绪/URL/宽度、缓动、URL 状态、层栈、i18n 格式串、滚动锚定 |
 | `analysis-meta.js` | 分析常量（管线生成，勿手改） |
 | `map-names.js` | 省/国名映射（地图工具生成，勿手改） |
