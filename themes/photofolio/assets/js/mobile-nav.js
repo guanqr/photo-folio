@@ -22,6 +22,7 @@ export function initMobileNav() {
     const btn = document.getElementById('nav-toggle');
     const nav = document.getElementById('site-nav');
     const themeBtn = document.getElementById('theme-toggle');
+    const siteHeader = document.querySelector('.site-header');
 
     if (!btn || !nav) return;
 
@@ -74,9 +75,8 @@ export function initMobileNav() {
 
         // 菜单开合时同步切换导航栏的 menu-open 状态（滚动时打开菜单需隐藏底边线，
         // 让导航栏与面板合为一体）；背景整块由菜单面板统一渐变填充，导航栏自身不再渐变
-        const header = document.querySelector('.site-header');
-        if (header) {
-            header.classList.toggle('menu-open', nav.classList.contains('active'));
+        if (siteHeader) {
+            siteHeader.classList.toggle('menu-open', nav.classList.contains('active'));
         }
     }
 
@@ -105,8 +105,11 @@ export function initMobileNav() {
         }
     });
 
-    // 3. 跨断点导航切换动画：宽→窄时菜单文字向右滑出（转换为汉堡），
-    //    窄→宽时汉堡消失、文字从右侧滑回原位；仅在断点跨越时播放，页面加载不触发。
+    // 3. 跨断点导航切换动画（抽屉式，与主题按钮同步）：
+    //    宽→窄：文字整块向右滑出，在内容右缘（= 汉堡右缘）被裁掉；
+    //           汉堡立即出现（不延迟、不淡入），明暗主题按钮同步右移到窄屏位置；
+    //    窄→宽：汉堡消失，文字从右缘滑回原位，主题按钮同步左移。
+    //    不做透明度淡出，避免与汉堡叠加成残影。仅在断点跨越时播放，页面加载不触发（2026-11-14）。
     //    旋转导致的断点跨越不播放：该动画为「absolute + transform + 时长>0」，
     //    恰是 WebKit 旋转后 clientWidth 永久取旧值（Bug 287042）的触发模式——
     //    旋转时跳过动画、样式直接切换（桌面窗口缩放跨越断点仍保留动画）
@@ -120,20 +123,78 @@ export function initMobileNav() {
         ? screen.orientation.type
         : null;
 
+    // 明暗切换图标与文字滑动同步：按布局差把主题按钮从旧位置 FLIP 回新位置
+    let themeFlipTimer = null;
+
+    function flipThemeToggle(delta) {
+        if (!themeBtn || prefersReducedMotion()) return;
+        if (themeFlipTimer) {
+            clearTimeout(themeFlipTimer);
+            themeFlipTimer = null;
+        }
+        themeBtn.style.transition = 'none';
+        themeBtn.style.transform = `translateX(${delta}px)`;
+        void themeBtn.offsetWidth;
+        themeBtn.style.transition = 'transform var(--transition-page)';
+        themeBtn.style.transform = '';
+        themeFlipTimer = setTimeout(() => {
+            themeFlipTimer = null;
+            themeBtn.style.transition = '';
+            themeBtn.style.transform = '';
+        }, 400);
+    }
+
+    /* 主题按钮的位移差：宽屏 actions = [主题][导航]，窄屏 = [主题][汉堡]；
+       文字右滑 W 的同时，主题按钮右移 W + 宽屏间距 − 汉堡宽 − 窄屏间距。
+       尺寸从 token 读取（--space-24 / --space-12 / --control-md），避免写死 */
+    function themeShift(navW) {
+        const style = getComputedStyle(document.documentElement);
+        const root = parseFloat(style.fontSize) || 16;
+        const em = (name) => {
+            const n = parseFloat(style.getPropertyValue(name));
+            return Number.isFinite(n) ? n * root : 0;
+        };
+        return navW + em('--space-24') - em('--control-md') - em('--space-12');
+    }
+
+    // 窄→宽时汉堡淡出的收尾（动画被取消/页面隐藏时由定时器兜底）
+    let crossingInTimer = null;
+
+    function finishCrossingIn() {
+        if (crossingInTimer) {
+            clearTimeout(crossingInTimer);
+            crossingInTimer = null;
+        }
+        if (siteHeader) siteHeader.classList.remove('nav-crossing-in');
+    }
+
     function animateNavCrossing(enteringDesktop) {
-        if (prefersReducedMotion()) return;
-        const cls = enteringDesktop ? 'nav-slide-in' : 'nav-slide-out';
         nav.classList.remove('nav-slide-in', 'nav-slide-out');
+        finishCrossingIn();
+        if (prefersReducedMotion()) return;
         // 强制重排，保证快速往返切换时动画重新播放
         void nav.offsetWidth;
-        nav.classList.add(cls);
+        if (enteringDesktop) {
+            // 汉堡以绝对定位淡出，与文字滑入同时开始，不占布局
+            if (siteHeader) siteHeader.classList.add('nav-crossing-in');
+            nav.classList.add('nav-slide-in');
+            // 宽屏位置在窄屏位置左侧：从旧位置（右）回放
+            flipThemeToggle(themeShift(nav.getBoundingClientRect().width));
+            crossingInTimer = setTimeout(finishCrossingIn, 500);
+        } else {
+            nav.classList.add('nav-slide-out');
+            // 窄屏位置在宽屏位置右侧：从旧位置（左）回放
+            flipThemeToggle(-themeShift(nav.getBoundingClientRect().width));
+        }
     }
 
     // 动画结束后清理类（监听器常驻，避免快速往返切换时状态残留）
     nav.addEventListener('animationend', (e) => {
-        if (e.animationName === 'nav-slide-in' || e.animationName === 'nav-slide-out') {
-            nav.classList.remove('nav-slide-in', 'nav-slide-out');
+        if (e.animationName === 'nav-slide-in') {
+            nav.classList.remove('nav-slide-in');
+            finishCrossingIn();
         }
+        if (e.animationName === 'nav-slide-out') nav.classList.remove('nav-slide-out');
     });
 
     if (mqDesktop.addEventListener) {

@@ -2,34 +2,42 @@
 
 /* ===== Header ===== */
 
-/* 跨断点导航切换动画：导航文字水平滑动（宽→窄右滑出，窄→宽左滑入）+ 汉堡按钮入场 */
+/* 跨断点导航切换动画：文字整块右移/右缘滑入，不做透明度渐变——
+   宽→窄时文字向右滑出、在内容右缘（= 最右侧汉堡图标右缘）被裁掉，
+   动画结束后汉堡才淡入；窄→宽反向。透明度淡出会与汉堡淡入叠加成残影（2026-11-14） */
 @keyframes nav-slide-in {
-    from {
-        opacity: 0;
-        transform: translateX(2em);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
 }
 
 @keyframes nav-slide-out {
-    from {
-        opacity: 1;
-        transform: translateX(0);
-    }
-    to {
-        opacity: 0;
-        /* 右滑距离由元素上的 --nav-slide-dist 决定：从宽屏原位向右滑出屏幕边缘 */
-        transform: translateX(var(--nav-slide-dist, 2em));
-    }
+    from { transform: translateX(0); }
+    to { transform: translateX(100%); }
+}
+
+@keyframes nav-toggle-fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
 }
 
 /* 进入宽屏：导航文字从右侧向左滑回原位（类由 JS 在断点跨越时添加，时长与首页进度条标题切换一致） */
 @media (min-width: 769px) {
     .site-nav.nav-slide-in {
-        animation: nav-slide-in var(--transition-reveal) both;
+        animation: nav-slide-in var(--transition-page) both;
+    }
+
+    /* 窄→宽：汉堡在文字滑入的同时淡出；绝对定位不占布局，
+       右缘与 .header-actions 内容右缘重合（= 最右侧位置） */
+    .site-header.nav-crossing-in .nav-toggle {
+        display: block;
+        position: absolute;
+        top: 50%;
+        right: 0;
+        transform: translateY(-50%);
+        opacity: 1;
+        visibility: visible;
+        animation: nav-toggle-fade-out var(--transition-page) both;
+        pointer-events: none;
     }
 }
 
@@ -59,6 +67,7 @@
 }
 
 .header-inner {
+    position: relative; /* 跨断点滑出的绝对定位导航以内容右缘为参照 */
     max-width: var(--container-width);
     margin: 0 auto;
     padding: 0 var(--space-16); /* 与窄屏一致的最小边距 */
@@ -66,6 +75,14 @@
     align-items: center;
     justify-content: space-between;
     height: 4.5em; /* style-lint-ignore：导航栏高度 */
+}
+
+/* 跨断点滑动期间把导航文字裁切在内容右缘（= 最右侧汉堡图标右缘）：
+   inset 右 1em 抵消 .header-inner 的横向 padding */
+.header-inner:has(.site-nav.nav-slide-in),
+.header-inner:has(.site-nav.nav-slide-out) {
+    overflow: hidden;
+    clip-path: inset(0 var(--space-16) 0 0);
 }
 
 .logo-text {

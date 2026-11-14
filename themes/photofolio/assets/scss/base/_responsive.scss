@@ -18,8 +18,8 @@
         display: block;
         visibility: visible;
         opacity: 1;
-        /* 跨断点进入窄屏时汉堡按钮原地淡入（display 切换不触发 transition，用 animation） */
-        animation: fadeIn var(--transition-reveal) both;
+        /* 与文字滑动同时开始淡入（0.35s），不再是文字消失后才出现 */
+        animation: fadeIn var(--transition-page) both;
     }
 
     .site-nav {
@@ -174,22 +174,14 @@
         }
     }
 
-    /* 跨断点进入窄屏时的滑出动画：菜单文字临时回到导航栏内向右滑出，
-       结束后恢复为隐藏的下拉面板（类由 JS 添加，动画结束即移除） */
+    /* 宽→窄的抽屉式滑出：文字临时恢复桌面横排，整块向右滑出，
+       在 .header-inner 的内容右缘（= 最右侧汉堡图标右缘）被裁掉；
+       结束后汉堡才淡入（.nav-crossing-out 由 JS 挂到 header 上） */
     .site-nav.nav-slide-out {
-        /* 锚定偏移 = 桌面/窄屏 .header-inner 内边距差（现两态均为 1em）：
-           窄屏下汉堡占据了导航原区域、actions 盒右移 1em，按此回退到宽屏原位，
-           动画从文字的原位置开始，不闪现到汉堡左侧 */
-        --nav-desktop-offset: 1em;
-        /* 右滑消失距离 */
-        --nav-slide-dist: 2em;
-        /* 绝对定位脱离文档流：滑出期间不参与导航栏布局，避免挤压站名。
-           left 必须重置为 auto——面板规则的 left:0 会与 right 冲突，
-           LTR 下 right 被忽略、导航以汉堡左缘为起点向右延伸 */
         position: absolute;
         top: 0;
         left: auto;
-        right: var(--nav-desktop-offset);
+        right: 0; /* 相对 .header-actions 内容右缘，与汉堡右缘重合 */
         height: 100%;
         display: flex;
         align-items: center;
@@ -198,7 +190,7 @@
         visibility: visible;
         transform: none;
         pointer-events: none;
-        animation: nav-slide-out var(--transition-reveal) forwards;
+        animation: nav-slide-out var(--transition-page) forwards;
 
         ul {
             flex-direction: row;
