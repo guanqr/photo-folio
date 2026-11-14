@@ -4,7 +4,7 @@
 .gallery-page { margin-top: var(--space-page-top); }
 
 .gallery-header {
-    padding: 3em 0 2em;
+    padding: var(--space-48) 0 var(--space-32);
     border-bottom: 0.0625em solid var(--color-border);
     transition: border-color var(--transition-fade);
 }
@@ -13,11 +13,11 @@
     @extend %section-heading;
     font-size: var(--size-h1);
     font-weight: 700;
-    margin-bottom: 0.75em;
+    margin-bottom: var(--space-12);
 }
 
 .masonry-container {
-    padding: 2em 1em var(--space-footer-gap); /* 底部与页脚间距统一（--space-footer-gap）；横向最小边距与窄屏一致（1em） */
+    padding: var(--space-32) 1em var(--space-footer-gap); /* 底部与页脚间距统一（--space-footer-gap）；横向最小边距与窄屏一致（1em） */
     max-width: var(--container-width);
     margin: 0 auto;
     /* 关键：卡片图片的内联像素宽度（JS 按当前视口布局写入）会把页面最小内容
@@ -34,7 +34,7 @@
 .masonry-grid {
     display: flex;
     flex-direction: column;
-    gap: 0.5em;
+    gap: var(--space-8);
 }
 
 /* 瀑布流初始化前按两行 3:2 照片高度占位（仅 JS 标记 is-masonry-pending 时生效）：
@@ -76,7 +76,7 @@
 .masonry-grid.is-fallback {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(14em, 1fr));
-    gap: 0.5em;
+    gap: var(--space-8);
 }
 
 .masonry-grid.is-fallback .photo-img {
@@ -87,7 +87,7 @@
 
 .masonry-row {
     display: flex;
-    gap: 0.5em;
+    gap: var(--space-8);
 }
 
 .masonry-item {
@@ -117,16 +117,23 @@
 }
 
 /* 主图入场（参考实现 2026-11-12）：未就绪时透明并带全灰/压暗；is-loaded 后
-   播放一次 slowFadeIn——0→15%（0.21s）快速浮现，同时 blur 从 1.25em 收到
-   0.625em、brightness 冲到 2 倍形成过曝辉光；15%→100% 缓慢去模糊、降回正常
-   亮度并完成灰度→全彩，1.4s 时完全清晰；占位层同步 1.4s 退场，不做缩放。
+   播放一次 slowFadeIn——0→15%（0.15s）以近正常亮度浮现，同时 blur 收一半；
+   15→50% 全黑白缓升到 brightness(1.25) 的柔和辉光；50→100% 亮度、灰度同步
+   缓降（灰度先压一半、亮度先到 1），1.0s 时完全清晰；占位层同步 1.0s 退场，
+   不做缩放。2026-11-13 五轮调参：brightness 与 grayscale 在同一条 filter 里
+   同步插值——峰值 2 会把暗调暗部洗成灰白、回落拖太长让整段偏亮（过曝）；把
+   亮度与灰度在同一帧一起收回会把黑白阶段压没；亮度在 opacity 满值同帧冲到
+   峰值像闪光；回落短于上升、到顶即降像突然变暗。这些都是多段「亮/暗形状」
+   的产物，且 animation 的 ease 会作用于每一对关键帧（每个关键帧都是一次减
+   速到停），6 帧就是 5 次顿挫。故最终改为 linear + 少而缓的辉光起伏：关键帧
+   只负责形状不再制造停顿，峰值压到 1.25、总时长 1.0s。
    显形用 animation 而非 transition：masonry 揭示缓存命中的图片时
    display:none → 显示与 is-loaded 同帧完成，transition 没有可比初始样式会
    直出全彩；关键帧在元素首次可见时从起始帧播放，淡入可靠。filter 完全由
    关键帧驱动（不再单独 transition 颜色），is-loaded 的 filter:none 仅作动画
    不可用时的兜底；filter 覆盖 base 中 img[loading="lazy"] 的 blur（同权重、
-   靠后导入的 gallery 覆盖）。20px/10px 按 16px 基准折算 em；模糊只在入场瞬间
-   存在，加载态的模糊仍由服务端 LQIP 承担 */
+   靠后导入的 gallery 覆盖）。模糊 20/8.8/6.1/4.8/3.2px 按 16px 基准折算 em；
+   模糊只在入场瞬间存在，加载态的模糊仍由服务端 LQIP 承担 */
 @keyframes slowFadeIn {
     0% {
         opacity: 0;
@@ -134,7 +141,19 @@
     }
     15% {
         opacity: 1;
-        filter: grayscale(1) brightness(2) blur(0.625em);
+        filter: grayscale(1) brightness(1.06) blur(0.55em);
+    }
+    35% {
+        opacity: 1;
+        filter: grayscale(1) brightness(1.2) blur(0.38em);
+    }
+    50% {
+        opacity: 1;
+        filter: grayscale(1) brightness(1.25) blur(0.3em);
+    }
+    70% {
+        opacity: 1;
+        filter: grayscale(0.8) brightness(1.12) blur(0.2em);
     }
     100% {
         opacity: 1;
@@ -152,7 +171,15 @@ img.photo-img {
     &.is-loaded {
         filter: none;
         opacity: 1;
-        animation: slowFadeIn var(--transition-image-reveal) ease both;
+    }
+
+    /* 入场动画只播放一次：结束后 JS 打上 is-animated，规则不再匹配——
+       跨档重排/筛选重启会移动卡片节点，元素移出并重新插入文档会让 CSS
+       动画从头播放，已加载过的图片不应再走一遍黑白→辉光→彩色（2026-11-14）。
+       linear：ease 会逐段作用在每个关键帧区间、每帧末尾速度归零 → 多帧
+       入场读成一顿一顿；linear 让关键帧只塑形、不制造停顿 */
+    &.is-loaded:not(.is-animated) {
+        animation: slowFadeIn var(--transition-image-reveal) linear both;
     }
 }
 
@@ -168,8 +195,8 @@ img.photo-img {
 /* 黑白低清占位层：背景图仍来自 --photo-blur（OSS 端烘焙模糊），只在本层叠
    grayscale；独立伪元素避免 filter 连带主图（filter 作用于子树）。z-index -1
    在 isolation 建立的层叠上下文内位于内容之下、wrapper 背景之上；主图加载后
-   同步 1.4s 淡出（:has 感知子图 is-loaded），与主图淡入交叉衔接，避免中间
-   透出底色 */
+   同步 1.0s 淡出（:has 感知子图 is-loaded），与主图淡入交叉衔接，避免中间
+   透出底色。缓动与主图 animation 同用 linear，交叉全程速率一致 */
 .photo-wrapper::before {
     content: "";
     position: absolute;
@@ -180,7 +207,7 @@ img.photo-img {
     background-position: center;
     filter: grayscale(1);
     opacity: 1;
-    transition: opacity var(--transition-image-reveal) ease;
+    transition: opacity var(--transition-image-reveal) linear;
 }
 
 .photo-wrapper:has(> img.photo-img.is-loaded)::before {
@@ -206,8 +233,8 @@ img.photo-img {
     bottom: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.2em;
-    padding: 1.6em 0.75em 0.6em;
+    gap: var(--space-4);
+    padding: var(--space-24) var(--space-12) var(--space-8);
     background: var(--photo-hover-overlay);
     opacity: 0;
     transition: opacity var(--transition-fade);
@@ -215,7 +242,7 @@ img.photo-img {
 
 .photo-hover-title {
     font-family: var(--font-body);
-    font-size: 0.8em;
+    font-size: var(--size-small);
     line-height: 1.3;
     color: var(--color-photo-hover-title);
     white-space: nowrap;
@@ -225,7 +252,7 @@ img.photo-img {
 
 .photo-hover-meta {
     font-family: var(--font-meta);
-    font-size: 0.75em;
+    font-size: var(--size-meta);
     line-height: 1.3;
     color: var(--color-photo-hover-meta);
     white-space: nowrap;
@@ -245,20 +272,20 @@ img.photo-img {
 .gallery-filters {
     display: flex;
     flex-direction: column;
-    gap: 0.875em;
-    margin-bottom: 1.5em;
+    gap: var(--space-16);
+    margin-bottom: var(--space-24);
 
     .filter-group {
         display: flex;
         align-items: center;
-        gap: 0.875em;
+        gap: var(--space-16);
         min-width: 0; /* 允许内部横向滚动 */
     }
 
     .filter-label {
         flex: none;
         font-family: var(--font-meta);
-        font-size: 1em;
+        font-size: var(--size-body);
         text-transform: uppercase;
         color: var(--color-text-muted);
         white-space: nowrap;
@@ -268,9 +295,9 @@ img.photo-img {
     .filter-options {
         display: flex;
         align-items: center;
-        gap: 0.5em;
+        gap: var(--space-8);
         overflow-x: auto;
-        padding-bottom: 0.125em;
+        padding-bottom: 0.125em; /* 补偿隐藏滚动条高度（2px 发丝级特例，不随间距标尺） */
         /* 右侧渐隐遮罩（JS 按可滚动状态切换） */
         mask-image: none;
         -webkit-mask-image: none;
@@ -289,7 +316,7 @@ img.photo-img {
             font-family: var(--font-meta);
             font-size: var(--size-small);
             letter-spacing: 0.1em;
-            padding: 0.3em 1em;
+            padding: var(--space-4) var(--space-16);
             cursor: pointer;
             /* 覆盖基类过渡：hover 三属性统一走 --transition-fade（匀速渐变——
                cubic-bezier 前快后慢、颜色在前段就跳到位，变化阶段观感突兀） */

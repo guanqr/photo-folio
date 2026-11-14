@@ -41,11 +41,30 @@ export function markImageLoaded(img) {
     if (!img) return;
     if (isImageReady(img)) {
         img.classList.add('is-loaded');
+        markRevealDone(img);
         return;
     }
     if (img._loadBound) return;
     img._loadBound = true;
-    img.addEventListener('load', () => img.classList.add('is-loaded'), { once: true });
+    img.addEventListener('load', () => {
+        img.classList.add('is-loaded');
+        markRevealDone(img);
+    }, { once: true });
+}
+
+/* 入场动画播完打 is-animated：跨档重排/筛选重启会把卡片移出再插入 DOM，
+   CSS 动画会因此从头播放；标记后 .is-loaded:not(.is-animated) 不再命中，
+   已显形过的图片不会再走一遍黑白→辉光→彩色（2026-11-14）。
+   先判就绪再挂监听，避免漏掉已完成的图片；同图只挂一次 */
+function markRevealDone(img) {
+    if (img._revealBound) return;
+    img._revealBound = true;
+    const onEnd = (e) => {
+        if (e.animationName !== 'slowFadeIn') return;
+        img.removeEventListener('animationend', onEnd);
+        img.classList.add('is-animated');
+    };
+    img.addEventListener('animationend', onEnd);
 }
 
 // AVIF 兜底（游离 Image 用）：脱离 DOM 的 Image 的 error 不传播到 document
