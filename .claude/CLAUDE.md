@@ -536,6 +536,7 @@ url = "https://example.com/source"
         lightbox = 1920                       # 灯箱大图
         carousel = 1920                       # 轮播回退宽度（无 srcset 环境）
         carouselWidths = [640, 960, 1280, 1920] # 轮播 srcset 候选
+        carouselQuality = 85                  # 轮播画质（与社交预览 ogQuality 解耦）
         strip = 240                           # 灯箱底部缩略图条小图宽度（lazy 加载）
         lightboxNarrow = 1280                 # 窄屏（≤1000px）灯箱主图宽度
         ogWidth = 1200                        # Open Graph 宽度
