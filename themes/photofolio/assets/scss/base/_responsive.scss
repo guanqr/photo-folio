@@ -33,7 +33,7 @@
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
         /* 内容下移避开顶部导航栏（--space-page-top）+ 2em 间距；左右 1em 页边距与窄屏 header-inner 一致 */
-        padding: calc(var(--space-page-top) + var(--space-32)) 1em var(--space-32);
+        padding: calc(var(--space-page-top) + var(--space-32)) var(--space-16) var(--space-32);
 
         /* 页面已滚动时：面板直接以不透明打开，不做背景渐变 */
         &.nav-solid {
@@ -220,8 +220,8 @@
 
     .back-to-top {
         right: var(--space-24);
-        width: 2.75em;
-        height: 2.75em;
+        width: var(--control-md);
+        height: var(--control-md);
     }
 
     /* 可见位置只挂 active：挂在基础规则上会压过隐藏态的 bottom:-4em、
@@ -235,11 +235,11 @@
     }
 
     .theme-toggle {
-        width: 2.75em;
-        height: 2.75em;
+        width: var(--control-md);
+        height: var(--control-md);
         svg {
-            width: 1.4em;
-            height: 1.4em;
+            width: var(--icon-xl);
+            height: var(--icon-xl);
         }
     }
 

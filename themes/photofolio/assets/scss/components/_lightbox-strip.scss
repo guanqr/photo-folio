@@ -74,7 +74,7 @@
     display: flex;
     align-items: center;
     gap: var(--space-8);
-    padding: 0 0.125em; /* 2px 边缘发丝（发丝级特例，不并入间距标尺） */
+    padding: 0 0.125em; /* 2px 边缘发丝（发丝级特例，style-lint-ignore） */
     box-sizing: border-box;
     overflow-x: auto;
     overflow-y: hidden;

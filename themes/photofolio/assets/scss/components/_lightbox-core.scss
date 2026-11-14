@@ -107,7 +107,7 @@
 .lightbox-counter {
     position: absolute;
     top: 50%;
-    left: 1em;
+    left: var(--space-16);
     transform: translateY(-50%);
     font-family: var(--font-meta);
     font-size: var(--size-body);
@@ -124,7 +124,7 @@
 .lightbox-topbar-actions {
     position: absolute;
     top: 50%;
-    right: 1em;
+    right: var(--space-16);
     display: flex;
     gap: var(--space-8);
     transform: translateY(-50%);
@@ -145,8 +145,8 @@
     border: none;
     color: var(--color-lightbox-ctrl-text);
     cursor: pointer;
-    width: 3em;
-    height: 3em;
+    width: var(--control-md);
+    height: var(--control-md);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -155,8 +155,8 @@
     -webkit-tap-highlight-color: transparent;
 
     svg {
-        width: 1.5em;
-        height: 1.5em;
+        width: var(--icon-xl);
+        height: var(--icon-xl);
     }
 
     &:hover {
@@ -360,13 +360,13 @@
 }
 
 .lightbox-prev {
-    left: 1em; /* 与顶栏内边距一致 */
+    left: var(--space-16); /* 与顶栏内边距一致 */
     /* 无水平位移：与叉号保持同一列对齐（悬停仅变背景/颜色） */
     &:hover { transform: translateY(-50%); }
     &:active { transform: translateY(-50%) scale(0.9); }
 }
 .lightbox-next {
-    right: 1em; /* 与顶部叉号右缘对齐（同为 3em 宽、右边距 1em） */
+    right: var(--space-16); /* 与顶部叉号右缘对齐（同为 3em 宽、右边距 1em） */
     &:hover { transform: translateY(-50%); }
     &:active { transform: translateY(-50%) scale(0.9); }
 }
@@ -438,10 +438,10 @@
 
     /* 箭头边距与顶栏一致（向右箭头与叉号右缘对齐） */
     .lightbox-prev {
-        left: 1em;
+        left: var(--space-16);
     }
 
     .lightbox-next {
-        right: 1em;
+        right: var(--space-16);
     }
 }

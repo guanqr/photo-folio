@@ -118,11 +118,11 @@
         color: var(--color-accent);
         display: flex;
         flex: none;
-        width: 0.95em; /* 与 EXIF 图标盒宽一致：地点/日期标签与设备等标签对齐 */
+        width: var(--icon-md); /* 与 EXIF 图标盒宽一致：地点/日期标签与设备等标签对齐 */
 
         svg {
-            width: 0.95em;
-            height: 0.95em;
+            width: var(--icon-md);
+            height: var(--icon-md);
         }
     }
 }
@@ -187,7 +187,7 @@
 @media (max-width: 1000px) {
     .lightbox-panel-scrollbar {
         position: absolute;
-        right: 1em;
+        right: var(--space-16);
         /* 视觉与桌面原生细滚动条一致：透明轨道、border 色滑块、悬停 muted */
         width: 0.375em;
         z-index: 2;
@@ -244,8 +244,8 @@
     &:hover { color: var(--color-lightbox-ctrl-text-hover); }
 
     svg {
-        width: 1.1em;
-        height: 1.1em;
+        width: var(--icon-lg);
+        height: var(--icon-lg);
         transition: transform var(--transition-spring);
     }
 
@@ -278,8 +278,8 @@
         color: var(--color-accent);
 
         svg {
-            width: 0.95em;
-            height: 0.95em;
+            width: var(--icon-md);
+            height: var(--icon-md);
         }
     }
 
@@ -317,7 +317,7 @@
     .lightbox-exif {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        column-gap: 4.5rem;
+        column-gap: 4.5rem; /* EXIF 双列对齐口径（style-lint-ignore） */
         position: relative;
 
         /* 竖分隔线：等宽两列下容器中线恰为列间距中心（不贴左列）；
@@ -334,8 +334,8 @@
         }
     }
 
-    .lightbox-meta { row-gap: 0.25em; }
-    .lightbox-exif { row-gap: 0.45em; }
+    .lightbox-meta { row-gap: var(--space-4); }
+    .lightbox-exif { row-gap: var(--space-8); }
 
     /* 简行与 EXIF 之间的竖线衔接成连续一段：EXIF 的线向上延伸 0.45em
        补上自身的外边距缺口，与简行线相接 */
@@ -363,7 +363,7 @@
            顶部留白一致）；底部 1em + 缩略图条高（见 strip 覆盖规则），与图片区
            底部对齐；右侧留出箭头按钮列；左侧 2em 与图片区辉光保持距离 */
         padding: var(--space-64) var(--space-20) var(--space-16) var(--space-32);
-        margin-right: 4.25em; /* 关闭按钮列让位（几何值，不并入间距标尺） */
+        margin-right: 4.25em; /* 关闭按钮列让位（几何值，style-lint-ignore） */
     }
 
     .lightbox-panel-details {

@@ -17,7 +17,7 @@
 }
 
 .masonry-container {
-    padding: var(--space-32) 1em var(--space-footer-gap); /* 底部与页脚间距统一（--space-footer-gap）；横向最小边距与窄屏一致（1em） */
+    padding: var(--space-32) var(--space-16) var(--space-footer-gap); /* 底部与页脚间距统一（--space-footer-gap）；横向最小边距与窄屏一致 */
     max-width: var(--container-width);
     margin: 0 auto;
     /* 关键：卡片图片的内联像素宽度（JS 按当前视口布局写入）会把页面最小内容
@@ -297,7 +297,7 @@ img.photo-img {
         align-items: center;
         gap: var(--space-8);
         overflow-x: auto;
-        padding-bottom: 0.125em; /* 补偿隐藏滚动条高度（2px 发丝级特例，不随间距标尺） */
+        padding-bottom: 0.125em; /* 补偿隐藏滚动条高度（2px 发丝级特例，style-lint-ignore） */
         /* 右侧渐隐遮罩（JS 按可滚动状态切换） */
         mask-image: none;
         -webkit-mask-image: none;

@@ -43,10 +43,10 @@
     /* 隐藏/显示用 bottom 位移（不用 transform——fixed + transform + 过渡时长>0
        是 WebKit 旋转后视口宽度永久取旧值的常驻触发模式，iPad Safari 横竖屏
        样式不切换的根因之一，故彻底移除 transform） */
-    bottom: -4em;
-    right: 2em;
-    width: 3em;
-    height: 3em;
+    bottom: calc(var(--space-64) * -1);
+    right: var(--space-32);
+    width: var(--control-md);
+    height: var(--control-md);
     border-radius: 50%;
     background-color: var(--color-bg-card);
     color: var(--color-text);
@@ -73,11 +73,11 @@
     &.active {
         opacity: 1;
         visibility: visible;
-        bottom: 2em;
+        bottom: var(--space-32);
     }
 
     svg {
-        width: 1.25em;
-        height: 1.25em;
+        width: var(--icon-lg);
+        height: var(--icon-lg);
     }
 }

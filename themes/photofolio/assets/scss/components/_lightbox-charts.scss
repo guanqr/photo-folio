@@ -135,8 +135,8 @@
     }
 
     i {
-        width: 0.7em;
-        height: 0.7em;
+        width: var(--icon-xs);
+        height: var(--icon-xs);
         border-radius: 50%;
         flex: none;
 
@@ -160,7 +160,7 @@
    括号标记照片占據區域 */
 .lightbox-zone-strip {
     display: flex;
-    gap: 0.125em; /* 11 级灰阶之间的 2px 发丝缝（发丝级特例） */
+    gap: 0.125em; /* 11 级灰阶之间的 2px 发丝缝（发丝级特例，style-lint-ignore） */
     margin-top: var(--space-8);
     position: relative;
 
@@ -306,7 +306,7 @@
     .lightbox-charts {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        column-gap: 4.5em; /* 与 EXIF 的 4.5rem 同一 72px 口径（对齐例外，不并入间距标尺） */
+        column-gap: 4.5em; /* 与 EXIF 的 4.5rem 同一 72px 口径（对齐例外，style-lint-ignore） */
         position: relative;
     }
 

@@ -127,8 +127,8 @@
     /* 下拉箭头（仅带子菜单的项显示） */
     .nav-caret {
         display: inline-flex;
-        width: 0.7em;
-        height: 0.7em;
+        width: var(--icon-xs);
+        height: var(--icon-xs);
         margin-left: var(--space-4);
         transition: transform var(--transition);
 
@@ -189,8 +189,8 @@
         .nav-icon {
             display: inline-flex;
             align-items: center;
-            width: 0.8em;
-            height: 0.8em;
+            width: var(--icon-sm);
+            height: var(--icon-sm);
             margin-right: var(--space-8); /* 图标与文字间距 */
             flex: none;
         }
@@ -233,8 +233,8 @@
 /* 导航图标 —— 宽屏隐藏 */
 .nav-icon {
     display: none;
-    width: 0.85em;
-    height: 0.85em;
+    width: var(--icon-sm);
+    height: var(--icon-sm);
     margin-right: var(--space-8);
     flex-shrink: 0;
 
@@ -250,8 +250,8 @@
     background: none;
     border: none;
     cursor: pointer;
-    width: 2.75em;
-    height: 2.75em;
+    width: var(--control-md);
+    height: var(--control-md);
     padding: 0;
     z-index: var(--z-nav-toggle);
 
@@ -269,8 +269,8 @@
         width: 1.5em;
         height: 0.125em;
         /* 汉堡三横线几何居中：线高 0.125em 的一半、宽度 1.5em 的一半（配对值，不随间距标尺） */
-        margin-top: -0.0625em;
-        margin-left: -0.75em;
+        margin-top: -0.0625em; /* 线高一半（几何配对值，style-lint-ignore） */
+        margin-left: -0.75em;  /* 宽度一半（几何配对值，style-lint-ignore） */
         background: var(--color-text);
         border-radius: 0.0625em;
         transition: transform var(--transition),
@@ -341,8 +341,8 @@
 /* ===== Theme Toggle Button ===== */
 .theme-toggle {
     position: relative;
-    width: 2.5em;
-    height: 2.5em;
+    width: var(--control-md);
+    height: var(--control-md);
     background: none;
     border: none;
     cursor: pointer;
@@ -359,8 +359,8 @@
     }
 
     svg {
-        width: 1.5em;
-        height: 1.5em;
+        width: var(--icon-xl);
+        height: var(--icon-xl);
     }
 
     .icon-sun,

@@ -6,7 +6,7 @@
 .about-container {
     max-width: var(--container-width); /* 与全站其他页面同宽（不再限 40em 窄栏） */
     margin: 0 auto;
-    padding: var(--space-64) 1em var(--space-footer-gap); /* 底部与页脚间距统一（--space-footer-gap）；横向最小边距与窄屏一致（1em） */
+    padding: var(--space-64) var(--space-16) var(--space-footer-gap); /* 底部与页脚间距统一（--space-footer-gap）；横向最小边距与窄屏一致 */
 }
 
 /* ===== 交错入场动画 ===== */
@@ -108,8 +108,8 @@
     display: inline-flex;
 
     svg {
-        width: 1.1em;
-        height: 1.1em;
+        width: var(--icon-lg);
+        height: var(--icon-lg);
     }
 }
 
@@ -226,8 +226,8 @@
     display: inline-flex;
 
     svg {
-        width: 0.9em;
-        height: 0.9em;
+        width: var(--icon-sm);
+        height: var(--icon-sm);
     }
 }
 

@@ -41,7 +41,7 @@ body {
 .skip-link {
     position: absolute;
     top: -100%;
-    left: 1em;
+    left: var(--space-16);
     z-index: var(--z-skip-link);
     padding: var(--space-12) var(--space-24);
     background: var(--color-accent);
@@ -51,7 +51,7 @@ body {
     transition: top var(--transition-fast);
 
     &:focus {
-        top: 1em;
+        top: var(--space-16);
     }
 }
 
@@ -192,7 +192,8 @@ body {
     /* 页面头与固定导航栏的间距（画廊/关于/足迹等页面统一） */
     --space-page-top: 4.5em;
 
-    /* ═══ 间距标尺（4px 基准的 em 档位，名称即设计像素值）═══
+    /* ═══ 间距标尺（4px 基准的 em 档位，名称按 16px 根字号标定为设计像素值；
+       改 baseFontSize 后名称仅作档位标识，实际像素随 em 缩放）═══
        margin/padding/gap 统一从这里取，避免再出现 1.6em/1.7em/2.6em 这类
        随手值或字号换算沉淀值；新增间距先在此登记（2026-11-14） */
     --space-4: 0.25em;   /* 4px */
@@ -206,6 +207,18 @@ body {
     --space-48: 3em;     /* 48px */
     --space-64: 4em;     /* 64px */
     --space-96: 6em;     /* 96px */
+
+    /* ═══ 组件尺寸标尺（图标/控件）═══
+       图标 0.75 / 0.875 / 1 / 1.25 / 1.5em 五档；控件 2.5 / 3em 两档
+       （返回顶部、主题切换、汉堡、灯箱圆形按钮统一 3em；2.75 的缩略图高
+       属媒体尺寸，不在此列） */
+    --icon-xs: 0.75em;
+    --icon-sm: 0.875em;
+    --icon-md: 1em;
+    --icon-lg: 1.25em;
+    --icon-xl: 1.5em;
+    --control-sm: 2.5em;
+    --control-md: 3em;
 
     /* 阴影梯度（与圆角梯度同法）：卡片悬停 / 浮层弹层 */
     --shadow-card: 0 0.25em 0.75em hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.15);
@@ -448,8 +461,8 @@ ul { list-style: none; }
         max-height var(--transition-reveal), margin-top var(--transition-reveal), padding var(--transition-reveal);
 
     svg {
-        width: 0.85em;
-        height: 0.85em;
+        width: var(--icon-sm);
+        height: var(--icon-sm);
         transition: transform var(--transition-spring);
     }
 
@@ -486,8 +499,8 @@ ul { list-style: none; }
     transition: color var(--transition-fade);
 
     svg {
-        width: 0.85em;
-        height: 0.85em;
+        width: var(--icon-sm);
+        height: var(--icon-sm);
     }
 
     &:hover {

@@ -164,8 +164,8 @@
 
     svg {
         display: block;
-        width: 1.5em;
-        height: 1.5em;
+        width: var(--icon-xl);
+        height: var(--icon-xl);
     }
 }
 
@@ -235,7 +235,7 @@
 
     @media (min-width: 769px) {
         right: 2.5rem;
-        gap: 0.625rem;
+        gap: 0.625rem; /* 视口锚定 rem 例外（style-lint-ignore） */
     }
 }
 
