@@ -47,6 +47,30 @@ let fadeCancel = null;
 // masonry-ready 由 masonry.js 移除；初始化失败时 4s 后兜底移除
 let masonryPendingTimer = null;
 
+// 滚动位置记忆（key = path + search）：只在浏览器后退/前进回到访问过的页面时
+// 恢复；点击链接进入新页面仍从顶部开始（与原生浏览一致，2026-11-14）
+const scrollMemory = new Map();
+// 待恢复的滚动等待取消槽（瀑布流页要等 masonry-ready），新导航先取消旧等待
+let restoreCancel = null;
+
+// 整页刷新位置记忆：scrollRestoration 为 manual（SPA 后退恢复接管），
+// 浏览器原生的刷新恢复被关闭——卸载前按 path+search 存 sessionStorage，
+// 重载后等页面高度建立再滚回（2026-11-14）
+const RELOAD_SCROLL_PREFIX = 'pf:scroll:';
+
+function reloadScrollKey() {
+    return RELOAD_SCROLL_PREFIX + location.pathname + location.search;
+}
+
+function isReloadNavigation() {
+    try {
+        const nav = performance.getEntriesByType
+            && performance.getEntriesByType('navigation')[0];
+        if (nav && nav.type) return nav.type === 'reload';
+    } catch (err) { /* 老浏览器走 performance.navigation */ }
+    return !!(performance.navigation && performance.navigation.type === 1);
+}
+
 function startProgress() {
     if (!progressEl) {
         progressEl = document.createElement('div');
@@ -87,6 +111,25 @@ function finishProgress() {
 
 export function initPageTransition(reinit) {
     reinitFn = reinit;
+    // 滚动恢复完全由本模块接管（scrollMemory）：浏览器自动恢复会在 popstate
+    // 前后改写 scrollY，既污染「离开页」的位置记录，也会和异步内容替换抢滚动
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+
+    // 卸载前记录位置（pagehide 覆盖刷新/关闭/整页跳转；SPA 切换不卸载、
+    // 由 scrollMemory 处理）；刷新加载后恢复，非刷新不读
+    window.addEventListener('pagehide', () => {
+        try {
+            sessionStorage.setItem(reloadScrollKey(), String(window.scrollY));
+        } catch (err) { /* 隐私模式/配额异常：忽略 */ }
+    });
+    if (isReloadNavigation()) {
+        let saved = null;
+        try { saved = sessionStorage.getItem(reloadScrollKey()); } catch (err) { /* ignore */ }
+        const y = saved == null ? NaN : Number(saved);
+        const main = document.querySelector('.main-content');
+        // 带 hash 时交给浏览器原生锚点滚动，不覆盖
+        if (main && !location.hash && Number.isFinite(y) && y > 0) restoreScroll(main, y);
+    }
     renderedPath = location.pathname + location.search;
     // pushQueryState（灯箱 ?p=、筛选）只改 URL、不换内容：同步已渲染路径，
     // 否则后续同页 hash/后退判断会用旧 search 比较（2026-11-10 审查 #22）
@@ -120,9 +163,13 @@ export function initPageTransition(reinit) {
         // 条目同样不能重载）；search 由 pushQueryState 的 querystate 事件同步，
         // 筛选/灯箱查询状态前进后退仍会因 search 不同而 loadContent（2026-11-10 #22）
         if (location.pathname + location.search === renderedPath) return;
+        // 离开当前页前记录位置：此时 renderedPath 仍是被离开的页（location 已指向目标）
+        rememberScroll();
         // 首次加载的页面（如首页）没有推入过状态（e.state 为 null）——
         // 此时按当前地址恢复（popstate 触发时 location 已指向目标页），否则无法返回首页
-        loadContent(e.state && e.state.url ? e.state.url : location.href);
+        const targetUrl = e.state && e.state.url ? e.state.url : location.href;
+        // 浏览器后退/前进回到访问过的页面：恢复离开时的滚动位置（无记录则回顶）
+        loadContent(targetUrl, savedScrollFor(targetUrl));
     });
 }
 
@@ -147,16 +194,84 @@ function shouldIntercept(link) {
     );
 }
 
+/* ===== 滚动位置记忆 =====
+   仅用于浏览器后退/前进：点击链接进入新页面仍从顶部开始（与原生浏览一致）。
+   记录时机 = 离开页面时（链接导航 / popstate），按 path+search 作键；
+   renderedPath 随 pf:querystate 同步，筛选/灯箱查询状态也能命中同一键 */
+function rememberScroll() {
+    if (renderedPath) scrollMemory.set(renderedPath, window.scrollY);
+}
+
+function savedScrollFor(url) {
+    const target = new URL(url, location.href);
+    const y = scrollMemory.get(target.pathname + target.search);
+    return typeof y === 'number' ? y : null;
+}
+
+/* 恢复滚动：瀑布流初始化前只有两行占位高度，此刻 scrollTo 会被钳到页尾；
+   等 masonry-ready（整组行计划与页面高度建立）后再滚，视口内的行由 masonry
+   的滚动监听补齐。初始化失败按 4s 看门狗同口径兜底（2026-11-14） */
+function restoreScroll(main, y) {
+    const grid = main.querySelector('.masonry-grid');
+    if (!grid || !main.querySelector('.masonry-item')
+        || grid.classList.contains('masonry-ready')) {
+        window.scrollTo(0, y);
+        return;
+    }
+    const seq = navSeq;
+    let observer = null;
+    let timer = null;
+    // 等待期间用户主动滚动/操作：放弃恢复，别把人从当前位置拽走
+    const userIntent = () => cleanup();
+    const cleanup = () => {
+        if (observer) {
+            observer.disconnect();
+            observer = null;
+        }
+        if (timer) {
+            clearTimeout(timer);
+            timer = null;
+        }
+        window.removeEventListener('wheel', userIntent);
+        window.removeEventListener('touchmove', userIntent);
+        window.removeEventListener('pointerdown', userIntent);
+        window.removeEventListener('keydown', userIntent);
+        if (restoreCancel === cleanup) restoreCancel = null;
+    };
+    const finish = () => {
+        cleanup();
+        if (seq !== navSeq) return; // 已被新导航取代
+        window.scrollTo(0, y);
+    };
+    restoreCancel = cleanup;
+    observer = new MutationObserver(() => {
+        if (grid.classList.contains('masonry-ready')) finish();
+    });
+    observer.observe(grid, { attributes: true, attributeFilter: ['class'] });
+    window.addEventListener('wheel', userIntent, { passive: true });
+    window.addEventListener('touchmove', userIntent, { passive: true });
+    window.addEventListener('pointerdown', userIntent);
+    window.addEventListener('keydown', userIntent);
+    // 兜底：masonry 初始化失败/超时（与 is-masonry-pending 看门狗同口径）
+    timer = setTimeout(finish, 4000);
+}
+
+function cancelRestore() {
+    if (restoreCancel) restoreCancel();
+}
+
 async function navigateTo(url) {
+    rememberScroll(); // 离开当前页：记录位置，供浏览器后退时恢复
     history.pushState({ url }, '', url);
     await loadContent(url);
 }
 
-async function loadContent(url) {
+async function loadContent(url, restoreY = null) {
     const seq = ++navSeq;
 
-    // 作废上一次淡出/淡入收尾，避免旧闭包影响本次导航
+    // 作废上一次淡出/淡入收尾与未完成的滚动恢复等待，避免旧闭包影响本次导航
     cancelFade();
+    cancelRestore();
 
     // 导航即关灯箱：灯箱在壳层 DOM、不随内容替换——不关闭则旧照片悬在
     // 新页面上（popstate/返回键路径同样经此）
@@ -204,7 +319,7 @@ async function loadContent(url) {
     if (seq !== navSeq) return;
     await fadeOut(main);
     if (seq !== navSeq) return;
-    commitPage(doc, url);
+    commitPage(doc, url, restoreY);
     finishProgress();
     await fadeIn(main);
 }
@@ -229,7 +344,7 @@ function syncHead(doc) {
 }
 
 /* 主内容替换与页面级状态同步 */
-function commitPage(doc, url) {
+function commitPage(doc, url, restoreY = null) {
     const main = document.querySelector('.main-content');
     const newMain = doc.querySelector('.main-content');
     if (!main || !newMain) return;
@@ -310,7 +425,8 @@ function commitPage(doc, url) {
     // 2026-11-10 审查 #14）
     closeMobileNav();
 
-    // 目标带 hash：滚到锚点（SPA 换页/后退到带锚点条目）；否则回顶
+    // 目标带 hash：滚到锚点；浏览器后退/前进：恢复离开时的位置；
+    // 其余（点链接进入新页）回顶
     const hash = new URL(url).hash;
     let anchor = null;
     if (hash) {
@@ -319,6 +435,7 @@ function commitPage(doc, url) {
         } catch (err) { /* 非法百分号编码：按回顶处理 */ }
     }
     if (anchor) anchor.scrollIntoView();
+    else if (restoreY != null) restoreScroll(main, restoreY);
     else window.scrollTo(0, 0);
 
     // 重新初始化页面 JS（SPA 标记供入口加载期的网格兜底计时器使用）
