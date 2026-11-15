@@ -916,6 +916,28 @@ published = "2026-06-07T11:24:43+08:00"
 featured = true
 
 [[photo]]
+src = "/images/photos/中兴大桥的晚霞.jpg"
+alt = "中興大橋的晚霞"
+category = "scenery"
+focus = "24"
+iso = "100"
+aperture = "9"
+shutter = "1/20"
+time = "2026-05-04 18:42:32"
+place = "寧波中興大橋"
+address = "浙江省寧波市鄞州區中興大橋"
+lat = "29.896536"
+lng = "121.585059"
+location = "浙江"
+width = "1920"
+height = "1080"
+camera = "NIKON Z 5"
+lens = "NIKKOR Z 24-200mm f/4-6.3 VR"
+hash = "4c45b66a"
+source_hash = "fa8e4ec5f56ad3bc28c4b5ab4e9aaa68"
+published = "2026-11-16T01:10:28+08:00"
+
+[[photo]]
 src = "/images/photos/半山铁骨.jpg"
 alt = "半山鐵骨"
 category = "scenery"
