@@ -138,10 +138,8 @@
         }
     }
 
-    .fm-photo-halo {
-        fill: var(--color-accent-15);
-    }
-
+    /* 光晕填充由 JS 生成的 radialGradient（#fm-photo-glow）提供：
+       --color-accent 中心亮、边缘透明，形成辉光衰减；不再用纯色半透明圆 */
     .fm-photo-dot {
         fill: var(--color-accent);
     }

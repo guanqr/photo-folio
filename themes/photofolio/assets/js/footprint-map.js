@@ -242,6 +242,21 @@ async function build(root, points, locationData, statsByName) {
     svg.setAttribute('viewBox', `0 0 ${pr.W} ${pr.H}`);
     svg.setAttribute('role', 'group');
 
+    // 点迹光晕的辉光渐变（只定义一次）：颜色走 accent token，中心亮、边缘
+    // 透明衰减，比纯色半透明圆更像发光；无滤镜成本（2026-11-15）
+    const defs = document.createElementNS(SVG_NS, 'defs');
+    const glow = document.createElementNS(SVG_NS, 'radialGradient');
+    glow.setAttribute('id', 'fm-photo-glow');
+    [[0, '0.5'], [0.55, '0.2'], [1, '0']].forEach(([offset, opacity]) => {
+        const stop = document.createElementNS(SVG_NS, 'stop');
+        stop.setAttribute('offset', String(offset));
+        stop.style.stopColor = 'var(--color-accent)'; // 属性不支持 var()，走 CSS 属性
+        stop.style.stopOpacity = opacity;
+        glow.appendChild(stop);
+    });
+    defs.appendChild(glow);
+    svg.appendChild(defs);
+
     const grid = document.createElementNS(SVG_NS, 'g');
     grid.setAttribute('class', 'fm-grid');
     buildGrid(grid, pr);
@@ -257,11 +272,12 @@ async function build(root, points, locationData, statsByName) {
         // 光环 + 核心（旧光点同款两层结构，点迹清晰可见）
         const halo = document.createElementNS(SVG_NS, 'circle');
         halo.setAttribute('class', 'fm-photo-halo');
-        halo.setAttribute('r', 6);
+        halo.setAttribute('r', 3); // 2026-11-15 用户裁定：点迹偏大，光晕 6→3
+        halo.setAttribute('fill', 'url(#fm-photo-glow)'); // 辉光渐变（见上方 defs）
         inner.appendChild(halo);
         const dot = document.createElementNS(SVG_NS, 'circle');
         dot.setAttribute('class', 'fm-photo-dot');
-        dot.setAttribute('r', 2);
+        dot.setAttribute('r', 1); // 核心 2→1，整体约缩小到原面积 1/4
         inner.appendChild(dot);
         dots.appendChild(inner);
         return { inner, lng: p.lng, lat: p.lat }; // 增量重投影时用于重定位

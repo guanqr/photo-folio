@@ -204,7 +204,7 @@ url = "https://example.com/source"
 - 构建期校验：每个系列 `is_cover` 恰好 1 张；`series-url.html` 找不到同名内容页时 errorf（不再回退 urlize 死链）
 
 ### 4. 足迹 `/footprint/` 及地区页 `/footprint/{slug}/`
-- **足迹世界地图**：自绘 SVG 等距圆柱投影（零外部库/瓦片），视图 = 照片点迹 ∪ **有照片省份的完整包围盒**（省份完整可见；海外国家不并入包围盒）；**省份/国家为独立填充区块**（悬停提亮、点击唯一选中并更新预览面板——面板样式与旧光点版一致；无照片地区中性填充、pointer-events none）；全部照片坐标形成**点迹**（光环+核心两层、纯展示）；鼠标/触控笔悬停与键盘聚焦显示弹层（地名/张数/年份跨度），**触屏不显示弹层、点按直接跳转地点详情页**（footprint-tooltip.js 按 pointerType 判定）；区块须声明 `cursor: pointer`（iOS 只向可交互或 cursor:pointer 元素派发 click）；陆地/省界/国家几何静态数据 + 同源 fetch 记忆化（失败降级为网格+点迹）；IntersectionObserver 懒加载（rootMargin 600px）；`prefers-reduced-motion` 完整降级；带边框圆角框架（内容裁剪到 viewBox，区块宽度与导航栏一致）
+- **足迹世界地图**：自绘 SVG 等距圆柱投影（零外部库/瓦片），视图 = 照片点迹 ∪ **有照片省份的完整包围盒**（省份完整可见；海外国家不并入包围盒）；**省份/国家为独立填充区块**（悬停提亮、点击唯一选中并更新预览面板——面板样式与旧光点版一致；无照片地区中性填充、pointer-events none）；全部照片坐标形成**点迹**（光环为 `--color-accent` 径向渐变辉光 + 核心两层、纯展示）；鼠标/触控笔悬停与键盘聚焦显示弹层（地名/张数/年份跨度），**触屏不显示弹层、点按直接跳转地点详情页**（footprint-tooltip.js 按 pointerType 判定）；区块须声明 `cursor: pointer`（iOS 只向可交互或 cursor:pointer 元素派发 click）；陆地/省界/国家几何静态数据 + 同源 fetch 记忆化（失败降级为网格+点迹）；IntersectionObserver 懒加载（rootMargin 600px）；`prefers-reduced-motion` 完整降级；带边框圆角框架（内容裁剪到 viewBox，区块宽度与导航栏一致）
 - 照片坐标字段：photo.toml 可选 address/lat/lng——address 经 `tools/geocode/geocode-photos.py` 高德地理编码生成 lat/lng（key 走环境变量 AMAP_KEY 或 tools/geocode/config.json）；**lat/lng 用于足迹地图点迹**（详情页小地图已取消）；geocode 兜底口径：仅「无结果/网络异常」落 Nominatim——**key/配额类错误（infocode 1000 前缀）不落兜底、中止循环**（境外服务解析境内中文地址不可靠、会污染坐标）
 - 地点注册表唯一实现：`layouts/partials/utils/location-registry.html`（Title → slug/URL，画廊筛选与足迹页共用；坐标不再输出，地图点迹用照片 lat/lng）
 - 桌面端地图左栏 + 右侧地点预览面板（点击地块/点迹更新面板，整块链接进地点详情页）
