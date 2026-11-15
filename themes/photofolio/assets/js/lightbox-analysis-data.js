@@ -14,11 +14,35 @@ export function analysisUrl(slug, hash) {
     return '/analysis/' + encodeURIComponent(slug) + '.json?v=' + encodeURIComponent(version);
 }
 
-/* 预取：只发请求、不解析——结果由 SW/HTTP 缓存承接（同 URL 的 SWR 命中），
-   失败仅告警，展开时渲染器会重试并走失败提示卡 */
+/* 预取记忆：成功预取的 URL 与在途请求都不再重复发（换图/算法升级时 URL 自带
+   新版本，自然换键）；上限防止长会话累积无界。此前渲染器内的 cache/inflight
+   去重随模块拆分消失，来回翻看会反复请求，这里补回（2026-11-15 审查修复） */
+const prefetched = new Set();
+const inflight = new Map();
+const MAX_PREFETCH_MEMORY = 200;
+
+/* 预取：只发请求、读完响应即弃（不解析）——结果由 SW/HTTP 缓存承接（同 URL
+   的 SWR 命中），失败仅告警，展开时渲染器会重试并走失败提示卡 */
 export function prefetchAnalysis(slug, hash) {
     if (!slug) return;
-    fetch(analysisUrl(slug, hash)).catch((err) => {
-        console.warn('[lightbox] analysis prefetch failed:', slug, err);
-    });
+    const url = analysisUrl(slug, hash);
+    if (prefetched.has(url) || inflight.has(url)) return;
+    const p = fetch(url)
+        .then((res) => {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.text(); // 读完响应体：确保 HTTP/SW 缓存完整落盘
+        })
+        .then(() => {
+            prefetched.add(url);
+            if (prefetched.size > MAX_PREFETCH_MEMORY) {
+                prefetched.delete(prefetched.values().next().value);
+            }
+        })
+        .catch((err) => {
+            console.warn('[lightbox] analysis prefetch failed:', slug, err);
+        })
+        .finally(() => {
+            inflight.delete(url);
+        });
+    inflight.set(url, p);
 }

@@ -58,7 +58,12 @@ function loadShell() {
                 const doc = new DOMParser().parseFromString(html, 'text/html');
                 const shell = doc.getElementById('lightbox');
                 if (!shell) throw new Error('lightbox shell missing');
-                document.body.appendChild(document.importNode(shell, true));
+                // 先以 display:none 注入：灯箱样式是独立文件、可能仍在途——无样式
+                // 时整块壳会以裸 HTML 闪现在页面底部；CSS 失败时也会永久残留。
+                // bootLightbox 待样式就位后再放出（2026-11-15 审查修复）
+                const node = document.importNode(shell, true);
+                node.style.display = 'none';
+                document.body.appendChild(node);
             })
             .catch((err) => {
                 shellPromise = null;
@@ -78,6 +83,10 @@ export function bootLightbox() {
         // 样式、骨架、入口并行拉取；三者都就位后才初始化（样式先于显示，
         // 避免灯箱以无样式状态闪一帧）
         const [mod] = await Promise.all([loadModule(), loadShell(), loadCss()]);
+        // 样式已就位：放出此前隐藏的骨架（CSS 失败时 Promise.all 拒绝，骨架
+        // 保持隐藏、不残留裸壳，下次点击重试）
+        const shellEl = document.getElementById('lightbox');
+        if (shellEl) shellEl.style.display = '';
         mod.initLightbox();
         booted = true; // 初始化完成，后续点击交给灯箱自身的委托
         return mod;

@@ -33,7 +33,9 @@
 }
 
 /* 说明气泡：挂在灯箱根节点下（分析区自身 overflow: hidden，放区内会被裁切），
-   位置由 JS 按按钮矩形写入 left/top；pointer-events none 不遮挡图表与切图操作。
+   位置与最大高度由 JS 按按钮矩形/面板可用高度写入 left/top/max-height；
+   内容超出高度时在气泡内部滚动（overscroll 不传给页面），因此 pointer-events
+   为 auto——点击/滚动气泡内部由 JS 守卫排除，不触发收起。
    配色沿用灯箱固定的暗色语义变量（.lightbox 内已重映射） */
 .lightbox-chart-help-pop {
     position: fixed;
@@ -48,9 +50,11 @@
     font-size: var(--size-small);
     line-height: 1.6;
     box-shadow: var(--shadow-pop);
+    overflow-y: auto; /* 短视口下长文案内部滚动（高度上限由 JS 写入） */
+    overscroll-behavior: contain;
     opacity: 0;
     transition: opacity var(--transition-fast);
-    pointer-events: none;
+    pointer-events: auto;
 
     &.is-open {
         opacity: 1;

@@ -6,9 +6,9 @@
  * 压缩后约 3.6KB，零逐像素
  * 客户端成本）；统计口径（Rec.709 明度/九调/剪裁/HSV 饱和度/色相加权/色卡
  * k-means）见 tools/photo-pipeline/src/analysis.py（唯一实现）。灯箱打开/切图
- * 即预取当前照片与左右各一位（prefetch，只填缓存不渲染），展开时直接渲染——
- * 避免展开后才发请求、空等一次网络往返；同 slug + 内容版本的在途请求去重，
- * 结果按 slug + 内容版本缓存，切换/回看作品时无需重复拉取。
+ * 的预取在 lightbox-analysis-data.js（只预热 HTTP/SW 缓存、含 URL 记忆与在途
+ * 去重，不加载渲染器）；本模块只负责展开后的拉取与渲染，同 slug + 内容版本的
+ * 在途请求去重、结果按版本缓存，切换/回看作品时无需重复拉取。
  *
  * 本端职责：直方图窗口 5 平滑、线性纵轴与目标 y 数组的纯数学派生（每通道
  * 256 点固定结构可形变），以及全部图表渲染（SVG 矢量：高 DPI / 缩放 / 窄屏
@@ -49,10 +49,11 @@ export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, o
     // slug 不会命中旧结果；SPA 跨页面复用本模块也不会串版本
     const analysisKey = (slug, hash) => slug + '@' + (hash || '') + '@' + ANALYSIS_VERSION;
     const cache = new Map(); // analysisKey → { histYs, lumYs, satYs, hueYs, palette, tone, sat, hue }
-    // 在途拉取（analysisKey → Promise）：预取与展开分析共用同一次请求——打开
-    // 灯箱即预取、用户点展开时通常已完成；若仍在途则等待同一 Promise，不重复下载
+    // 在途拉取（analysisKey → Promise）：展开分析与缓存未命中路径共用同一次
+    // 请求（预取只预热 HTTP/SW 缓存，去重由 data 模块负责，不共享本表）
     const inflight = new Map();
-    // 任一大类启用才拉取/渲染（配置全部关闭时连预取请求也不发）
+    // 任一大类启用才拉取/渲染（配置全关时分析触发行不渲染、预取也不发，
+    // 见 lightbox.js 的 prefetchAnalysis 门禁与模板）
     const hasAnalysis = !!(paletteEl || toneEls.wrap || satEls.wrap || hueEls.wrap);
 
     function hideAll() {
@@ -178,8 +179,8 @@ export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, o
             }
             if (errorEl) errorEl.hidden = true; // 拉取成功：收起上次的失败提示
             renderEntry(entry);
-            // 幂等入缓存（预取可能已写入同一结果）；渲染异常由缓存命中路径
-            // 自愈清除，坏数据不长期污染（2026-10-21 审查 #4）
+            // 幂等入缓存；渲染异常由缓存命中路径自愈清除，坏数据不长期污染
+            //（2026-10-21 审查 #4）
             cache.set(key, entry);
             if (onDone) onDone(true);
         } catch (err) {
@@ -193,19 +194,5 @@ export function initLightboxAnalysis({ paletteWrap, paletteEl, tone, sat, hue, o
         }
     }
 
-    /* 预取（不渲染）：灯箱打开/切图时由调用方触发，填充缓存供展开时直接渲染。
-       失败仅告警、不入缓存——展开路径 analyze 会重试并走失败提示；空 slug /
-       已缓存直接返回。 */
-    function prefetch(slug, hash) {
-        if (!hasAnalysis) return;
-        if (!slug) return;
-        const key = analysisKey(slug, hash);
-        if (cache.has(key)) return;
-        load(slug, hash).then(
-            (entry) => cache.set(key, entry),
-            (err) => console.warn('[lightbox] analysis prefetch failed:', slug, err)
-        );
-    }
-
-    return { analyze, prefetch };
+    return { analyze };
 }

@@ -88,10 +88,11 @@
     opacity: 1;
 }
 
+/* 名称标签与标题的间距由 .lightbox-section-title 的 flex gap 统一提供，
+   这里不再加 margin-left（叠加会把间距由 8px 变成 16px，2026-11-15 审查修复） */
 .lightbox-tonal-name,
 .lightbox-sat-name,
 .lightbox-hue-name {
-    margin-left: var(--space-8);
     font-family: var(--font-meta);
     color: var(--color-accent);
 }

@@ -54,6 +54,9 @@ export function initLightboxAnalysisHelp({ lightbox, pop, panel, reducedMotion }
         // 跨断点后 617px 的按钮被误判成「下方放不下」而翻到顶部）；同一帧内
         // 先写 0 再写最终位置，不会闪现
         pop.style.maxWidth = '';
+        // 纵向同样限高：短视口/抽屉未全开时，长文案改为气泡内部滚动，
+        // 不再超出面板底边被裁掉（内部滚动与点按由下方守卫排除，不触发收起）
+        pop.style.maxHeight = `${Math.max(0, b.bottom - b.top)}px`;
         pop.style.left = '0px';
         pop.style.top = '0px';
         let w = pop.offsetWidth;
@@ -113,9 +116,15 @@ export function initLightboxAnalysisHelp({ lightbox, pop, panel, reducedMotion }
             clearHide();
             hideTimer = setTimeout(hideNow, fadeMs() + 20);
         }
-        document.removeEventListener('scroll', close, true);
-        window.removeEventListener('scroll', close);
+        document.removeEventListener('scroll', onScrollClose, true);
+        window.removeEventListener('scroll', onScrollClose);
         window.removeEventListener('resize', close);
+    }
+
+    // 页面/详情区滚动即收起；气泡自身滚动（内容超出高度时）不算页面移动
+    function onScrollClose(e) {
+        if (e.target === pop) return;
+        close();
     }
 
     // 供 lightbox.js 的 Esc 处理先消费：气泡开着时 Esc 只收气泡、不关灯箱
@@ -160,8 +169,8 @@ export function initLightboxAnalysisHelp({ lightbox, pop, panel, reducedMotion }
         btn.setAttribute('aria-expanded', 'true');
         // 页面移动即收起：capture 阶段接住元素内滚动（详情区/抽屉滚底动画），
         // 再补窗口自身的滚动与尺寸变化（旋转/拉宽窗口）
-        document.addEventListener('scroll', close, true);
-        window.addEventListener('scroll', close, { passive: true });
+        document.addEventListener('scroll', onScrollClose, true);
+        window.addEventListener('scroll', onScrollClose, { passive: true });
         window.addEventListener('resize', close);
     }
 
@@ -172,13 +181,14 @@ export function initLightboxAnalysisHelp({ lightbox, pop, panel, reducedMotion }
             else open(btn);
             return;
         }
-        close(); // 点到气泡外任意处即收起（气泡 pointer-events:none，不会落到这里）
+        if (pop.contains(e.target)) return; // 气泡内点按（含内部滚动）不收起
+        close(); // 点到气泡外任意处即收起
     });
 
     // 拖拽抽屉不会产生 click：按下别处即收起，避免拖动过程中气泡脱锚悬空；
-    // 按在问号按钮上则交给 click 做开合切换
+    // 按在问号按钮上交给 click 做开合切换，按在气泡内（含滚动条拖拽）不收起
     lightbox.addEventListener('pointerdown', (e) => {
-        if (openBtn && !e.target.closest('.lightbox-chart-help')) close();
+        if (openBtn && !e.target.closest('.lightbox-chart-help') && !pop.contains(e.target)) close();
     });
 
     return { close, closeIfOpen };

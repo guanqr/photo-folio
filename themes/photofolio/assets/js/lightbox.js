@@ -211,7 +211,16 @@ export function initLightbox() {
         if (!p) return;
         ensureAnalysis()
             .then((a) => a.analyze(p.slug, p.hash))
-            .catch((err) => console.warn('[lightbox] analysis module load failed:', err));
+            .catch((err) => {
+                console.warn('[lightbox] analysis module load failed:', err);
+                // 渲染器没加载起来时它内部的失败路径（hideAll + 失败卡）不可达：
+                // 这里兜底隐藏空图表框并显示失败提示卡；下次展开会重试加载
+                [paletteWrap, tonalWrap, satWrap, hueWrap].forEach((w) => {
+                    if (w) w.style.display = 'none';
+                });
+                if (analysisErrorEl) analysisErrorEl.hidden = false;
+                drawer.refresh();
+            });
     }
 
     // 元信息面板渲染（独立模块见 lightbox-meta.js）：简行/EXIF/胶囊填充
@@ -329,8 +338,12 @@ export function initLightbox() {
         },
         // 当前照片全尺寸主图加载完成/失败：自动播放开始当前照片的计时
         onPhotoReady: (index) => { if (autoplay) autoplay.photoReady(index); },
-        // 分析数据预取（只拉 JSON、不加载渲染器）：当前照片 ±1，展开时直接命中
-        prefetchAnalysis: (photos) => photos.forEach((p) => prefetchAnalysisData(p.slug, p.hash)),
+        // 分析数据预取（只拉 JSON、不加载渲染器）：当前照片 ±1，展开时直接命中；
+        // 区块全部关闭时模板不渲染分析触发行，此时不发请求（与「关闭不请求」一致）
+        prefetchAnalysis: (photos) => {
+            if (!analysisTrigger) return;
+            photos.forEach((p) => prefetchAnalysisData(p.slug, p.hash));
+        },
         glow, backdrop, swipe, drawer,
         closeBtn: lightboxClose, pageRoots,
         // 切图前取消窄屏开合锚定：旧锚点/隐藏块不得继续改写新照片的 scrollTop
