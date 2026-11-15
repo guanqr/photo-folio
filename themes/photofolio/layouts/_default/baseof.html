@@ -101,7 +101,9 @@
         (dict "name" "home" "path" "js/entries/home.js")
         (dict "name" "map" "path" "js/entries/map.js")
         (dict "name" "about" "path" "js/entries/about.js")
-        (dict "name" "lightbox" "path" "js/entries/lightbox.js") }}
+        (dict "name" "lightbox" "path" "js/entries/lightbox.js")
+        (dict "name" "lightbox-analysis" "path" "js/entries/lightbox-analysis.js")
+        (dict "name" "lightbox-bird" "path" "js/entries/lightbox-bird.js") }}
         {{ $r := resources.Get $entry.path }}
         {{ $o := dict "targetPath" (printf "js/entries/%s.js" $entry.name) }}
         {{ if hugo.IsProduction }}{{ $o = merge $o (dict "minify" true) }}{{ end }}
@@ -109,17 +111,11 @@
         {{ if hugo.IsProduction }}{{ $r = $r | resources.Fingerprint }}{{ end }}
         {{ $entryUrls = merge $entryUrls (dict $entry.name $r.RelPermalink) }}
     {{ end }}
-    <script type="application/json" id="js-entry-urls" data-lightbox-shell="{{ "/lightbox-shell/" | relURL }}">{{ $entryUrls | jsonify | safeJS }}</script>
+    {{ $lightboxCss := partialCached "lightbox-style.html" . "lightbox-style" }}
+    <script type="application/json" id="js-entry-urls" data-lightbox-shell="{{ "/lightbox-shell/" | relURL }}" data-lightbox-css="{{ $lightboxCss }}">{{ $entryUrls | jsonify | safeJS }}</script>
 
     {{/* defer 确保在 DOM 解析完成后执行，不会阻塞渲染 */}}
     <script src="{{ $js.RelPermalink }}" {{ with $js.Data.Integrity }}integrity="{{ . }}"{{ end }} defer></script>
-
-    {{/* Instant.page 预加载加速（自托管，见下方脚本） */}}
-    {{ if .Site.Params.enableInstantPage }}
-    {{/* instant.page 自托管（static/js，含 MIT 许可证头）：消除唯一无 SRI 的第三方
-       同源脚本依赖——CDN 被投毒即获得整站同源脚本执行能力（供应链风险） */}}
-    <script src="/js/instantpage.min.js" type="module"></script>
-    {{ end }}
 
     {{/* PWA Service Worker 注册 (必须独立，不参与 js.Build) */}}
     {{ if and .Site.Params.enableServiceWorker (eq hugo.Environment "production") }}

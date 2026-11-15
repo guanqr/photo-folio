@@ -35,7 +35,7 @@
 
 ### 代码风格
 
-- 模板中任何展示给用户的文本（含 aria-label、JS 动态构建的）都必须经 `i18n` 转换，严禁硬编码；含可变部分的展示文本用 i18n 格式串（`photo_hover_meta_*`、`date_format_full` 同法），严禁模板拼接 mm/f/· 等字面量
+- 模板中任何展示给用户的文本（含 aria-label、JS 动态构建的）都必须经 `i18n` 转换，严禁硬编码；含可变部分的展示文本用 i18n 格式串（`photo_hover_place_date`、`date_format_full` 同法），严禁模板拼接 mm/f/· 等字面量
 - front matter 统一 TOML 格式（`+++` 包裹，2026-10-18 起 content 全量转换）；archetype 放主题内（站点根目录不设 archetypes，避免遮蔽主题模板）
 - 注释用「为什么 + 实测日期」的因果式写法；模板内注释一律 `{{/* */}}`，HTML 注释会输出进管线
 - 颜色规范：严禁硬编码颜色值（`#hex`、`rgb(数字)`），一律经 `var(--color-*)` / `var(--dark-*)` 引用；新增颜色先在 `:root` 经 `defineColorHSL` 定义为 HSL 四元组（主值 + -h/-s/-l 分量），再引用
@@ -112,7 +112,7 @@ lng = 100.23
 
 - 本表预登记全部 34 个省级地区（含港澳台）；内容适配器只为照片实际使用的地点生成 `/footprint/<slug>/` 页面，预留但无照片的地区不产生空页；照片 `location` 未登记进本表时构建报错（避免地图/地点链接指向未生成页面）
 - `lat/lng` 保留备用：当前地图点迹使用照片 `photo.lat/lng`，地点页不依赖坐标；注册表不再输出坐标
-- 地图陆地与省界几何为一次性生成数据（`themes/photofolio/static/maps/land-10m.json` 世界陆地 10m、`provinces.json` 中国省级边界线含港澳台——省界源要素需剔除无 adcode 的十段线/插图要素；管线 `python tools/map-data/generate-maps.py`，下载缓存 tools/map-data/vendor 不入库、临时文件原子替换写入、缓存损坏自动重下载）
+- 地图陆地与省界几何为一次性生成数据（`themes/photofolio/static/maps/land-10m.json` 世界陆地 10m、`provinces.json` 中国省级边界线含港澳台——省界源要素需剔除无 adcode 的十段线/插图要素；管线 `python tools/map-data/generate-maps.py`，下载缓存 tools/map-data/vendor 不入库、临时文件原子替换写入、缓存损坏自动重下载）；几何统一为 `{quant, delta, data}`——整数对量化后再做增量编码（首点绝对、其余相邻差值，渲染端逐点累加还原），坐标点集与绝对坐标格式逐位一致，体积约减半（2026-11-15）
 - 省/国名映射唯一源 `tools/map-data/map_names.py`（PROVINCE_NAMES/COUNTRY_NAMES）；`generate-maps.py` 直接 import 并生成 `themes/photofolio/assets/js/map-names.js`（渲染端 import、勿手改；`--names-only` 只刷新映射）；PROVINCE_NAMES 已全量覆盖 34 个省级地区（新增国内拍摄地无需再改），新增海外国家仍需登记 COUNTRY_NAMES
 
 ### 排序规则
@@ -160,7 +160,7 @@ url = "https://example.com/source"
 - **EXIF 焦距口径**：`get_exif_info` 优先读取 `FocalLengthIn35mmFilm`（41989，35mm 等效焦距），缺失、为 0 或非法时回退 `FocalLength`（37386）；手机物理焦距（如 4mm）不得直接写入站点（2026-11-04）
 - **photo.toml 更新**：新条目 EXIF 字段（focus/iso/aperture/shutter/time/camera/lens）自动填（`time` 保留完整拍摄时刻 `YYYY-MM-DD HH:MM:SS`，同日作品按时刻排序；见 `exif_utils._normalize_time`）、width/height 恒取处理后的输出图尺寸（处理完成后统一刷新，避免同名换图改比例时预读旧输出值）、hash 恒取输出图内容 MD5 前 8 位（图片 URL 的 `?v=` 缓存版本号）、source_hash 恒取输入图内容 MD5 全 32 位（换图检测，站点不消费）、published 在新建条目时写入一次本地带时区时间戳（RSS 排序用；重跑/`--force`/同名换图不变，旧条目缺失回退拍摄时间）、手动字段留空；**同名换图（source_hash 变化）成功重出后同步更新上述 EXIF/time/camera/lens，手动字段保留**；新条目处理失败（无输出/抛错）不落条目；`write_toml` 按 time 升序**全量重写**——FIELDS 白名单**必须包含站点扩展字段 address/lat/lng/hash/source_hash**（漏掉会抹掉地理编码坐标与内容哈希——featured 曾被白名单漏掉而丢过，同类坑）；description/series/species/is_cover/featured 有值才写（species 供观鸟图鉴引用，登记在 CONDITIONAL_FIELDS）；字符串值写前转义反斜杠/双引号（`_tostr`）、读侧逆还原（`_fromstr`）——全量重写必须无损（改此文件须跑 tomllib 往返验证）；解析器严格匹配双引号字符串/布尔/数字整行，未登记字段或重复 src 拒绝重写（fail-fast，避免静默丢字段）
 - **分析取整**：影调三段占比取整余数并入最大档（与饱和度同口径），v5 起合计恒为 100%；已有 v5 JSON 已修正
-- **增量策略**：按输入图 `source_hash` 与 photo.toml 比较跳过未变化照片（同名换图保留旧 mtime 也能发现）；无 source_hash 的旧数据按变化处理，可用 `backfill_source_hash.py` 一次性回填；`run.py --force` 忽略增量重出全部图（仅重出图，分析仍按源图变化/缺失/版本惰性判定）；OSS 同步只传本次实际处理的文件名（force 覆盖云端），其余仅补云端缺失——避免本地/云端时间基准不一致；OSS 已有文件清单**分页拉取**（is_truncated/next_marker，单页默认 100 条）；**图像分析为独立惰性步骤**：结果缺失或算法版本（JSON v 字段）过期才重算，源图变化成功重处理时强制重算、处理失败不重算；`--force` 仅重出图且分析未过期时不重算；首次接入自动全量回填（一次性成本），日常运行只付新增照片
+- **增量策略**：按输入图 `source_hash` 与 photo.toml 比较跳过未变化照片（同名换图保留旧 mtime 也能发现）；无 source_hash 的旧数据按变化处理，可用 `backfill_source_hash.py` 一次性回填；`run.py --force` 忽略增量重出全部图（仅重出图，分析仍按源图变化/缺失/版本惰性判定）；OSS 同步只传本次实际处理的文件名（force 覆盖云端），其余仅补云端缺失——避免本地/云端时间基准不一致；OSS 已有文件清单**分页拉取**（is_truncated/next_marker，单页默认 100 条）；待传文件按 `max_workers` 并发上传（默认 4、1=串行；oss2 `Bucket` 内部复用 requests.Session，不跨线程共享——每线程用同凭证新建实例，列表仍在主线程完成，输出按文件名顺序）；**图像分析为独立惰性步骤**：结果缺失或算法版本（JSON v 字段）过期才重算，源图变化成功重处理时强制重算、处理失败不重算；`--force` 仅重出图且分析未过期时不重算；首次接入自动全量回填（一次性成本），日常运行只付新增照片
 - **写盘与上传顺序**：输出 JPEG 与 photo.toml 经 `compat.py` 临时文件 + `os.replace` 原子替换（TOML 固定 LF）；OSS 上传成功后才写 photo.toml，失败保留旧数据；新增条目打印手填字段提醒（2026-10-29）
 - **OSS 凭证**：`oss_config.json`（gitignore，example 为模板）+ 环境变量回退（OSS_ACCESS_KEY_ID/SECRET/ENDPOINT/BUCKET_NAME）
 - **上传缓存头**：新上传对象写入 `Cache-Control: public, max-age=31536000, immutable`——照片 URL 带内容哈希、对象内容不可变，可放心长缓存；同名换图产生新 URL，不依赖短 TTL 兜底（2026-10-26）
@@ -215,7 +215,7 @@ url = "https://example.com/source"
 ## 瀑布流布局
 
 ### 架构
-- **两端对齐行布局（自然行高，零裁切）**：行高 = (行宽 − 间距 − 边框) / 宽高比之和，由本行照片内容自然决定、恰好铺满容器；全模块唯一实现为 `rowHeight()` 助手
+- **两端对齐行布局（自然行高，零裁切）**：行高 = (行宽 − 间距 − 边框) / 宽高比之和，由本行照片内容自然决定、恰好铺满容器；唯一实现为 `masonry-layout.js` 的 `rowHeight()`（纯函数，masonry.js 引入）
 - 布局容器 `.masonry-grid`：初始化后加 `.is-virtual`（`position: relative; display: block`，高度由 JS 设为行计划总高），**每个引擎行一个显式绝对定位 `.masonry-row` 容器**（`display: flex`，水平 gap 0.5em，`top` 取计划位置）——引擎行 = 视觉行；`.masonry-item` 行内左→右 = 新→旧
 - 行高参考值：以「每行 N 张 3:2 宽幅照片（长边 3、宽边 2）」反推；**档位由 CSS 变量驱动**（`--layout-tier` 基础档位，`--layout-tier-exit` 为已越过的最高出口档位；升档需 exitTier > 当前档位、降档按基础档位立即生效）：**≤500px 每行 1–2 张**（3:2 横构图独占一行；正方形只与竖构图并排，与横构图/正方形分行；竖构图绝不落单、与相邻照片同行；尾行竖构图并入前一张横构图）、501–768px 每行 2 张基准、769–1000px 每行 3 张基准、>1000px 每行 4 张基准
 - 照片间距 `gap: 0.5em`，全断点统一（JS 读取计算后的 columnGap/rowGap 并缓存——**勿硬编码回退值**）
@@ -247,7 +247,7 @@ url = "https://example.com/source"
 ### 照片卡片
 - `.photo-card`：圆角（0.25em）、边框；**悬停时整卡轻微上移（translateY(-0.15em)，弹簧曲线，比分类卡 -0.35em 幅度小），图片不放大**；照片卡与分类/系列卡悬停时边框有**光标跟随高亮**——保留整圈强调色，鼠标附近一段叠全强调色光晕（`card-glow.js` 逐帧写入 `--card-glow-x/y`；`components/_card-glow.scss` 把边框本身画成高亮：透明边框 + 三层背景，实色卡底裁 padding-box、径向光晕与整圈强调色裁 border-box，与边框线完全重合；光晕半径取卡片短边（`--card-glow-r`），光标到最近边框的距离与半径同比例，大卡与小卡亮度一致；`card-hover` mixin 只做位移/阴影、不再改 `border-color`，避免高特异性规则盖掉透明边框导致亮度不一；仅可悬停设备）
 - `.photo-wrapper`：统一 div 容器，`position: relative`，`overflow: hidden`
-- **卡片悬停显示标题 + 焦距/光圈两行小字**（触屏无悬停）；标题与完整元信息（地点/分类/日期/EXIF）经 `.photo-card` 的 `data-title` / `data-place` / `data-category` / `data-date` / `data-focus` / `data-aperture` / `data-shutter` / `data-iso` / `data-camera` / `data-lens` 传给灯箱（不再使用 `data-exif` 聚合属性）
+- **卡片悬停显示标题 + 「地点 · 日期」两行小字**（地点取 `photo.location`、日期沿用 i18n 完整日期，空项自动省略；触屏无悬停）；标题与完整元信息（地点/分类/日期/EXIF）经 `.photo-card` 的 `data-title` / `data-place` / `data-category` / `data-date` / `data-focus` / `data-aperture` / `data-shutter` / `data-iso` / `data-camera` / `data-lens` 传给灯箱（不再使用 `data-exif` 聚合属性）
 - 所有照片（含组照封面与内页）均为普通卡片，点击触发 Lightbox；点击委托守卫排除 `<a>` 内元素（卡片内部不再有系列链接）
 
 ---
@@ -276,7 +276,7 @@ url = "https://example.com/source"
 
 ## Lightbox
 
-- **懒加载**：灯箱骨架不随页面 HTML 输出，由独立 `/lightbox-shell/` 页面承载（`content/lightbox-shell.md`，`noindex`、不进 sitemap）；首次点击 `.photo-wrapper` 或带 `?p=` 深链时 `lightbox-boot.js` fetch 骨架注入并动态加载灯箱入口（`entries/lightbox.js`），随后重放点击；**指针悬停作品卡（桌面）或键盘聚焦时预启动**（后台完成同一流程，点击时已就绪；未悬停的触屏首点仍按懒启动），骨架/入口加载失败可重试，SPA 换页保留已注入骨架。灯箱样式仍随全站 CSS 输出
+- **懒加载**：灯箱骨架不随页面 HTML 输出，由独立 `/lightbox-shell/` 页面承载（`content/lightbox-shell.md`，`noindex`、不进 sitemap）；首次点击 `.photo-wrapper` 或带 `?p=` 深链时 `lightbox-boot.js` fetch 骨架注入并动态加载灯箱入口（`entries/lightbox.js`），随后重放点击；**指针悬停作品卡（桌面）或键盘聚焦时预启动**（后台完成同一流程，点击时已就绪；未悬停的触屏首点仍按懒启动），骨架/入口加载失败可重试，SPA 换页保留已注入骨架。灯箱样式独立编译为 `css/lightbox.<hash>.css`（`scss/lightbox.scss`），由 `lightbox-boot.js` 在首次启动时注入——样式、骨架、入口三者并行加载、样式就位后才初始化；悬停/聚焦预启动会提前拉取，首访主样式不再携带灯箱规则（2026-11-15）
 - 全屏遮罩，点击 `.photo-wrapper` 触发；**背景为当前照片铺满屏幕的模糊毛玻璃**（`.lightbox-backdrop`：cover + `blur(40px) brightness(0.55)` 合成滤镜压暗 + scale 1.1，切换照片时随主图同步更换）；打开时滚动锁挂根元素（`documentElement` overflow hidden——只锁 body 不生效：`html { overflow-x: clip }` 阻断向视口传播），经典滚动条随灯箱隐藏、灯箱覆盖满视口，关闭恢复并保持滚动位置
 - 全局事件委托 `document.addEventListener('click', ...)`；**箭头覆盖当前页面全部照片**——集合按网格 `_planItems`（当前筛选结果、时间顺序）生成，含尚未渲染、留在隐藏池的卡片（灯箱直接读卡片的 `data-src` / `data-full-src` 与元信息，翻页不触碰网格、不触发任何行渲染）；筛选时只在当前筛选集合内循环；关闭后页面停留在打开前的滚动与已渲染状态
 - 图片切换：图片 + 标题 + 描述同步淡出 → 换内容 → 同步淡入（`opacity 0.3s ease`）
@@ -298,7 +298,7 @@ url = "https://example.com/source"
 - **详情滚动条**：桌面原生细滚动条常显、不随滚动空闲隐藏；窄屏抽屉原生滚动条隐藏（滚动由手势模型接管），右侧自定义滚动条仅抽屉全开时显示/拖动，视觉与桌面一致（透明轨道、border 色滑块、悬停 muted；标准滚动条属性仅 Firefox 生效，Chrome 走 `::-webkit-scrollbar` 的 0.375em 宽度），可点击轨道跳转/拖动滑块；拖动前取消在途平滑滚底并遵守分析收起 `inputHold`，独立处理指针事件（`stopPropagation` + 抽屉守卫）不触发抽屉拖拽，随 scrollTop 与抽屉展开更新
 - **开合滚动锚定**：窄屏图像分析/观鸟图鉴开合时，展开锚定触发行顶部、收起锚定折叠容器底边（`utils.anchorWhile` 逐帧补偿详情区 scrollTop），按钮位置尽量不变；切图、隐藏块、跨断点或用户指针/键盘/滚轮输入立即取消，同一时间仅允许一个锚定；滚到详情区上/下尽头即停止、随内容整体移动；`overflow-anchor: none` 仅窄屏生效（桌面保留原生锚定），防止浏览器二次锚定
 - **自动播放**（`lightbox-autoplay.js`）：顶栏播放/暂停按钮与关闭同行（play/pause 图标走 `svg.toml`、切换交叉淡入淡出 + 缩放旋转（弹簧）、标签走 i18n、`aria-pressed` 同步），默认关闭；灯箱最顶部时间进度条按间隔从左到右填充、切图重置、暂停/停止隐藏（与 SPA 加载条同款细条；轨道白色 10%、填充 accent）；主图未完全加载时不计时——加载期间进度条隐藏、计时暂停，主图全尺寸图片加载完成/失败（失败按就绪继续，避免永久停摆）后才开始当前图片的完整间隔（切换管线 `onPhotoReady` 钩子）；用户点播放后按 `params.lightboxAutoplay`（默认 5000ms）自动 `next()`，末张回绕循环；悬停不暂停，任意手动操作（指针/滚轮/键盘，播放/全屏按钮及全屏闲置唤回控件的首次点按除外；滑动切图仍停止）立即停止；页面隐藏暂停计时、回前台恢复；集合 ≤1、间隔 0 或 `prefers-reduced-motion` 时隐藏按钮；关闭灯箱停止并复位，状态不跨打开保留
-- **图像分析为管线预计算结果直读**：照片生成管线在加水印前对全分辨率原图预计算统计（`tools/photo-pipeline/src/analysis.py` 唯一实现：RGB/明度/饱和度/色相直方图、6 主色色卡、影调定性——Rec.709 明度、九调（長/中/短按 P5–P95 在 11 级等距灰阶上的跨区数：≤4 短、5–7 中、≥8 长）、动态范围（线性光真档，独立数值展示）、剪裁警告、区域系统），结果写 `static/analysis/{slug}.json`（v5 schema、v 算法版本号、约 8KB/张（压缩后约 3.6KB），入库随部署发布）；灯箱打开/切图预取当前 ±1 照片、展开时按 slug + 内容版本直读（URL `?v=<照片 hash>-<schema 版本>`，同源 fetch、SW Stale-While-Revalidate 缓存即用/后台刷新、离线可回退；缓存键保留查询串，换图/算法升级不命中旧结果）后纯数学派生曲线并渲染——浏览端零逐像素成本、无 CORS 依赖
+- **图像分析为管线预计算结果直读**：照片生成管线在加水印前对全分辨率原图预计算统计（`tools/photo-pipeline/src/analysis.py` 唯一实现：RGB/明度/饱和度/色相直方图、6 主色色卡、影调定性——Rec.709 明度、九调（長/中/短按 P5–P95 在 11 级等距灰阶上的跨区数：≤4 短、5–7 中、≥8 长）、动态范围（线性光真档，独立数值展示）、剪裁警告、区域系统），结果写 `static/analysis/{slug}.json`（v5 schema、v 算法版本号、约 8KB/张（压缩后约 3.6KB），入库随部署发布）；灯箱打开/切图预取当前 ±1 照片、展开时按 slug + 内容版本直读（URL `?v=<照片 hash>-<schema 版本>`，同源 fetch、SW Stale-While-Revalidate 缓存即用/后台刷新、离线可回退；缓存键保留查询串，换图/算法升级不命中旧结果）后纯数学派生曲线并渲染——浏览端零逐像素成本、无 CORS 依赖；影調/色卡/飽和度/色相四个区块标题右端各有一个圆形问号按钮（与标题同字号、贴区块右缘），点击弹出该区块全部图表与计算方法的说明气泡，图表小标题只保留纯名称（文案走 i18n；气泡挂灯箱根节点、fixed 定位，位置钳制在详情面板内——面板矩形 ∩ 视口，面板较窄时先收窄气泡，避开分析区 `overflow: hidden` 裁切；打开后页面滚动、窗口尺寸变化或开始拖拽即收起，不跟随滚动；出现/消失均有 opacity 淡入淡出——收起先淡出、过渡结束才隐藏，淡出中重新打开不闪断，减弱动态直切）
 - **分析失败提示卡**（`.lightbox-analysis-error`）：预计算结果拉取失败（网络异常/结果缺失）时显示提示（i18n `lightbox_analysis_failed`），成功/缓存命中收起，analyze 入口先收起上次提示再拉取；骨架来自 empty-state partial（icon alert）
 - **觀鳥圖鑑**（`lightbox-bird.js` + `_lightbox-bird.scss`）：照片带 `species` 或属于 `bird_series` 时，详情栏最底部显示「觀鳥圖鑑」触发行与可折叠内容（默认收起、开合状态跨切图保持、关闭灯箱复位）；内容为目→科→屬→種（中文 + 拉丁学名）、分布區域、棲息地、習性、資料來源（外链新窗口）；物种名标题右侧显示保育等级标签（等级代码决定 i18n 文案与底色，文案来自注册表唯一等级清单）；数据来自灯箱壳内嵌的 `data/birds.toml` JSON，按 species id 取用；缺 `species`/无对应数据时展开显示「缺少鳥種圖鑑資料」空状态卡（同分析失败卡样式）；空 slot 恒为详情区末子块（slot 内层以 0fr 折叠，块本身保留布局、隐藏态 inert/aria-hidden），不破坏末子块 auto 边距居中规则；有↔无时只让该块高度/透明度过渡，详情文字不淡出；图鉴块随详情区其他块同步淡入；資料來源链接按鸟种缓存，同鸟种连切不重建、焦点保持，切换鸟种/非鸟照片时焦点落回对应新链接或收起/关闭按钮；开合走 grid 0fr↔1fr 过渡并刷新窄屏抽屉高度/箭头；桌面展开按实际高度逐帧重判 is-fit（内容超高即切为可滚动），收起复用图像分析的居中补偿（冻结 is-fit + transform 下滑 + 翻转残余补偿）；既无 species 也不属于 bird_series 的照片整块从 slot 折叠隐藏（inert/aria-hidden）
 
@@ -344,9 +344,10 @@ url = "https://example.com/source"
 
 ## SCSS 规范
 
+- **样式入口拆分**：`scss/main.scss`（全站）与 `scss/lightbox.scss`（灯箱专用，首次启动灯箱才加载）两个入口；不产出 CSS 的占位符/mixin 放 `base/_primitives.scss`（`_base.scss` 通过 `@forward` 转发），两入口共用同一份定义、不得复制
 - 长度以 `em` 为单位（基于 16px）
 - **间距唯一标尺**：`--space-4 … --space-96`（4px 基准，名称即设计像素值，见 `_base.scss`）是 margin/padding/gap 的唯一来源；新增间距先登记 token，禁止 1.6em/1.7em 这类字号换算沉淀值；页面内容顶部统一 `--space-32`（2em）
-- **字号唯一标尺**：H1 2.5 / H2 2 / H3 1.5 / lead 1.25 / body 1 / small 0.875 / meta 0.75（`--size-*`，footer 与 small 同值）；模板/样式不再写字面量字号，展示级 3em/6em（空状态图标、404 大字）为唯一例外
+- **字号唯一标尺**：H1 2.5 / H2 2 / H3 1.5 / lead 1.25 / body 1 / small 0.875 / meta 0.75（`--size-*`，footer 与 small 同值）；**倍率固定写在 `_base.scss` 的 `:root`，不开放站点配置**——hugo.toml 只暴露 `baseFontSize`，各档位随根字号等比缩放；模板/样式不再写字面量字号，展示级 3em/6em（轮播大屏标题、空状态图标、404 大字）为唯一例外
 - **标尺自检**：间距、字号、`width/height/top/right/bottom/left` 的 `em/rem` 字面量由 `tools/style-lint/check_style.py` 拦截；几何配对、发丝级、媒体/数据尺寸等真例外在同一行注释写 `style-lint-ignore`，不允许无标记放行
 - **组件尺寸标尺**：图标 `--icon-xs/sm/md/lg/xl`（0.75/0.875/1/1.25/1.5em）、控件 `--control-sm/md`（2.5/3em）；定位偏移用 `--space-*`；缩略图高、图表高、色卡、头像、统计列宽等媒体/数据尺寸保留现值并标记例外
 - `transition` 不写 `all`，明确列出属性
@@ -425,6 +426,7 @@ url = "https://example.com/source"
 - 新增图标时先在 `svg.toml` 添加定义（含 `xmlns`、`viewBox` 等完整属性），再在模板中引用
 - **共享数据管线用 partial**：`utils/photo-sorted.html`（时间排序）、`utils/location-registry.html`（地点注册表）——新模板不得重复实现
 - **页面骨架单源**：页面头与空状态骨架用 `components/page-header.html`、`components/empty-state.html`（2026-10-18 自 13 处复制收敛），新页面不得复制骨架
+- **灯箱壳分块**：`lightbox-shell.html` 只保留容器骨架（图片区/面板底栏/箭头/缩略图条/气泡容器），顶栏、地点日期+EXIF、图像分析、故事、觀鳥圖鑑拆为 `components/lightbox-{topbar,meta-exif,analysis,story,bird}.html`；区块开关 `lbCfg` 与鸟种注册表经 dict 传入分块
 - **瀑布流网格单源**：网格标记与卡片循环统一由 `components/masonry-grid.html` 渲染，新列表页不得复制网格骨架
 - 页面注入 JSON 数据用 `<script type="application/json">` + `jsonify | safeJS`（Hugo 会把 script 内容转义成带引号字符串，漏 safeJS 会导致 JSON.parse 得到字符串）
 
@@ -436,11 +438,12 @@ url = "https://example.com/source"
 |---|---|
 | `main.js` | 入口，DOMContentLoaded 统一初始化；全局模块只跑一次，页面模块按入口按需加载 |
 | `entry-loader.js` | 页面级入口按需加载：读 `#js-entry-urls` 的指纹 URL、注入脚本、失败可重试 |
-| `entries/*.js` | 按页入口（list/home/map/about/lightbox）：打包对应页面模块并注册到 `window.__MimoEntries` |
-| `lightbox-boot.js` | 灯箱懒启动：首次点击/`?p=` 深链时 fetch 骨架页、加载灯箱入口并重放点击；失败重试 |
+| `entries/*.js` | 按页/按需入口（list/home/map/about/lightbox，以及灯箱内按需的 lightbox-analysis/lightbox-bird）：打包对应模块并注册到 `window.__MimoEntries` |
+| `lightbox-boot.js` | 灯箱懒启动：首次点击/`?p=` 深链时并行加载灯箱样式、fetch 骨架页、加载灯箱入口并重放点击；失败重试 |
 | `lightbox-bridge.js` | SPA 导航关闭灯箱的薄桥（避免静态 import 把灯箱入口拉回核心 bundle；关闭函数经 window 注册——核心与灯箱入口各自打包本模块，模块级变量互不相通） |
 | `gallery-filter-params.js` | 筛选 URL 参数键单源（核心 bundle 与 list 入口共用） |
-| `masonry.js` | 网格引擎：整组行计划与完整页面高度、首屏可见窗口 + 下拉逐行补载（刷新恢复只揭示视口行、所有补行走串行队列一次建立一行、已渲染行保留）、自然行高布局（`rowHeight()` 唯一公式）、档位判定（CSS `--layout-tier`/`--layout-tier-exit` 单源 + 高度变化补行）、resize 重排（同档缩放 / 跨档 FLIP + 锚点补偿）、筛选重启（`restartMasonryGrid`）、`?p=` 深链直接渲染目标行、缺宽高照片 load 后按自然比例自愈 |
+| `masonry.js` | 网格引擎：整组行计划与完整页面高度、首屏可见窗口 + 下拉逐行补载（刷新恢复只揭示视口行、所有补行走串行队列一次建立一行、已渲染行保留）、自然行高布局（数学部分见 `masonry-layout.js`）、档位判定（CSS `--layout-tier`/`--layout-tier-exit` 单源 + 高度变化补行）、resize 重排（同档缩放 / 跨档 FLIP + 锚点补偿）、筛选重启（`restartMasonryGrid`）、`?p=` 深链直接渲染目标行、缺宽高照片 load 后按自然比例自愈 |
+| `masonry-layout.js` | 瀑布流排版纯函数（零 DOM）：`rowHeight`/`getTargetRowHeight`/`partitionRows`/`shouldFillLastRow`/`planRowHeight`/`rowCellAbsorbs`/`rowCellWidth`/`isSquareRatio` |
 | `gallery-filter.js` | 全部作品筛选：四组胶囊、URL 同步（pushState）、按窗口重启 |
 | `footprint-map.js` | 足迹世界地图：等距圆柱投影、省/国区块、点迹/弹层/懒加载；三份几何数据并行拉取、失败分别降级 |
 | `footprint-map-data.js` | 地图几何与省/国名数据 fetch/记忆化 |
@@ -461,10 +464,13 @@ url = "https://example.com/source"
 | `lightbox-swipe.js` | 触屏水平滑动切图 |
 | `lightbox-drawer.js` | 窄屏底部抽屉：展开/滚动模型、触底箭头重判与自动滚底；全屏中手势/重算挂起、退出重算 |
 | `lightbox-meta.js` | 灯箱元信息行渲染 |
-| `lightbox-analysis.js` | 分析结果拉取与图表渲染 |
+| `lightbox-analysis.js` | 分析数据拉取/缓存/schema 校验/代次守卫与渲染编排（独立 entry，首次展开分析才加载；URL/预取口径见 data 模块） |
+| `lightbox-charts-paint.js` | 图表绘制层（纯渲染）：曲线派生、直方图/区域尺/色卡/饱和度/色相 SVG 绘制与补间 |
+| `lightbox-analysis-data.js` | 分析结果 URL 与预取（只拉 JSON、不加载渲染器；渲染器同样用其 URL 口径） |
 | `lightbox-analysis-control.js` | 分析区开合与触发行；桌面收起居中补偿经共享 helper |
+| `lightbox-analysis-help.js` | 图表说明气泡：问号按钮开合、fixed 定位与视口钳制、滚动/resize 跟随、Esc 与外部点击收起 |
 | `lightbox-panel-comp.js` | 灯箱详情区收起居中补偿（图像分析与觀鳥圖鑑共用：冻结 is-fit、transform 下滑、翻转残余补偿） |
-| `lightbox-bird.js` | 觀鳥圖鑑：species 查表填充分类/分布/棲息/習性/資料來源、缺资料空状态、默认收起与开合、抽屉刷新 |
+| `lightbox-bird.js` | 觀鳥圖鑑（独立 entry，首次遇到鸟种照片才加载）：species 查表填充分类/分布/棲息/習性/資料來源、缺资料空状态、默认收起与开合、抽屉刷新 |
 | `lazy-load.js` | 图片懒加载（data-src 模式） |
 | `header-scroll.js` | 滚动时 header 背景切换 |
 | `mobile-nav.js` | 移动端导航：汉堡菜单切换 |
@@ -498,13 +504,13 @@ url = "https://example.com/source"
     copyrightText = ""                     # 自定义页脚版权（支持 HTML）
     imageCDN = "https://cdn.example.com"   # 图床前缀
     enableServiceWorker = true
-    enableInstantPage = false              # SPA 已自行 fetch；SW NetworkFirst 使预取无法复用，站点关闭
     carouselCount = 6                      # 首页轮播精选图数量（1–12）
     carouselInterval = 5000                # 轮播自动播放间隔（毫秒；0 禁用，其余最小 1200）
     lightboxAutoplay = 5000                # 灯箱自动播放间隔（毫秒；0 禁用并隐藏按钮；默认关闭）
     yearMergeBefore = 2024                 # 早于此年的年份合并为一档（如 2024 → 「2024 前」，即 2023 及更早；0 = 不合并）
     jsonldPhotoLimit = 24                  # 列表页 JSON-LD 最多输出的照片条数（0 = 不限；EXIF 明细不进 JSON-LD）
     feedCount = 20                         # RSS 最近发布作品条数
+    enableFooterRss = true                 # 页脚版权行末尾「·RSS」订阅入口（false 隐藏）
     categoryCover = "latest-landscape"     # 分类卡片封面：custom / latest-landscape
 
     # 瀑布流加载策略（首屏只揭示可见窗口，之后正常下拉逐行补载）
@@ -559,9 +565,10 @@ url = "https://example.com/source"
     bodyFont = "..."
     footerFont = "..."
     metaFont = "..."
-    # 字号标尺: H1 2.5 / H2 2 / H3 1.5 / lead 1.25 / body 1 / small 0.875 / meta 0.75（footer 与 small 同值）
-    # 变量: baseFontSize, sizeH1-H3, sizeLead, sizeBody, sizeSmall, sizeMeta, sizeFooter
-    # baseFontSize 注入 --base-font-size，由 _base.scss 的 html font-size 消费
+    # 基础字号：唯一开放配置的字号项；注入 --base-font-size，由 _base.scss 的 html font-size 消费
+    # 其余档位按固定倍率定义在 _base.scss 的 --size-*（H1 2.5 / H2 2 / H3 1.5 / lead 1.25 /
+    # body 1 / small 0.875 / meta 0.75，footer 与 small 同值），随基础字号等比缩放，不开放配置
+    baseFontSize = "16px"
 ```
 
 ---
@@ -576,8 +583,8 @@ url = "https://example.com/source"
 
 - `head.html` 包含 meta description、canonical、Open Graph（`og:*`）、Twitter Card；SPA 导航后 `page-transition.js` 从新页面 head 同步这些页面级标签（canonical/OG/Twitter/description/RSS alternate），字体/样式/站点级 JSON-LD 不动
 - OG/Twitter 图片：页面 `.Params.cover` 优先；无 cover 的首页/全部作品/系列/足迹/关于回退最新精选（无则最新作品）
-- RSS 只保留首页摄影 feed（`/index.xml`）；section 输出设为仅 HTML，不再生成空的 `/section/index.xml` 与 `rel=alternate`
-- 订阅源每张作品一条、按 `published`（缺失回退 `time`）倒序取最近 `feedCount` 条；`guid` 用作品 `src`（稳定唯一），链接指向灯箱深链 `/gallery/?p=<slug>`——补发旧拍摄日期的作品也会成为新条目
+- RSS 只保留首页摄影 feed（`/index.xml`）；section 输出设为仅 HTML，不再生成空的 `/section/index.xml` 与 `rel=alternate`；页脚版权行末尾以「·RSS」链接指向该 feed（`params.enableFooterRss` 开关，文案与分隔符走 i18n）
+- 订阅源每张作品一条、按 `published`（缺失回退 `time`）倒序取最近 `feedCount` 条；`guid` 用作品 `src`（稳定唯一），链接指向灯箱深链 `/gallery/?p=<slug>`——补发旧拍摄日期的作品也会成为新条目；描述文本给出「地點 · 日期 · 焦距 · 光圈 · 快門 · 感光度」并另起一行附「來源：」+ 同一深链（读者端通常只渲染描述、看不到 item link）
 - sitemap 由 Hugo 自动生成
 
 ---

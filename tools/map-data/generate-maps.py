@@ -6,7 +6,9 @@
   下载源 GeoJSON（优先 jsDelivr CDN 镜像；缓存于本目录 vendor/，不入库）
   → Douglas-Peucker 简化（容差逐级加强直到体积达标）
   → 量化成整数对（陆地 0.05° = ×20；省界 0.005° = ×200，
-    口径写入文件头 {quant, data} 由渲染端还原）→ 删除连续重复点 → 输出静态 JSON。
+    口径写入文件头 {quant, delta, data} 由渲染端还原）→ 删除连续重复点
+  → 增量编码（首点绝对值、其余存相邻差值，坐标点集不变、体积约减半；
+    渲染端逐点累加还原，2026-11-15）→ 输出静态 JSON。
 
 用法：python tools/map-data/generate-maps.py
       python tools/map-data/generate-maps.py --names-only  # 只刷新 map-names.js
@@ -33,7 +35,9 @@ SOURCES = {
         "cache": "ne_10m_land.geojson",
         "out": "land-10m.json",
         "quant": 20,
-        "max_bytes": 350 * 1024,
+        # 增量编码后同容差只需约 166KB；上限压到 200KB 以保持原 0.08 容差
+        # （不因编码变紧凑而自动选更细容差、悄悄改变渲染几何，2026-11-15）
+        "max_bytes": 200 * 1024,
         "tolerances": [0.01, 0.015, 0.02, 0.03, 0.05, 0.08, 0.12, 0.18, 0.25],
     },
     "provinces": {
@@ -201,6 +205,23 @@ def encode(features, tolerance, quant):
     return polys
 
 
+def delta_ring(ring):
+    """增量编码：首点存绝对值、其余存相对前一点的差值。量化点集不变，
+    渲染端累加还原；小整数差值让 JSON 文本与 gzip 都显著变小（2026-11-15）"""
+    out = [ring[0]]
+    for i in range(1, len(ring)):
+        out.append([ring[i][0] - ring[i - 1][0], ring[i][1] - ring[i - 1][1]])
+    return out
+
+
+def delta_polys(polys):
+    return [[delta_ring(r) for r in rings] for rings in polys]
+
+
+def delta_named(by_name):
+    return {k: delta_polys(v) for k, v in by_name.items()}
+
+
 def encode_provinces(features, tolerance, quant):
     """省界专用：按省名输出 {省名: 环数组}，主地图取全部省合并绘制"""
     by_province = {}
@@ -276,7 +297,10 @@ def main():
                 out = by_name
             else:
                 out = encode(features, tol, cfg["quant"])
-            data = out if name == "land" else {"quant": cfg["quant"], "data": out}
+            # 三份数据统一为 {quant, delta, data}（land 也包一层，渲染端统一解码；
+            # 旧格式仍兼容，见 footprint-map.js 的归一化）
+            body = delta_polys(out) if name == "land" else delta_named(out)
+            data = {"quant": cfg["quant"], "delta": 1, "data": body}
             payload = json.dumps(data, separators=(",", ":"), ensure_ascii=False)
             nbytes = len(payload.encode("utf-8"))
             count = len(out)

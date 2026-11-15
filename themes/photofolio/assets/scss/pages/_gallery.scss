@@ -221,7 +221,7 @@ img.photo-img {
     max-width: none;
 }
 
-/* 悬停信息层：底部渐变遮罩 + 标题/焦距·光圈两行小字——仅悬停显示
+/* 悬停信息层：底部渐变遮罩 + 标题/地点·日期两行小字——仅悬停显示
    （hover:hover 门禁防触屏粘性 hover 闪烁；触屏详情由灯箱承担）；
    渐变与文字色走 :root token（见 --photo-hover-overlay 等），
    图片相关区域不随明暗主题切换；为 wrapper 子元素，点击仍走

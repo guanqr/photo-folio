@@ -1,4 +1,4 @@
-@use "../base/base" as *;
+﻿@use "../base/primitives" as *;
 
 /* ===== Lightbox 分析图表（影調 / 色卡 / 飽和度 / 色相）与故事 ===== */
 
@@ -281,8 +281,12 @@
     text-overflow: ellipsis;
 }
 
-/* 作品背后的故事 / 直方图 等区块标题（与 EXIF 标签同款：白色、同字号） */
+/* 作品背后的故事 / 直方图 等区块标题（与 EXIF 标签同款：白色、同字号）；
+   标题行是 flex：名称居中、右端留给说明问号（margin-left: auto 顶到右缘） */
 .lightbox-section-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
     font-family: var(--font-meta);
     font-size: var(--size-small);
     font-weight: 400;

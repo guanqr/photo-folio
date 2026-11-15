@@ -111,22 +111,29 @@ export function buildGrid(g, pr) {
 }
 
 /* 陆地 path：逐点等距圆柱映射；换日线断段守卫 */
-export function buildLand(g, polys, pr, quant = 20) {
+export function buildLand(g, polys, pr, quant = 20, delta = false) {
     for (const poly of polys) {
-        const d = poly.map((ring) => buildRingPath(ring, pr, quant)).join(' ');
+        const d = poly.map((ring) => buildRingPath(ring, pr, quant, delta)).join(' ');
         const path = document.createElementNS(SVG_NS, 'path');
         path.setAttribute('d', d);
         g.appendChild(path);
     }
 }
 
-function buildRingPath(ring, pr, quant = 20) {
+function buildRingPath(ring, pr, quant = 20, delta = false) {
     let d = '';
     let prev = null;
+    let accX = 0;
+    let accY = 0;
     // 数据为量化整数对（陆地/国家 20 单位/度 = 0.05°；省界 200 单位/度 = 0.005°，
-    // 见 tools/map-data/generate-maps.py），投影前按口径还原为度
+    // 见 tools/map-data/generate-maps.py），投影前按口径还原为度；
+    // delta=1 时首点绝对值、其余为相邻差值，此处逐点累加还原（2026-11-15）
     ring.forEach(([xq, yq], i) => {
-        const [x, y] = project(pr, xq / quant, yq / quant);
+        accX += xq;
+        accY += yq;
+        const vx = delta ? accX : xq;
+        const vy = delta ? accY : yq;
+        const [x, y] = project(pr, vx / quant, vy / quant);
         if (i === 0) {
             d += `M${round1(x)},${round1(y)}`;
         } else if (prev !== null && Math.abs(x - prev) > pr.W / 2) {
@@ -170,16 +177,16 @@ export function buildRegionLayer(g, data, pr, locationData, statsByName, nameOf,
                 ? fillTemplate(regionLabelFormat, { NAME: siteName, COUNT: countText })
                 : countText;
         }
-        buildRegionPath(g, polys, pr, data.quant, attrs);
+        buildRegionPath(g, polys, pr, data.quant, data.delta, attrs);
     }
 }
 
 /* 区块 path：一个地区（省/国）的全部多边形合并为单个 path（多环子路径空格连接），
    便于整块点击/悬停/选中 */
-function buildRegionPath(g, polys, pr, quant, attrs) {
+function buildRegionPath(g, polys, pr, quant, delta, attrs) {
     let d = '';
     for (const poly of polys) {
-        d += poly.map((ring) => buildRingPath(ring, pr, quant)).join(' ');
+        d += poly.map((ring) => buildRingPath(ring, pr, quant, delta)).join(' ');
     }
     const path = document.createElementNS(SVG_NS, 'path');
     path.setAttribute('d', d);
@@ -204,17 +211,23 @@ export function computeBounds(points, provData, activeNames, nameOf) {
     };
     for (const p of points) extend(p.lng, p.lat);
 
-    const extendRings = (polys, quant) => {
+    const extendRings = (polys, quant, delta) => {
         for (const poly of polys) {
             for (const ring of poly) {
-                for (const [xq, yq] of ring) extend(xq / quant, yq / quant);
+                let ax = 0;
+                let ay = 0;
+                for (const [xq, yq] of ring) {
+                    ax += xq;
+                    ay += yq;
+                    extend((delta ? ax : xq) / quant, (delta ? ay : yq) / quant);
+                }
             }
         }
     };
     if (provData) {
         for (const [key, polys] of Object.entries(provData.data)) {
             const siteName = nameOf(key);
-            if (siteName && activeNames.has(siteName)) extendRings(polys, provData.quant);
+            if (siteName && activeNames.has(siteName)) extendRings(polys, provData.quant, provData.delta);
         }
     }
     return { minLng, maxLng, minLat, maxLat };

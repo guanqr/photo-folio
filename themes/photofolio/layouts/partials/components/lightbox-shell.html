@@ -1,4 +1,4 @@
-    {{- /* 构建期校验 photo.toml 的 species 引用、bird_series 匹配与保育等级 i18n
+﻿    {{- /* 构建期校验 photo.toml 的 species 引用、bird_series 匹配与保育等级 i18n
            （页面无关，缓存一次；返回值提供等级文案与系列名） */ -}}
     {{- $birdRegistry := partialCached "utils/bird-registry.html" "birds" "birds" -}}
     {{/* Lightbox 全局容器（dialog 语义：读屏器视作模态对话框、背景 inert 由 JS 管理） */}}
@@ -11,48 +11,7 @@
         <div class="lightbox-autoplay-progress" id="lightbox-autoplay-progress" aria-hidden="true">
             <span class="lightbox-autoplay-progress-fill"></span>
         </div>
-        <div class="lightbox-topbar">
-            {{/* 当前照片编号（左上角，与播放按钮同一垂直中线）：格式与无障碍
-                标签均走 i18n，模板传入哨兵占位，由 lightbox-counter.js 替换数值 */}}
-            <span class="lightbox-counter" id="lightbox-counter"
-                data-format='{{ i18n "lightbox_counter" (dict "Current" "%CUR%" "Total" "%TOTAL%") }}'
-                data-label-format='{{ i18n "lightbox_counter_label" (dict "Current" "%CUR%" "Total" "%TOTAL%") }}'></span>
-            {{/* 顶栏右侧按钮组：flex 自然排布（0.5em 间距），全屏隐藏放大镜后
-                其余按钮自动补位——不再按彼此宽度累加 right 偏移 */}}
-            <div class="lightbox-topbar-actions">
-                {{/* 自动播放开关（默认关闭；集合 ≥2 且间隔 >0 时由 JS 显示）——
-                    play/pause 图标并置、aria-pressed 同步状态 */}}
-                <button class="lightbox-autoplay" id="lightbox-autoplay" type="button" hidden
-                    aria-label="{{ i18n "lightbox_play" }}" aria-pressed="false"
-                    data-play-label="{{ i18n "lightbox_play" }}"
-                    data-pause-label="{{ i18n "lightbox_pause" }}"
-                    data-autoplay-ms="{{ site.Params.lightboxAutoplay }}">
-                    <span class="lightbox-autoplay-play">{{ partial "utils/icon.html" (dict "name" "play") }}</span>
-                    <span class="lightbox-autoplay-pause">{{ partial "utils/icon.html" (dict "name" "pause") }}</span>
-                </button>
-                {{/* 全屏（沉浸）开关：隐藏底部缩略图条与信息面板，只留主图、编号、
-                    顶栏按钮与左右箭头；展开/收拢图标并置、aria-pressed 同步状态 */}}
-                <button class="lightbox-fullscreen" id="lightbox-fullscreen" type="button"
-                    aria-label="{{ i18n "lightbox_fullscreen" }}" aria-pressed="false"
-                    data-enter-label="{{ i18n "lightbox_fullscreen" }}"
-                    data-exit-label="{{ i18n "lightbox_fullscreen_exit" }}">
-                    <span class="lightbox-fullscreen-enter">{{ partial "utils/icon.html" (dict "name" "fullscreen") }}</span>
-                    <span class="lightbox-fullscreen-exit">{{ partial "utils/icon.html" (dict "name" "fullscreen_exit") }}</span>
-                </button>
-                {{/* 主图缩放（放大镜）：默认放大到 2× 并隐藏信息面板/缩略图条；
-                    滚轮、双指捏合可继续在 1×–4× 间缩放，缩放后可拖动平移 */}}
-                <button class="lightbox-magnify" id="lightbox-magnify" type="button"
-                    aria-label="{{ i18n "lightbox_zoom" }}" aria-pressed="false"
-                    data-enter-label="{{ i18n "lightbox_zoom" }}"
-                    data-exit-label="{{ i18n "lightbox_zoom_exit" }}">
-                    <span class="lightbox-magnify-in">{{ partial "utils/icon.html" (dict "name" "zoom_in") }}</span>
-                    <span class="lightbox-magnify-out">{{ partial "utils/icon.html" (dict "name" "zoom_out") }}</span>
-                </button>
-                <button class="lightbox-close" id="lightbox-close" aria-label="{{ i18n "close" }}">
-                    {{ partial "utils/icon.html" (dict "name" "x") }}
-                </button>
-            </div>
-        </div>
+        {{ partial "components/lightbox-topbar.html" . }}
         <div class="lightbox-content">
             <div class="lightbox-main">
                 <div class="lightbox-img-area">
@@ -68,227 +27,10 @@
                         <div class="lightbox-tags-inner" id="lightbox-tags-inner"></div>
                     </div>
                     <div class="lightbox-panel-details" id="lightbox-panel-details">
-                        {{ if $lbCfg.meta }}
-                        <div class="lightbox-meta" id="lightbox-meta">
-                            <div class="lightbox-meta-group" id="lightbox-meta-place">
-                                <span class="icon">{{ partial "utils/icon.html" (dict "name" "location") }}</span>
-                                <span class="lightbox-meta-label">{{ i18n "lightbox_place" }}</span>
-                                <span class="lightbox-meta-text"></span>
-                            </div>
-                            <div class="lightbox-meta-group" id="lightbox-meta-date">
-                                <span class="icon">{{ partial "utils/icon.html" (dict "name" "calendar") }}</span>
-                                <span class="lightbox-meta-label">{{ i18n "lightbox_date" }}</span>
-                                <span class="lightbox-meta-text"></span>
-                            </div>
-                        </div>
-                        {{ end }}
-                        {{ if $lbCfg.exif }}
-                        <ul class="lightbox-exif" id="lightbox-exif">
-                            <li data-exif-key="camera" data-missing="{{ i18n "exif_missing" }}" data-missing-strike="true">
-                                <span class="exif-icon">{{ partial "utils/icon.html" (dict "name" "camera") }}</span>
-                                <span class="exif-label">{{ i18n "exif_device" }}</span>
-                                <span class="exif-value"></span>
-                            </li>
-                            <li data-exif-key="lens" data-missing="{{ i18n "exif_na" }}">
-                                <span class="exif-icon">{{ partial "utils/icon.html" (dict "name" "lens") }}</span>
-                                <span class="exif-label">{{ i18n "exif_lens" }}</span>
-                                <span class="exif-value"></span>
-                            </li>
-                            <li data-exif-key="focus" data-format="{{ i18n "exif_focus_value" (dict "Value" "%VALUE%") }}">
-                                <span class="exif-icon">{{ partial "utils/icon.html" (dict "name" "focal") }}</span>
-                                <span class="exif-label">{{ i18n "exif_focus" }}</span>
-                                <span class="exif-value"></span>
-                            </li>
-                            <li data-exif-key="aperture" data-format="{{ i18n "exif_aperture_value" (dict "Value" "%VALUE%") }}">
-                                <span class="exif-icon">{{ partial "utils/icon.html" (dict "name" "aperture") }}</span>
-                                <span class="exif-label">{{ i18n "exif_aperture" }}</span>
-                                <span class="exif-value"></span>
-                            </li>
-                            <li data-exif-key="shutter" data-format="{{ i18n "exif_shutter_value" (dict "Value" "%VALUE%") }}">
-                                <span class="exif-icon">{{ partial "utils/icon.html" (dict "name" "shutter") }}</span>
-                                <span class="exif-label">{{ i18n "exif_shutter" }}</span>
-                                <span class="exif-value"></span>
-                            </li>
-                            <li data-exif-key="iso" data-format="{{ i18n "exif_iso_value" (dict "Value" "%VALUE%") }}">
-                                <span class="exif-icon">{{ partial "utils/icon.html" (dict "name" "iso") }}</span>
-                                <span class="exif-label">{{ i18n "exif_iso" }}</span>
-                                <span class="exif-value"></span>
-                            </li>
-                        </ul>
-                        {{ end }}
-                        {{ $chartsAny := or $lbCfg.tonal $lbCfg.saturation $lbCfg.hue $lbCfg.palette }}
-                        {{ if $chartsAny }}
-                        {{/* 图像分析按需加载：EXIF 下方一行安静的文字触发，点击展开下方
-                            分析区（加载期只显示转圈、不显示文字），收起按钮位于区域底部 */}}
-                        <button class="lightbox-analysis-trigger" id="lightbox-analysis-trigger" type="button"
-                            aria-expanded="false" aria-controls="lightbox-analysis">
-                            <span>{{ i18n "lightbox_analysis" }}</span>
-                            {{ partial "utils/icon.html" (dict "name" "arrow_down" "variant" "thick") }}
-                        </button>
-                        {{/* inert 与 aria-hidden 并置：aria-hidden 是读屏语义、inert 阻止焦点——
-                            收起按钮点击后仍持焦点时若只挂 aria-hidden，焦点留在隐藏子树里
-                            （Chrome 报警告并阻断隐藏）；inert 使浏览器自动移出焦点。
-                            JS 开合时同步切换（setOpen/reset） */}}
-                        <div class="lightbox-analysis" id="lightbox-analysis" aria-hidden="true" inert>
-                            <div class="lightbox-charts" id="lightbox-charts">
-                        {{ end }}
-                        {{ if $lbCfg.tonal }}
-                        <div class="lightbox-tonal-wrap" id="lightbox-tonal-wrap"
-                            data-key-prefixes="{{ i18n "tonal_key_low_prefix" }}|{{ i18n "tonal_mid_prefix" }}|{{ i18n "tonal_key_high_prefix" }}"
-                            data-separator="{{ i18n "list_separator" }}"
-                            data-frac-format="{{ i18n "tonal_frac_line" (dict "ShadowName" "%SHADOW_NAME%" "Shadow" "%SHADOW%" "MidName" "%MID_NAME%" "Mid" "%MID%" "HighName" "%HIGH_NAME%" "High" "%HIGH%") }}"
-                            data-mid-prefix="{{ i18n "tonal_mid_prefix" }}"
-                            data-range-names="{{ i18n "tonal_range_short" }}|{{ i18n "tonal_range_mid" }}|{{ i18n "tonal_range_long" }}"
-                            data-zone-names="{{ i18n "tonal_zone_shadow" }}|{{ i18n "tonal_zone_mid" }}|{{ i18n "tonal_zone_high" }}"
-                            data-clip-shadow="{{ i18n "tonal_clip_shadow" }}"
-                            data-clip-high="{{ i18n "tonal_clip_high" }}"
-                            data-dr-unit="{{ i18n "tonal_dr_unit" }}"
-                            data-hist-legend="{{ i18n "hist_legend" }}">
-                            <h4 class="lightbox-section-title">
-                                <span>{{ i18n "lightbox_tonal" }}</span>
-                                <span class="lightbox-tonal-name" id="lightbox-tonal-name"></span>
-                            </h4>
-                            <p class="lightbox-chart-caption">{{ i18n "lightbox_histogram" }}</p>
-                            <svg class="lightbox-histogram" id="lightbox-histogram" viewBox="0 0 256 96" preserveAspectRatio="none" role="img" aria-label="{{ i18n "lightbox_histogram" }}"></svg>
-                            <div class="lightbox-hist-legend" id="lightbox-hist-legend"></div>
-                            <p class="lightbox-chart-caption">{{ i18n "tonal_zone_system" }}</p>
-                            <div class="lightbox-zone-strip" id="lightbox-zone-strip" role="img" aria-label="{{ i18n "tonal_zone_system" }}">
-                                <span class="lightbox-zone-bracket" id="lightbox-zone-bracket"></span>
-                            </div>
-                            <div class="lightbox-tone-ratio" id="lightbox-tone-ratio">
-                                <span class="lightbox-tone-ratio-seg" id="lightbox-tone-ratio-shadow"></span><span class="lightbox-tone-ratio-seg" id="lightbox-tone-ratio-mid"></span><span class="lightbox-tone-ratio-seg" id="lightbox-tone-ratio-high"></span>
-                            </div>
-                            <div class="lightbox-tonal-stats">
-                                <span id="lightbox-tone-frac-text"></span>
-                                <span class="lightbox-tonal-stat"><span class="lightbox-tonal-stat-label">{{ i18n "tonal_dr" }}</span><span class="lightbox-tonal-stat-value" id="lightbox-tonal-dr"></span></span>
-                                <span class="lightbox-tonal-stat"><span class="lightbox-tonal-stat-label">{{ i18n "tonal_median" }}</span><span class="lightbox-tonal-stat-value" id="lightbox-tonal-p50"></span></span>
-                            </div>
-                        </div>
-                        {{ end }}
-                        {{ if $lbCfg.palette }}
-                        <div class="lightbox-palette-wrap" id="lightbox-palette-wrap">
-                            <h4 class="lightbox-section-title">{{ i18n "lightbox_palette" }}</h4>
-                            <div class="lightbox-palette" id="lightbox-palette"></div>
-                        </div>
-                        {{ end }}
-                        {{ if $lbCfg.saturation }}
-                        <div class="lightbox-sat-wrap" id="lightbox-sat-wrap"
-                            data-sat-names="{{ i18n "sat_low" }}|{{ i18n "sat_mid" }}|{{ i18n "sat_high" }}">
-                            <h4 class="lightbox-section-title">
-                                <span>{{ i18n "lightbox_saturation" }}</span>
-                                <span class="lightbox-sat-name" id="lightbox-sat-name"></span>
-                            </h4>
-                            {{/* 虚线说明（与直方图标注同款）：虚线为饱和度均值标记 */}}
-                            <p class="lightbox-chart-caption">{{ i18n "sat_caption" }}</p>
-                            <svg class="lightbox-sat-hist" id="lightbox-sat-hist" viewBox="0 0 100 48" preserveAspectRatio="none" role="img" aria-label="{{ i18n "lightbox_saturation" }}"></svg>
-                            <div class="lightbox-sat-axis">
-                                <span>{{ i18n "sat_low" }}</span>
-                                <span>{{ i18n "sat_high" }}</span>
-                            </div>
-                        </div>
-                        {{ end }}
-                        {{ if $lbCfg.hue }}
-                        <div class="lightbox-hue-wrap" id="lightbox-hue-wrap"
-                            data-hue-names="{{ i18n "hue_names" }}"
-                            data-hue-gray="{{ i18n "hue_gray" }}">
-                            <h4 class="lightbox-section-title">
-                                <span>{{ i18n "lightbox_hue" }}</span>
-                                <span class="lightbox-hue-name" id="lightbox-hue-name"></span>
-                            </h4>
-                            {{/* 与饱和度说明行同款——窄屏双列并排时补足高度、图表与区块底部对齐 */}}
-                            <p class="lightbox-chart-caption">{{ i18n "hue_caption" }}</p>
-                            <svg class="lightbox-hue-hist" id="lightbox-hue-hist" viewBox="0 0 360 48" preserveAspectRatio="none" role="img" aria-label="{{ i18n "lightbox_hue" }}"></svg>
-                            <div class="lightbox-hue-axis" id="lightbox-hue-axis"></div>
-                        </div>
-                        {{ end }}
-                        {{ if $chartsAny }}
-                            {{/* 分析加载失败提示：构建期预渲染、lightbox-analysis.js 切换 hidden
-                                （成功路径隐藏、拉取失败路径显示） */}}
-                            {{ partial "components/empty-state.html" (dict "class" "lightbox-analysis-error" "id" "lightbox-analysis-error" "hidden" true "icon" "alert" "titleKey" "lightbox_analysis_failed") }}
-                            </div>
-                            <button class="lightbox-analysis-collapse" id="lightbox-analysis-collapse" type="button">
-                                <span>{{ i18n "lightbox_analysis_collapse" }}</span>
-                                {{ partial "utils/icon.html" (dict "name" "arrow_up" "variant" "thick") }}
-                            </button>
-                        </div>
-                        {{ end }}
-                        {{ if $lbCfg.story }}
-                        <div class="lightbox-story-wrap" id="lightbox-story-wrap">
-                            <div class="lightbox-story-inner">
-                                <h4 class="lightbox-section-title">{{ i18n "lightbox_story" }}</h4>
-                                <p class="lightbox-story" id="lightbox-story"></p>
-                            </div>
-                        </div>
-                        {{ end }}
-                        {{/* 觀鳥圖鑑：仅带 species 的照片显示；空 slot 恒为详情区末子块，
-                            让「末子块 auto 边距」居中规则无需改动（块隐藏时 slot 高度为 0） */}}
-                        <div class="lightbox-bird-slot" id="lightbox-bird-slot">
-                            <div class="lightbox-bird-slot-inner">
-                            <section class="lightbox-bird" id="lightbox-bird" hidden>
-                                <button class="lightbox-bird-trigger" id="lightbox-bird-trigger" type="button"
-                                    aria-expanded="false" aria-controls="lightbox-bird-body">
-                                    <span>{{ i18n "lightbox_bird_guide" }}</span>
-                                    {{ partial "utils/icon.html" (dict "name" "arrow_down" "variant" "thick") }}
-                                </button>
-                                <div class="lightbox-bird-body" id="lightbox-bird-body" aria-hidden="true" inert>
-                                    <div class="lightbox-bird-inner">
-                                        <div class="lightbox-bird-content" id="lightbox-bird-content">
-                                        {{/* 物种名作为图鉴标题：展开后才随内容出现；右侧为保育等级标签 */}}
-                                        <div class="lightbox-bird-heading">
-                                            <h4 class="lightbox-section-title lightbox-bird-name" id="lightbox-bird-name"></h4>
-                                            {{/* 保育等级文案由 bird-registry 按唯一等级清单生成（JSON），
-                                                 shell 不再逐级硬编码 data-label-* */}}
-                                            <span class="lightbox-bird-status" id="lightbox-bird-status" hidden
-                                                data-labels="{{ $birdRegistry.labels | jsonify }}"></span>
-                                        </div>
-                                        <dl class="lightbox-bird-taxonomy">
-                                            <div class="lightbox-bird-rank">
-                                                <dt>{{ i18n "lightbox_bird_rank_order" }}</dt>
-                                                <dd data-rank="order" data-format='{{ i18n "lightbox_bird_rank_format" (dict "Name" "%NAME%" "Latin" "%LATIN%") }}'></dd>
-                                            </div>
-                                            <div class="lightbox-bird-rank">
-                                                <dt>{{ i18n "lightbox_bird_rank_family" }}</dt>
-                                                <dd data-rank="family" data-format='{{ i18n "lightbox_bird_rank_format" (dict "Name" "%NAME%" "Latin" "%LATIN%") }}'></dd>
-                                            </div>
-                                            <div class="lightbox-bird-rank">
-                                                <dt>{{ i18n "lightbox_bird_rank_genus" }}</dt>
-                                                <dd data-rank="genus" data-format='{{ i18n "lightbox_bird_rank_format" (dict "Name" "%NAME%" "Latin" "%LATIN%") }}'></dd>
-                                            </div>
-                                            <div class="lightbox-bird-rank">
-                                                <dt>{{ i18n "lightbox_bird_rank_species" }}</dt>
-                                                <dd data-rank="species" data-format='{{ i18n "lightbox_bird_rank_format" (dict "Name" "%NAME%" "Latin" "%LATIN%") }}'></dd>
-                                            </div>
-                                        </dl>
-                                        <div class="lightbox-bird-section">
-                                            <h4 class="lightbox-section-title">{{ i18n "lightbox_bird_distribution" }}</h4>
-                                            <p class="lightbox-bird-text" data-field="distribution"></p>
-                                        </div>
-                                        <div class="lightbox-bird-section">
-                                            <h4 class="lightbox-section-title">{{ i18n "lightbox_bird_habitat" }}</h4>
-                                            <p class="lightbox-bird-text" data-field="habitat"></p>
-                                        </div>
-                                        <div class="lightbox-bird-section">
-                                            <h4 class="lightbox-section-title">{{ i18n "lightbox_bird_habits" }}</h4>
-                                            <p class="lightbox-bird-text" data-field="habits"></p>
-                                        </div>
-                                        <p class="lightbox-bird-sources">
-                                            <span class="lightbox-bird-sources-label">{{ i18n "lightbox_bird_sources" }}</span>
-                                            <span class="lightbox-bird-source-list" id="lightbox-bird-sources"
-                                                data-separator="{{ i18n "list_separator" }}"></span>
-                                        </p>
-                                        </div>
-                                        {{/* 缺 species/资料：开关仍显示，展开显示与分析失败同款空状态卡 */}}
-                                        {{ partial "components/empty-state.html" (dict "class" "lightbox-bird-missing" "id" "lightbox-bird-missing" "hidden" true "icon" "alert" "titleKey" "lightbox_bird_missing") }}
-                                        {{/* 与图像分析一致：展开后触发行隐藏，收起入口移到内容最底部 */}}
-                                        <button class="lightbox-bird-collapse" id="lightbox-bird-collapse" type="button">
-                                            <span>{{ i18n "lightbox_bird_guide_collapse" }}</span>
-                                            {{ partial "utils/icon.html" (dict "name" "arrow_up" "variant" "thick") }}
-                                        </button>
-                                    </div>
-                                </div>
-                            </section>
-                            </div>
-                        </div>
+                        {{ partial "components/lightbox-meta-exif.html" (dict "lbCfg" $lbCfg) }}
+                        {{ partial "components/lightbox-analysis.html" (dict "lbCfg" $lbCfg) }}
+                        {{ partial "components/lightbox-story.html" (dict "lbCfg" $lbCfg) }}
+                        {{ partial "components/lightbox-bird.html" (dict "birdRegistry" $birdRegistry) }}
                     </div>
                     {{/* 窄屏详情滚动条：抽屉原生滚动条被手势模型隐藏，这里用覆盖层常显
                         位置指示；pointer-events none，不拦截抽屉手势 */}}
@@ -318,6 +60,9 @@
             data-strip-thumb-width="{{ site.Params.imageSizes.strip | default 240 }}" hidden>
             <div class="lightbox-strip-track" id="lightbox-strip-track"></div>
         </div>
+        {{/* 图表说明气泡：直接挂在灯箱根节点下、fixed 定位——分析区自身
+             overflow: hidden，气泡放在里面会被裁切；文本由按钮的 data-help 注入 */}}
+        <div class="lightbox-chart-help-pop" id="lightbox-chart-help-pop" aria-live="polite" hidden></div>
         {{/* 鸟种图鉴数据：随灯箱壳一次性载入（当前 3 个物种约几 KB），
              lightbox-bird.js 按照片的 species id 查找；jsonify 必须 safeJS */}}
         <script type="application/json" id="lightbox-birds-data">{{ with hugo.Data.birds }}{{ .bird | jsonify | safeJS }}{{ else }}[]{{ end }}</script>

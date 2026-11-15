@@ -1,0 +1,20 @@
+/* 灯箱专用样式表（懒加载）：与全站样式分离，首次启动灯箱时才由
+   lightbox-boot.js 注入（悬停/聚焦预启动会提前拉取，点击时通常已就绪）。
+   这里只 @use 灯箱组件；token 由主样式表在 :root 提供（运行时 var() 引用），
+   占位符/mixin 与主入口共用 base/primitives，不会重复输出公共样式（2026-11-15）。
+   组件顺序须与原先 main.scss 中保持一致，避免同特异性规则的先后顺序变化 */
+
+@use "base/primitives" as *;
+
+/* lightbox-core 骨架 → 图片区 → 元信息面板 → 缩略图条 → 全屏 → 缩放 →
+   分析区开合 → 觀鳥圖鑑 → 分析图表 → 图表说明气泡 */
+@use "components/lightbox-core";
+@use "components/lightbox-image";
+@use "components/lightbox-panel";
+@use "components/lightbox-strip";
+@use "components/lightbox-fullscreen";
+@use "components/lightbox-magnify";
+@use "components/lightbox-analysis-control";
+@use "components/lightbox-bird";
+@use "components/lightbox-charts";
+@use "components/lightbox-chart-help";

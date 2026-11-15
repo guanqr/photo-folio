@@ -1,0 +1,64 @@
+﻿@use "../base/primitives" as *;
+
+/* ===== 灯箱图表说明（问号按钮 + 气泡） ===== */
+/* 每个分析区块标题右端一个圆形问号（margin-left: auto 顶到右缘），图标盒
+   与标题同字号（--icon-md = 1em）、flex 居中，与文字等高对齐；点击由
+   lightbox-analysis-help.js 在灯箱根节点下弹出 fixed 气泡（2026-11-15） */
+.lightbox-chart-help {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: var(--icon-md);
+    height: var(--icon-md);
+    margin-left: auto;
+    font-size: inherit; /* button 默认 13.3px：不继承会与标题字号错开、图标偏小 */
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: color var(--transition-fade);
+
+    svg {
+        width: 100%;
+        height: 100%;
+    }
+
+    &:hover,
+    &[aria-expanded="true"] {
+        color: var(--color-accent);
+    }
+}
+
+/* 说明气泡：挂在灯箱根节点下（分析区自身 overflow: hidden，放区内会被裁切），
+   位置由 JS 按按钮矩形写入 left/top；pointer-events none 不遮挡图表与切图操作。
+   配色沿用灯箱固定的暗色语义变量（.lightbox 内已重映射） */
+.lightbox-chart-help-pop {
+    position: fixed;
+    z-index: var(--z-lightbox-pop);
+    max-width: 20em;
+    padding: var(--space-8) var(--space-12);
+    border: 0.0625em solid var(--color-border);
+    border-radius: 0.25em;
+    background: var(--color-bg-card);
+    color: var(--color-text-secondary);
+    font-family: var(--font-meta);
+    font-size: var(--size-small);
+    line-height: 1.6;
+    box-shadow: var(--shadow-pop);
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+    pointer-events: none;
+
+    &.is-open {
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lightbox-chart-help-pop {
+        transition: none;
+    }
+}

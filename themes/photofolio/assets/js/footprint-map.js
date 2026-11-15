@@ -187,9 +187,13 @@ async function build(root, points, locationData, statsByName) {
     ]);
     if (!root.isConnected || seq !== buildSeq) return;
 
-    let landPolys = null;
+    let landGeom = null;
     if (landRes.status === 'fulfilled') {
-        landPolys = landRes.value;
+        // 新格式为 {quant, delta, data}；SWR 缓存里的旧格式是裸多边形数组，
+        // 归一化后统一交给 buildLand（2026-11-15）
+        landGeom = Array.isArray(landRes.value)
+            ? { quant: 20, delta: false, data: landRes.value }
+            : landRes.value;
     } else {
         resetLandData();
         console.warn('[footprint-map] land geometry load failed', landRes.reason);
@@ -286,10 +290,10 @@ async function build(root, points, locationData, statsByName) {
     };
 
     // 陆地几何（数据已在投影前加载；失败仅降级为网格 + 点迹）
-    if (landPolys) {
+    if (landGeom) {
         const land = document.createElementNS(SVG_NS, 'g');
         land.setAttribute('class', 'fm-land');
-        buildLand(land, landPolys, pr);
+        buildLand(land, landGeom.data, pr, landGeom.quant, landGeom.delta);
         land.setAttribute('transform', matrixFrom(pr, state.view.pr));
         state.view.land = land;
         state.view.landPr = pr;

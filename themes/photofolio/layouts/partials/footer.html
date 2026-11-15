@@ -1,11 +1,23 @@
 <footer class="site-footer">
     <div class="footer-inner">
         <p class="copyright-text">
-            {{ with .Site.Params.copyrightText }}
+            {{- with .Site.Params.copyrightText -}}
                 {{ . | safeHTML }}
-            {{ else }}
+            {{- else -}}
                 &copy; {{ now.Year }} {{ $.Site.Params.Author.Name }}
-            {{ end }}
+            {{- end -}}
+            {{- /* 订阅入口接在版权行末尾（分隔符走 i18n，与其余并列文本同源）。
+                   开关用 isset 判断缺省值：default 会把合法的 false 当成无值，
+                   因此未配置时视为开启（2026-11-15） */ -}}
+            {{- $footerRss := true -}}
+            {{- if isset .Site.Params "enablefooterrss" -}}
+                {{- $footerRss = index .Site.Params "enablefooterrss" -}}
+            {{- end -}}
+            {{- if $footerRss -}}
+                {{- with site.Home.OutputFormats.Get "rss" -}}
+                    {{ i18n "footer_separator" }}<a href="{{ .RelPermalink }}">{{ i18n "footer_rss" }}</a>
+                {{- end -}}
+            {{- end -}}
         </p>
     </div>
 </footer>

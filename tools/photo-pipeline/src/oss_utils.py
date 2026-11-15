@@ -1,10 +1,15 @@
 # -*- coding: utf-8 -*-
 """阿里云 OSS 上传工具"""
 import os
+import threading
+from concurrent.futures import ThreadPoolExecutor
 
 # 照片 URL 带内容哈希（?v=，photo.toml 的 hash 字段）：对象内容不可变，可放心
 # 设一年 immutable 长缓存；同名换图会生成新 URL，不依赖短 TTL 兜底（2026-10-26）
 CACHE_CONTROL = "public, max-age=31536000, immutable"
+
+# create_bucket_from_config 读到的凭证：供 worker 线程静默新建 Bucket 实例
+_CREDENTIALS = None
 
 
 def upload_to_oss(local_path, object_name, bucket):
@@ -15,7 +20,7 @@ def upload_to_oss(local_path, object_name, bucket):
     return f"https://{bucket.bucket_name}.{bucket.endpoint.replace('https://', '')}/{object_name}"
 
 
-def sync_new_photos(output_dir, bucket, oss_prefix="images/photos/", force_files=None):
+def sync_new_photos(output_dir, bucket, oss_prefix="images/photos/", force_files=None, max_workers=4):
     """
     将 output_dir 中的图片上传到 OSS。
 
@@ -23,6 +28,7 @@ def sync_new_photos(output_dir, bucket, oss_prefix="images/photos/", force_files
     - force_files 中的文件（本次实际处理过的）始终上传覆盖
     - 不在 force_files 中但 OSS 上不存在的文件也会上传（首次上传）
     - 其他文件跳过（未变化）
+    - 待上传文件按 max_workers 并发（默认 4；1 = 串行），上传结果仍按文件名顺序打印
     """
     if not os.path.exists(output_dir):
         return
@@ -42,7 +48,8 @@ def sync_new_photos(output_dir, bucket, oss_prefix="images/photos/", force_files
         else:
             break
 
-    uploaded = 0
+    # 先收集待上传清单（列表/跳过判定仍在主线程完成，输出顺序与文件名一致）
+    tasks = []
     skipped = 0
     for f in sorted(os.listdir(output_dir)):
         if not f.lower().endswith((".jpg", ".jpeg")):
@@ -56,13 +63,45 @@ def sync_new_photos(output_dir, bucket, oss_prefix="images/photos/", force_files
             skipped += 1
             continue
 
-        url = upload_to_oss(local_path, object_name, bucket)
-        status = "🔄 已更新" if object_name in existing else "☁️  已上传"
+        tasks.append((f, object_name, local_path, object_name in existing))
+
+    if not tasks:
+        if skipped:
+            print(f"☁️  OSS 上传 0 张，跳过 {skipped} 张（未变化）")
+        return
+
+    # 并发上传（网络等待为主）：oss2.Bucket 内部复用 requests.Session，
+    # 多线程共享同一实例不保证安全——每个 worker 用自己线程的 Bucket
+    # （同一凭证新建，创建成本可忽略）；单任务或显式 max_workers<=1 时
+    # 直接在主线程上传，保持原有串行语义（2026-11-15）
+    local = threading.local()
+
+    def worker_bucket():
+        b = getattr(local, "bucket", None)
+        if b is None:
+            b = create_bucket() or bucket
+            local.bucket = b
+        return b
+
+    def do_upload(task):
+        f, object_name, local_path, _ = task
+        return f, object_name, upload_to_oss(local_path, object_name, worker_bucket())
+
+    workers = min(max_workers, len(tasks))
+    if workers <= 1:
+        results = [do_upload(t) for t in tasks]
+    else:
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = [pool.submit(do_upload, t) for t in tasks]
+            results = [fut.result() for fut in futures]
+
+    uploaded = 0
+    for index, (f, object_name, url) in enumerate(results):
+        status = "🔄 已更新" if tasks[index][3] else "☁️  已上传"
         print(f"{status}：{f}  →  {url}")
         uploaded += 1
 
-    if uploaded or skipped:
-        print(f"☁️  OSS 上传 {uploaded} 张，跳过 {skipped} 张（未变化）")
+    print(f"☁️  OSS 上传 {uploaded} 张，跳过 {skipped} 张（未变化）")
 
 
 def create_bucket_from_config():
@@ -99,5 +138,23 @@ def create_bucket_from_config():
         print("   请复制 oss_config.example.json 为 oss_config.json 并填写你的凭证")
         return None
 
+    # 凭证留一份供 worker 线程新建独立 Bucket（见 sync_new_photos）
+    global _CREDENTIALS
+    _CREDENTIALS = (access_key_id, access_key_secret, endpoint, bucket_name)
+
     auth = oss2.Auth(access_key_id, access_key_secret)
     return oss2.Bucket(auth, endpoint, bucket_name)
+
+
+def create_bucket():
+    """按已读取的凭证新建 Bucket 实例（并发上传的每线程副本用）。
+
+    未配置凭证（create_bucket_from_config 未成功）时返回 None；
+    调用方回退共享实例。
+    """
+    if not _CREDENTIALS:
+        return None
+    import oss2
+
+    access_key_id, access_key_secret, endpoint, bucket_name = _CREDENTIALS
+    return oss2.Bucket(oss2.Auth(access_key_id, access_key_secret), endpoint, bucket_name)

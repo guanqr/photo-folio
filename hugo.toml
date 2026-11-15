@@ -57,6 +57,8 @@ defaultContentLanguage = "zh-hant"
 
     # 摄影作品订阅源（/index.xml，RSS 2.0）：最近发布的作品条数（按发布时间倒序）
     feedCount = 20
+    # 页脚订阅入口：true 在版权行末尾接「· RSS」链接（指向 /index.xml），false 隐藏
+    enableFooterRss = true
 
     # 首页分类卡片封面策略（两种模式互斥）：
     #   custom           = 仅使用分类页 front matter 的 cover 自定义封面（无则卡片不带图）
@@ -70,11 +72,6 @@ defaultContentLanguage = "zh-hant"
 
     # 启用 Service Worker (仅在 hugo 构建生产环境时生效)
     enableServiceWorker = true
-
-    # instant.page 链接预取：SPA 已拦截点击自行 fetch，且 SW 对 HTML 走 NetworkFirst，
-    # 预取结果不会被 SPA 复用（悬停预取 + 点击 fetch 重复整页请求），故关闭；
-    # 保留开关以便未来 SPA 自带悬停预取后重新评估
-    enableInstantPage = false
 
     # 年份合并分界：早于此年份的年份合并为一档（如 2024 → 「2024 前」，即 2023 及更早；0 = 不合并）
     # 同时作用于全部作品页年份筛选与关于页「拍摄档案」年度走势
@@ -150,18 +147,11 @@ defaultContentLanguage = "zh-hant"
     footerFont = "Glyph Correction, LXGW WenKai TC"
     metaFont = "Glyph Correction, LXGW WenKai TC"
 
-    # 基础字号 (这些是纯数字+单位，不会触发 ZgotmplZ)
-    # 字号标尺：H1 2.5 / H2 2 / H3 1.5 / lead 1.25 / body 1 / small 0.875 / meta 0.75；
-    # footer 与 small 同值（合并重复档位，2026-11-14）
+    # 基础字号：唯一开放配置的字号项（纯数值+单位，避免 ZgotmplZ）。
+    # 其余档位（H1 2.5 / H2 2 / H3 1.5 / lead 1.25 / body 1 / small 0.875 /
+    # meta 0.75，footer 与 small 同值）按固定倍率定义在
+    # themes/photofolio/assets/scss/base/_base.scss 的 --size-*，随基础字号等比缩放
     baseFontSize = "16px"
-    sizeH1 = "2.5em"
-    sizeH2 = "2em"
-    sizeH3 = "1.5em"
-    sizeLead = "1.25em"
-    sizeBody = "1em"
-    sizeSmall = "0.875em"
-    sizeMeta = "0.75em"
-    sizeFooter = "0.875em"
 
 [menu]
     [[menu.main]]

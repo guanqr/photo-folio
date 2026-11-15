@@ -1,4 +1,4 @@
-@use "../base/base" as *;
+﻿@use "../base/primitives" as *;
 
 /* ===== Lightbox 分析区开合（触发行 / 容器 / 收起按钮） ===== */
 /* 图像分析按需加载：EXIF 下方一行安静的文字触发（灰色小字 + 下箭头，

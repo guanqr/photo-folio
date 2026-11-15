@@ -340,8 +340,7 @@ url = "https://example.com/source"
 | `params.feedCount` | 摄影作品订阅源（`/index.xml`）输出的作品条数（按发布时间倒序） |
 | `params.lightbox` | 灯箱信息区块开关：`meta` / `exif` / `palette` / `story` / `tonal`（影調，含合并直方图）/ `saturation`（飽和度分布）/ `hue`（色相分布）（缺省全开） |
 | `params.enableServiceWorker` | 启用 PWA Service Worker |
-| `params.enableInstantPage` | Instant.page 预加载开关（站点关闭：SPA 已自行 fetch，SW NetworkFirst 使预取无法复用） |
-| `params.typography` | 字体设置（fontLinks、字体名称、字号、本地字体注入） |
+| `params.typography` | 字体设置（fontLinks、字体名称、本地字体注入、基础字号 `baseFontSize`；其余字号档位按固定倍率写在 `_base.scss`，不开放配置） |
 | `params.galleryFilters` | 全部作品页筛选维度开关：`scope` / `year` / `location` / `category`（true 开启、false 关闭；模板缺省仅 year，站点当前开启 scope/year） |
 | `params.grid` | 瀑布流加载策略：`rowLoadRatio`（下一行至少多少比例进入视口后补载，默认 0.75，站点当前 0.5）；`lcpPreload`（首行前 N 张卡片在 HTML 直接写 src，默认 4，0 关闭）；首屏只揭示可见窗口内的行，不额外预载 |
 | `params.yearMergeBefore` | 年份合并分界：早于该年份的年份合并为一档，标签显示分界年本身（如 2024 → 「2024 前」，即 2023 及更早；0/缺省不合并），同时作用于全部作品页年份筛选与关于页「拍摄档案」年度走势 |

@@ -1,11 +1,12 @@
 // 约定：组件内部断点统一用 min-width（移动优先）；跨组件的全局窄屏覆盖收敛到 base/_responsive.scss
 // （max-width，最后引入保证优先级）。当前由外部 Dart Sass（标准版 Hugo）编译，模块用 @use 组织：
-// 共享变量/占位符/mixin 在 base/_base.scss，使用方 `@use "../base/base" as *;`；unquote 已改为
+// 共享占位符/mixin 在 base/_primitives.scss（两个样式入口共用），主入口统一
+// `@use "base/base"`（base 内部 @forward primitives）；unquote 已改为
 // string.unquote，无 LibSass 时代的 @import 弃用警告。
 // 目录分层（2026-10-17 对齐博客）：base 基础 / layout 布局 / pages 页面模块 /
 // components 交互部件；响应式覆盖虽在 base/ 但必须最后引入。
 
-// 1. 基础与变量 (必须最先引入；%pill / %reveal-entry 占位符也在此定义，供后续 @extend)
+// 1. 基础与变量 (必须最先引入；%pill / %reveal-entry 等占位符经 base 转发自 primitives)
 @use "base/base";
 @use "base/scrollbar";
 
@@ -21,17 +22,10 @@
 @use "pages/series";
 @use "pages/about";
 
-// 4. 交互与工具（lightbox 按部件拆分：core 骨架 → 图片区 → 元信息面板 →
-//    分析区开合 → 分析图表，%lightbox-ctrl/%chart-note 占位符随各自 partial 自含）
-@use "components/lightbox-core";
-@use "components/lightbox-image";
-@use "components/lightbox-panel";
-@use "components/lightbox-strip";
-@use "components/lightbox-fullscreen";
-@use "components/lightbox-magnify";
-@use "components/lightbox-analysis-control";
-@use "components/lightbox-bird";
-@use "components/lightbox-charts";
+// 4. 交互与工具
+// （灯箱组件已拆到 scss/lightbox.scss 单独打包：首次启动灯箱时才由
+//   lightbox-boot.js 注入，首访不再携带约 30KB 灯箱样式；占位符与
+//   mixin 两个入口共用 base/primitives，2026-11-15）
 @use "components/card-glow";
 @use "components/utils";
 

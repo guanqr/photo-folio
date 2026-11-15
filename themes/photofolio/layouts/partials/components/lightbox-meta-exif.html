@@ -1,0 +1,50 @@
+﻿{{- /* Lightbox 壳分块：由 lightbox-shell.html 调用（结构拆分，渲染结果不变；2026-11-15） */ -}}
+{{- $lbCfg := .lbCfg -}}
+                        {{ if $lbCfg.meta }}
+                        <div class="lightbox-meta" id="lightbox-meta">
+                            <div class="lightbox-meta-group" id="lightbox-meta-place">
+                                <span class="icon">{{ partial "utils/icon.html" (dict "name" "location") }}</span>
+                                <span class="lightbox-meta-label">{{ i18n "lightbox_place" }}</span>
+                                <span class="lightbox-meta-text"></span>
+                            </div>
+                            <div class="lightbox-meta-group" id="lightbox-meta-date">
+                                <span class="icon">{{ partial "utils/icon.html" (dict "name" "calendar") }}</span>
+                                <span class="lightbox-meta-label">{{ i18n "lightbox_date" }}</span>
+                                <span class="lightbox-meta-text"></span>
+                            </div>
+                        </div>
+                        {{ end }}
+                        {{ if $lbCfg.exif }}
+                        <ul class="lightbox-exif" id="lightbox-exif">
+                            <li data-exif-key="camera" data-missing="{{ i18n "exif_missing" }}" data-missing-strike="true">
+                                <span class="exif-icon">{{ partial "utils/icon.html" (dict "name" "camera") }}</span>
+                                <span class="exif-label">{{ i18n "exif_device" }}</span>
+                                <span class="exif-value"></span>
+                            </li>
+                            <li data-exif-key="lens" data-missing="{{ i18n "exif_na" }}">
+                                <span class="exif-icon">{{ partial "utils/icon.html" (dict "name" "lens") }}</span>
+                                <span class="exif-label">{{ i18n "exif_lens" }}</span>
+                                <span class="exif-value"></span>
+                            </li>
+                            <li data-exif-key="focus" data-format="{{ i18n "exif_focus_value" (dict "Value" "%VALUE%") }}">
+                                <span class="exif-icon">{{ partial "utils/icon.html" (dict "name" "focal") }}</span>
+                                <span class="exif-label">{{ i18n "exif_focus" }}</span>
+                                <span class="exif-value"></span>
+                            </li>
+                            <li data-exif-key="aperture" data-format="{{ i18n "exif_aperture_value" (dict "Value" "%VALUE%") }}">
+                                <span class="exif-icon">{{ partial "utils/icon.html" (dict "name" "aperture") }}</span>
+                                <span class="exif-label">{{ i18n "exif_aperture" }}</span>
+                                <span class="exif-value"></span>
+                            </li>
+                            <li data-exif-key="shutter" data-format="{{ i18n "exif_shutter_value" (dict "Value" "%VALUE%") }}">
+                                <span class="exif-icon">{{ partial "utils/icon.html" (dict "name" "shutter") }}</span>
+                                <span class="exif-label">{{ i18n "exif_shutter" }}</span>
+                                <span class="exif-value"></span>
+                            </li>
+                            <li data-exif-key="iso" data-format="{{ i18n "exif_iso_value" (dict "Value" "%VALUE%") }}">
+                                <span class="exif-icon">{{ partial "utils/icon.html" (dict "name" "iso") }}</span>
+                                <span class="exif-label">{{ i18n "exif_iso" }}</span>
+                                <span class="exif-value"></span>
+                            </li>
+                        </ul>
+                        {{ end }}

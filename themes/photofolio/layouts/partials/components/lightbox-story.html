@@ -1,0 +1,10 @@
+﻿{{- /* Lightbox 壳分块：由 lightbox-shell.html 调用（结构拆分，渲染结果不变；2026-11-15） */ -}}
+{{- $lbCfg := .lbCfg -}}
+                        {{ if $lbCfg.story }}
+                        <div class="lightbox-story-wrap" id="lightbox-story-wrap">
+                            <div class="lightbox-story-inner">
+                                <h4 class="lightbox-section-title">{{ i18n "lightbox_story" }}</h4>
+                                <p class="lightbox-story" id="lightbox-story"></p>
+                            </div>
+                        </div>
+                        {{ end }}

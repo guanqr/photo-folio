@@ -56,22 +56,10 @@
             {{ printf "%s: %s;" $f.var $stack | safeCSS }}
         {{ end }}
 
-        {{/* 字号比例表驱动（纯数值，直接输出） */}}
-        {{ $sizeVars := slice
-            (dict "param" "baseFontSize" "var" "--base-font-size" "default" "16px")
-            (dict "param" "sizeH1" "var" "--size-h1" "default" "2.5em")
-            (dict "param" "sizeH2" "var" "--size-h2" "default" "2em")
-            (dict "param" "sizeH3" "var" "--size-h3" "default" "1.5em")
-            (dict "param" "sizeLead" "var" "--size-lead" "default" "1.25em")
-            (dict "param" "sizeBody" "var" "--size-body" "default" "1em")
-            (dict "param" "sizeSmall" "var" "--size-small" "default" "0.875em")
-            (dict "param" "sizeMeta" "var" "--size-meta" "default" "0.75em")
-            (dict "param" "sizeFooter" "var" "--size-footer" "default" "0.875em")
-        }}
-        {{ range $s := $sizeVars }}
-            {{ with index $typo $s.param | default $s.default }}
-                {{ printf "%s: %s;" $s.var . | safeCSS }}
-            {{ end }}
+        {{/* 基础字号：唯一可配置的字号项；其余档位（--size-*）以固定倍率写在
+             _base.scss 的 :root，随本值等比缩放（2026-11-15 收口） */}}
+        {{ with $typo.baseFontSize | default "16px" }}
+            {{ printf "--base-font-size: %s;" . | safeCSS }}
         {{ end }}
     }
 </style>

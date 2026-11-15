@@ -1,4 +1,4 @@
-@use "../base/base" as *;
+﻿@use "../base/primitives" as *;
 
 /* ===== Lightbox 觀鳥圖鑑 ===== */
 /* slot 恒为详情区末子块（无鸟种时块 hidden、slot 高度 0）——保留详情区

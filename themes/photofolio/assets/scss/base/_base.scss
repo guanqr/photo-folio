@@ -1,4 +1,8 @@
-@use "sass:string";
+﻿@use "sass:string";
+
+/* 共享占位符与 mixin（%pill / %card-surface / 灯箱详情区 mixin 等）抽到 primitives：
+   灯箱样式表单独打包后两个入口共用同一份定义，不重复输出 CSS（2026-11-15） */
+@forward "primitives";
 
 /* ===== Reset & Base ===== */
 *, *::before, *::after {
@@ -188,6 +192,7 @@ body {
     --z-progress: 1005;      /* SPA 导航进度条（高于固定导航；导航会先关灯箱、不与灯箱叠层） */
     --z-lightbox: 9999;      /* 灯箱 */
     --z-lightbox-arrow: 10000; /* 灯箱箭头 */
+    --z-lightbox-pop: 10001; /* 灯箱图表说明气泡（高于箭头：气泡可能伸到箭头下方） */
     --z-skip-link: 10000;    /* 无障碍跳转链接 */
 
     --container-width: 87.5em;
@@ -211,6 +216,20 @@ body {
     --space-48: 3em;     /* 48px */
     --space-64: 4em;     /* 64px */
     --space-96: 6em;     /* 96px */
+
+    /* ═══ 字号标尺（唯一源头；倍率固定，不开放配置）═══
+       H1 2.5 / H2 2 / H3 1.5 / lead 1.25 / body 1 / small 0.875 / meta 0.75
+       （footer 与 small 同值）。em 随根字号 --base-font-size（hugo.toml 唯一
+       可配字号）等比缩放；展示级 3em/6em（轮播大屏标题、空状态图标、404 大字）
+       为仅有的例外，在使用处直接声明（2026-11-15） */
+    --size-h1: 2.5em;
+    --size-h2: 2em;
+    --size-h3: 1.5em;
+    --size-lead: 1.25em;
+    --size-body: 1em;
+    --size-small: 0.875em;
+    --size-meta: 0.75em;
+    --size-footer: 0.875em;
 
     /* ═══ 组件尺寸标尺（图标/控件）═══
        图标 0.75 / 0.875 / 1 / 1.25 / 1.5em 五档；控件 2.5 / 3em 两档
@@ -381,147 +400,6 @@ ul { list-style: none; }
     to { transform: rotate(360deg); }
 }
 
-/* ===== 共享占位符（须先于使用方定义；组件里用 @extend 引用） ===== */
-
-/* 胶囊几何基类：筛选按钮、轮播胶囊按钮、地图降级链接共用（边框色各自声明） */
-%pill {
-    border-style: solid;
-    border-width: 0.0625em;
-    border-radius: var(--radius-pill);
-}
-
-/* 卡片表面基类：卡片底色 + 细边框（圆角档/阴影/悬停由使用方按需声明） */
-%card-surface {
-    background: var(--color-bg-card);
-    border: 0.0625em solid var(--color-border);
-}
-
-/* 卡片悬停抬升：上移 + 阴影（抬升量与阴影 token 由使用方传入）。
-   边框高亮不再在此改 border-color：统一由 card-glow 以背景层绘制
-   （透明边框 + 光晕），否则高特异性 hover 规则会盖掉透明边框、
-   令部分卡片只剩整圈强调色、与照片卡亮度不一致（2026-11-14） */
-@mixin card-hover($lift, $shadow) {
-    transform: translateY($lift);
-    box-shadow: $shadow;
-}
-
-/* 幽灵胶囊基类：透明底 + 边框/文字基色；hover 强调描边（文字色由使用方覆盖） */
-%pill-ghost {
-    @extend %pill;
-    background: transparent;
-    border-color: var(--color-border);
-    color: var(--color-text-secondary);
-    transition: border-color var(--transition), color var(--transition-fade);
-
-    &:hover {
-        border-color: var(--color-accent-30);
-    }
-}
-
-/* 胶囊激活态：强调色填充 + 卡片色文字 */
-%pill-active {
-    background: var(--color-accent);
-    border-color: var(--color-accent);
-    color: var(--color-bg-card);
-}
-
-/* 滚动入场基类：初始隐藏并下移，揭示时淡入归位（masonry-item / category-card 共用） */
-%reveal-entry {
-    opacity: 0;
-    transform: translateY(1.5em);
-
-    &.is-revealed {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* 区块标题基类：字体栈/字重/颜色/过渡统一（home-section-title / page-others-title 共用，
-   字号与间距由使用方按 h1/h2 档位声明） */
-%section-heading {
-    font-family: var(--font-heading);
-    font-weight: 600;
-    color: var(--color-text);
-    transition: color var(--transition-fade);
-}
-
-/* 灯箱详情区通用触发行：图像分析与觀鳥圖鑑共用（两处曾逐条复制，任一处
-   调整会静默漂移；2026-11-03 审查收敛）。展开后边距/内边距/透明度一并
-   归零——border-box 下 max-height 无法压缩 padding。
-   用 mixin 而非 % 占位符：Dart Sass 的 @extend 不能跨 @use 模块引用占位符 */
-@mixin lightbox-detail-trigger {
-    display: flex;
-    align-items: center;
-    gap: var(--space-8);
-    margin-top: var(--space-16);
-    padding: var(--space-4) 0;
-    max-height: 2em; /* 略高于自然高度（一行 0.875em + 0.5em 边距） */
-    overflow: hidden;
-    background: none;
-    border: none;
-    color: var(--color-text-muted);
-    font-family: var(--font-meta);
-    font-size: var(--size-small);
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    transition: opacity var(--transition-fade), color var(--transition-fade),
-        max-height var(--transition-reveal), margin-top var(--transition-reveal), padding var(--transition-reveal);
-
-    svg {
-        width: var(--icon-sm);
-        height: var(--icon-sm);
-        transition: transform var(--transition-spring);
-    }
-
-    &:hover {
-        color: var(--color-text-secondary);
-    }
-}
-
-/* 触发行展开态：图像分析挂在按钮自身（.is-open），觀鳥圖鑑挂在块容器
-   （.lightbox-bird.is-open）；visibility 把不可见按钮移出 Tab 序 */
-@mixin lightbox-detail-trigger-collapsed {
-    max-height: 0;
-    margin-top: 0;
-    padding-top: 0;
-    padding-bottom: 0;
-    opacity: 0;
-    visibility: hidden;
-}
-
-/* 详情区底部收起按钮：图像分析与觀鳥圖鑑共用 */
-@mixin lightbox-detail-collapse {
-    display: flex;
-    align-items: center;
-    gap: var(--space-8);
-    margin: var(--space-16) 0 0;
-    padding: var(--space-4) 0;
-    background: none;
-    border: none;
-    color: var(--color-text-muted);
-    font-family: var(--font-meta);
-    font-size: var(--size-small);
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    transition: color var(--transition-fade);
-
-    svg {
-        width: var(--icon-sm);
-        height: var(--icon-sm);
-    }
-
-    &:hover {
-        color: var(--color-text-secondary);
-    }
-}
-
-/* 详情区正文：背後的故事与觀鳥圖鑑正文共用 */
-@mixin lightbox-detail-text {
-    margin: 0;
-    font-size: var(--size-small);
-    line-height: 1.8;
-    color: var(--color-text-secondary);
-}
 
 /* 布局档位信号（JS 只读，阈值唯一源）：iPad Safari 旋转后 JS 侧 matchMedia/
    clientWidth 评估永久陈旧、CSS 媒体查询照常重估（诊断页探针实测）——档位判定

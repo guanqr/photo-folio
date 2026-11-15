@@ -51,7 +51,7 @@
     transition: border-color var(--transition-fade);
 }
 
-/* H2 标题：typography 的 sizeH2 档位（介于 H1 区块标题与 H3 之间） */
+/* H2 标题：字号标尺的 --size-h2 档位（介于 H1 区块标题与 H3 之间） */
 .page-others-title {
     @extend %section-heading;
     font-size: var(--size-h2);

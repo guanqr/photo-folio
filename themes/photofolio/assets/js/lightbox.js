@@ -1,5 +1,4 @@
 import { initLightboxDrawer } from './lightbox-drawer.js';
-import { initLightboxAnalysis } from './lightbox-analysis.js';
 import { initLightboxSwipe } from './lightbox-swipe.js';
 import { initLightboxMeta } from './lightbox-meta.js';
 import { initLightboxBackdrop } from './lightbox-backdrop.js';
@@ -12,7 +11,9 @@ import { initLightboxFullscreen } from './lightbox-fullscreen.js';
 import { initLightboxMagnify } from './lightbox-magnify.js';
 import { initLightboxSwitch } from './lightbox-switch.js';
 import { initLightboxAnalysisControl } from './lightbox-analysis-control.js';
-import { initLightboxBird } from './lightbox-bird.js';
+import { initLightboxAnalysisHelp } from './lightbox-analysis-help.js';
+import { loadEntry } from './entry-loader.js';
+import { prefetchAnalysis as prefetchAnalysisData } from './lightbox-analysis-data.js';
 import { prefersReducedMotion } from './utils.js';
 import { BP_LIGHTBOX_NARROW } from './breakpoints.js';
 import { revealUpToItem } from './masonry.js';
@@ -82,6 +83,7 @@ export function initLightbox() {
     const hueHist = document.getElementById('lightbox-hue-hist');
     const hueAxis = document.getElementById('lightbox-hue-axis');
     const analysisErrorEl = document.getElementById('lightbox-analysis-error');
+    const chartHelpPop = document.getElementById('lightbox-chart-help-pop');
     // 观鸟图鉴（详情栏底部）：仅带 species 的照片显示；数据随灯箱壳内嵌
     const lightboxBirdSlot = document.getElementById('lightbox-bird-slot');
     const lightboxBird = document.getElementById('lightbox-bird');
@@ -147,35 +149,70 @@ export function initLightbox() {
         reservedBottom: () => (lightboxStrip ? lightboxStrip.offsetHeight : 0)
     });
 
-    // 观鸟图鉴（独立模块见 lightbox-bird.js）：按 photo.species 查内嵌鸟种数据，
-    // 默认收起；开合状态跨切图保持，关闭灯箱复位
-    const birdGuide = initLightboxBird({
-        block: lightboxBird, trigger: lightboxBirdTrigger, body: lightboxBirdBody,
-        nameEl: lightboxBirdName, sourceList: lightboxBirdSources, drawer,
-        // 桌面收起居中补偿与图像分析共用（标题/胶囊/详情区 + 面板）
-        panel, panelDetails, caption: lightboxCaption, tagsEl,
-        // 切到无图鉴的照片时，块内聚焦节点被隐藏，焦点交给常显的关闭按钮
-        fallbackFocus: lightboxClose
-    });
+    // 觀鳥圖鑑与图像分析渲染器按需加载（独立 entry，首次用到才下载）：
+    // 分析要展开才渲染、图鉴只在鸟种照片出现，两者都不该计入灯箱首开；
+    // 分析数据预取走 lightbox-analysis-data（只拉 JSON、不加载渲染器）（2026-11-15）
+    let birdGuide = null;
+    let birdLoading = null;
+    function ensureBirdGuide() {
+        if (birdGuide) return Promise.resolve(birdGuide);
+        if (birdLoading) return birdLoading;
+        birdLoading = loadEntry('lightbox-bird').then((mod) => {
+            birdGuide = mod.initLightboxBird({
+                block: lightboxBird, trigger: lightboxBirdTrigger, body: lightboxBirdBody,
+                nameEl: lightboxBirdName, sourceList: lightboxBirdSources, drawer,
+                // 桌面收起居中补偿与图像分析共用（标题/胶囊/详情区 + 面板）
+                panel, panelDetails, caption: lightboxCaption, tagsEl,
+                // 切到无图鉴的照片时，块内聚焦节点被隐藏，焦点交给常显的关闭按钮
+                fallbackFocus: lightboxClose
+            });
+            return birdGuide;
+        }).catch((err) => {
+            birdLoading = null; // 失败允许下次重试
+            throw err;
+        });
+        return birdLoading;
+    }
 
-    // 图片分析：色卡/影调与色彩（独立模块，见 lightbox-analysis.js；直方图
-    // 已并入影调区块——RGB 通道曲线 + 三分区/P50/剪裁注释同图展示）
-    const analysis = initLightboxAnalysis({
-        paletteWrap, paletteEl, errorEl: analysisErrorEl,
-        tone: {
-            wrap: tonalWrap, name: tonalName, histEl: histogramEl, legendEl: histLegendEl,
-            zoneStripEl: tonalZoneStrip, zoneBracketEl: tonalZoneBracket,
-            fracs: [tonalFracShadow, tonalFracMid, tonalFracHigh], fracText: tonalFracText,
-            dr: tonalDr, p50: tonalP50
-        },
-        sat: { wrap: satWrap, name: satName, histEl: satHist },
-        hue: { wrap: hueWrap, name: hueName, histEl: hueHist, axisEl: hueAxis },
-        onDone: () => {
-            // 分析完成（缓存命中/探测成功/失败）：图表内容高度变化后刷新抽屉
-            // 箭头状态（桌面 is-fit 由 ResizeObserver 重判）
-            drawer.refresh();
-        }
-    });
+    let analysis = null;
+    let analysisLoading = null;
+    function ensureAnalysis() {
+        if (analysis) return Promise.resolve(analysis);
+        if (analysisLoading) return analysisLoading;
+        analysisLoading = loadEntry('lightbox-analysis').then((mod) => {
+            // 直方图已并入影调区块：RGB 通道曲线 + 三分区/P50/剪裁注释同图展示
+            analysis = mod.initLightboxAnalysis({
+                paletteWrap, paletteEl, errorEl: analysisErrorEl,
+                tone: {
+                    wrap: tonalWrap, name: tonalName, histEl: histogramEl, legendEl: histLegendEl,
+                    zoneStripEl: tonalZoneStrip, zoneBracketEl: tonalZoneBracket,
+                    fracs: [tonalFracShadow, tonalFracMid, tonalFracHigh], fracText: tonalFracText,
+                    dr: tonalDr, p50: tonalP50
+                },
+                sat: { wrap: satWrap, name: satName, histEl: satHist },
+                hue: { wrap: hueWrap, name: hueName, histEl: hueHist, axisEl: hueAxis },
+                onDone: () => {
+                    // 分析完成（缓存命中/拉取成功/失败）：图表高度变化后刷新抽屉箭头
+                    drawer.refresh();
+                }
+            });
+            return analysis;
+        }).catch((err) => {
+            analysisLoading = null;
+            throw err;
+        });
+        return analysisLoading;
+    }
+
+    // 分析当前照片：仅展开态渲染；首次展开触发渲染器 entry 加载
+    function analyzeCurrent() {
+        if (!analysisWrap || !analysisWrap.classList.contains('is-open')) return;
+        const p = switchModule.current();
+        if (!p) return;
+        ensureAnalysis()
+            .then((a) => a.analyze(p.slug, p.hash))
+            .catch((err) => console.warn('[lightbox] analysis module load failed:', err));
+    }
 
     // 元信息面板渲染（独立模块见 lightbox-meta.js）：简行/EXIF/胶囊填充
     const meta = initLightboxMeta({
@@ -250,11 +287,20 @@ export function initLightbox() {
         }
         // 分析只在展开态渲染（收起态只由切换管线预取数据、不绘制）；展开切图
         // 时旧图表保持显示，新数据就绪后按既有形变过渡替换
-        if (analysisWrap && analysisWrap.classList.contains('is-open')) {
-            analysis.analyze(p.slug, p.hash);
+        analyzeCurrent();
+        // 觀鳥圖鑑：有鸟种/观鸟系列才按需加载模块；已加载过则每次切换都更新
+        // （切到非鸟照片时由模块负责折叠/空状态）。加载完成时以「当前照片」渲染，
+        // 快速连切不会把旧照片的资料填进新照片
+        if (p.species || p.birdGuide) {
+            ensureBirdGuide()
+                .then((bg) => {
+                    const cur = switchModule.current();
+                    if (cur) bg.render(cur);
+                })
+                .catch((err) => console.warn('[lightbox] bird module load failed:', err));
+        } else if (birdGuide) {
+            birdGuide.render(p);
         }
-        // 观鸟图鉴内容随照片切换；块在详情栏最底部，填充后再重测抽屉
-        birdGuide.render(p);
         // 切图保持信息栏滚动位置（不回到顶部）：内容高度变化时浏览器自动把
         // scrollTop 钳制到新范围，抽屉的虚拟位置模型（展开程度 × 行程 + scrollTop）
         // 随之停在原位；标题换行/胶囊行数变化会改变头部与简行高度，需重测抽屉
@@ -283,19 +329,21 @@ export function initLightbox() {
         },
         // 当前照片全尺寸主图加载完成/失败：自动播放开始当前照片的计时
         onPhotoReady: (index) => { if (autoplay) autoplay.photoReady(index); },
-        prefetchAnalysis: (photos) => photos.forEach((p) => analysis.prefetch(p.slug, p.hash)),
+        // 分析数据预取（只拉 JSON、不加载渲染器）：当前照片 ±1，展开时直接命中
+        prefetchAnalysis: (photos) => photos.forEach((p) => prefetchAnalysisData(p.slug, p.hash)),
         glow, backdrop, swipe, drawer,
         closeBtn: lightboxClose, pageRoots,
         // 切图前取消窄屏开合锚定：旧锚点/隐藏块不得继续改写新照片的 scrollTop
         onSwitchStart: () => {
             analysisControl.cancelCenterComp();
             analysisControl.cancelAnchor();
-            birdGuide.cancelCenterComp();
-            birdGuide.cancelAnchor();
+            birdGuide?.cancelCenterComp();
+            birdGuide?.cancelAnchor();
         },
         onClose: () => {
             analysisControl.reset();
-            birdGuide.reset();
+            analysisHelp.close();
+            birdGuide?.reset();
             if (autoplay) autoplay.stop();
             counter.reset();
             fullscreen.exitNative(); // 退出浏览器全屏；沉浸布局保留到关闭动画结束（下次首开 reset）
@@ -333,10 +381,14 @@ export function initLightbox() {
         trigger: analysisTrigger, wrap: analysisWrap,
         caption: lightboxCaption, tagsEl, panelDetails, panel,
         reducedMotion, drawer,
-        analyze: () => {
-            const p = switchModule.current();
-            if (p) analysis.analyze(p.slug, p.hash);
-        }
+        analyze: analyzeCurrent
+    });
+
+    // 图表说明气泡（独立模块见 lightbox-analysis-help.js）：各分析区块标题的
+    // 问号按钮共用同一个 fixed 气泡（位置钳制在详情面板内）；Esc 由下方键盘
+    // 处理先消费（只收气泡）
+    const analysisHelp = initLightboxAnalysisHelp({
+        lightbox, pop: chartHelpPop, panel, reducedMotion
     });
 
     // 自动播放（独立模块见 lightbox-autoplay.js）：默认关闭、用户主动开始；
@@ -412,6 +464,11 @@ export function initLightbox() {
     document.addEventListener('keydown', e => {
         if (!lightbox.classList.contains('active')) return;
         if (e.key === 'Escape') {
+            // 图表说明气泡开着时 Esc 只收气泡（再按一次才按下面顺序处理）
+            if (analysisHelp.closeIfOpen()) {
+                e.preventDefault();
+                return;
+            }
             // 缩放下 Esc 先还原图片（再按一次才退全屏/关闭）
             if (magnify && magnify.isActive()) {
                 magnify.exit();

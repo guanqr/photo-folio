@@ -3,7 +3,9 @@
        published 由管线在条目首次写入时记录，旧数据缺该字段时回退拍摄时间。
        GUID 用作品 src（稳定唯一）——此前按拍摄日期分组、GUID=日期，已有日期
        或早于最近 20 天窗口的新作品永远不会成为新条目，订阅器收不到更新
-       （2026-11-12）。 */ -}}
+       （2026-11-12）。
+       描述在「地點 · 日期」后接拍摄参数与作品源地址（灯箱深链）——读者端只
+       渲染描述、看不到 item link，需把地址写成文本（2026-11-15）。 */ -}}
 {{- $feedCount := site.Params.feedCount | default 20 -}}
 {{- $sorted := partialCached "utils/photo-sorted.html" . "desc" -}}
 {{- /* 排序键 = 发布时间 Unix 秒 + 拍摄时间：整数/字符串比较，避免模板 sort
@@ -33,10 +35,22 @@
         {{- /* 展示文本一律走 i18n；空标题回退 i18n 占位 */ -}}
         {{- $title := $p.alt | default (i18n "feed_untitled") -}}
         {{- /* 拍摄时间自 2026-11-14 起带具体时刻；订阅描述仍只展示日期 */ -}}
-        {{- $desc := i18n "feed_photo_meta" (dict "Place" (default $p.location $p.place) "Date" ($p.time | time.Format "2006-01-02")) -}}
+        {{- /* 作品源地址 = 灯箱深链（slug 即照片文件名去扩展名），item link 与描述文本同源 */ -}}
+        {{- $url := printf "%sgallery/?p=%s" site.Home.Permalink ($slug | urlquery) -}}
+        {{- /* 拍摄参数沿用灯箱的 i18n 值格式，单位/前缀不写死在模板里；缺项跳过不占位 */ -}}
+        {{- $exif := slice -}}
+        {{- with $p.focus }}{{ $exif = $exif | append (i18n "exif_focus_value" (dict "Value" .)) }}{{ end -}}
+        {{- with $p.aperture }}{{ $exif = $exif | append (i18n "exif_aperture_value" (dict "Value" .)) }}{{ end -}}
+        {{- with $p.shutter }}{{ $exif = $exif | append (i18n "exif_shutter_value" (dict "Value" .)) }}{{ end -}}
+        {{- with $p.iso }}{{ $exif = $exif | append (i18n "exif_iso_value" (dict "Value" .)) }}{{ end -}}
+        {{- $desc := i18n "feed_photo_meta" (dict
+            "Place" (default $p.location $p.place)
+            "Date" ($p.time | time.Format "2006-01-02")
+            "Exif" (delimit $exif (i18n "list_separator"))
+            "Link" (i18n "feed_photo_link" (dict "Url" $url))) -}}
     <item>
         <title>{{ $title | transform.XMLEscape }}</title>
-        <link>{{ printf "%sgallery/?p=%s" site.Home.Permalink ($slug | urlquery) }}</link>
+        <link>{{ $url }}</link>
         <guid isPermaLink="false">{{ $p.src | transform.XMLEscape }}</guid>
         <pubDate>{{ .at.Format "Mon, 02 Jan 2006 15:04:05 -0700" }}</pubDate>
         <description>{{ $desc | transform.XMLEscape }}</description>

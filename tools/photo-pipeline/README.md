@@ -107,6 +107,6 @@ python list_orphan_photos.py <photo.toml路径>
 
 ## 增量处理
 
-只处理新增或源图内容变化的照片（`photo.toml` 的 `source_hash` 与输入文件 MD5 比较），未变化的自动跳过；同名换图（source_hash 变化）成功重出后会同步更新 focus/iso/aperture/shutter/time/camera/lens 等 EXIF 字段，手动字段保留。`python run.py --force` 忽略该检测、重新处理全部照片。OSS 同步：本次实际处理过的照片始终覆盖上传；未处理但在云端缺失的文件也会补传（避免本地有、云端无的 404）；其余跳过。**图像分析为独立惰性步骤**：结果缺失或算法版本（JSON 的 v 字段）过期才重算；`--force` 仅重出图时不重算分析（源图未变），首次接入自动全量回填（一次性逐像素成本），此后日常运行只分析新增照片。每次运行都会按输出图字节重算 `hash`（未变化时值相同），上传对象写入一年 `immutable` 长缓存——图片 URL 带内容哈希，可放心缓存，同名换图会生成新 URL。
+只处理新增或源图内容变化的照片（`photo.toml` 的 `source_hash` 与输入文件 MD5 比较），未变化的自动跳过；同名换图（source_hash 变化）成功重出后会同步更新 focus/iso/aperture/shutter/time/camera/lens 等 EXIF 字段，手动字段保留。`python run.py --force` 忽略该检测、重新处理全部照片。OSS 同步：本次实际处理过的照片始终覆盖上传；未处理但在云端缺失的文件也会补传（避免本地有、云端无的 404）；其余跳过；待传文件默认 4 线程并发（`sync_new_photos(..., max_workers=N)` 可调，1 = 串行）。**图像分析为独立惰性步骤**：结果缺失或算法版本（JSON 的 v 字段）过期才重算；`--force` 仅重出图时不重算分析（源图未变），首次接入自动全量回填（一次性逐像素成本），此后日常运行只分析新增照片。每次运行都会按输出图字节重算 `hash`（未变化时值相同），上传对象写入一年 `immutable` 长缓存——图片 URL 带内容哈希，可放心缓存，同名换图会生成新 URL。
 
 输出图与 `photo.toml` 均采用临时文件 + `os.replace` 原子写（TOML 固定 LF）；OSS 上传成功后才写 `photo.toml`，上传失败时站点数据保持旧版本。新增照片会打印「请填写 alt/category/place/location」提醒，并在总结中计数。

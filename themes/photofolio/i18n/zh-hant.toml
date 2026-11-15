@@ -6,14 +6,8 @@ other = "{{ .Count }} 張作品"
 [total_photos]
 other = "共 {{ .Count }} 張作品"
 
-[photo_hover_meta_both]
-other = "{{ .Focus }}mm · f/{{ .Aperture }}"
-
-[photo_hover_meta_focus]
-other = "{{ .Focus }}mm"
-
-[photo_hover_meta_aperture]
-other = "f/{{ .Aperture }}"
+[photo_hover_place_date]
+other = "{{ if .Place }}{{ .Place }}{{ end }}{{ if and .Place .Date }} · {{ end }}{{ if .Date }}{{ .Date }}{{ end }}"
 
 [no_photos_under]
 other = "{{ .Title }} 下暫無作品"
@@ -115,13 +109,22 @@ other = "地點"
 other = "日期"
 
 [lightbox_histogram]
-other = "直方圖（虛線為明度中位數）"
+other = "直方圖"
+
+[chart_help_label]
+other = "{{ .Title }}說明"
+
+[tonal_help]
+other = "直方圖的四條曲線是紅、綠、藍通道與 Rec.709 明度，橫軸由暗到亮、縱軸為像素數量；虛線是明度中位數（P50），底色三分區以中灰上下各一檔為界（sRGB 85 與 162）。曝光灰階把亮度均分為 0–X 共 11 級，括號標出 P5–P95 所在的級數；百分比是陰影、中間調、高光的像素佔比（取整餘數併入最大段）；動態範圍取線性光下 P5–P95 的亮度跨度，換算成真檔。"
 
 [hist_legend]
 other = "R|G|B|明度"
 
 [lightbox_palette]
 other = "色卡"
+
+[palette_help]
+other = "每個像素先按 RGB 各 16 級量化成 4096 個色桶，按像素數量從多到少取互相保持距離的種子色，再用 k-means 把所有色桶歸到最近的 6 個中心（按像素數加權、迭代 5 輪）；真實顏色不足 6 種時，把最大的一色向白或向黑混合拆出來補足。右側百分比是該顏色在整張照片中的像素佔比，不足 1% 顯示 <1%。"
 
 [lightbox_expand]
 other = "展開詳情"
@@ -262,10 +265,16 @@ other = "適中"
 other = "高飽和"
 
 [sat_caption]
-other = "飽和度分佈（虛線為均值）"
+other = "飽和度分佈"
+
+[sat_help]
+other = "橫軸是 HSV 飽和度（（最大 − 最小）÷ 最大）由低到高，曲線高度為該區間的像素數量；底色三段以 18% 與 45% 為界，標題旁的判定取像素佔比最大的一檔；虛線是整張照片的飽和度均值，平均低於 5% 視為黑白。"
 
 [hue_caption]
-other = "色相分佈（按飽和度加權）"
+other = "色相分佈"
+
+[hue_help]
+other = "HSV 色相分為 36 段（每段 10°），每段按該色相像素的飽和度加權累加，柱子越高代表在畫面中越顯眼，最高的一段描白邊標出主色相；飽和度低於 2% 的灰色像素不參與統計；整張照片平均飽和度低於 5% 時改以灰柱呈現。"
 
 [hue_names]
 other = "紅|橙|黃|綠|青|藍|紫|品紅"
@@ -336,6 +345,12 @@ other = "請檢查 data/photo.toml 中作品的 series 字段是否與當前頁�
 [copyright_notice]
 other = "本站所有作品均由本人拍攝，歡迎轉發與分享，禁止商用或二次創作。"
 
+[footer_rss]
+other = "RSS"
+
+[footer_separator]
+other = "·"
+
 [page_not_found]
 other = "頁面未找到"
 
@@ -358,13 +373,16 @@ other = "下一張"
 other = "返回首頁"
 
 [feed_description]
-other = "最新發布的攝影作品：按發布時間倒序，每張作品一條，附拍攝地點與拍攝日期"
+other = "最新發布的攝影作品：按發布時間倒序，每張作品一條，附拍攝地點、拍攝日期、拍攝參數與作品連結"
 
 [feed_untitled]
 other = "未命名作品"
 
 [feed_photo_meta]
-other = "{{ if .Place }}{{ .Place }}{{ end }}{{ if and .Place .Date }} · {{ end }}{{ if .Date }}{{ .Date }}{{ end }}"
+other = "{{ if .Place }}{{ .Place }}{{ end }}{{ if and .Place .Date }} · {{ end }}{{ if .Date }}{{ .Date }}{{ end }}{{ if .Exif }} · {{ .Exif }}{{ end }}{{ if .Link }}\n{{ .Link }}{{ end }}"
+
+[feed_photo_link]
+other = "來源：{{ .Url }}"
 
 [categories_title]
 other = "分類"

@@ -1,0 +1,14 @@
+{{- /* 灯箱样式表（scss/lightbox.scss）的指纹 URL：与全站样式分离的独立入口，
+       首次启动灯箱时由 lightbox-boot.js 注入；调用点用 partialCached。
+       与 site-style.html 同款：生产环境压缩 + 指纹（2026-11-15） */ -}}
+{{- $opts := dict
+    "targetPath" "css/lightbox.css"
+    "transpiler" "dartsass" -}}
+{{- if hugo.IsProduction -}}
+    {{- $opts = merge $opts (dict "outputStyle" "compressed") -}}
+{{- end -}}
+{{- $css := resources.Get "scss/lightbox.scss" | css.Sass $opts -}}
+{{- if hugo.IsProduction -}}
+    {{- $css = $css | resources.Fingerprint -}}
+{{- end -}}
+{{- return $css.RelPermalink -}}

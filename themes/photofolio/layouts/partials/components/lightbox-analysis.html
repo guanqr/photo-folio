@@ -1,0 +1,126 @@
+﻿{{- /* Lightbox 壳分块：由 lightbox-shell.html 调用（结构拆分，渲染结果不变；2026-11-15） */ -}}
+{{- $lbCfg := .lbCfg -}}
+                        {{ $chartsAny := or $lbCfg.tonal $lbCfg.saturation $lbCfg.hue $lbCfg.palette }}
+                        {{ if $chartsAny }}
+                        {{/* 图像分析按需加载：EXIF 下方一行安静的文字触发，点击展开下方
+                            分析区（加载期只显示转圈、不显示文字），收起按钮位于区域底部 */}}
+                        <button class="lightbox-analysis-trigger" id="lightbox-analysis-trigger" type="button"
+                            aria-expanded="false" aria-controls="lightbox-analysis">
+                            <span>{{ i18n "lightbox_analysis" }}</span>
+                            {{ partial "utils/icon.html" (dict "name" "arrow_down" "variant" "thick") }}
+                        </button>
+                        {{/* inert 与 aria-hidden 并置：aria-hidden 是读屏语义、inert 阻止焦点——
+                            收起按钮点击后仍持焦点时若只挂 aria-hidden，焦点留在隐藏子树里
+                            （Chrome 报警告并阻断隐藏）；inert 使浏览器自动移出焦点。
+                            JS 开合时同步切换（setOpen/reset） */}}
+                        <div class="lightbox-analysis" id="lightbox-analysis" aria-hidden="true" inert>
+                            <div class="lightbox-charts" id="lightbox-charts">
+                        {{ end }}
+                        {{ if $lbCfg.tonal }}
+                        <div class="lightbox-tonal-wrap" id="lightbox-tonal-wrap"
+                            data-key-prefixes="{{ i18n "tonal_key_low_prefix" }}|{{ i18n "tonal_mid_prefix" }}|{{ i18n "tonal_key_high_prefix" }}"
+                            data-separator="{{ i18n "list_separator" }}"
+                            data-frac-format="{{ i18n "tonal_frac_line" (dict "ShadowName" "%SHADOW_NAME%" "Shadow" "%SHADOW%" "MidName" "%MID_NAME%" "Mid" "%MID%" "HighName" "%HIGH_NAME%" "High" "%HIGH%") }}"
+                            data-mid-prefix="{{ i18n "tonal_mid_prefix" }}"
+                            data-range-names="{{ i18n "tonal_range_short" }}|{{ i18n "tonal_range_mid" }}|{{ i18n "tonal_range_long" }}"
+                            data-zone-names="{{ i18n "tonal_zone_shadow" }}|{{ i18n "tonal_zone_mid" }}|{{ i18n "tonal_zone_high" }}"
+                            data-clip-shadow="{{ i18n "tonal_clip_shadow" }}"
+                            data-clip-high="{{ i18n "tonal_clip_high" }}"
+                            data-dr-unit="{{ i18n "tonal_dr_unit" }}"
+                            data-hist-legend="{{ i18n "hist_legend" }}">
+                            <h4 class="lightbox-section-title">
+                                <span>{{ i18n "lightbox_tonal" }}</span>
+                                <span class="lightbox-tonal-name" id="lightbox-tonal-name"></span>
+                                {{/* 问号放区块标题右端：说明覆盖本区块全部图表与计算方法，
+                                    点击由 lightbox-analysis-help.js 弹出气泡（2026-11-15） */}}
+                                <button class="lightbox-chart-help" type="button" aria-expanded="false"
+                                    aria-controls="lightbox-chart-help-pop"
+                                    aria-label="{{ i18n "chart_help_label" (dict "Title" (i18n "lightbox_tonal")) }}"
+                                    data-help="{{ i18n "tonal_help" }}">
+                                    {{ partial "utils/icon.html" (dict "name" "help_circle") }}
+                                </button>
+                            </h4>
+                            <p class="lightbox-chart-caption">{{ i18n "lightbox_histogram" }}</p>
+                            <svg class="lightbox-histogram" id="lightbox-histogram" viewBox="0 0 256 96" preserveAspectRatio="none" role="img" aria-label="{{ i18n "lightbox_histogram" }}"></svg>
+                            <div class="lightbox-hist-legend" id="lightbox-hist-legend"></div>
+                            <p class="lightbox-chart-caption">{{ i18n "tonal_zone_system" }}</p>
+                            <div class="lightbox-zone-strip" id="lightbox-zone-strip" role="img" aria-label="{{ i18n "tonal_zone_system" }}">
+                                <span class="lightbox-zone-bracket" id="lightbox-zone-bracket"></span>
+                            </div>
+                            <div class="lightbox-tone-ratio" id="lightbox-tone-ratio">
+                                <span class="lightbox-tone-ratio-seg" id="lightbox-tone-ratio-shadow"></span><span class="lightbox-tone-ratio-seg" id="lightbox-tone-ratio-mid"></span><span class="lightbox-tone-ratio-seg" id="lightbox-tone-ratio-high"></span>
+                            </div>
+                            <div class="lightbox-tonal-stats">
+                                <span id="lightbox-tone-frac-text"></span>
+                                <span class="lightbox-tonal-stat"><span class="lightbox-tonal-stat-label">{{ i18n "tonal_dr" }}</span><span class="lightbox-tonal-stat-value" id="lightbox-tonal-dr"></span></span>
+                                <span class="lightbox-tonal-stat"><span class="lightbox-tonal-stat-label">{{ i18n "tonal_median" }}</span><span class="lightbox-tonal-stat-value" id="lightbox-tonal-p50"></span></span>
+                            </div>
+                        </div>
+                        {{ end }}
+                        {{ if $lbCfg.palette }}
+                        <div class="lightbox-palette-wrap" id="lightbox-palette-wrap">
+                            <h4 class="lightbox-section-title">
+                                <span>{{ i18n "lightbox_palette" }}</span>
+                                <button class="lightbox-chart-help" type="button" aria-expanded="false"
+                                    aria-controls="lightbox-chart-help-pop"
+                                    aria-label="{{ i18n "chart_help_label" (dict "Title" (i18n "lightbox_palette")) }}"
+                                    data-help="{{ i18n "palette_help" }}">
+                                    {{ partial "utils/icon.html" (dict "name" "help_circle") }}
+                                </button>
+                            </h4>
+                            <div class="lightbox-palette" id="lightbox-palette"></div>
+                        </div>
+                        {{ end }}
+                        {{ if $lbCfg.saturation }}
+                        <div class="lightbox-sat-wrap" id="lightbox-sat-wrap"
+                            data-sat-names="{{ i18n "sat_low" }}|{{ i18n "sat_mid" }}|{{ i18n "sat_high" }}">
+                            <h4 class="lightbox-section-title">
+                                <span>{{ i18n "lightbox_saturation" }}</span>
+                                <span class="lightbox-sat-name" id="lightbox-sat-name"></span>
+                                <button class="lightbox-chart-help" type="button" aria-expanded="false"
+                                    aria-controls="lightbox-chart-help-pop"
+                                    aria-label="{{ i18n "chart_help_label" (dict "Title" (i18n "lightbox_saturation")) }}"
+                                    data-help="{{ i18n "sat_help" }}">
+                                    {{ partial "utils/icon.html" (dict "name" "help_circle") }}
+                                </button>
+                            </h4>
+                            {{/* 虚线说明（与直方图标注同款）：虚线为饱和度均值标记 */}}
+                            <p class="lightbox-chart-caption">{{ i18n "sat_caption" }}</p>
+                            <svg class="lightbox-sat-hist" id="lightbox-sat-hist" viewBox="0 0 100 48" preserveAspectRatio="none" role="img" aria-label="{{ i18n "lightbox_saturation" }}"></svg>
+                            <div class="lightbox-sat-axis">
+                                <span>{{ i18n "sat_low" }}</span>
+                                <span>{{ i18n "sat_high" }}</span>
+                            </div>
+                        </div>
+                        {{ end }}
+                        {{ if $lbCfg.hue }}
+                        <div class="lightbox-hue-wrap" id="lightbox-hue-wrap"
+                            data-hue-names="{{ i18n "hue_names" }}"
+                            data-hue-gray="{{ i18n "hue_gray" }}">
+                            <h4 class="lightbox-section-title">
+                                <span>{{ i18n "lightbox_hue" }}</span>
+                                <span class="lightbox-hue-name" id="lightbox-hue-name"></span>
+                                <button class="lightbox-chart-help" type="button" aria-expanded="false"
+                                    aria-controls="lightbox-chart-help-pop"
+                                    aria-label="{{ i18n "chart_help_label" (dict "Title" (i18n "lightbox_hue")) }}"
+                                    data-help="{{ i18n "hue_help" }}">
+                                    {{ partial "utils/icon.html" (dict "name" "help_circle") }}
+                                </button>
+                            </h4>
+                            {{/* 与饱和度说明行同款——窄屏双列并排时补足高度、图表与区块底部对齐 */}}
+                            <p class="lightbox-chart-caption">{{ i18n "hue_caption" }}</p>
+                            <svg class="lightbox-hue-hist" id="lightbox-hue-hist" viewBox="0 0 360 48" preserveAspectRatio="none" role="img" aria-label="{{ i18n "lightbox_hue" }}"></svg>
+                            <div class="lightbox-hue-axis" id="lightbox-hue-axis"></div>
+                        </div>
+                        {{ end }}
+                        {{ if $chartsAny }}
+                            {{/* 分析加载失败提示：构建期预渲染、lightbox-analysis.js 切换 hidden
+                                （成功路径隐藏、拉取失败路径显示） */}}
+                            {{ partial "components/empty-state.html" (dict "class" "lightbox-analysis-error" "id" "lightbox-analysis-error" "hidden" true "icon" "alert" "titleKey" "lightbox_analysis_failed") }}
+                            </div>
+                            <button class="lightbox-analysis-collapse" id="lightbox-analysis-collapse" type="button">
+                                <span>{{ i18n "lightbox_analysis_collapse" }}</span>
+                                {{ partial "utils/icon.html" (dict "name" "arrow_up" "variant" "thick") }}
+                            </button>
+                        </div>
+                        {{ end }}

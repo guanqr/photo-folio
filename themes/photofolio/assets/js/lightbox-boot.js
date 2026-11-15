@@ -11,6 +11,7 @@ import { loadEntry } from './entry-loader.js';
 
 let shellPromise = null;
 let bootPromise = null;
+let cssPromise = null;
 let installed = false;
 let booted = false;
 
@@ -18,6 +19,30 @@ let booted = false;
 function shellUrl() {
     const el = document.getElementById('js-entry-urls');
     return (el && el.dataset.lightboxShell) || '/lightbox-shell/';
+}
+
+// 灯箱专用样式表 URL（指纹化；与全站样式分离，首访不再携带灯箱 CSS）。
+// 失败移除 <link> 并复位 Promise，下一次点击重试（与骨架/入口同口径）
+function cssUrl() {
+    const el = document.getElementById('js-entry-urls');
+    return (el && el.dataset.lightboxCss) || '/css/lightbox.css';
+}
+
+function loadCss() {
+    if (cssPromise) return cssPromise;
+    cssPromise = new Promise((resolve, reject) => {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = cssUrl();
+        link.onload = () => resolve();
+        link.onerror = () => {
+            link.remove();
+            cssPromise = null;
+            reject(new Error('lightbox css failed'));
+        };
+        document.head.appendChild(link);
+    });
+    return cssPromise;
 }
 
 function loadShell() {
@@ -50,8 +75,9 @@ function loadModule() {
 export function bootLightbox() {
     if (bootPromise) return bootPromise;
     bootPromise = (async () => {
-        await loadShell();
-        const mod = await loadModule();
+        // 样式、骨架、入口并行拉取；三者都就位后才初始化（样式先于显示，
+        // 避免灯箱以无样式状态闪一帧）
+        const [mod] = await Promise.all([loadModule(), loadShell(), loadCss()]);
         mod.initLightbox();
         booted = true; // 初始化完成，后续点击交给灯箱自身的委托
         return mod;
