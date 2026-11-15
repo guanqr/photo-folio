@@ -1,8 +1,9 @@
 public/
 resources/
 .hugo_build.lock
-# 验证构建目录（hugo -d 独立输出，与 public/ 同类的高频再生临时产物）
-.verify-build/
+# 验证构建目录（hugo -d 独立输出，与 public/ 同类的高频再生临时产物；
+# 通配覆盖 .verify-build2/3 等审查/对比用的一次性目录）
+.verify-build*/
 # Claude Code 本地配置忽略；项目规格文档随代码库维护（换机/回滚不丢失）
 .claude/*
 !.claude/CLAUDE.md
