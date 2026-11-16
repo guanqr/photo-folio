@@ -506,3 +506,60 @@ other = "800–1600"
 
 [stats_iso_6]
 other = ">1600"
+
+[error_photo_category_unknown]
+other = "photo.toml 的 category {{ .Categories }} 未匹配 content/categories/<key>/（這些照片會從分類頁靜默消失）"
+
+[error_list_separator]
+other = "、"
+
+[error_photo_missing_dimensions]
+other = "photo.toml 缺 width/height（橫/豎構圖筛选不匹配）：{{ .Sources }}"
+
+[error_series_cover_count]
+other = "系列《{{ .Name }}》is_cover 应恰好 1 张，实际 {{ .Count }} 张"
+
+[error_photo_shutter_unknown]
+other = "photo.toml 快門值無法歸檔（已忽略）：{{ .Value }}"
+
+[error_bird_series_missing]
+other = "data/birds.toml 缺少 bird_series（观鸟系列名），缺 species 的观鸟照片不会显示图鉴开关"
+
+[error_bird_conservation_i18n_missing]
+other = "i18n 缺少保育等级 {{ .Level }} 的文案（bird_conservation_{{ .Level }}）"
+
+[error_bird_id_missing]
+other = "data/birds.toml 存在缺少 id 的鸟种条目"
+
+[error_bird_id_duplicate]
+other = "data/birds.toml 鸟种 id {{ .ID }} 重复"
+
+[error_bird_field_missing]
+other = "鸟种 {{ .ID }} 缺少字段 {{ .Field }}"
+
+[error_bird_conservation_invalid]
+other = "鸟种 {{ .ID }} 的 conservation_level {{ .Level }} 不支持（可用：lc / nt / vu / en / cr / domestic）"
+
+[error_bird_source_incomplete]
+other = "鸟种 {{ .ID }} 的 source 条目必须同时有 label 与 url"
+
+[error_bird_source_missing]
+other = "鸟种 {{ .ID }} 至少需要一个 [[bird.source]] 资料来源"
+
+[error_photo_species_unknown]
+other = "photo.toml 照片 {{ .Src }} 的 species {{ .Species }} 未在 data/birds.toml 建档"
+
+[error_bird_series_unmatched]
+other = "data/birds.toml 的 bird_series {{ .Series }} 未匹配 photo.toml 中任何照片的 series（拼写错误或系列改名后会静默失去图鉴开关）"
+
+[error_series_page_missing]
+other = "系列《{{ .Name }}》沒有對應的 content/series 頁面（系列卡/燈箱膠囊會 404）"
+
+[error_location_slug_missing]
+other = "locations.toml 地点 {{ .Name }} 缺少 slug（地点页 URL 必填）"
+
+[error_location_slug_duplicate]
+other = "locations.toml slug {{ .Slug }} 重复（地点页 URL 冲突）"
+
+[error_location_unregistered]
+other = "photo.toml 的地点 {{ .Names }} 未登记进 locations.toml（地点页无法生成，时间线/地图会链接到 404）"

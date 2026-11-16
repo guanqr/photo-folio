@@ -4,6 +4,17 @@ on:
   push:
     branches:
     - main
+  workflow_dispatch:
+
+# 同一时间只允许一个部署：连续两次 push 时取消进行中的旧 run，
+# 避免两个 job 同时向 gh-pages force-push 互相覆盖（2026-11-16）
+concurrency:
+  group: deploy
+  cancel-in-progress: true
+
+# 构建与 style-lint 只需要读源码；部署走 PAT，不需要放宽 GITHUB_TOKEN
+permissions:
+  contents: read
 
 jobs:
   deploy:

@@ -10,7 +10,7 @@
     {{- with .bird }}{{ $birds = . }}{{ end -}}
 {{- end -}}
 {{- if not $birdSeries -}}
-    {{- warnf "data/birds.toml 缺少 bird_series（观鸟系列名），缺 species 的观鸟照片不会显示图鉴开关" -}}
+    {{- warnf "%s" (i18n "error_bird_series_missing") -}}
 {{- end -}}
 {{- $ids := slice -}}
 {{- $required := slice "name" "latin" "order" "order_latin" "family" "family_latin" "genus" "genus_latin" "distribution" "habitat" "habits" "conservation_level" -}}
@@ -19,37 +19,37 @@
 {{- range $level := $levels -}}
     {{- $label := i18n (printf "bird_conservation_%s" $level) -}}
     {{- if not $label -}}
-        {{- errorf "i18n 缺少保育等级 %q 的文案（bird_conservation_%s）" $level $level -}}
+        {{- errorf "%s" (i18n "error_bird_conservation_i18n_missing" (dict "Level" (printf "%q" $level))) -}}
     {{- end -}}
     {{- $labels = merge $labels (dict $level $label) -}}
 {{- end -}}
 {{- range $bird := $birds -}}
     {{- $id := $bird.id | default "" -}}
-    {{- if not $id }}{{ errorf "data/birds.toml 存在缺少 id 的鸟种条目" }}{{ end -}}
-    {{- if in $ids $id }}{{ errorf "data/birds.toml 鸟种 id %q 重复" $id }}{{ end -}}
+    {{- if not $id }}{{ errorf "%s" (i18n "error_bird_id_missing") }}{{ end -}}
+    {{- if in $ids $id }}{{ errorf "%s" (i18n "error_bird_id_duplicate" (dict "ID" (printf "%q" $id))) }}{{ end -}}
     {{- range $field := $required -}}
-        {{- if not (index $bird $field) }}{{ errorf "鸟种 %q 缺少字段 %q" $id $field }}{{ end -}}
+        {{- if not (index $bird $field) }}{{ errorf "%s" (i18n "error_bird_field_missing" (dict "ID" (printf "%q" $id) "Field" (printf "%q" $field))) }}{{ end -}}
     {{- end -}}
-    {{- if not (in $levels $bird.conservation_level) }}{{ errorf "鸟种 %q 的 conservation_level %q 不支持（可用：lc / nt / vu / en / cr / domestic）" $id $bird.conservation_level }}{{ end -}}
+    {{- if not (in $levels $bird.conservation_level) }}{{ errorf "%s" (i18n "error_bird_conservation_invalid" (dict "ID" (printf "%q" $id) "Level" (printf "%q" $bird.conservation_level))) }}{{ end -}}
     {{- with $bird.source -}}
         {{- range $src := . -}}
-            {{- if or (not $src.label) (not $src.url) }}{{ errorf "鸟种 %q 的 source 条目必须同时有 label 与 url" $id }}{{ end -}}
+            {{- if or (not $src.label) (not $src.url) }}{{ errorf "%s" (i18n "error_bird_source_incomplete" (dict "ID" (printf "%q" $id))) }}{{ end -}}
         {{- end -}}
     {{- else -}}
-        {{- errorf "鸟种 %q 至少需要一个 [[bird.source]] 资料来源" $id -}}
+        {{- errorf "%s" (i18n "error_bird_source_missing" (dict "ID" (printf "%q" $id))) -}}
     {{- end -}}
     {{- $ids = $ids | append $id -}}
 {{- end -}}
 {{- $seriesMatched := false -}}
 {{- range $photo := hugo.Data.photo.photo -}}
     {{- with $photo.species -}}
-        {{- if not (in $ids .) }}{{ errorf "photo.toml 照片 %q 的 species %q 未在 data/birds.toml 建档" $photo.src . }}{{ end -}}
+        {{- if not (in $ids .) }}{{ errorf "%s" (i18n "error_photo_species_unknown" (dict "Src" (printf "%q" $photo.src) "Species" (printf "%q" .))) }}{{ end -}}
     {{- end -}}
     {{- if and $birdSeries (eq ($photo.series | default "") $birdSeries) -}}
         {{- $seriesMatched = true -}}
     {{- end -}}
 {{- end -}}
 {{- if and $birdSeries (not $seriesMatched) -}}
-    {{- errorf "data/birds.toml 的 bird_series %q 未匹配 photo.toml 中任何照片的 series（拼写错误或系列改名后会静默失去图鉴开关）" $birdSeries -}}
+    {{- errorf "%s" (i18n "error_bird_series_unmatched" (dict "Series" (printf "%q" $birdSeries))) -}}
 {{- end -}}
 {{- return (dict "series" $birdSeries "levels" $levels "labels" $labels) -}}

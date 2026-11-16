@@ -100,7 +100,7 @@
             {{ $sec := float . }}
             {{ if gt $sec 1.0 }}{{ $label = i18n "stats_shutter_7" }}
             {{ else if ge $sec 1.0 }}{{ $label = i18n "stats_shutter_6" }}
-            {{ else }}{{ warnf "photo.toml 快門值無法歸檔（已忽略）：%s" . }}{{ end }}
+            {{ else }}{{ warnf "%s" (i18n "error_photo_shutter_unknown" (dict "Value" .)) }}{{ end }}
         {{ end }}
         {{ with $label }}
             {{ $shutterCount = merge $shutterCount (dict . (add (default 0 (index $shutterCount .)) 1)) }}

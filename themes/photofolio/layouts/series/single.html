@@ -17,7 +17,7 @@
 {{/* 系列封面必须恰好一张：首页/系列合集/详情页联动卡依赖 is_cover 选封面 */}}
 {{ $covers := where $photos "is_cover" true }}
 {{ if ne (len $covers) 1 }}
-    {{ errorf "系列《%s》is_cover 应恰好 1 张，实际 %d 张" $seriesName (len $covers) }}
+    {{ errorf "%s" (i18n "error_series_cover_count" (dict "Name" $seriesName "Count" (len $covers))) }}
 {{ end }}
 
 <section class="gallery-page">

@@ -3,6 +3,17 @@
      系列详情页与其他页面共用同一顺序，不再接受自定义 order 参数（2026-11-04）。
      调用：{{ $sorted := partialCached "utils/photo-sorted.html" . "desc" }} */}}
 {{ $allPhotos := hugo.Data.photo.photo | default slice }}
+{{/* 分类白名单：category 拼错时分类页的 where 过滤会静默漏图（照片只出现在全部作品页），
+   在唯一入口 fail-fast，避免内容页静默缺图（2026-11-16） */}}
+{{ $badCategories := slice }}
+{{ range $allPhotos }}
+    {{ with .category }}
+        {{ if and (not (site.GetPage (printf "/categories/%s" .))) (not (in $badCategories .)) }}
+            {{ $badCategories = $badCategories | append . }}
+        {{ end }}
+    {{ end }}
+{{ end }}
+{{ with $badCategories }}{{ errorf "%s" (i18n "error_photo_category_unknown" (dict "Categories" (delimit . (i18n "error_list_separator")))) }}{{ end }}
 {{ $withKey := slice }}
 {{ range $idx, $p := $allPhotos }}
     {{ $t := $p.time | time.Format "2006-01-02 15:04:05" }}

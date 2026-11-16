@@ -79,7 +79,7 @@
     {{ range $sortedPhotos }}
         {{ if or (not .width) (not .height) }}{{ $missingDims = $missingDims | append .src }}{{ end }}
     {{ end }}
-    {{ if $missingDims }}{{ warnf "photo.toml 缺 width/height（橫/豎構圖筛选不匹配）：%s" (delimit $missingDims "、") }}{{ end }}
+    {{ if $missingDims }}{{ warnf "%s" (i18n "error_photo_missing_dimensions" (dict "Sources" (delimit $missingDims (i18n "error_list_separator")))) }}{{ end }}
 {{ end }}
 
 <section class="gallery-page">
