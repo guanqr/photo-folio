@@ -16,10 +16,7 @@ def get_region_brightness(img, box):
     bottom = min(img.height, int(bottom))
     # 防御：bbox 退化时退回全图平均（正常文字 bbox 不会为空）
     crop_img = (img.crop((left, top, right, bottom)) if right > left and bottom > top else img).convert("L")
-    try:
-        pixels = list(crop_img.get_flattened_data())
-    except AttributeError:
-        pixels = list(crop_img.getdata())
+    pixels = list(crop_img.get_flattened_data())
     return sum(pixels) / len(pixels)
 
 
@@ -43,20 +40,14 @@ def add_watermark(img, text="Guanqr Photography", opacity=0.6, photo_year=""):
     else:
         final_text = text
 
-    try:
-        _, _, w, h = draw.textbbox((0, 0), final_text, font=font)
-    except AttributeError:
-        w, h = draw.textsize(final_text, font=font)
+    _, _, w, h = draw.textbbox((0, 0), final_text, font=font)
 
     x = (img.width - w) // 2
     y = img.height - h - 25
 
     # 只取水印文字实际渲染区域判断明暗：整条底部平均会被左右暗部拉低，
     # 水印所在中间偏亮时误选白字（2026-10-29）
-    try:
-        region = draw.textbbox((x, y), final_text, font=font)
-    except AttributeError:
-        region = (x, y, x + w, y + h)
+    region = draw.textbbox((x, y), final_text, font=font)
     bright = get_region_brightness(img, region)
     alpha = int(255 * opacity)
     fill = (0, 0, 0, alpha) if bright > 127 else (255, 255, 255, alpha)

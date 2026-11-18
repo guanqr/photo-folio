@@ -6,13 +6,29 @@ export function initThemeToggle() {
     const toggleBtn = document.getElementById('theme-toggle');
     if (!toggleBtn) return;
 
-    const applyTheme = (theme) => {
+    const applyTheme = (theme, persist = true) => {
         document.documentElement.setAttribute('data-theme', theme);
+        if (!persist) return;
         // 存储被禁（隐私模式/阻止 Cookie）时静默降级：视觉切换不受影响、偏好不持久化
         try {
             localStorage.setItem('theme', theme);
         } catch (e) { /* noop */ }
     };
+
+    // 无本地选择时跟随系统偏好；用户手动切换后以 localStorage 为准
+    const systemLight = window.matchMedia('(prefers-color-scheme: light)');
+    const hasStoredTheme = () => {
+        try {
+            const stored = localStorage.getItem('theme');
+            return stored === 'light' || stored === 'dark';
+        } catch (e) {
+            return false; // 存储被禁按无存储处理
+        }
+    };
+    systemLight.addEventListener('change', () => {
+        if (hasStoredTheme()) return;
+        applyTheme(systemLight.matches ? 'light' : 'dark', false);
+    });
 
     let themeSwitchTimer = null;
     toggleBtn.addEventListener('click', () => {

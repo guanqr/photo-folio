@@ -4,11 +4,18 @@
     {{- /* 主题初始化：样式表加载前恢复本地存储的主题（默认暗色），避免切换闪烁 */ -}}
     <script>
     (function () {
+        // 本地选择优先；无本地选择时按系统偏好初始化（暗色为 CSS 默认，亮色设 data-theme）。
+        // data-theme 始终写入，避免无 JS 的 prefers-color-scheme 兜底覆盖用户已选的暗色。
+        var stored = null;
         try {
-            if (localStorage.getItem('theme') === 'light') {
-                document.documentElement.setAttribute('data-theme', 'light');
-            }
-        } catch (e) { /* 存储被禁（隐私模式/阻止 Cookie）时静默降级为默认暗色 */ }
+            stored = localStorage.getItem('theme');
+        } catch (e) { /* 存储被禁（隐私模式/阻止 Cookie）时回退系统偏好 */ }
+        if (stored !== 'light' && stored !== 'dark') {
+            stored = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches
+                ? 'light'
+                : 'dark';
+        }
+        document.documentElement.setAttribute('data-theme', stored);
     })();
     </script>
     {{- partial "head.html" . -}}

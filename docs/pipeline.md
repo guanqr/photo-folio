@@ -16,7 +16,7 @@
 - **OSS 凭证**：`oss_config.json`（gitignore，example 为模板）+ 环境变量回退（OSS_ACCESS_KEY_ID/SECRET/ENDPOINT/BUCKET_NAME）
 - **上传缓存头**：新上传对象写入 `Cache-Control: public, max-age=31536000, immutable`——照片 URL 带内容哈希、对象内容不可变，可放心长缓存；同名换图产生新 URL，不依赖短 TTL 兜底（2026-10-26）
 - **字体**：`fonts/` 不入库，`tools/photo-pipeline/scripts/download_font.py` 从 Google Fonts 下载 NotoSans-Bold.ttf；加载失败 ImageFont.load_default 兜底
-- **兼容性**：Windows 控制台 stdout 重包 UTF-8、原子写、JS 取整统一在 `src/compat.py`（download_font 与 `tools/backfill/backfill-dimensions.py` 同样接入）；Pillow textbbox/textsize 与 getdata/get_flattened_data 新旧 API 回退；EXIF 字符串控制字符（NUL 等）在读写两侧清洗，否则 TOML 解析失败；backfill-dimensions 对中文文件名做 URL 编码
+- **兼容性**：Windows 控制台 stdout 重包 UTF-8、原子写、JS 取整统一在 `src/compat.py`（download_font 与 `tools/backfill/backfill-dimensions.py` 同样接入）；EXIF 字符串控制字符（NUL 等）在读写两侧清洗，否则 TOML 解析失败；backfill-dimensions 对中文文件名做 URL 编码
 - **回填脚本**：`backfill_camera_lens.py <original_photos目录> <toml路径>`——只读 EXIF 写 camera/lens，无图片处理/上传副作用；`backfill_published.py <toml路径>`——按 `src` 首次出现在 photo.toml 的 git 提交时间回填 `published`（已有值不覆盖、无法溯源留空），只读 git 历史；**读不到 EXIF 的字段留空（覆盖既有值）——用户明确裁定的口径（2026-10-18），不得改为「保留既有值」**；`tools/backfill/backfill-dimensions.py` 经 OSS image/info 回填宽高（ROOT 三级 parent 指向仓库根）；`backfill_source_hash.py <original_photos目录> <toml路径>` 只读输入图回填 source_hash（无处理/上传/分析副作用），用于接入换图检测前跳过首轮全量重处理；`backfill_time.py <original_photos目录> <toml路径>` 从原图 EXIF 回填完整拍摄时刻，读不到时刻或原图缺失时**保持原值**（time 是站点排序/展示必需字段，写空会让构建期 `time.Format` 报错，不套用上面的留空口径）
 - **OSS 孤儿核对（只读）**：`list_orphan_photos.py [photo.toml]` 分页拉取 OSS `images/photos/` 对象，与 `photo.toml` 的 `src` basename 比对，列出未被引用的对象（改名/删除后的残留）；不删除，删除仍走 OSS 控制台（2026-11-08）
 

@@ -327,7 +327,7 @@ html.theme-switching *::after {
 }
 
 /* ===== Light Mode (明亮模式) ===== */
-[data-theme="light"] {
+@mixin light-theme-tokens {
     color-scheme: light; /* UA 原生件（滚动条/表单控件/取色器）随亮色主题 */
 
     /* 冷调浅色板：全部与 #f0f3f7 同调（统一冷蓝灰，明暗层级与暗色主题对应） */
@@ -362,6 +362,17 @@ html.theme-switching *::after {
     --color-map-region-fill: hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.17); /* 高精度区块单层实色：边缘即高精度轮廓 */
     @include defineColorHSL(--color-map-region-hover, 181.9, 11.6%, 80.2%); /* 悬停色块：旧版叠加色 */
     @include defineColorHSL(--color-map-border, 217.5, 9.6%, 67.5%); /* 亮色：省/国分界线加深一档（冷灰与色板同调，经四元组定义） */
+}
+
+[data-theme="light"] {
+    @include light-theme-tokens;
+}
+
+/* 无 JS 时按系统偏好兜底：亮色系统且尚未写入 data-theme 时套用同一组亮色 token */
+@media (prefers-color-scheme: light) {
+    :root:not([data-theme]) {
+        @include light-theme-tokens;
+    }
 }
 
 img { max-width: 100%; height: auto; display: block; }

@@ -15,7 +15,7 @@
     @include defineColorHSL(--dark-text, 0, 0%, 91%);
     @include defineColorHSL(--dark-accent, 168.9, 25.2%, 58%); /* teal */
     ...
-    /* 主题色（暗色默认值；亮色值见 [data-theme="light"] 覆盖同组四元组） */
+    /* 主题色（暗色默认值；亮色值见 [data-theme="light"]，无 JS 时由 prefers-color-scheme: light 兜底） */
     @include defineColorHSL(--color-bg, 202.5, 22.2%, 7.1%);
     @include defineColorHSL(--color-bg-card, 207.3, 18.6%, 11.6%);
     @include defineColorHSL(--color-accent, 168.9, 25.2%, 58%);
