@@ -35,7 +35,8 @@
 ### 语义颜色（派生自上方四元组）
 - 透明度阶梯：`--color-accent-15/30/50/75`（hsla(accent 分量, 0.15/0.3/0.5/0.75)）
 - 背景遮罩：`--color-header-bg`(0.85)、`--color-nav-bg`(不透明)、`--color-lightbox-bg`(纯黑)
-- 叠加层：`--color-overlay-subtle`（暗=白 10% / 亮=黑 5%，地图陆地填充用）
+- 叠加层：`--color-overlay-subtle`（暗=白 10% / 亮=黑 5%，遮罩/叠加用）
+- 足迹地图：`--color-map-fill`（低精度陆地填充）、`--color-map-region-fill`（高精度省/国区块，单层深色实色）、`--color-map-region-hover`（省/国悬停色块，旧版叠加色）、`--color-map-border`（边界/海岸线）
 - 灯箱固定暗色：组件内重新声明语义变量，取值自 `--dark-*` 固定四元组
 
 ---

@@ -507,6 +507,7 @@ other = "800–1600"
 [stats_iso_6]
 other = ">1600"
 
+
 [error_photo_category_unknown]
 other = "photo.toml 的 category {{ .Categories }} 未匹配 content/categories/<key>/（這些照片會從分類頁靜默消失）"
 

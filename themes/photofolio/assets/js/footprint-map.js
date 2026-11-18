@@ -77,6 +77,7 @@ function updateProjection(root, prNew) {
     view.grid.removeAttribute('transform');
     view.gridPr = prNew;
     if (view.land) view.land.setAttribute('transform', matrixFrom(view.landPr, prNew));
+    if (view.landStroke) view.landStroke.setAttribute('transform', matrixFrom(view.landPr, prNew));
     if (view.prov) view.prov.setAttribute('transform', matrixFrom(view.provPr, prNew));
     if (view.country) view.country.setAttribute('transform', matrixFrom(view.countryPr, prNew));
     view.dotsData.forEach((d) => {
@@ -300,20 +301,66 @@ async function build(root, points, locationData, statsByName) {
 
     // 视图状态：增量重投影依赖（重建路径只更新这些，不重建 DOM）
     state.view = {
-        svg, grid, gridPr: pr, land: null, landPr: null,
+        svg, grid, gridPr: pr, land: null, landStroke: null, landPr: null,
         prov: null, provPr: null, country: null, countryPr: null,
         dotsData, pr,
     };
 
     // 陆地几何（数据已在投影前加载；失败仅降级为网格 + 点迹）
+    // 填充与描边拆成两组：高精度区域内两层都由 mask 挖掉，区块用单层深色实色；
+    // 填充单列一组也便于整条隐藏主岛低精度路径（见下方 small/国界 bbox 处理）
     if (landGeom) {
-        const land = document.createElementNS(SVG_NS, 'g');
-        land.setAttribute('class', 'fm-land');
-        buildLand(land, landGeom.data, pr, landGeom.quant, landGeom.delta);
-        land.setAttribute('transform', matrixFrom(pr, state.view.pr));
-        state.view.land = land;
+        const landFill = document.createElementNS(SVG_NS, 'g');
+        landFill.setAttribute('class', 'fm-land fm-land-fill');
+        buildLand(landFill, landGeom.data, pr, landGeom.quant, landGeom.delta);
+        const landStroke = document.createElementNS(SVG_NS, 'g');
+        landStroke.setAttribute('class', 'fm-land fm-land-stroke');
+        buildLand(landStroke, landGeom.data, pr, landGeom.quant, landGeom.delta);
+        const landTransform = matrixFrom(pr, state.view.pr);
+        landFill.setAttribute('transform', landTransform);
+        landStroke.setAttribute('transform', landTransform);
+        state.view.land = landFill;
+        state.view.landStroke = landStroke;
         state.view.landPr = pr;
-        svg.insertBefore(land, grid);
+        svg.insertBefore(landFill, grid);
+        svg.insertBefore(landStroke, grid);
+
+        // 细小低精度陆地：长条/退化 sliver 整条不绘制，消除东海—日本一带
+        // 多余的细直线闭合轮廓；实心小岛保留填充与描边。用填充采样占比区分
+        // “实心岛”和“细线状退化多边形”，避免把小岛也一起删掉。
+        const fillPaths = [...landFill.querySelectorAll('path')];
+        landStroke.querySelectorAll('path').forEach((strokePath, i) => {
+            let box;
+            try {
+                box = strokePath.getBBox();
+            } catch {
+                return;
+            }
+            const degX = box.width / (pr.s * pr.cos1);
+            const degY = box.height / pr.s;
+            if (Math.max(degX, degY) > 4) return;
+            const fillPath = fillPaths[i];
+            const N = 6;
+            let inside = 0;
+            if (fillPath && typeof fillPath.isPointInFill === 'function') {
+                const probe = svg.createSVGPoint();
+                for (let iy = 0; iy < N; iy++) {
+                    for (let ix = 0; ix < N; ix++) {
+                        probe.x = box.x + (box.width * (ix + 0.5)) / N;
+                        probe.y = box.y + (box.height * (iy + 0.5)) / N;
+                        try {
+                            if (fillPath.isPointInFill(probe)) inside += 1;
+                        } catch {
+                            /* 忽略不可测路径 */
+                        }
+                    }
+                }
+            }
+            if (inside / (N * N) < 0.08) {
+                if (fillPath) fillPath.classList.add('fm-land-hidden');
+                strokePath.classList.add('fm-land-hidden');
+            }
+        });
     }
 
     // 省份区块：每省一个合并 path（填充 + 描边）；数据为 {quant, data: {省名: 多边形数组}}
@@ -336,6 +383,132 @@ async function build(root, points, locationData, statsByName) {
         state.view.country = country;
         state.view.countryPr = pr;
         svg.insertBefore(country, grid);
+    }
+
+    // 高精度省/国界区域用自身填充/描边；陆地填充层与描边层在高精度区域内
+    // 都由 mask 挖掉，区外保留低精度陆地/海岸线；高精度区块用单层实色，
+    // 深色块边缘即高精度轮廓，不会出现两层叠加后边缘跑到 NE 海岸线的问题。
+    if (state.view.landStroke && (state.view.prov || state.view.country)) {
+        const mask = document.createElementNS(SVG_NS, 'mask');
+        mask.setAttribute('id', 'fm-land-mask');
+        mask.setAttribute('maskUnits', 'userSpaceOnUse');
+        mask.setAttribute('maskContentUnits', 'userSpaceOnUse');
+        mask.setAttribute('x', '0');
+        mask.setAttribute('y', '0');
+        mask.setAttribute('width', String(pr.W));
+        mask.setAttribute('height', String(pr.H));
+        const maskBg = document.createElementNS(SVG_NS, 'rect');
+        maskBg.setAttribute('x', '0');
+        maskBg.setAttribute('y', '0');
+        maskBg.setAttribute('width', String(pr.W));
+        maskBg.setAttribute('height', String(pr.H));
+        maskBg.setAttribute('fill', 'white'); // mask 亮度：白显（描边默认透出）
+        mask.appendChild(maskBg);
+        const highPaths = [];
+        [state.view.prov, state.view.country].filter(Boolean).forEach((group) => {
+            group.querySelectorAll('.fm-region').forEach((region) => {
+                highPaths.push(region);
+                const hole = document.createElementNS(SVG_NS, 'path');
+                hole.setAttribute('d', region.getAttribute('d'));
+                hole.setAttribute('class', 'fm-land-mask-region');
+                mask.appendChild(hole);
+            });
+        });
+        // 岛屿/小型陆地的整条 land path 若大部分落在高精度区域内，整条挖掉：
+        // 只挖区域多边形的话，NE 岛屿在外沿仍会露出第二圈线（日本最明显）；
+        // 5×5 采样判断“大部分在区域内”，避免误伤横跨区域的大陆块。
+        if (highPaths.length) {
+            const probe = svg.createSVGPoint();
+            const highBoxes = [];
+            highPaths.forEach((high) => {
+                try {
+                    highBoxes.push(high.getBBox());
+                } catch {
+                    /* 忽略不可量测的路径 */
+                }
+            });
+            const hideLand = (landPath) => {
+                const hole = document.createElementNS(SVG_NS, 'path');
+                hole.setAttribute('d', landPath.getAttribute('d'));
+                hole.setAttribute('class', 'fm-land-mask-region');
+                mask.appendChild(hole);
+            };
+            // 主岛（本州/北海道/九州/四国）整体落在国界包围盒内：低精度填充与描边
+            // 整条隐藏，由高精度国界提供轮廓；萨哈林/朝鲜等大块陆地不在 bbox 内，不受影响
+            const countryBoxes = state.view.country
+                ? [...state.view.country.querySelectorAll('.fm-region')]
+                    .map((countryRegion) => {
+                        try {
+                            return countryRegion.getBBox();
+                        } catch {
+                            return null;
+                        }
+                    })
+                    .filter(Boolean)
+                : [];
+            const insideHigh = (x, y) => highPaths.some((high) => {
+                try {
+                    if (typeof high.isPointInFill === 'function') return high.isPointInFill(probe);
+                    const hb = high.getBBox();
+                    return x >= hb.x && x <= hb.x + hb.width && y >= hb.y && y <= hb.y + hb.height;
+                } catch {
+                    return false;
+                }
+            });
+            const N = 5;
+            const fillPaths = [...state.view.land.querySelectorAll('path')];
+            state.view.landStroke.querySelectorAll('path').forEach((landPath, landIndex) => {
+                let box;
+                try {
+                    box = landPath.getBBox();
+                } catch {
+                    return;
+                }
+                // 处理本州/北海道/九州/四国等主岛级 land path（跨度 >2°），
+                // 保留国界内真正的小岛（跨度 ≤2°）的填充与轮廓
+                const largeLand = Math.max(box.width / (pr.s * pr.cos1), box.height / pr.s) > 2;
+                const inCountryBox = largeLand && countryBoxes.some((cb) => box.x >= cb.x && box.y >= cb.y
+                    && box.x + box.width <= cb.x + cb.width
+                    && box.y + box.height <= cb.y + cb.height);
+                if (inCountryBox) {
+                    // 填充与描边整条隐藏；再挖 mask 已无意义（display:none 已不渲染）
+                    landPath.classList.add('fm-land-hidden');
+                    const fillPath = fillPaths[landIndex];
+                    if (fillPath) fillPath.classList.add('fm-land-hidden');
+                    return;
+                }
+                const nearHigh = highBoxes.some((hb) => box.x <= hb.x + hb.width
+                    && box.x + box.width >= hb.x
+                    && box.y <= hb.y + hb.height
+                    && box.y + box.height >= hb.y);
+                if (!nearHigh) return;
+                let land = 0;
+                let covered = 0;
+                for (let iy = 0; iy < N; iy++) {
+                    for (let ix = 0; ix < N; ix++) {
+                        probe.x = box.x + (box.width * (ix + 0.5)) / N;
+                        probe.y = box.y + (box.height * (iy + 0.5)) / N;
+                        let inLand = true;
+                        try {
+                            if (typeof landPath.isPointInFill === 'function') {
+                                inLand = landPath.isPointInFill(probe);
+                            }
+                        } catch {
+                            inLand = false;
+                        }
+                        if (!inLand) continue;
+                        land += 1;
+                        if (insideHigh(probe.x, probe.y)) covered += 1;
+                    }
+                }
+                if (land > 0 && covered / land >= 0.8) hideLand(landPath);
+            });
+        }
+        defs.appendChild(mask);
+        // 填充层也挖掉：高精度区块改用单层实色，边缘严格等于高精度轮廓，
+        // 不再出现“陆地填充叠加后深色块边缘跑到 NE 海岸线”的问题
+        state.view.land.setAttribute('mask', 'url(#fm-land-mask)');
+        state.view.landStroke.setAttribute('mask', 'url(#fm-land-mask)');
     }
 
     if (seq !== buildSeq) return; // 成功路径在 await 后已守卫，此处兜底（如未缓存 fetch 快速完成）

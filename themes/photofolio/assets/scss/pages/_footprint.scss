@@ -60,17 +60,36 @@
        主题切换时全量元素同跑 0.3s fill/stroke 过渡会逐帧重光栅化巨量路径
        （round 线帽线接更贵），掉帧卡顿且与页面其余部分不同步——
        大地块与点迹瞬时切换最省性能，页面级元素（地图框/图例/弹层）保留主题渐隐 */
-    .fm-land path {
+    /* 低精度陆地填充：与描边一起在高精度区域内由 mask 挖掉 */
+    .fm-land-fill path {
         fill: var(--color-map-fill);
+    }
+
+    /* 低精度陆地描边：高精度区域内由 mask 挖掉，区域外保留海岸线 */
+    .fm-land-stroke path {
+        fill: none;
         stroke: var(--color-map-border);
         stroke-width: 0.5;
         stroke-linejoin: round;
         stroke-linecap: round;
     }
 
-    /* 省/国区块：填充 + 描边的可交互区块；无照片地区中性填充、不可交互 */
+    /* mask 亮度值（黑遮白显，非可见主题色）：黑色省/国界形状把陆地填充与描边
+       一起挖掉；高精度区块用单层深色实色，边缘即高精度轮廓 */
+    .fm-land-mask-region {
+        fill: black;
+        stroke: none;
+    }
+
+    /* 整条不绘制：主岛低精度 land path（跨度 >2° 且落在国界 bbox 内）
+       与长条/退化 sliver；实心小岛保留填充和描边 */
+    .fm-land-hidden {
+        display: none;
+    }
+
+    /* 高精度省/国区块：填充 + 描边；无照片地区中性填充、不可交互 */
     .fm-regions .fm-region {
-        fill: var(--color-map-fill);
+        fill: var(--color-map-region-fill);
         stroke: var(--color-map-border);
         stroke-width: 0.5;
         stroke-linejoin: round;
@@ -82,7 +101,7 @@
         /* 交互态（悬停提亮/聚焦）保持瞬时切换、不挂过渡：触屏粘性 :hover
            会让过渡常驻，主题切换时这些数万坐标点的大路径仍会参与
            逐帧重光栅化、明暗切换恢复卡顿（iPad 实测） */
-        &:hover { fill: var(--color-accent-15); }
+        &:hover { fill: var(--color-map-region-hover); }
         &:focus,
         &:focus-visible {
             /* 点击/聚焦都摘除 UA 焦点框：Chromium 给 :focus 画 auto 5px outline、

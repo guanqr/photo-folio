@@ -158,6 +158,10 @@ body {
 
     /* 足迹地图区块配色（明暗主题各自定义，亮色下加深保证可读性） */
     --color-map-fill: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.1);
+    /* 高精度省/国区块：单层实色（≈原陆地+区块两层叠加深度），边缘即高精度轮廓 */
+    --color-map-region-fill: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.19);
+    /* 悬停色块：旧版“陆地填充 + accent-15”叠加后的实色（新单层区块上直接铺 accent-15 会偏暗） */
+    @include defineColorHSL(--color-map-region-hover, 189.3, 11.4%, 25.8%);
     --color-map-border: var(--color-border);
 
     /* 首页轮播背景：固定暗色卡片色——轮播始终为暗色视觉（亮色下 bg-card
@@ -354,7 +358,9 @@ html.theme-switching *::after {
 
     --color-overlay-subtle: hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.05);
 
-    --color-map-fill: hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.09); /* 亮色：陆地/区块填充加深一档 */
+    --color-map-fill: hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.09); /* 亮色：陆地填充加深一档 */
+    --color-map-region-fill: hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.17); /* 高精度区块单层实色：边缘即高精度轮廓 */
+    @include defineColorHSL(--color-map-region-hover, 181.9, 11.6%, 80.2%); /* 悬停色块：旧版叠加色 */
     @include defineColorHSL(--color-map-border, 217.5, 9.6%, 67.5%); /* 亮色：省/国分界线加深一档（冷灰与色板同调，经四元组定义） */
 }
 
