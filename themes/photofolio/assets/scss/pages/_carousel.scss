@@ -71,6 +71,9 @@
     align-items: center;
     justify-content: center;
     gap: var(--space-8);
+    /* 长副标题在窄屏会占满整行、贴住视口左右边缘；左右边距与导航栏
+       （.header-inner）一致，文字左/右缘和导航栏内容对齐（2026-11-19） */
+    padding: 0 var(--space-16);
 
     /* 按类名而非标签选择：hero 标题改用 h1 后入场动画仍生效（2026-11-16） */
     .carousel-hero-title { animation: hero-rise 0.6s var(--ease-soft) 0.05s both; }
