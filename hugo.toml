@@ -43,8 +43,8 @@ defaultContentLanguage = "zh-hant"
 
 [params]
     description = "用鏡頭記錄生活的每一個瞬間"
-    heroTitle = "向時間借一瞬"
-    heroSubtitle = "按下快門，世界便安靜了半拍"
+    heroTitle = "風阡尋影"
+    heroSubtitle = "沿漫野之途，收錄散於厚土間的煙火舊事"
     # 首页轮播图数量（1-12 张，超出范围自动钳制到边界值）
     carouselCount = 6
     # 首页轮播自动播放间隔（毫秒；0 禁用自动播放，其余最小 1200——与淡入淡出时长一致）
