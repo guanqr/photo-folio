@@ -13,6 +13,53 @@ def _clean(value):
     return _CONTROL_RE.sub("", str(value)).strip()
 
 
+def _gps_decimal(values, ref, max_deg):
+    """GPS 度分秒 → 十进制度；缺 ref、缺值、越界返回 None。
+
+    Pillow 已把 GPS 坐标解成 (度, 分, 秒) 的浮点序列；ref 必须是
+    N/S/E/W 才能定半球，缺失时无法判断正负，宁可视为无坐标（2026-11-19）。"""
+    if isinstance(ref, bytes):
+        ref = ref.decode("ascii", "ignore")
+    ref = str(ref or "").strip().upper()
+    if ref not in ("N", "S", "E", "W"):
+        return None
+    try:
+        d, m, s = (float(v) for v in values)
+    except (TypeError, ValueError):
+        return None
+    if not (0 <= d <= max_deg and 0 <= m < 60 and 0 <= s < 60):
+        return None
+    deg = d + m / 60 + s / 3600
+    return -deg if ref in ("S", "W") else deg
+
+
+def _format_coord(value):
+    """十进制度 → 6 位小数、去尾随 0（与 geocode-photos.py 的 round(...,6) 同口径）"""
+    out = f"{round(value, 6):.6f}".rstrip("0").rstrip(".")
+    return out if out not in ("", "-0") else "0"
+
+
+def _fill_gps_info(img, info):
+    """EXIF GPS → lat/lng（十进制度；2026-11-19）。
+
+    GPS IFD 存在不等于有坐标：实测原图有两张只写了方向/海拔、没有
+    GPSLatitude/GPSLongitude；相机无定位时还可能写 (0,0)（Null Island）。
+    这些情况一律留空，避免足迹地图出现假点。"""
+    try:
+        exif = img.getexif()
+        gps = exif.get_ifd(34853) if 34853 in exif else {}
+    except Exception:
+        gps = {}
+    if not gps:
+        return
+    lat = _gps_decimal(gps.get(2), gps.get(1), 90)
+    lng = _gps_decimal(gps.get(4), gps.get(3), 180)
+    if lat is None or lng is None or (lat == 0 and lng == 0):
+        return
+    info["lat"] = _format_coord(lat)
+    info["lng"] = _format_coord(lng)
+
+
 def _normalize_time(value):
     """EXIF 日期时间 → "YYYY-MM-DD HH:MM:SS"（保留拍摄时刻，2026-11-14）。
 
@@ -31,7 +78,8 @@ def _normalize_time(value):
 
 
 def get_exif_info(image_path):
-    """从 EXIF 中提取：focus, iso, aperture, shutter, time, camera, lens（宽高由 main.py 从处理后输出图读取）"""
+    """从 EXIF 中提取：focus, iso, aperture, shutter, time, camera, lens, lat, lng
+    （宽高由 main.py 从处理后输出图读取）"""
     info = {
         "focus": "",
         "iso": "",
@@ -40,9 +88,13 @@ def get_exif_info(image_path):
         "time": "",
         "camera": "",
         "lens": "",
+        "lat": "",
+        "lng": "",
     }
     try:
         img = Image.open(image_path)
+        # GPS 独立于主 EXIF 块读取：没有 EXIF 的图仍可能有 GPS IFD
+        _fill_gps_info(img, info)
         exif_data = img._getexif()
         if not exif_data:
             return info

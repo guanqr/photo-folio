@@ -31,8 +31,8 @@ lens = "LEICA DG 12-60"           # 镜头（EXIF LensModel；管线自动填）
 time = "2025-10-05 15:33:52"      # 拍摄时刻（EXIF 原始口径；Hugo 只认带秒的 HH:MM:SS 与纯日期，无秒的 HH:MM 会解析报错）
 place = "云南丽江"                  # 拍摄地点
 location = "云南"                   # 所属地区（足迹地点注册与地图聚合依据）
-address = "云南省丽江市玉龙雪山"     # 详细地址（选填，geocode-photos.py 地理编码输入；相机无 GPS）
-lat = "27.1059"                    # 纬度（选填，由 address 地理编码生成；足迹地图点迹用）
+address = "云南省丽江市玉龙雪山"     # 详细地址（选填，geocode-photos.py 地理编码输入；原图无 GPS 时补坐标）
+lat = "27.1059"                    # 纬度（选填；原图自带 EXIF GPS 时管线自动填，否则由 address 地理编码生成；足迹地图点迹用）
 lng = "100.1812"                   # 经度（同上）
 hash = "a1b2c3d4"                  # 输出图内容哈希（管线自动生成；图片 URL 以 ?v= 拼接，换图即刷新缓存）
 source_hash = "…"                 # 输入图内容 MD5 全 32 位（管线自动生成；换图检测用，站点不消费）
@@ -131,7 +131,7 @@ url = "https://example.com/source"
 
 ### 4. 足迹 `/footprint/` 及地区页 `/footprint/{slug}/`
 - **足迹世界地图**：自绘 SVG 等距圆柱投影（零外部库/瓦片），视图 = 照片点迹 ∪ **有照片省份的完整包围盒**（省份完整可见；海外国家不并入包围盒）；**省份/国家为独立填充区块**（高精度省/国填充 + 描边；高精度区块用单层深色实色，边缘即高精度轮廓；低精度陆地填充与描边在省/国区域内由 mask 挖掉、区域外保留低精度海岸线，两套线在边界处直接衔接，无缺口；海外国家主岛（跨度 >2° 且落在国界 bbox 内）的低精度填充与描边整条隐藏，由高精度国界提供轮廓；实心小岛保留填充和描边，长条/退化 sliver 整条不绘制（保留小岛轮廓、消除东海的细直线闭合轮廓）；悬停/聚焦提亮、点击跳转地点详情页；无照片地区 pointer-events none）；全部照片坐标形成**点迹**（光环为 `--color-accent` 径向渐变辉光 + 核心两层、纯展示）；鼠标/触控笔悬停与键盘聚焦显示弹层（地名/张数/年份跨度），**触屏不显示弹层、点按直接跳转地点详情页**（footprint-tooltip.js 按 pointerType 判定）；区块须声明 `cursor: pointer`（iOS 只向可交互或 cursor:pointer 元素派发 click）；陆地/省界/国家几何静态数据 + 同源 fetch 记忆化（失败降级为网格+点迹）；IntersectionObserver 懒加载（rootMargin 600px）；`prefers-reduced-motion` 完整降级；带边框圆角框架（内容裁剪到 viewBox，区块宽度与导航栏一致）
-- 照片坐标字段：photo.toml 可选 address/lat/lng——address 经 `tools/geocode/geocode-photos.py` 高德地理编码生成 lat/lng（key 走环境变量 AMAP_KEY 或 tools/geocode/config.json）；**lat/lng 用于足迹地图点迹**（详情页小地图已取消）；geocode 兜底口径：仅「无结果/网络异常」落 Nominatim——**key/配额类错误（infocode 1000 前缀）不落兜底、中止循环**（境外服务解析境内中文地址不可靠、会污染坐标）
+- 照片坐标字段：photo.toml 可选 address/lat/lng——原图自带 EXIF GPS 时预处理管线直接写 lat/lng（度分秒转十进制度 6 位小数、S/W 取负；缺 ref/值、越界、(0,0) 视为无坐标留空，2026-11-19）；仍缺坐标的条目再由 address 经 `tools/geocode/geocode-photos.py` 高德地理编码生成（key 走环境变量 AMAP_KEY 或 tools/geocode/config.json）；**lat/lng 用于足迹地图点迹**（详情页小地图已取消）；geocode 兜底口径：仅「无结果/网络异常」落 Nominatim——**key/配额类错误（infocode 1000 前缀）不落兜底、中止循环**（境外服务解析境内中文地址不可靠、会污染坐标）
 - 地点注册表唯一实现：`layouts/partials/utils/location-registry.html`（Title → slug/URL，画廊筛选与足迹页共用；坐标不再输出，地图点迹用照片 lat/lng）
 - 桌面端地图左栏 + 右侧地点预览面板（点击地块/点迹更新面板，整块链接进地点详情页）
 - 地区详情页使用瀑布流展示

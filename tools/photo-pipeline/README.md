@@ -9,6 +9,7 @@ tools/photo-pipeline/
 ├── run.py                   # 入口（python run.py）
 ├── backfill_camera_lens.py  # 一次性回填相机/镜头（历史数据迁移）
 ├── backfill_source_hash.py  # 一次性回填输入图 source_hash（接入换图检测前）
+├── backfill_gps.py          # 一次性回填原图 EXIF GPS 坐标 lat/lng
 ├── backfill_published.py    # 一次性按 git 历史回填发布时间 published
 ├── src/                     # 源代码
 │   ├── main.py              # 调度逻辑 + 路径配置读取
@@ -49,7 +50,7 @@ python run.py            # 增量处理（只处理新增/源图变化的照片�
 python run.py --force    # 全量重跑（忽略 source_hash 增量检测）
 ```
 
-处理完成并写入 `data/photo.toml` 后，站点侧如需补充地理坐标：为照片填 `address` 后运行 `python tools/geocode/geocode-photos.py`（站点根目录，详见站点 README）。
+原图自带 EXIF GPS 时坐标已直接写入 `data/photo.toml`（无 GPS 留空）；仍缺坐标的照片再填 `address` 后运行 `python tools/geocode/geocode-photos.py`（站点根目录，详见站点 README）。
 
 ## 处理内容
 
@@ -61,7 +62,7 @@ python run.py --force    # 全量重跑（忽略 source_hash 增量检测）
 
 ## photo.toml 自动更新
 
-新增照片自动追加，EXIF 拍摄参数自动填入，手动字段留空，按拍摄时间升序排列；已有条目的手动编辑内容（alt/category/place/location/description/series/species/featured/address/lat/lng 等）完整保留。同名换图（source_hash 变化）成功重出后，focus/iso/aperture/shutter/time/camera/lens 会随新 EXIF 更新；新照片处理失败不会写入条目。
+新增照片自动追加，EXIF 拍摄参数自动填入，手动字段留空，按拍摄时间升序排列；已有条目的手动编辑内容（alt/category/place/location/description/series/species/featured/address 等）完整保留。同名换图（source_hash 变化）成功重出后，focus/iso/aperture/shutter/time/camera/lens 会随新 EXIF 更新；lat/lng 仅在新图自带 GPS 时覆盖（无 GPS 不抹掉地址地理编码结果）；新照片处理失败不会写入条目。
 
 | 字段 | 来源 |
 |------|------|
@@ -71,7 +72,7 @@ python run.py --force    # 全量重跑（忽略 source_hash 增量检测）
 | width / height | 处理后图片尺寸（从输出目录读取） |
 | hash | 处理后图片内容 MD5 前 8 位（图片 URL 的 `?v=` 缓存版本号） |
 | alt / category / place / location / description / address | 留空，手动填写 |
-| lat / lng | 由站点侧 geocode-photos.py 从 address 生成 |
+| lat / lng | 原图自带 EXIF GPS 时自动提取（度分秒转十进制度，无坐标留空）；否则由站点侧 geocode-photos.py 从 address 生成 |
 | series / species / is_cover / featured | 不自动生成，手动添加后保留（species 对应 data/birds.toml 的鸟种 id） |
 
 ## 历史数据回填（一次性）
@@ -83,6 +84,16 @@ python backfill_camera_lens.py <original_photos目录> <photo.toml路径>
 ```
 
 脚本只读取 EXIF 并更新 `photo.toml` 的 `camera`/`lens` 字段，不处理图片、不上传 OSS。
+
+### 回填 GPS 坐标
+
+旧数据没有坐标、而原图自带 GPS 时：
+
+```bash
+python backfill_gps.py <original_photos目录> <photo.toml路径>
+```
+
+自带 GPS 的坐标覆盖旧值（EXIF 实测优先于 address 地理编码）；读不到坐标的条目保持原值，不抹掉地理编码结果。只读 EXIF、只改 toml。
 
 ### 回填发布时间
 
@@ -107,6 +118,6 @@ python list_orphan_photos.py <photo.toml路径>
 
 ## 增量处理
 
-只处理新增或源图内容变化的照片（`photo.toml` 的 `source_hash` 与输入文件 MD5 比较），未变化的自动跳过；同名换图（source_hash 变化）成功重出后会同步更新 focus/iso/aperture/shutter/time/camera/lens 等 EXIF 字段，手动字段保留。`python run.py --force` 忽略该检测、重新处理全部照片。OSS 同步：本次实际处理过的照片始终覆盖上传；未处理但在云端缺失的文件也会补传（避免本地有、云端无的 404）；其余跳过；待传文件默认 4 线程并发（`sync_new_photos(..., max_workers=N)` 可调，1 = 串行）。**图像分析为独立惰性步骤**：结果缺失或算法版本（JSON 的 v 字段）过期才重算；`--force` 仅重出图时不重算分析（源图未变），首次接入自动全量回填（一次性逐像素成本），此后日常运行只分析新增照片。每次运行都会按输出图字节重算 `hash`（未变化时值相同），上传对象写入一年 `immutable` 长缓存——图片 URL 带内容哈希，可放心缓存，同名换图会生成新 URL。
+只处理新增或源图内容变化的照片（`photo.toml` 的 `source_hash` 与输入文件 MD5 比较），未变化的自动跳过；同名换图（source_hash 变化）成功重出后会同步更新 focus/iso/aperture/shutter/time/camera/lens 等 EXIF 字段（lat/lng 仅新图自带 GPS 时更新），手动字段保留。`python run.py --force` 忽略该检测、重新处理全部照片。OSS 同步：本次实际处理过的照片始终覆盖上传；未处理但在云端缺失的文件也会补传（避免本地有、云端无的 404）；其余跳过；待传文件默认 4 线程并发（`sync_new_photos(..., max_workers=N)` 可调，1 = 串行）。**图像分析为独立惰性步骤**：结果缺失或算法版本（JSON 的 v 字段）过期才重算；`--force` 仅重出图时不重算分析（源图未变），首次接入自动全量回填（一次性逐像素成本），此后日常运行只分析新增照片。每次运行都会按输出图字节重算 `hash`（未变化时值相同），上传对象写入一年 `immutable` 长缓存——图片 URL 带内容哈希，可放心缓存，同名换图会生成新 URL。
 
 输出图与 `photo.toml` 均采用临时文件 + `os.replace` 原子写（TOML 固定 LF）；OSS 上传成功后才写 `photo.toml`，上传失败时站点数据保持旧版本。新增照片会打印「请填写 alt/category/place/location」提醒，并在总结中计数。

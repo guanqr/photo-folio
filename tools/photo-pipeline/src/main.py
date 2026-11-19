@@ -18,7 +18,8 @@ from oss_utils import create_bucket_from_config, sync_new_photos
 
 # 同名换图（source_hash 变化）时随 EXIF 一起更新的自动字段；手动字段
 # （alt/category/place/address/location/description/series/species/is_cover/featured）
-# 不在此列，保持用户编辑
+# 不在此列，保持用户编辑。lat/lng 单独处理：新图自带 GPS 才覆盖，
+# 无 GPS 不得抹掉 address 地理编码得到的坐标（2026-11-19）
 AUTO_EXIF_FIELDS = ("focus", "iso", "aperture", "shutter", "time", "camera", "lens")
 
 
@@ -118,6 +119,11 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None, forc
             if source_changed and exif_info is not None:
                 for key in AUTO_EXIF_FIELDS:
                     entry[key] = exif_info.get(key, "")
+                # 坐标优先取 EXIF GPS：新图带了就覆盖（含地理编码旧值），
+                # 没带则保留原值——address 地理编码结果不能被空值冲掉
+                for key in ("lat", "lng"):
+                    if exif_info.get(key):
+                        entry[key] = exif_info[key]
 
         # 图像分析：源图变化成功重处理时强制重算；force 仅重出图 / 跳过时按
         # 结果缺失/算法版本惰性判定；处理失败不重算（避免分析结果与旧输出图版本错配）
@@ -152,6 +158,8 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None, forc
                     "shutter": exif_info["shutter"],
                     "time": exif_info["time"],
                     "place": "",
+                    "lat": exif_info.get("lat", ""),
+                    "lng": exif_info.get("lng", ""),
                     "location": "",
                     "camera": exif_info.get("camera", ""),
                     "lens": exif_info.get("lens", ""),

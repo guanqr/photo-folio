@@ -147,8 +147,8 @@ hash = "a1b2c3d4"         # 输出图内容哈希（管线自动生成；图片 
 source_hash = "…"         # 输入图内容 MD5（换图检测，站点不消费；管线自动生成）
 published = "2026-11-12T10:00:00+08:00"  # 发布时间（RSS 排序；管线新建条目时写入一次）
 camera = "NIKON Z 5"      # 机身（灯箱「機身」行展示，缺失时以删除线占位）
-address = "浙江省杭州市西湖区曲院风荷"  # 详细地址（选填；相机无 GPS，由 geocode-photos.py 转经纬度）
-lat = "30.2534"           # 纬度（选填；由 address 地理编码生成，用于足迹地图点迹）
+address = "浙江省杭州市西湖区曲院风荷"  # 详细地址（选填；原图无 GPS 时供 geocode-photos.py 转经纬度）
+lat = "30.2534"           # 纬度（选填；原图自带 GPS 时管线自动填，否则由 address 地理编码生成，用于足迹地图点迹）
 lng = "120.1320"          # 经度（同上）
 lens = "NIKKOR Z 24-200mm f/4-6.3 VR"  # 镜头（灯箱「鏡頭」行展示，缺失时以删除线占位）
 description = "照片描述（可选，用于 Lightbox 展示）"
@@ -172,7 +172,7 @@ lng = 100.23
 
 - 全国省级地区已在 `locations.toml` 预登记（含港澳台），新增国内照片无需再改注册表；只有**海外新国家/地区**需要加一条 `[[location]]`，并在 `tools/map-data/map_names.py` 的 `COUNTRY_NAMES` 登记后运行 `generate-maps.py --names-only`；照片的 `location` 未登记时构建会报错（避免地图/地点链接 404）
 - 地图陆地与省界几何为一次性生成的数据（`themes/photofolio/static/maps/land-10m.json` 世界陆地、`provinces.json` 中国省级边界线按省索引，含港澳台），如无特殊需要不必重新生成（管线：`python tools/map-data/generate-maps.py`）
-- **照片坐标字段**：为照片填 `address`（详细地址）后运行 `python tools/geocode/geocode-photos.py` 生成 `lat`/`lng`（需先申请高德开放平台「Web 服务」key，写在 `tools/geocode/config.json`（`{"amap_key": "..."}`，复制 config.example.json 填写，已 gitignore 不入库）或环境变量 `AMAP_KEY`；脚本按 350ms 间隔串行请求、可重复运行，坐标写入 address 行之后；高德无结果/网络异常时经 OSM Nominatim 兜底（海外地址），key 无效/配额耗尽等错误直接中止、不会把境内地址误交给境外服务）；**lat/lng 用于足迹地图点迹**（详情页不再展示小地图）
+- **照片坐标字段**：原图自带 EXIF GPS 时预处理管线直接写入 `lat`/`lng`（无 GPS 留空），无需另填；没有 GPS 的照片填 `address`（详细地址）后运行 `python tools/geocode/geocode-photos.py` 补坐标（需先申请高德开放平台「Web 服务」key，写在 `tools/geocode/config.json`（`{"amap_key": "..."}`，复制 config.example.json 填写，已 gitignore 不入库）或环境变量 `AMAP_KEY`；脚本只处理仍缺坐标的条目，按 350ms 间隔串行请求、可重复运行；高德无结果/网络异常时经 OSM Nominatim 兜底（海外地址），key 无效/配额耗尽等错误直接中止、不会把境内地址误交给境外服务）；**lat/lng 用于足迹地图点迹**（详情页不再展示小地图）
 
 ### 系列作品
 

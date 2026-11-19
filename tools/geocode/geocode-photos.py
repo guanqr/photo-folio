@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 照片地理编码：把 photo.toml 中用户填写的详细地址（address 字段）转成 lat/lng 坐标
-（零第三方依赖，Python 3.11+；相机无 GPS，坐标由地址解析而来）。
+（零第三方依赖，Python 3.11+；原图自带 EXIF GPS 时预处理管线已直接写入坐标，
+本脚本只为仍缺坐标的条目按地址解析）。
 
 前置：申请高德开放平台「Web 服务」key（个人开发者免费额度），两种提供方式任选：
   1) 本目录 config.json（已加入 .gitignore，不会入库；复制 config.example.json 填写）：
