@@ -6,7 +6,7 @@
 
 - **懒加载**：灯箱骨架不随页面 HTML 输出，由独立 `/lightbox-shell/` 页面承载（`content/lightbox-shell.md`，`noindex`、不进 sitemap）；首次点击 `.photo-wrapper` 或带 `?p=` 深链时 `lightbox-boot.js` fetch 骨架注入并动态加载灯箱入口（`entries/lightbox.js`），随后重放点击；**指针悬停作品卡（桌面）或键盘聚焦时预启动**（后台完成同一流程，点击时已就绪；未悬停的触屏首点仍按懒启动），骨架/入口加载失败可重试，SPA 换页保留已注入骨架。灯箱样式独立编译为 `css/lightbox.<hash>.css`（`scss/lightbox.scss`），由 `lightbox-boot.js` 在首次启动时注入——样式、骨架、入口三者并行加载、样式就位后才初始化，骨架先以 `display:none` 注入、成功后才放出（CSS 失败时不残留裸壳、可重试）；悬停/聚焦预启动会提前拉取，首访主样式不再携带灯箱规则（2026-11-15）
 - 全屏遮罩，点击 `.photo-wrapper` 触发；**背景为当前照片铺满屏幕的模糊毛玻璃**（`.lightbox-backdrop`：cover + `blur(40px) brightness(0.55)` 合成滤镜压暗 + scale 1.1，切换照片时随主图同步更换）；打开时滚动锁挂根元素（`documentElement` overflow hidden——只锁 body 不生效：`html { overflow-x: clip }` 阻断向视口传播），经典滚动条随灯箱隐藏、灯箱覆盖满视口，关闭恢复并保持滚动位置
-- 全局事件委托 `document.addEventListener('click', ...)`；**箭头覆盖当前页面全部照片**——集合按网格 `_planItems`（当前筛选结果、时间顺序）生成，含尚未渲染、留在隐藏池的卡片（灯箱直接读卡片的 `data-src` / `data-full-src` 与元信息，翻页不触碰网格、不触发任何行渲染）；筛选时只在当前筛选集合内循环；关闭后页面停留在打开前的滚动与已渲染状态
+- 全局事件委托 `document.addEventListener('click', ...)`；**箭头覆盖当前页面全部照片**——集合按网格 `_planItems`（当前筛选结果、展示顺序）生成，含尚未渲染、留在隐藏池的卡片（灯箱直接读卡片的 `data-src` / `data-full-src` 与元信息，翻页不触碰网格、不触发任何行渲染）；筛选时只在当前筛选集合内循环；关闭后页面停留在打开前的滚动与已渲染状态
 - 图片切换：图片 + 标题 + 描述同步淡出 → 换内容 → 同步淡入（`opacity 0.3s ease`）
 - 关闭按钮（3em 圆形）：hover 时 SVG 弹簧旋转 90°，仅改颜色不缩放按钮本身
 - 左右箭头（3em 圆形，与关闭/播放/全屏按钮同档）：默认 `opacity: 0`，仅 hover/触达时淡入浮现（0.35s），hover 方向微移

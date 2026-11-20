@@ -1,4 +1,6 @@
 {
     "input_dir": "D:\\photos\\original_photos",
-    "output_dir": "D:\\photos\\output_photos"
+    "output_dir": "D:\\photos\\output_photos",
+    "photos_dir": "D:\\site\\data\\photos",
+    "photos_split_from_year": 2024
 }

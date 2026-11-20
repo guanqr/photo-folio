@@ -4,7 +4,7 @@
        {{ partial "utils/photo-hash.html" (dict "src" $cover) }} */}}
 {{- $src := .src | default "" -}}
 {{- $hash := "" -}}
-{{- with where hugo.Data.photo.photo "src" $src -}}
+{{- with where (partialCached "utils/photo-sorted.html" . "display") "src" $src -}}
     {{- $hash = (index . 0).hash | default "" -}}
 {{- end -}}
 {{- return $hash -}}

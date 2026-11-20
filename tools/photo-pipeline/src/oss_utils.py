@@ -4,7 +4,7 @@ import os
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
-# 照片 URL 带内容哈希（?v=，photo.toml 的 hash 字段）：对象内容不可变，可放心
+# 照片 URL 带内容哈希（?v=，照片分片的 hash 字段）：对象内容不可变，可放心
 # 设一年 immutable 长缓存；同名换图会生成新 URL，不依赖短 TTL 兜底（2026-10-26）
 CACHE_CONTROL = "public, max-age=31536000, immutable"
 

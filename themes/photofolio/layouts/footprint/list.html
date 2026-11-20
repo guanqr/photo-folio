@@ -1,22 +1,27 @@
 {{ define "main" }}
-{{/* 1. 全站作品时间排序（按地点聚合展示全部作品，含系列内页——与全站拆分一致） */}}
-{{ $sortedPhotos := partialCached "utils/photo-sorted.html" . "desc" }}
+{{/* 1. 全站作品展示顺序（按地点聚合展示全部作品，含系列内页——与全站拆分一致） */}}
+{{ $sortedPhotos := partialCached "utils/photo-sorted.html" . "display" }}
 
-{{/* 2. 按 location 单趟聚合（输入时间降序 → 首见即最新、末见即最早） */}}
+{{/* 2. 按 location 单趟聚合（输入为展示顺序，手动调序可能打破时间序 →
+      最新/最早时刻按 max/min 计算，地点排序仍按最新拍摄时间） */}}
 {{ $locAgg := dict }}
 {{ range $p := $sortedPhotos }}
     {{ with $p.location }}
         {{ $cur := index $locAgg . }}
         {{ $latest := $p.time }}
+        {{ $earliest := $p.time }}
         {{ $count := 1 }}
         {{ $displays := slice }}
         {{ if $cur }}
             {{ $latest = $cur.time }}
+            {{ $earliest = $cur.earliest }}
+            {{ if gt $p.time $latest }}{{ $latest = $p.time }}{{ end }}
+            {{ if lt $p.time $earliest }}{{ $earliest = $p.time }}{{ end }}
             {{ $count = add $cur.realCount 1 }}
             {{ $displays = $cur.photos }}
         {{ end }}
         {{ $displays = $displays | append $p }}
-        {{ $locAgg = merge $locAgg (dict . (dict "time" $latest "earliest" $p.time "realCount" $count "photos" $displays)) }}
+        {{ $locAgg = merge $locAgg (dict . (dict "time" $latest "earliest" $earliest "realCount" $count "photos" $displays)) }}
     {{ end }}
 {{ end }}
 {{ $locationData := slice }}

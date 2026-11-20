@@ -6,7 +6,7 @@
     {{ $sectionName = .Title | urlize }}
 {{ end }}
 
-{{ $sortedPhotos := partialCached "utils/photo-sorted.html" . "desc" }}
+{{ $sortedPhotos := partialCached "utils/photo-sorted.html" . "display" }}
 
 {{/* 【修复 1】先获取真实的作品集合（包含系列内页），用于准确统计总数 */}}
 {{ $realPhotos := slice }}

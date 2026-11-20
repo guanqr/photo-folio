@@ -1,7 +1,7 @@
 {{ define "main" }}
-{{/* ================= 首页轮播：按时间排序最新的精选图，数量由 carouselCount 配置（1-12 张） ================= */}}
+{{/* ================= 首页轮播：按展示顺序取精选图，数量由 carouselCount 配置（1-12 张） ================= */}}
 <section class="carousel-section">
-    {{ $sortedPhotos := partialCached "utils/photo-sorted.html" . "desc" }}
+    {{ $sortedPhotos := partialCached "utils/photo-sorted.html" . "display" }}
     {{ $featured := slice }}
     {{ range $sortedPhotos }}
         {{ if .featured }}

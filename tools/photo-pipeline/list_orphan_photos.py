@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-"""只读核对：列出 OSS images/photos/ 下未被 photo.toml 引用的对象。
+"""只读核对：列出 OSS images/photos/ 下未被 data/photos/ 分片引用的对象。
 
-用法：python list_orphan_photos.py [photo.toml]
+用法：python list_orphan_photos.py [photos目录]
 
-照片改名或从 photo.toml 移除后，旧对象不会再被站点引用，但管线不会自动
-清理；本脚本只拉取清单并打印，不执行任何删除。注意：本地删除图片但保留
-photo.toml 条目时，对象仍算被引用，不会出现在清单里（2026-11-08）。
+照片改名或从分片中移除后，旧对象不会再被站点引用，但管线不会自动清理；
+本脚本只拉取清单并打印，不执行任何删除。注意：本地删除图片但保留分片条目
+时，对象仍算被引用，不会出现在清单里（2026-11-08）。
 """
 import json
 import os
@@ -18,7 +18,7 @@ from compat import setup_windows_stdout
 setup_windows_stdout()
 
 from oss_utils import create_bucket_from_config
-from toml_utils import parse_toml_entries
+from toml_utils import parse_photo_dir
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 OSS_PREFIX = "images/photos/"
@@ -34,8 +34,8 @@ def _format_modified(value):
     return str(value)
 
 
-def _toml_path(cli_arg=""):
-    """命令行参数优先；否则读 pipeline_config.json，缺省仓库 data/photo.toml"""
+def _photos_dir(cli_arg=""):
+    """命令行参数优先；否则读 pipeline_config.json，缺省仓库 data/photos"""
     if cli_arg:
         return os.path.abspath(cli_arg)
     config_path = os.path.join(BASE_DIR, "pipeline_config.json")
@@ -46,19 +46,19 @@ def _toml_path(cli_arg=""):
                 config = json.load(f)
         except Exception as e:
             print(f"⚠️  pipeline_config.json 解析失败：{e}")
-    return config.get("toml_path") or os.path.abspath(
-        os.path.join(BASE_DIR, "..", "..", "data", "photo.toml"))
+    return config.get("photos_dir") or os.path.abspath(
+        os.path.join(BASE_DIR, "..", "..", "data", "photos"))
 
 
 def main():
-    toml_path = _toml_path(sys.argv[1] if len(sys.argv) > 1 else "")
-    if not os.path.exists(toml_path):
-        print(f"❌ photo.toml 不存在：{toml_path}")
+    photos_dir = _photos_dir(sys.argv[1] if len(sys.argv) > 1 else "")
+    if not os.path.isdir(photos_dir):
+        print(f"❌ 照片分片目录不存在：{photos_dir}")
         return
     try:
-        entries = parse_toml_entries(toml_path)
+        entries = [e for _name, items in parse_photo_dir(photos_dir) for e in items]
     except Exception as e:
-        print(f"❌ photo.toml 解析失败：{e}")
+        print(f"❌ 照片分片解析失败：{e}")
         return
 
     referenced = {
@@ -94,12 +94,12 @@ def main():
         key for key in sorted(objects)
         if key[len(OSS_PREFIX):] not in referenced
     ]
-    print(f"☁️  OSS {OSS_PREFIX} 图片对象 {len(objects)} 个，photo.toml 引用 {len(referenced)} 个")
+    print(f"☁️  OSS {OSS_PREFIX} 图片对象 {len(objects)} 个，照片分片引用 {len(referenced)} 个")
     if not orphans:
         print("✅ 未发现未引用的对象")
         return
 
-    print(f"⚠️  未被 photo.toml 引用的对象 {len(orphans)} 个（只列出，不删除）：")
+    print(f"⚠️  未被照片分片引用的对象 {len(orphans)} 个（只列出，不删除）：")
     for key in orphans:
         obj = objects[key]
         size_kb = (obj.size or 0) / 1024

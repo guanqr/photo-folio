@@ -10,7 +10,7 @@
 
 ### 作品浏览
 
-- **两端对齐行布局** — 参考实现式：行高由本行照片内容自然决定、行宽恰好铺满容器（零拉伸、零粗暴裁切），行高贴近参考值（肉眼看基本一致），按时间顺序逐行加载不乱序，resize 自动重排（跨档位换行带 FLIP 过渡）；超窄屏（≤500px）横构图独占一行、竖构图与相邻照片同行
+- **两端对齐行布局** — 参考实现式：行高由本行照片内容自然决定、行宽恰好铺满容器（零拉伸、零粗暴裁切），行高贴近参考值（肉眼看基本一致），按展示顺序逐行加载不乱序，resize 自动重排（跨档位换行带 FLIP 过渡）；超窄屏（≤500px）横构图独占一行、竖构图与相邻照片同行
 - **整页容器 + 渐进加载** — 整组照片的行计划一次算完、页面高度撑满，滚动条一开始就能直达底部；首屏只揭示可见窗口内的行（不额外预载），刷新恢复滚动位置时只揭示当前视口行；之后正常下拉逐行补载，一次补多行也由串行队列逐行建立（图片请求与入场都不同时）；拖到未渲染区域时只补视口内的行；已渲染行保留，滚回不闪；末行 ≥2 张时以常规行最小实际行高为基准，放大后超过其 1.1 倍则保持最小行高左对齐，单张末行仍按参考行高 H 留白（详见 [docs/layout.md](docs/layout.md)）
 - **照片卡片悬浮效果** — 鼠标悬停时整卡轻微上移（带回弹弹簧曲线）；悬停显示标题与焦距/光圈两行小字（触屏无悬停）；地点、日期与完整 EXIF 在灯箱中展示
 - **全部作品筛选** — 作品范围（全部/精選/橫構圖/豎構圖）/拍摄年份/拍摄地点/作品类型四组胶囊筛选（可组合、URL 参数同步 `?s=/?y=/?l=/?c=`、视口窗口渲染、计数滚动动画），各维度开关由 `hugo.toml` 的 `[params.galleryFilters]` 控制
@@ -35,7 +35,7 @@
 - **响应式动画过渡** — 瀑布流跨档位换行、列数切换、分类/系列卡片网格、足迹地图旋转、移动端导航均带 FLIP/淡入动画（换行/布局跳变平滑过渡）
 - **页面级 JS 按需加载** — 核心 bundle 只保留全站模块；瀑布流/地图/轮播/系列粒子/关于统计按当前页面加载，灯箱入口首次打开才加载；入口带内容指纹、跨页复用缓存，SPA 换页时先按住新网格卡片避免无 src 卡片铺开
 - **PWA 支持** — Service Worker 离线缓存（版本化壳缓存随发布自动清理；哈希产物/分析结果 JSON/地图几何 JSON 走缓存即用后台更新；离线打开未访问过的链接回退到首页壳；导航缓存键去查询串——`?y=`/`?p=` 等客户端状态参数 URL 与页面本体同缓存、离线可直接打开）
-- **SEO 支持** — 站点地图 `/sitemap.xml`（Hugo 内置，仅页面 URL、不含图片地址——OSS 额度保护）与 `robots.txt`；OG/Twitter 图片在页面无 cover 时回退最新精选；SPA 换页同步 canonical/OG/Twitter/description；订阅源只保留首页 `/index.xml`，不再生成空 section feed；全站与照片页结构化数据 JSON-LD（`WebSite`/`Person`/`ImageGallery`/`Photograph`，含拍摄日期/地点/关键词与作者；列表页最多输出 `params.jsonldPhotoLimit` 条（默认 24，0 不限），EXIF 明细不进 JSON-LD，`numberOfItems` 保持真实总数；**不含任何图片 URL**——搜索引擎只获得元信息文本、不收录照片地址）
+- **SEO 支持** — 站点地图 `/sitemap.xml`（Hugo 内置，仅页面 URL、不含图片地址——OSS 额度保护）与 `robots.txt`；OG/Twitter 图片在页面无 cover 时回退展示顺序最前的精选；SPA 换页同步 canonical/OG/Twitter/description；订阅源只保留首页 `/index.xml`，不再生成空 section feed；全站与照片页结构化数据 JSON-LD（`WebSite`/`Person`/`ImageGallery`/`Photograph`，含拍摄日期/地点/关键词与作者；列表页最多输出 `params.jsonldPhotoLimit` 条（默认 24，0 不限），EXIF 明细不进 JSON-LD，`numberOfItems` 保持真实总数；**不含任何图片 URL**——搜索引擎只获得元信息文本、不收录照片地址）
 - **中文排版优化** — 使用自建字体库的 I.MingCP（标题/正文）与 LXGW WenKai TC（元信息/页脚），Glyph Correction 本地注入；不引入 Google Fonts 或思源宋体外链
 
 ### 订阅与图片基建
@@ -103,10 +103,10 @@ photo-folio/
 │   ├── footprint/       # 足迹（按地区归档）
 │   └── lightbox-shell.md # 灯箱骨架页（首开 fetch；noindex、不进 sitemap）
 ├── data/
-│   ├── photo.toml       # ★ 照片数据（集中管理）
+│   ├── photos/          # ★ 照片数据分片（按拍摄年份：pre-2024.toml、2024.toml…）
 │   └── locations.toml   # 足迹地图坐标（按 location 名键控）
 ├── tools/               # 站点工具（按功能分目录；photo-pipeline 依赖 Pillow/oss2）
-│   ├── photo-pipeline/  # 照片水印/缩放/压缩处理管线（直写 data/photo.toml）
+│   ├── photo-pipeline/  # 照片水印/缩放/压缩处理管线（直写 data/photos/ 分片）
 │   ├── map-data/        # 足迹地图几何生成管线（generate-maps.py，陆地 10m + 省界）
 │   ├── geocode/         # 照片地址地理编码（geocode-photos.py + config.json）
 │   ├── backfill/        # 照片宽高回填（backfill-dimensions.py）
@@ -125,9 +125,9 @@ photo-folio/
 
 ## 📸 添加照片
 
-所有照片数据集中在 `data/photo.toml`，每张照片一条记录。完整字段、构建期校验与排序口径见 [docs/architecture.md](docs/architecture.md)。
+所有照片数据集中在 `data/photos/` 分片目录，按拍摄年份拆分（2024 年以前合并为 `pre-2024.toml`），每张照片一条记录。完整字段、构建期校验与排序口径见 [docs/architecture.md](docs/architecture.md)。
 
-> 💡 推荐使用 [images](https://github.com/guanqr/images) 工具自动读取照片 EXIF 信息，批量生成 `photo.toml` 数据条目，省去手工填写的麻烦。
+> 💡 推荐使用 [images](https://github.com/guanqr/images) 工具自动读取照片 EXIF 信息，批量生成照片数据条目，省去手工填写的麻烦。
 
 ```toml
 [[photo]]
@@ -138,7 +138,7 @@ focus = "24"              # 焦距 (mm)
 iso = "100"
 aperture = "5.6"
 shutter = "1/250"
-time = "2025-10-05 15:33:52"  # 拍摄时刻（EXIF 原值；同日作品按秒级时间排序）
+time = "2025-10-05 15:33:52"  # 拍摄时刻（EXIF 原值；同日作品按秒级时刻区分）
 place = "雲南麗江"
 location = "雲南"
 width = "1920"            # 宽高由预处理管线 tools/photo-pipeline/ 生成（取处理后输出图尺寸，横/竖构图据此推导）
@@ -158,13 +158,15 @@ is_cover = false          # 是否为系列封面（同一系列中仅一张设�
 featured = true           # 精選标记（可选，true 的照片进入首页轮播，并可在全部作品页按「作品範圍 → 精選」筛选）
 ```
 
+> 排序与调序：站点按年份分片降序拼接（2026 → 2025 → 2024 → pre-2024），每个分片文件内部从上到下就是瀑布流顺序（新→旧）。想调整同一天照片的先后，直接在对应分片里上下移动条目即可；跨日顺序由拍摄时间保证。管线重跑与回填脚本会保留既有顺序，新照片按拍摄时间插入对应年份分片。
+
 ### 足迹地图与地点页
 
 足迹页顶部的地图使用照片自身的 `lat`/`lng` 绘制点迹，并按省/国区块聚合、点击跳转地点详情页；`data/locations.toml` 负责地点页注册（名称与 slug），坐标字段保留备用、当前不参与地图：
 
 ```toml
 [[location]]
-name = "雲南"      # 必须与 photo.toml 的 location 字段逐字一致
+name = "雲南"      # 必须与照片数据的 location 字段逐字一致
 slug = "yunnan"    # 地点页 URL：/footprint/yunnan/（必填且唯一；缺省构建报错）
 lat = 26.86       # 保留备用
 lng = 100.23
@@ -192,7 +194,7 @@ is_cover = false
 # ... 其他字段
 ```
 
-同时在 `content/series/` 目录下创建与系列同名的 Markdown 文件（front matter 统一 TOML 格式）。系列照片直接由 `photo.toml` 的 `series` 字段自动带出，按 `time` 降序展示，无需再维护文件名列表：
+同时在 `content/series/` 目录下创建与系列同名的 Markdown 文件（front matter 统一 TOML 格式）。系列照片直接由照片数据的 `series` 字段自动带出，按展示顺序（分片内条目顺序，手动调序优先）排列，无需再维护文件名列表：
 
 ```markdown
 +++
@@ -202,7 +204,7 @@ title = "割藺草"
 
 ### 观鸟图鉴（`data/birds.toml`）
 
-观鸟照片在 `photo.toml` 填 `species = "<id>"`（对应 `data/birds.toml` 的 `[[bird]]` id），灯箱详情栏底部会显示可折叠的「觀鳥圖鑑」：目→科→屬→種（中文 + 拉丁学名）、分布區域、棲息地、習性與資料來源，物种名右侧显示保育等级标签；默认收起、开合状态跨切图保持、关闭灯箱复位。不显示插图、观察记录与保护级别。
+观鸟照片在照片数据中填 `species = "<id>"`（对应 `data/birds.toml` 的 `[[bird]]` id），灯箱详情栏底部会显示可折叠的「觀鳥圖鑑」：目→科→屬→種（中文 + 拉丁学名）、分布區域、棲息地、習性與資料來源，物种名右侧显示保育等级标签；默认收起、开合状态跨切图保持、关闭灯箱复位。不显示插图、观察记录与保护级别。
 
 ```toml
 # 观鸟系列名：属于该系列的照片即使缺少 species 也显示图鉴开关
@@ -229,7 +231,7 @@ label = "资料来源名称"
 url = "https://example.com/source"
 ```
 
-- `id` 唯一；photo.toml 的 `species` 必须能在 birds.toml 找到；构建期校验字段完整性与引用，缺项会报错
+- `id` 唯一；照片数据的 `species` 必须能在 birds.toml 找到；构建期校验字段完整性与引用，缺项会报错
 - 图鉴标题优先使用可选 `display_name`，缺省回落 `name`；分类「種」始终使用 `name`
 - 属于 `bird_series` 的照片即使没有 `species` 也会显示图鉴开关；展开显示「缺少鳥種圖鑑資料」空状态（与图像分析失败卡同款），补上 `species` 后显示图鉴
 - 物种名标题右侧显示保育等级标签：只维护 `conservation_level`（`lc` / `nt` / `vu` / `en` / `cr` / `domestic`），标签文案按等级从 i18n 取、底色按等级切换；构建期校验等级取值
@@ -237,7 +239,7 @@ url = "https://example.com/source"
 
 ### 精選（featured）
 
-在任意照片记录中添加 `featured = true`，该照片便会进入首页轮播（按时间排序，数量由 `carouselCount` 配置），并可在全部作品页通过「作品範圍 → 精選」筛选查看。
+在任意照片记录中添加 `featured = true`，该照片便会进入首页轮播（按展示顺序取前 N 张，数量由 `carouselCount` 配置），并可在全部作品页通过「作品範圍 → 精選」筛选查看。
 
 ## 🎨 配置
 

@@ -1,7 +1,7 @@
 /**
  * 灯箱作品集合与预加载（独立模块；集成见 lightbox.js）
  *
- * - 作品收集：按网格当前行计划（_planItems = 筛选结果、时间顺序）收集页面
+ * - 作品收集：按网格当前行计划（_planItems = 筛选结果、展示顺序）收集页面
  *   全部作品——含尚未渲染、留在隐藏池的卡片：灯箱所需数据（data-full-src /
  *   data-src / 宽高 / 元信息）均由模板写在卡片属性上，翻页不触碰网格 DOM、
  *   不触发任何行渲染（2026-10-31）——浏览全集后关闭即回到打开前状态；
@@ -44,7 +44,7 @@ export function initLightboxCollection({ shortLens, narrowWidth = 1280 }) {
     const isCached = (url) => isImageReady(preloadCache.get(url));
 
     // 收集当前页面全部可预览的作品。集合来源：
-    // ① 网格行计划 _planItems（当前筛选结果、时间顺序，含隐藏池中未渲染的
+    // ① 网格行计划 _planItems（当前筛选结果、展示顺序，含隐藏池中未渲染的
     //    卡片）——未渲染卡片虽无 src，但 data-src / data-full-src / 宽高 /
     //    元信息都在，直接读取即可，翻页不触发任何行渲染；
     // ② 无网格/未初始化的页面退回扫描已渲染的 .photo-wrapper（改造前口径）。
@@ -100,7 +100,7 @@ export function initLightboxCollection({ shortLens, narrowWidth = 1280 }) {
             photos.push({
                 // 照片唯一标识（URL ?p= 用）：photo-card 恒带 data-slug（构建期写入）
                 slug: card ? (card.dataset.slug || '') : '',
-                // 内容哈希（分析 JSON 的缓存版本号）：photo-card 由 photo.toml 的 hash 写入
+                // 内容哈希（分析 JSON 的缓存版本号）：photo-card 由照片数据的 hash 写入
                 hash: card ? (card.dataset.hash || '') : '',
                 src,
                 // 窄屏灯箱主图（≤1000px 用）：宽度由 params.imageSizes.lightboxNarrow
@@ -123,7 +123,7 @@ export function initLightboxCollection({ shortLens, narrowWidth = 1280 }) {
                 species: card ? (card.dataset.species || '') : '',
                 // 观鸟系列照片即使缺 species 也显示图鉴开关（展开提示缺少资料）
                 birdGuide: card ? card.dataset.birdGuide === 'true' : false,
-                // 照片真实像素尺寸（photo.toml 回填的 width/height 属性）：
+                // 照片真实像素尺寸（照片数据回填的 width/height 属性）：
                 // 供缩放目标按展示图自然尺寸封顶（超宽屏不再放大过头）
                 width: parseFloat(img.getAttribute('width')) || 0,
                 height: parseFloat(img.getAttribute('height')) || 0,

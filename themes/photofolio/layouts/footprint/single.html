@@ -1,7 +1,7 @@
 {{ define "main" }}
 {{ $locationName := .Title }}
 
-{{ $sortedPhotos := partialCached "utils/photo-sorted.html" . "desc" }}
+{{ $sortedPhotos := partialCached "utils/photo-sorted.html" . "display" }}
 
 {{/* 该地点全部作品（含系列内页——全站一致拆分展示） */}}
 {{ $realPhotos := where $sortedPhotos "location" $locationName }}

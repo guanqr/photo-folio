@@ -1,5 +1,5 @@
 {{ define "main" }}
-{{ $sortedPhotos := partialCached "utils/photo-sorted.html" . "desc" }}
+{{ $sortedPhotos := partialCached "utils/photo-sorted.html" . "display" }}
 {{ $coverMode := .Site.Params.categoryCover | default "latest-landscape" }}
 
 <section class="gallery-page">

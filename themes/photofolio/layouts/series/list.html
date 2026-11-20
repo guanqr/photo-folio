@@ -1,5 +1,5 @@
 {{ define "main" }}
-{{ $sortedPhotos := partialCached "utils/photo-sorted.html" . "desc" }}
+{{ $sortedPhotos := partialCached "utils/photo-sorted.html" . "display" }}
 
 {{/* 只过滤出所有的“系列封面” */}}
 {{ $coverPhotos := partial "components/series-covers.html" (dict "photos" $sortedPhotos) }}

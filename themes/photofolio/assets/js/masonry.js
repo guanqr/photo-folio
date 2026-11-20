@@ -63,7 +63,7 @@ export function initMasonry(skipInitialReveal = false) {
     // 否则未进入窗口的作品会以原始尺寸占据版面）
     allItems.forEach((item) => item.classList.add('is-hidden'));
 
-    // 原始时间顺序基准必须在任何行容器创建前捕获：首屏行会把卡片移出隐藏池，
+    // 原始展示顺序基准必须在任何行容器创建前捕获：首屏行会把卡片移出隐藏池，
     // 之后再查 DOM 顺序会变成「隐藏池 + 首屏行」，筛选/重置按错误基准排序（2026-10-31）
     if (!grid._origOrder) {
         grid._origOrder = new Map(allItems.map((el, i) => [el, i]));
@@ -106,7 +106,7 @@ export function initMasonry(skipInitialReveal = false) {
 
 /* ===== 行计划与窗口渲染 ===== */
 
-/* 每张作品的宽高比：优先取 photo.toml 回填的 width/height 属性（构建期写入，
+/* 每张作品的宽高比：优先取照片数据回填的 width/height 属性（构建期写入，
    管线保证恒有）——整组行计划在初始化时一次算好，不再等待图片测量。
    属性缺失（数据地雷）不阻塞渲染：按 3:2 兜底并挂一次 load 校正——图片
    就绪后以自然宽高重算比例并重建行计划，不会整会话按 3:2 裁切竖构图
@@ -462,7 +462,7 @@ function renderRow(grid, rowIndex, instant = false) {
     revealItems(grid, items, instant);
 }
 
-/* 行容器按行号排序插入，保持 DOM 顺序 = 时间顺序；灯箱集合按 _planItems
+/* 行容器按行号排序插入，保持 DOM 顺序 = 展示顺序；灯箱集合按 _planItems
    生成（含隐藏池中无 src 的卡片），不依赖行容器的 DOM 顺序（2026-10-31） */
 function insertRowSorted(grid, rowEl, index) {
     const rows = grid.querySelectorAll(':scope > .masonry-row');
@@ -1011,7 +1011,7 @@ function rebuildForPlanChange(grid) {
 /* 将行容器拍平：所有作品（含隐藏的）回到网格直属子级——
    后续重建只重排当前集合，隐藏项必须留在 DOM 里供再次筛选/重置。
    【顺序关键】行内作品必须插到第一个游离项之前（appendChild 到末尾会把
-   行内作品挪到游离项之后，破坏时间顺序——筛选切换后作品乱序的根因） */
+   行内作品挪到游离项之后，破坏展示顺序——筛选切换后作品乱序的根因） */
 function flattenRows(grid) {
     const firstStray = grid.querySelector(':scope > .masonry-item');
     grid.querySelectorAll('.masonry-row').forEach((row) => {

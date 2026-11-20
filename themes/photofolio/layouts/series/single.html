@@ -1,10 +1,10 @@
 {{ define "main" }}
 {{ $seriesName := .Title }}
 
-{{/* 系列成员由 photo.toml 的 series 字段推导；排序与全站瀑布流一致：
-   time 降序（同日按 photo.toml 数组索引）。不再维护 front matter 文件名
-   列表，也不支持自定义系列内顺序（2026-11-04） */}}
-{{ $sortedPhotos := partialCached "utils/photo-sorted.html" . "desc" }}
+{{/* 系列成员由照片数据（data/photos/）的 series 字段推导；排序与全站
+   瀑布流一致：分片文件内即展示顺序（新→旧），手动调整条目位置即生效。
+   不再维护 front matter 文件名列表，也不支持自定义系列内顺序（2026-11-04） */}}
+{{ $sortedPhotos := partialCached "utils/photo-sorted.html" . "display" }}
 
 {{/* 使用 range + eq 手动过滤，确保精准匹配系列名称 */}}
 {{ $photos := slice }}

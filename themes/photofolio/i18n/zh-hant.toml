@@ -334,13 +334,13 @@ other = "共 {{ .Count }} 個系列"
 other = "暫無系列"
 
 [no_series_hint]
-other = "請在 data/photo.toml 中為作品添加 series 和 is_cover = true 字段。"
+other = "請在照片數據（data/photos/）中為作品添加 series 和 is_cover = true 字段。"
 
 [no_photos_in_series]
 other = "未找到屬於《{{ .Title }}》的作品"
 
 [no_series_match_hint]
-other = "請檢查 data/photo.toml 中作品的 series 字段是否與當前頁面的標題完全一致（注意空格和大小寫）。"
+other = "請檢查照片數據（data/photos/）中作品的 series 字段是否與當前頁面的標題完全一致（注意空格和大小寫）。"
 
 [copyright_notice]
 other = "本站所有作品均由本人拍攝，歡迎轉發與分享，禁止商用或二次創作。"
@@ -509,19 +509,19 @@ other = ">1600"
 
 
 [error_photo_category_unknown]
-other = "photo.toml 的 category {{ .Categories }} 未匹配 content/categories/<key>/（這些照片會從分類頁靜默消失）"
+other = "照片數據的 category {{ .Categories }} 未匹配 content/categories/<key>/（這些照片會從分類頁靜默消失）"
 
 [error_list_separator]
 other = "、"
 
 [error_photo_missing_dimensions]
-other = "photo.toml 缺 width/height（橫/豎構圖筛选不匹配）：{{ .Sources }}"
+other = "照片數據缺 width/height（橫/豎構圖篩選不匹配）：{{ .Sources }}"
 
 [error_series_cover_count]
 other = "系列《{{ .Name }}》is_cover 应恰好 1 张，实际 {{ .Count }} 张"
 
 [error_photo_shutter_unknown]
-other = "photo.toml 快門值無法歸檔（已忽略）：{{ .Value }}"
+other = "照片數據快門值無法歸檔（已忽略）：{{ .Value }}"
 
 [error_bird_series_missing]
 other = "data/birds.toml 缺少 bird_series（观鸟系列名），缺 species 的观鸟照片不会显示图鉴开关"
@@ -548,10 +548,10 @@ other = "鸟种 {{ .ID }} 的 source 条目必须同时有 label 与 url"
 other = "鸟种 {{ .ID }} 至少需要一个 [[bird.source]] 资料来源"
 
 [error_photo_species_unknown]
-other = "photo.toml 照片 {{ .Src }} 的 species {{ .Species }} 未在 data/birds.toml 建档"
+other = "照片 {{ .Src }} 的 species {{ .Species }} 未在 data/birds.toml 建档"
 
 [error_bird_series_unmatched]
-other = "data/birds.toml 的 bird_series {{ .Series }} 未匹配 photo.toml 中任何照片的 series（拼写错误或系列改名后会静默失去图鉴开关）"
+other = "data/birds.toml 的 bird_series {{ .Series }} 未匹配任何照片的 series（拼写错误或系列改名后会静默失去图鉴开关）"
 
 [error_series_page_missing]
 other = "系列《{{ .Name }}》沒有對應的 content/series 頁面（系列卡/燈箱膠囊會 404）"
@@ -563,4 +563,4 @@ other = "locations.toml 地点 {{ .Name }} 缺少 slug（地点页 URL 必填）
 other = "locations.toml slug {{ .Slug }} 重复（地点页 URL 冲突）"
 
 [error_location_unregistered]
-other = "photo.toml 的地点 {{ .Names }} 未登记进 locations.toml（地点页无法生成，时间线/地图会链接到 404）"
+other = "照片數據的地點 {{ .Names }} 未登记进 locations.toml（地点页无法生成，时间线/地图会链接到 404）"

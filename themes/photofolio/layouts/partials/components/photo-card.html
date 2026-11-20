@@ -106,7 +106,7 @@
                 aria-label 已含标题，此处为视觉副本；格式与灯箱 EXIF 一致） */}}
             <div class="photo-hover-info" aria-hidden="true">
                 <span class="photo-hover-title">{{ $displayTitle }}</span>
-                {{/* 第二行：地点 · 日期（地点取 photo.toml 的 location；任一为空
+                {{/* 第二行：地点 · 日期（地点取照片数据的 location；任一为空
                     由 i18n 格式串自动省略，不拼接分隔符字面量） */}}
                 {{- $hoverMeta := i18n "photo_hover_place_date" (dict "Place" $photo.location "Date" $dateStr) -}}
                 {{ with $hoverMeta }}<span class="photo-hover-meta">{{ . }}</span>{{ end }}

@@ -1,5 +1,5 @@
 {{- /* 鸟种数据注册表与构建期校验（唯一实现）：
-       data/birds.toml 的 id 必须唯一且字段完整；photo.toml 中带 species 的照片
+       data/birds.toml 的 id 必须唯一且字段完整；照片数据中带 species 的照片
        必须能反查到条目；bird_series 必须匹配真实系列；保育等级必须有 i18n 文案。
        页面无关，调用方用 partialCached（variant "birds"）只跑一次；返回值供
        灯箱壳（labels）与照片卡片（series）复用。 */ -}}
@@ -41,7 +41,7 @@
     {{- $ids = $ids | append $id -}}
 {{- end -}}
 {{- $seriesMatched := false -}}
-{{- range $photo := hugo.Data.photo.photo -}}
+{{- range $photo := partialCached "utils/photo-sorted.html" . "display" -}}
     {{- with $photo.species -}}
         {{- if not (in $ids .) }}{{ errorf "%s" (i18n "error_photo_species_unknown" (dict "Src" (printf "%q" $photo.src) "Species" (printf "%q" .))) }}{{ end -}}
     {{- end -}}

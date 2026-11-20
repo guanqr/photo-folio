@@ -1,10 +1,10 @@
 {{/* ===== 關於頁「拍攝檔案」統計（構建期聚合，零 JS）=====
-     照片取數與全站一致：photo-sorted.html 返回 photo.toml 全部記錄（含組照內頁）。
+     照片取數與全站一致：photo-sorted.html 返回照片分片全部記錄（含組照內頁）。
      機身排行：按具體值聚合、數量 desc（同數按名稱 asc 保證構建穩定）；
      檔位面板（焦距/光圈/快門/感光度）：固定檔位順序、空檔隱藏；年度走勢升序、僅列有照片的年份。
      條形寬度 = 數量 / 面板最大值（百分比），行級交錯延遲由 about-stats-rows.html 生成。 */}}
 
-{{ $photos := partialCached "utils/photo-sorted.html" . "desc" }}
+{{ $photos := partialCached "utils/photo-sorted.html" . "display" }}
 
 {{/* 測試數據：data/photo-test.toml 存在時併入統計聚合——僅關於頁統計，
     不影響全站任何頁面；測試完成刪除該文件即恢復真實統計。

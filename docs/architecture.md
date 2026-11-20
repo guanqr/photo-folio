@@ -6,7 +6,7 @@
 
 - **Hugo** ≥ 0.139.0（标准版；SCSS 由外部 Dart Sass 1.107.0 独立版编译，JS 由内置 esbuild 打包）
 - **自定义主题** `themes/photofolio`
-- **数据格式** TOML（`data/photo.toml`、`data/locations.toml`、`data/birds.toml`）
+- **数据格式** TOML（`data/photos/*.toml` 照片分片、`data/locations.toml`、`data/birds.toml`）
 - **部署** GitHub Pages + 阿里云 OSS CDN
 - **JS** ES6 模块，Hugo `js.Build`（esbuild）打包
 - **CSS** SCSS，Hugo `css.Sass` 经外部 Dart Sass 1.107.0 编译（`transpiler: dartsass`；模块用 `@use`，base 共享模块 `as *`；`unquote` 改 `string.unquote`，无弃用警告）
@@ -15,7 +15,7 @@
 
 ## 照片数据结构
 
-每张照片在 `data/photo.toml` 中为一条 `[[photo]]` 记录：
+每张照片在 `data/photos/` 的某个分片中为一条 `[[photo]]` 记录（分片按拍摄年份拆分，2024 年以前合并为 `pre-2024.toml`）：
 
 ```toml
 [[photo]]
@@ -50,7 +50,7 @@ featured = true                    # 精选标记（可选；true 的照片进�
 
 ```toml
 [[location]]
-name = "雲南"     # 必须与 photo.toml 的 location 字段逐字一致
+name = "雲南"     # 必须与照片数据（data/photos/）的 location 字段逐字一致
 slug = "yunnan"  # 地点页 URL：/footprint/yunnan/（必填、唯一；缺省不自动生成，适配器会 errorf）
 lat = 26.86      # 保留备用
 lng = 100.23
@@ -62,9 +62,10 @@ lng = 100.23
 - 省/国名映射唯一源 `tools/map-data/map_names.py`（PROVINCE_NAMES/COUNTRY_NAMES）；`generate-maps.py` 直接 import 并生成 `themes/photofolio/assets/js/map-names.js`（渲染端 import、勿手改；`--names-only` 只刷新映射）；PROVINCE_NAMES 已全量覆盖 34 个省级地区（新增国内拍摄地无需再改），新增海外国家仍需登记 COUNTRY_NAMES
 
 ### 排序规则
-- 按 `time` 降序排列（全站统一，含系列详情页；带时刻时按完整拍摄时刻比较）
-- 时刻相同（同秒，或双方仅有日期）按 `photo.toml` 中的数组索引（添加顺序）作为次级排序键
-- 排序管线唯一实现：`layouts/partials/photo-sorted.html`（固定 time 降序，不接受 `order` 参数；调用方用 `partialCached` 显式 variant `"desc"`）
+- **分片内顺序即展示顺序**：`data/photos/` 按拍摄年份拆分，每个文件内部按「新→旧」保存；分片拼接顺序为 4 位年份降序、`pre-YYYY` 排最后（2026-11-20）
+- **同一天的手动调序直接生效**：把条目在分片内上下移动即可，不再按 `time` 重排；管线 `write_photo_dir` 保持既有顺序，新条目/换图后 time 变化的条目按拍摄时间（新→旧）插入对应年份分片
+- 跨日顺序始终由拍摄时间保证；手动调整只影响同一天的先后（跨日拖动会照文件顺序展示，不建议）
+- 排序管线唯一实现：`layouts/partials/photo-sorted.html`（拼接分片、文件内顺序原样返回，不接受 `order` 参数；调用方用 `partialCached` 显式 variant `"display"`）
 
 ### 观鸟图鉴（`data/birds.toml`）
 
@@ -73,7 +74,7 @@ lng = 100.23
 bird_series = "觀鳥"
 
 [[bird]]
-id = "fairy-pitta"             # 与 photo.toml 的 species 字段对应（唯一）
+id = "fairy-pitta"             # 与照片数据的 species 字段对应（唯一）
 name = "仙八色鶇"               # 种名：「種」行使用，也是标题缺省值
 display_name = "俗名（種名）"    # 可选：仅覆盖图鉴标题（俗名与种名不同时使用）
 latin = "Pitta nympha"
@@ -95,12 +96,12 @@ url = "https://example.com/source"
 
 - 照片填 `species = "<id>"` 后，灯箱详情栏底部显示可折叠「觀鳥圖鑑」（默认收起、开合状态跨切图保持、关闭灯箱复位）；展示目→科→屬→種分类（中文 + 拉丁学名）、分布區域、棲息地、習性、資料來源；标题优先用可选 `display_name`、缺省回落 `name`，「種」行始终用 `name`；物种名标题右侧显示保育等级标签（只维护 `conservation_level`，标签文案走 i18n、底色按等级切换），无插图、观察记录
 - 属于 `bird_series` 的照片即使缺 `species` 也显示图鉴开关；展开显示「缺少鳥種圖鑑資料」空状态卡（沿用分析失败卡样式），补上 `species` 后显示图鉴
-- `utils/bird-registry.html` 构建期校验：id 唯一、必需字段完整（含 `conservation_level`）、保育等级取值合法、每条至少一个 `[[bird.source]]`、photo.toml 的 species 必须能反查到条目、`bird_series` 必须匹配 photo.toml 中至少一条 series、每个等级必须有 `bird_conservation_*` i18n 文案；灯箱壳内嵌 `data/birds.toml` JSON 供 `lightbox-bird.js` 按 id 取用，保育等级文案由注册表按唯一等级清单生成（`data-labels` JSON，shell/JS 不再逐级硬编码），照片卡片与灯箱壳共用注册表返回值
+- `utils/bird-registry.html` 构建期校验：id 唯一、必需字段完整（含 `conservation_level`）、保育等级取值合法、每条至少一个 `[[bird.source]]`、照片数据的 species 必须能反查到条目、`bird_series` 必须匹配照片数据中至少一条 series、每个等级必须有 `bird_conservation_*` i18n 文案；灯箱壳内嵌 `data/birds.toml` JSON 供 `lightbox-bird.js` 按 id 取用，保育等级文案由注册表按唯一等级清单生成（`data-labels` JSON，shell/JS 不再逐级硬编码），照片卡片与灯箱壳共用注册表返回值
 
 ## 页面结构
 
 ### 1. 首页 `/`
-- **全屏轮播**（`.carousel`，高度 `calc(100vh - 4.5em)`、宽度充满页面）：按时间降序取最新 `carouselCount` 张 `featured=true` 照片（模板默认 12，站点当前 6）；`object-fit: cover` 居中适当裁剪、无白边；自动播放 5s/张（`params.carouselInterval`，默认 5000ms）+ 左右箭头 + 圆点；**鼠标悬停不再暂停**（仅键盘聚焦圆点暂停）；轮播仅作展示，点击照片不打开灯箱（2026-11-01 用户裁定）
+- **全屏轮播**（`.carousel`，高度 `calc(100vh - 4.5em)`、宽度充满页面）：按展示顺序取前 `carouselCount` 张 `featured=true` 照片（分片拼接顺序，手动调序优先）（模板默认 12，站点当前 6）；`object-fit: cover` 居中适当裁剪、无白边；自动播放 5s/张（`params.carouselInterval`，默认 5000ms）+ 左右箭头 + 圆点；**鼠标悬停不再暂停**（仅键盘聚焦圆点暂停）；轮播仅作展示，点击照片不打开灯箱（2026-11-01 用户裁定）
 - **轮播响应式图片**：`[params.imageSizes].carouselWidths`（默认 640/960/1280/1920）生成 `srcset` + `sizes=100vw`；首图 eager/fetchpriority 与 hero-preload 的 `imagesrcset` 同候选；其余 `data-src`/`data-srcset` 按需加载，左右邻居在 `requestIdleCallback` 空闲预取（1.5s 兜底），首屏不再同时拉 3 张 1920 图；AVIF 兜底同时改写 `srcset`
 - 标题与副标题悬浮在轮播图左下角（`.carousel-overlay`，底部渐变压暗保证可读）
 - **顶部导航栏透明**：滚动 ≤10px 时 header 背景透明；下拉后（`.is-scrolled`）显示 `--color-nav-bg` 背景 + 毛玻璃 + 底边框
@@ -118,7 +119,7 @@ url = "https://example.com/source"
 - 四组胶囊按钮（`作品範圍 / 拍摄年份 / 拍摄地點 / 作品類型`），行首文字标签 + 「全部」按钮，可组合，默认全部；範圍选项为 `featured / landscape / portrait`（精選/橫構圖/豎構圖，可与年份等维度组合）
 - 年份/地点/类型选项从网格渲染集（`$gridPhotos`，含组照内页——与卡片 data 属性同源）推导：年份降序、地点/类型按照片数降序；类型显示中文标题（風光/人文/花木/動物，分类页经 `site.GetPage (printf "/categories/%s" ...)` 绝对路径取标题）
 - 早于 `params.yearMergeBefore` 的年份合并为一个「<分界年> 前」档（标签显示分界年本身，如分界 2024 → 「2024 前」、覆盖 2023 及更早；data-value `before-<分界年>`、`gallery-filter.js` 按数值区间匹配；0/缺省不合并），与关于页「拍摄档案」年度走势共用同一配置
-- 每组横向滚动（窄屏）+ 右侧渐隐遮罩 `can-scroll-r`；切换后选中项自动滚入可视区
+- 每组横向滚动（窄屏）+ 左右渐隐遮罩（深度分别随已滚动距离 / 右侧剩余可滚动距离连续变化：两侧各 48px 内由无渐隐平滑加深到满格，滚到对应端点时该侧完全消失）；切换后选中项自动滚入可视区
 - **任何筛选状态都按整页容器渐进加载**：`restartMasonryGrid` 重启网格（集合外隐藏、集合内重建整组行计划与页面高度、先揭示当前视口内的行，之后滚动逐行补载）；无匹配显示空状态文案
 - URL 同步（`pushState`；加载恢复/过期参数清理走 `replaceState`）：`?s=` 範圍、`?y=` 年份（合并档值形如 `before-2024`）、`?l=` 地点英文 slug（= 足迹页文件名，如 guangdong/japan）、`?c=` 类型；默认值不写入；直接打开带参链接 / 浏览器后退自动恢复筛选
 - 维度开关由 `hugo.toml` 的 `[params.galleryFilters]` 控制（scope/year/location/category；模板缺省仅 year，站点当前开启 scope/year）
@@ -126,12 +127,12 @@ url = "https://example.com/source"
 
 ### 3. 组照合集 `/series/` 及详情页 `/series/{name}/`
 - 列表页展示所有组照封面
-- 详情页直接按 `photo.toml` 的 `series` 字段取图（含内页），按 `time` 降序展示（与其他瀑布流一致）；无需 front matter `photos` 列表，不支持自定义系列内顺序
+- 详情页直接按照片数据的 `series` 字段取图（含内页），按展示顺序（分片内条目顺序，手动调序优先）排列，与其他瀑布流一致；无需 front matter `photos` 列表，不支持自定义系列内顺序
 - 构建期校验：每个系列 `is_cover` 恰好 1 张；`series-url.html` 找不到同名内容页时 errorf（不再回退 urlize 死链）
 
 ### 4. 足迹 `/footprint/` 及地区页 `/footprint/{slug}/`
 - **足迹世界地图**：自绘 SVG 等距圆柱投影（零外部库/瓦片），视图 = 照片点迹 ∪ **有照片省份的完整包围盒**（省份完整可见；海外国家不并入包围盒）；**省份/国家为独立填充区块**（高精度省/国填充 + 描边；高精度区块用单层深色实色，边缘即高精度轮廓；低精度陆地填充与描边在省/国区域内由 mask 挖掉、区域外保留低精度海岸线，两套线在边界处直接衔接，无缺口；海外国家主岛（跨度 >2° 且落在国界 bbox 内）的低精度填充与描边整条隐藏，由高精度国界提供轮廓；实心小岛保留填充和描边，长条/退化 sliver 整条不绘制（保留小岛轮廓、消除东海的细直线闭合轮廓）；悬停/聚焦提亮、点击跳转地点详情页；无照片地区 pointer-events none）；全部照片坐标形成**点迹**（光环为 `--color-accent` 径向渐变辉光 + 核心两层、纯展示）；鼠标/触控笔悬停与键盘聚焦显示弹层（地名/张数/年份跨度），**触屏不显示弹层、点按直接跳转地点详情页**（footprint-tooltip.js 按 pointerType 判定）；区块须声明 `cursor: pointer`（iOS 只向可交互或 cursor:pointer 元素派发 click）；陆地/省界/国家几何静态数据 + 同源 fetch 记忆化（失败降级为网格+点迹）；IntersectionObserver 懒加载（rootMargin 600px）；`prefers-reduced-motion` 完整降级；带边框圆角框架（内容裁剪到 viewBox，区块宽度与导航栏一致）
-- 照片坐标字段：photo.toml 可选 address/lat/lng——原图自带 EXIF GPS 时预处理管线直接写 lat/lng（度分秒转十进制度 6 位小数、S/W 取负；缺 ref/值、越界、(0,0) 视为无坐标留空，2026-11-19）；仍缺坐标的条目再由 address 经 `tools/geocode/geocode-photos.py` 高德地理编码生成（key 走环境变量 AMAP_KEY 或 tools/geocode/config.json）；**lat/lng 用于足迹地图点迹**（详情页小地图已取消）；geocode 兜底口径：仅「无结果/网络异常」落 Nominatim——**key/配额类错误（infocode 1000 前缀）不落兜底、中止循环**（境外服务解析境内中文地址不可靠、会污染坐标）
+- 照片坐标字段：照片数据可选 address/lat/lng——原图自带 EXIF GPS 时预处理管线直接写 lat/lng（度分秒转十进制度 6 位小数、S/W 取负；缺 ref/值、越界、(0,0) 视为无坐标留空，2026-11-19）；仍缺坐标的条目再由 address 经 `tools/geocode/geocode-photos.py` 高德地理编码生成（key 走环境变量 AMAP_KEY 或 tools/geocode/config.json）；**lat/lng 用于足迹地图点迹**（详情页小地图已取消）；geocode 兜底口径：仅「无结果/网络异常」落 Nominatim——**key/配额类错误（infocode 1000 前缀）不落兜底、中止循环**（境外服务解析境内中文地址不可靠、会污染坐标）
 - 地点注册表唯一实现：`layouts/partials/utils/location-registry.html`（Title → slug/URL，画廊筛选与足迹页共用；坐标不再输出，地图点迹用照片 lat/lng）
 - 桌面端地图左栏 + 右侧地点预览面板（点击地块/点迹更新面板，整块链接进地点详情页）
 - 地区详情页使用瀑布流展示
@@ -142,7 +143,7 @@ url = "https://example.com/source"
 
 - **SVG 图标统一管理**：所有 SVG 图标必须定义在 `data/svg.toml` 中，模板通过 `{{ $.Site.Data.svg.xxx | safeHTML }}` 引用，**严禁在 HTML 模板中直接硬编码 `<svg>` 标签**
 - 新增图标时先在 `svg.toml` 添加定义（含 `xmlns`、`viewBox` 等完整属性），再在模板中引用
-- **共享数据管线用 partial**：`utils/photo-sorted.html`（时间排序）、`utils/location-registry.html`（地点注册表）——新模板不得重复实现
+- **共享数据管线用 partial**：`utils/photo-sorted.html`（展示顺序）、`utils/location-registry.html`（地点注册表）——新模板不得重复实现
 - **页面骨架单源**：页面头与空状态骨架用 `components/page-header.html`、`components/empty-state.html`（2026-10-18 自 13 处复制收敛），新页面不得复制骨架
 - **灯箱壳分块**：`lightbox-shell.html` 只保留容器骨架（图片区/面板底栏/箭头/缩略图条/气泡容器），顶栏、地点日期+EXIF、图像分析、故事、觀鳥圖鑑拆为 `components/lightbox-{topbar,meta-exif,analysis,story,bird}.html`；区块开关 `lbCfg` 与鸟种注册表经 dict 传入分块
 - **瀑布流网格单源**：网格标记与卡片循环统一由 `components/masonry-grid.html` 渲染，新列表页不得复制网格骨架

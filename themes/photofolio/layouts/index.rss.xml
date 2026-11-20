@@ -7,7 +7,7 @@
        描述在「地點 · 日期」后接拍摄参数与作品源地址（灯箱深链）——读者端只
        渲染描述、看不到 item link，需把地址写成文本（2026-11-15）。 */ -}}
 {{- $feedCount := site.Params.feedCount | default 20 -}}
-{{- $sorted := partialCached "utils/photo-sorted.html" . "desc" -}}
+{{- $sorted := partialCached "utils/photo-sorted.html" . "display" -}}
 {{- /* 排序键 = 发布时间 Unix 秒 + 拍摄时间：整数/字符串比较，避免模板 sort
        直接比较 time 类型；同批次内按拍摄时间降序保持稳定 */ -}}
 {{- $entries := slice -}}

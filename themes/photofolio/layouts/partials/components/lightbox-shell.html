@@ -1,4 +1,4 @@
-    {{- /* 构建期校验 photo.toml 的 species 引用、bird_series 匹配与保育等级 i18n
+    {{- /* 构建期校验照片数据的 species 引用、bird_series 匹配与保育等级 i18n
            （页面无关，缓存一次；返回值提供等级文案与系列名） */ -}}
     {{- $birdRegistry := partialCached "utils/bird-registry.html" "birds" "birds" -}}
     {{/* Lightbox 全局容器（dialog 语义：读屏器视作模态对话框、背景 inert 由 JS 管理） */}}

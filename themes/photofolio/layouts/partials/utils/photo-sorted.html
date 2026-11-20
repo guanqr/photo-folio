@@ -1,8 +1,33 @@
-{{/* 全站作品时间排序管线（唯一实现）：
-     返回按 time 降序的作品 slice（_sortKey 保证同日作品按数据文件顺序稳定排序）。
-     系列详情页与其他页面共用同一顺序，不再接受自定义 order 参数（2026-11-04）。
-     调用：{{ $sorted := partialCached "utils/photo-sorted.html" . "desc" }} */}}
-{{ $allPhotos := hugo.Data.photo.photo | default slice }}
+{{/* 全站作品展示顺序（唯一实现）：
+     data/photos/ 按拍摄年份分片，文件内即展示顺序（新→旧）；拼接顺序为
+     4 位年份分片降序、其余（pre-YYYY）排最后。不做任何时间排序——分片内
+     条目位置就是手动调整结果，直接生效（2026-11-20）。
+     调用：{{ $sorted := partialCached "utils/photo-sorted.html" . "display" }} */}}
+{{ $shards := hugo.Data.photos | default dict }}
+{{ $yearKeys := slice }}
+{{ $preKeys := slice }}
+{{ range $k, $v := $shards }}
+    {{ if and (eq (len $k) 4) (findRE `^[0-9]{4}$` $k) }}
+        {{ $yearKeys = $yearKeys | append $k }}
+    {{ else }}
+        {{ $preKeys = $preKeys | append $k }}
+    {{ end }}
+{{ end }}
+{{ $allPhotos := slice }}
+{{ range collections.Reverse (sort $yearKeys) }}
+    {{ with index $shards . }}
+        {{ with .photo }}
+            {{ range . }}{{ $allPhotos = $allPhotos | append . }}{{ end }}
+        {{ end }}
+    {{ end }}
+{{ end }}
+{{ range sort $preKeys }}
+    {{ with index $shards . }}
+        {{ with .photo }}
+            {{ range . }}{{ $allPhotos = $allPhotos | append . }}{{ end }}
+        {{ end }}
+    {{ end }}
+{{ end }}
 {{/* 分类白名单：category 拼错时分类页的 where 过滤会静默漏图（照片只出现在全部作品页），
    在唯一入口 fail-fast，避免内容页静默缺图（2026-11-16） */}}
 {{ $badCategories := slice }}
@@ -14,9 +39,4 @@
     {{ end }}
 {{ end }}
 {{ with $badCategories }}{{ errorf "%s" (i18n "error_photo_category_unknown" (dict "Categories" (delimit . (i18n "error_list_separator")))) }}{{ end }}
-{{ $withKey := slice }}
-{{ range $idx, $p := $allPhotos }}
-    {{ $t := $p.time | time.Format "2006-01-02 15:04:05" }}
-    {{ $withKey = $withKey | append (merge $p (dict "_sortKey" (printf "%s-%06d" $t $idx))) }}
-{{ end }}
-{{ return (sort $withKey "_sortKey" "desc") }}
+{{ return $allPhotos }}

@@ -207,7 +207,7 @@ export function initCarousel() {
         const dot = document.createElement('button');
         dot.className = 'carousel-dot';
         dot.setAttribute('aria-label', title);
-        // 骨架 innerHTML 不含任何动态部分；照片标题（photo.toml alt，自由文本）
+        // 骨架 innerHTML 不含任何动态部分；照片标题（照片数据 alt，自由文本）
         // 经 textContent 写入——标题含 <>& 等字符若拼进 innerHTML 会被当标签/实体解析
         dot.innerHTML = `
             <span class="carousel-dot-title"></span>

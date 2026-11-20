@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 """
-照片地理编码：把 photo.toml 中用户填写的详细地址（address 字段）转成 lat/lng 坐标
-（零第三方依赖，Python 3.11+；原图自带 EXIF GPS 时预处理管线已直接写入坐标，
-本脚本只为仍缺坐标的条目按地址解析）。
+照片地理编码：把 data/photos/ 分片中用户填写的详细地址（address 字段）转成
+lat/lng 坐标（零第三方依赖，Python 3.11+；原图自带 EXIF GPS 时预处理管线已
+直接写入坐标，本脚本只为仍缺坐标的条目按地址解析）。
 
 前置：申请高德开放平台「Web 服务」key（个人开发者免费额度），两种提供方式任选：
   1) 本目录 config.json（已加入 .gitignore，不会入库；复制 config.example.json 填写）：
      { "amap_key": "你的key" }
   2) 环境变量 AMAP_KEY
 
-管线：解析 data/photo.toml（复用预处理管线 tools/photo-pipeline/src/toml_utils.py）
+管线：解析 data/photos/ 分片（复用预处理管线 tools/photo-pipeline/src/toml_utils.py）
      → 对「有 address 且缺 lat/lng」的条目请求高德地理编码（350ms 间隔防限速；
        海外地址高德不覆盖时自动经 OSM Nominatim 兜底，兜底网络不可达则跳过）
-     → 写回 lat/lng（6 位小数；write_toml 全量重写，字段白名单含 address/lat/lng）
+     → 写回 lat/lng（6 位小数；分片全量重写、保持条目顺序，字段白名单含 address/lat/lng）
 
 用法：python tools/geocode/geocode-photos.py
 """
@@ -26,7 +26,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
-PHOTO_PATH = ROOT / "data" / "photo.toml"
+PHOTOS_DIR = ROOT / "data" / "photos"
 CONFIG_PATH = HERE / "config.json"
 API_URL = "https://restapi.amap.com/v3/geocode/geo"
 INTERVAL_SEC = 0.35   # 高德个人 key 并发限制 3 QPS，串行 + 间隔最稳妥
@@ -36,7 +36,7 @@ TIMEOUT_SEC = 15
 sys.path.insert(0, str(ROOT / "tools" / "photo-pipeline" / "src"))
 from compat import setup_windows_stdout  # noqa: E402
 setup_windows_stdout()
-from toml_utils import parse_toml_entries, write_toml  # noqa: E402
+from toml_utils import parse_photo_dir, write_photo_dir  # noqa: E402
 
 
 def load_key():
@@ -115,7 +115,8 @@ def main():
         print("缺少高德 key：设置环境变量 AMAP_KEY，或复制 tools/geocode/config.example.json 为 config.json 并填写 amap_key")
         sys.exit(1)
 
-    entries = parse_toml_entries(str(PHOTO_PATH))
+    shards = parse_photo_dir(str(PHOTOS_DIR))
+    entries = [e for _name, items in shards for e in items]
     todo = [e for e in entries if e.get("address") and not (e.get("lat") and e.get("lng"))]
     print(f"共 {len(entries)} 条记录，待编码 {len(todo)} 条")
 
@@ -138,8 +139,8 @@ def main():
         time.sleep(INTERVAL_SEC)
 
     if done:
-        write_toml(str(PHOTO_PATH), entries)
-    print(f"完成：成功 {done}，失败 {failed}，已写回 data/photo.toml")
+        write_photo_dir(str(PHOTOS_DIR), shards)
+    print(f"完成：成功 {done}，失败 {failed}，已写回 data/photos/")
 
 
 if __name__ == "__main__":

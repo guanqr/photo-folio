@@ -4,7 +4,7 @@
 
 | 文档 | 内容 | 何时读 |
 |---|---|---|
-| [architecture.md](architecture.md) | 技术栈、`photo.toml` / `locations.toml` / `birds.toml` 数据结构、页面结构、模板与 JS 模块约定、配置项 | 加字段、改页面、动模板或入口 |
+| [architecture.md](architecture.md) | 技术栈、照片分片（`data/photos/`）/ `locations.toml` / `birds.toml` 数据结构、页面结构、模板与 JS 模块约定、配置项 | 加字段、改页面、动模板或入口 |
 | [layout.md](layout.md) | 瀑布流行高公式与分行、末行规则、加载与 resize、移动端导航、断点 | 改间距、断点或加载行为 |
 | [lightbox.md](lightbox.md) | 灯箱交互（切图/抽屉/缩放/全屏/自动播放）与图像分析口径 | 改灯箱或分析图表 |
 | [styling.md](styling.md) | 颜色四元组、SCSS 标尺、动画与过渡 token | 改样式或动画 |

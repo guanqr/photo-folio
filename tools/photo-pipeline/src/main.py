@@ -11,7 +11,8 @@ from PIL import Image
 
 from exif_utils import get_exif_info
 from hash_utils import file_md5
-from toml_utils import parse_toml_entries, write_toml
+from toml_utils import (
+    detect_split_year, parse_photo_dir, repartition_shards, write_photo_dir)
 from watermark import process_image
 from analysis import is_analysis_stale, analyze_and_store, write_js_meta
 from oss_utils import create_bucket_from_config, sync_new_photos
@@ -32,7 +33,8 @@ def _get_image_size(path):
         return "", ""
 
 
-def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None, force=False):
+def batch_process(input_dir, output_dir, photos_dir=None, split_year=2024,
+                  analysis_dir=None, force=False):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
@@ -42,9 +44,9 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None, forc
     published_now = datetime.now().astimezone().isoformat(timespec="seconds")
 
     # 分析常量单源：Python 常量 -> 主题 JS module（灯箱 import）。
-    # 以 photo.toml 所在仓库根定位主题资源；路径不存在时告警不中断。
-    if toml_path:
-        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(toml_path)))
+    # 以分片目录所在仓库根定位主题资源；路径不存在时告警不中断。
+    if photos_dir:
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(photos_dir)))
         js_meta = os.path.join(repo_root, "themes", "photofolio", "assets", "js", "analysis-meta.js")
         if os.path.isdir(os.path.dirname(js_meta)):
             try:
@@ -52,13 +54,20 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None, forc
             except OSError as e:
                 print(f"⚠️  分析常量写入失败：{e}")
 
+    shards = []  # [(分片名, 条目)]，分片内即展示顺序（新→旧）
     src_to_entry = {}
-    if toml_path:
-        for entry in parse_toml_entries(toml_path):
-            if entry["src"] in src_to_entry:
-                raise ValueError(
-                    f"photo.toml 存在重复 src（拒绝重写，否则条目会被覆盖）：{entry['src']}")
-            src_to_entry[entry["src"]] = entry
+    original_times = {}  # 既有条目的 time；变化时重新定位
+    if photos_dir:
+        shards = parse_photo_dir(photos_dir)
+        # 拆分阈值以现有 pre-YYYY 分片名为准，避免配置与数据布局不一致
+        split_year = detect_split_year([name for name, _ in shards], split_year)
+        for _name, entries in shards:
+            for entry in entries:
+                if entry["src"] in src_to_entry:
+                    raise ValueError(
+                        f"照片分片存在重复 src（拒绝重写，否则条目会被覆盖）：{entry['src']}")
+                src_to_entry[entry["src"]] = entry
+                original_times[entry["src"]] = entry.get("time", "")
     skipped = 0
     processed = 0
     analyzed = 0
@@ -70,11 +79,11 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None, forc
 
         input_path = os.path.join(input_dir, f)
         output_path = os.path.join(output_dir, f)
-        src = f"/images/photos/{f}" if toml_path else None
+        src = f"/images/photos/{f}" if photos_dir else None
         entry = src_to_entry.get(src) if src else None
         is_new = src is not None and src not in src_to_entry
         # 输入图内容哈希（全 32 位）：同名换图保留旧 mtime 也能发现（2026-10-28）
-        input_hash = file_md5(input_path) if toml_path else None
+        input_hash = file_md5(input_path) if photos_dir else None
 
         needs_reprocess = True
         source_changed = True
@@ -84,7 +93,7 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None, forc
                 # backfill_source_hash.py 一次性回填以跳过首轮全量重处理
                 source_changed = entry.get("source_hash") != input_hash
             else:
-                # 无 toml 条目/无 toml 模式：退回 mtime 判定
+                # 无分片条目/未启用数据写入：退回 mtime 判定
                 source_changed = os.path.getmtime(output_path) < os.path.getmtime(input_path)
         # force 只强制重出全部图；图像分析仍按源图变化/缺失/版本惰性判定，
         # 避免仅重出水印时无谓重算全分辨率分析（2026-10-29）
@@ -143,7 +152,7 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None, forc
                 except Exception as e:
                     print(f"❌ 分析失败：{f}  {e}")
 
-        if toml_path:
+        if photos_dir:
             # 处理失败不落新条目：否则 width/height 为空、无 hash/source_hash、
             # src 指向从未生成/上传的 CDN 文件，站点出现 404 卡片且每次运行
             # 重复报分析失败。输出存在且处理成功（或本就跳过）才建条目
@@ -170,7 +179,7 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None, forc
                 new_entries.append(f)
                 print(f"🆕 新条目：{f}（请填写 alt/category/place/location 等手填字段）")
 
-    if toml_path:
+    if photos_dir:
         # 处理完成后按输出图统一刷新宽高与哈希：重新处理/跳过/新条目一次覆盖，
         # 避免处理前预读旧输出图、同名换图改比例时把旧宽高写回（2026-11-05）；
         # 缺失输出文件的条目保留既有值，下次有文件时再补。
@@ -183,7 +192,7 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None, forc
                     entry["hash"] = file_md5(img_path, 8)
                 except OSError as e:
                     print(f"⚠️  哈希计算失败：{os.path.basename(src)}  {e}")
-        # 分析结果完整性检查：photo.toml 全部条目（含本次新增）都应有对应 JSON——
+        # 分析结果完整性检查：全部分片条目（含本次新增）都应有对应 JSON——
         # src 与管线输入文件名不一致的照片（人工条目/历史改名）没有生成路径，站点
         # 侧会永久显示失败提示卡；此处告警定位（2026-10-21 审查修复 #5）
         if analysis_dir:
@@ -203,24 +212,39 @@ def batch_process(input_dir, output_dir, toml_path=None, analysis_dir=None, forc
             except Exception:
                 pass
 
+    # 写出分片：其余条目保持原分片与原顺序（手动调序优先），新增条目与
+    # time 变化的条目按展示顺序插入目标年份分片；此处只算布局，真正写盘
+    # 在 OSS 上传成功之后（见 run）
+    if photos_dir:
+        moved = [
+            e for src, e in src_to_entry.items()
+            if src in original_times and e.get("time", "") != original_times[src]
+        ]
+        extra = [e for src, e in src_to_entry.items() if src not in original_times]
+        planned = repartition_shards(shards, split_year, moved=moved, extra=extra)
+    else:
+        planned = []
+
     summary = f"📊 本次处理 {processed} 张，跳过 {skipped} 张（未变化），分析 {analyzed} 张"
     if new_entries:
         summary += f"，新增 {len(new_entries)} 条（需补手填字段）"
     print(summary)
-    return processed_files, src_to_entry
+    return processed_files, src_to_entry, planned
 
 
 def _load_config():
     """读取 pipeline_config.json（本管线目录）。照片原图/输出图体积大、不在仓库内，
-    输入/输出目录必须由用户配置（未配置则退出并提示）；toml_path 缺省直写站点
-    数据源 data/photo.toml。"""
+    输入/输出目录必须由用户配置（未配置则退出并提示）；photos_dir 缺省直写站点
+    数据源 data/photos/（按拍摄年份分片）。"""
     import json
 
     BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     DEFAULTS = {
         "input_dir": "",
         "output_dir": "",
-        "toml_path": os.path.abspath(os.path.join(BASE_DIR, "..", "..", "data", "photo.toml")),
+        "photos_dir": os.path.abspath(os.path.join(BASE_DIR, "..", "..", "data", "photos")),
+        # 拆分阈值：早于该年份的照片统一写入 pre-<年份>.toml；须与现有分片名一致
+        "photos_split_from_year": 2024,
         # 图像分析结果输出目录：缺省直写站点 static/analysis/（入库随部署发布，
         # 灯箱按 slug 拉取）；配置为空串时同样回退缺省值
         "analysis_dir": os.path.abspath(os.path.join(BASE_DIR, "..", "..", "static", "analysis")),
@@ -238,9 +262,19 @@ def _load_config():
         print("⚠️  未找到 pipeline_config.json")
         print("   请复制 pipeline_config.example.json 为 pipeline_config.json 并填写照片目录")
 
+    if config.get("toml_path") and not config.get("photos_dir"):
+        print("❌ 配置格式已更新：toml_path 已改为分片目录 photos_dir，请更新 pipeline_config.json")
+        return None
+
     for key, default in DEFAULTS.items():
         if not config.get(key):
             config[key] = default
+
+    try:
+        config["photos_split_from_year"] = int(config["photos_split_from_year"])
+    except (TypeError, ValueError):
+        print(f"❌ photos_split_from_year 非法：{config['photos_split_from_year']!r}")
+        return None
 
     if not config["input_dir"] or not config["output_dir"]:
         print("❌ 未配置照片输入/输出目录，请填写 pipeline_config.json 后重试")
@@ -248,7 +282,7 @@ def _load_config():
 
     print(f"   输入目录: {config['input_dir']}")
     print(f"   输出目录: {config['output_dir']}")
-    print(f"   TOML 路径: {config['toml_path']}")
+    print(f"   照片数据: {config['photos_dir']}（早于 {config['photos_split_from_year']} 年并入 pre 分片）")
     print(f"   分析目录: {config['analysis_dir']}")
     return config
 
@@ -259,7 +293,8 @@ def run(force=False):
         return
     INPUT_FOLDER = config["input_dir"]
     OUTPUT_FOLDER = config["output_dir"]
-    TOML_PATH = config["toml_path"]
+    PHOTOS_DIR = config["photos_dir"]
+    SPLIT_YEAR = config["photos_split_from_year"]
     ANALYSIS_DIR = config["analysis_dir"]
 
     if not os.path.isdir(INPUT_FOLDER):
@@ -268,12 +303,12 @@ def run(force=False):
         return
 
     print("===== 开始处理 =====")
-    processed_files, src_to_entry = batch_process(
-        INPUT_FOLDER, OUTPUT_FOLDER, toml_path=TOML_PATH,
+    processed_files, src_to_entry, planned_shards = batch_process(
+        INPUT_FOLDER, OUTPUT_FOLDER, photos_dir=PHOTOS_DIR, split_year=SPLIT_YEAR,
         analysis_dir=ANALYSIS_DIR, force=force)
     print("===== 全部完成 =====")
 
-    # 先传 OSS，成功后才写 photo.toml：上传失败时站点数据保持旧版本，
+    # 先传 OSS，成功后才写分片：上传失败时站点数据保持旧版本，
     # 不会出现新 hash 指向未上传对象（2026-10-29）
     bucket = create_bucket_from_config()
     if bucket:
@@ -282,13 +317,13 @@ def run(force=False):
             sync_new_photos(OUTPUT_FOLDER, bucket, force_files=processed_files)
         except Exception as e:
             print(f"❌ OSS 上传失败：{e}")
-            print("   photo.toml 未写入；请修复网络/凭证后重新运行"
+            print("   照片数据未写入；请修复网络/凭证后重新运行"
                   "（建议 --force，确保云端全部为新版本）")
             return
         print("===== OSS 上传完成 =====")
 
-    if TOML_PATH and src_to_entry:
-        write_toml(TOML_PATH, list(src_to_entry.values()))
+    if PHOTOS_DIR and src_to_entry:
+        write_photo_dir(PHOTOS_DIR, planned_shards)
 
 
 if __name__ == "__main__":
