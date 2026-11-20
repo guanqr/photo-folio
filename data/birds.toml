@@ -1,5 +1,5 @@
 # 观鸟图鉴物种资料：灯箱「觀鳥圖鑑」区块的数据源
-# id 与 photo.toml 的 species 字段对应；文本为繁体内容，来源见每条的 [[bird.source]]
+# id 与照片数据（data/photos/）的 species 字段对应；文本为繁体内容，来源见每条的 [[bird.source]]
 # 属于该系列的观鸟照片即使缺少 species 也显示图鉴开关，展开提示缺少资料
 bird_series = "觀鳥"
 

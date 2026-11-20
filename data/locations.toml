@@ -1,4 +1,4 @@
-# 足迹地图与地点页统一数据源：name 必须与 data/photo.toml 的 location 字段逐字一致
+# 足迹地图与地点页统一数据源：name 必须与照片数据（data/photos/）的 location 字段逐字一致
 # slug 决定地点页 URL（/footprint/<slug>/，由 content/footprint/_content.gotmpl 构建期生成）与画廊筛选参数
 # 照片 location 未登记进本表时构建报错（地点页无法生成，链接会 404）
 # lat/lng 保留备用：地图点迹使用照片自身的 lat/lng，本表坐标当前不参与展示
