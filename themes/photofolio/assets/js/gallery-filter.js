@@ -18,6 +18,10 @@ import { PARAM_KEYS } from './gallery-filter-params.js';
 
 const YEAR_BUCKET_PREFIX = 'before-'; // 年份合并档 data-value 前缀（与模板生成规则对应）
 
+// 渐隐深度过渡距离：右侧剩余可滚动距离在该值以内时按比例减弱渐隐（px）
+// （约 3 个胶囊间距；只影响遮罩视觉，不是布局/断点常量）
+const FADE_RAMP = 48;
+
 let resizeBound = false; // 模块级：跨 SPA 页面实例只挂一个窗口监听
 
 let countAnimRaf = null; // 计数动画单槽位：快速连点启动多个 rAF 循环会交替写同一 textContent（数字闪烁）
@@ -97,10 +101,18 @@ export function initGalleryFilter() {
         pushQueryState(updates, { replace });
     };
 
-    /* 横向滚动渐隐遮罩：仅当右侧还有内容时显示（参考站 can-scroll-r） */
+    /* 横向滚动渐隐遮罩（左右两端）：深度分别随「已滚动距离」与「右侧剩余
+       可滚动距离」连续变化——≤ FADE_RAMP 时由无渐隐平滑加深到满格，
+       滚到对应端点时该侧完全消失。--filter-fade-l/-r 是渐变两端的 alpha
+       （1 = 无渐隐、0 = 满格），由 CSS mask-image 消费（_gallery.scss） */
     const updateMask = (box) => {
-        const scrollable = box.scrollLeft + box.clientWidth < box.scrollWidth - 8;
-        box.classList.toggle('can-scroll-r', scrollable);
+        const scrolled = Math.max(0, box.scrollLeft);
+        const remaining = Math.max(
+            0, box.scrollWidth - box.clientWidth - box.scrollLeft);
+        const left = 1 - Math.min(scrolled / FADE_RAMP, 1);
+        const right = 1 - Math.min(remaining / FADE_RAMP, 1);
+        box.style.setProperty('--filter-fade-l', left.toFixed(3));
+        box.style.setProperty('--filter-fade-r', right.toFixed(3));
     };
 
     /* 切换筛选后把选中胶囊滚到可视区中间：用矩形相对位置 + 当前 scrollLeft
@@ -139,7 +151,7 @@ export function initGalleryFilter() {
             (!locLabel || item.dataset.location === locLabel) &&
             (!category || item.dataset.category === category);
         const items = Array.from(grid.querySelectorAll('.masonry-item'));
-        // 恢复原始时间顺序（DOM 顺序已被历次筛选拍平打乱）——装饰-排序-还原：
+        // 恢复原始展示顺序（DOM 顺序已被历次筛选拍平打乱）——装饰-排序-还原：
         // 比较器逐次比较会对同一元素重复查 Map（约 2·n·log n 次），order 值
         // 会话内不变、每个元素只取一次即可（2026-10-19）
         const matching = items
@@ -176,7 +188,15 @@ export function initGalleryFilter() {
     groups.forEach((g) => {
         const box = g.querySelector('.filter-options');
         updateMask(box);
-        box.addEventListener('scroll', () => updateMask(box), { passive: true });
+        // 滚动期间每帧最多更新一次遮罩（只写自定义属性，不触发布局）
+        let maskRaf = 0;
+        box.addEventListener('scroll', () => {
+            if (maskRaf) return;
+            maskRaf = requestAnimationFrame(() => {
+                maskRaf = 0;
+                updateMask(box);
+            });
+        }, { passive: true });
     });
     if (!resizeBound) {
         resizeBound = true;

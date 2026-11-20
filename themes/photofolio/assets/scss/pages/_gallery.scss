@@ -298,17 +298,13 @@ img.photo-img {
         gap: var(--space-8);
         overflow-x: auto;
         padding-bottom: 0.125em; /* 补偿隐藏滚动条高度（2px 发丝级特例，style-lint-ignore） */
-        /* 右侧渐隐遮罩（JS 按可滚动状态切换） */
-        mask-image: none;
-        -webkit-mask-image: none;
+        /* 左右渐隐遮罩：--filter-fade-l/-r 是渐变两端 alpha（1 = 无渐隐、
+           0 = 满格），由 gallery-filter.js 按已滚动距离 / 右侧剩余距离连续写入 */
+        mask-image: linear-gradient(to right, hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), var(--filter-fade-l, 1)) 0%, var(--color-black) 18%, var(--color-black) 82%, hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), var(--filter-fade-r, 1)) 100%);
+        -webkit-mask-image: linear-gradient(to right, hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), var(--filter-fade-l, 1)) 0%, var(--color-black) 18%, var(--color-black) 82%, hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), var(--filter-fade-r, 1)) 100%);
         scrollbar-width: none;
 
         &::-webkit-scrollbar { display: none; }
-
-        &.can-scroll-r {
-            mask-image: linear-gradient(to right, var(--color-black) 82%, transparent 100%);
-            -webkit-mask-image: linear-gradient(to right, var(--color-black) 82%, transparent 100%);
-        }
 
         button {
             @extend %pill-ghost;
