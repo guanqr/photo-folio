@@ -10,7 +10,11 @@
                             <div class="lightbox-meta-group" id="lightbox-meta-date">
                                 <span class="icon">{{ partial "utils/icon.html" (dict "name" "calendar") }}</span>
                                 <span class="lightbox-meta-label">{{ i18n "lightbox_date" }}</span>
-                                <span class="lightbox-meta-text"></span>
+                                {{/* 节气标识在日期值左侧；与日期同处右对齐文本组，空值不占位 */}}
+                                <span class="lightbox-meta-text">
+                                    <span class="lightbox-solar-term" id="lightbox-solar-term" hidden></span>
+                                    <span class="lightbox-meta-date-value"></span>
+                                </span>
                             </div>
                         </div>
                         {{ end }}

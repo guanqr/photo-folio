@@ -114,6 +114,8 @@ export function initLightboxCollection({ shortLens, narrowWidth = 1280 }) {
                 title: card ? (card.dataset.title || '') : '',
                 place: card ? (card.dataset.place || '') : '',
                 date: card ? (card.dataset.date || '') : '',
+                // 日期当天命中的节气名（模板已按日期查表并 i18n；空串不显示）
+                solarTerm: card ? (card.dataset.solarTerm || '') : '',
                 description: card ? (card.dataset.description || '') : '',
                 category: card ? (card.dataset.category || '') : '',
                 categoryUrl: card ? (card.dataset.categoryUrl || '') : '',

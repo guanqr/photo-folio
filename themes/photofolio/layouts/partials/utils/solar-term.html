@@ -1,0 +1,14 @@
+{{- /* 日期当天命中的节气名（i18n）；数据表见 data/solar_terms.toml。
+       只按日期匹配、不看交节时刻——节气日常口径是「当天」，
+       按交节时刻会把同一天上午的照片归到上一个节气（2026-11-23 裁定）。 */ -}}
+{{- $term := "" -}}
+{{- with .time -}}
+    {{- $dates := dict -}}
+    {{- with hugo.Data.solar_terms -}}
+        {{- $dates = .dates | default dict -}}
+    {{- end -}}
+    {{- with index $dates (. | time.Format "2006-01-02") -}}
+        {{- $term = i18n (printf "solar_term_%s" .) -}}
+    {{- end -}}
+{{- end -}}
+{{- return $term -}}

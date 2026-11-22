@@ -564,3 +564,53 @@ other = "locations.toml slug {{ .Slug }} 重复（地点页 URL 冲突）"
 
 [error_location_unregistered]
 other = "照片數據的地點 {{ .Names }} 未登记进 locations.toml（地点页无法生成，时间线/地图会链接到 404）"
+
+# 二十四節氣（燈箱日期標識；data/solar_terms.toml 的 key → 繁體名）
+[solar_term_xiaohan]
+other = "小寒"
+[solar_term_dahan]
+other = "大寒"
+[solar_term_lichun]
+other = "立春"
+[solar_term_yushui]
+other = "雨水"
+[solar_term_jingzhe]
+other = "驚蟄"
+[solar_term_chunfen]
+other = "春分"
+[solar_term_qingming]
+other = "清明"
+[solar_term_guyu]
+other = "穀雨"
+[solar_term_lixia]
+other = "立夏"
+[solar_term_xiaoman]
+other = "小滿"
+[solar_term_mangzhong]
+other = "芒種"
+[solar_term_xiazhi]
+other = "夏至"
+[solar_term_xiaoshu]
+other = "小暑"
+[solar_term_dashu]
+other = "大暑"
+[solar_term_liqiu]
+other = "立秋"
+[solar_term_chushu]
+other = "處暑"
+[solar_term_bailu]
+other = "白露"
+[solar_term_qiufen]
+other = "秋分"
+[solar_term_hanlu]
+other = "寒露"
+[solar_term_shuangjiang]
+other = "霜降"
+[solar_term_lidong]
+other = "立冬"
+[solar_term_xiaoxue]
+other = "小雪"
+[solar_term_daxue]
+other = "大雪"
+[solar_term_dongzhi]
+other = "冬至"

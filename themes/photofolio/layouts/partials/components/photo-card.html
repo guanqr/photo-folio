@@ -73,6 +73,9 @@
     {{ $dateStr = i18n "date_format_full" (dict "Year" $year "Month" $month "Day" $day) }}
 {{ end }}
 
+{{/* 日期当天命中的节气（灯箱日期行标识；空值不输出属性） */}}
+{{ $solarTerm := partial "utils/solar-term.html" (dict "time" $time) }}
+
 <div class="masonry-item" data-year="{{ $year }}" data-location="{{ $photo.location }}" data-category="{{ $photo.category }}" data-scope="{{ if $photo.featured }}featured {{ end }}{{ $orientation }}">
     <div class="photo-card"
         tabindex="0"
@@ -90,6 +93,7 @@
         {{ with $photo.species }}data-species="{{ . }}"{{ end }}
         {{ if $showBirdGuide }}data-bird-guide="true"{{ end }}
         {{ with $dateStr }}data-date="{{ . }}"{{ end }}
+        {{ with $solarTerm }}data-solar-term="{{ . }}"{{ end }}
         {{ with $focus }}data-focus="{{ . }}"{{ end }}
         {{ with $aperture }}data-aperture="{{ . }}"{{ end }}
         {{ with $shutter }}data-shutter="{{ . }}"{{ end }}

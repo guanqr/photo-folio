@@ -36,6 +36,7 @@ export function initLightbox() {
     const lightboxImgArea = lightbox ? lightbox.querySelector('.lightbox-img-area') : null; // 辉光层插入点（主图之前；lightbox 缺失时保持 null——下方守卫兜底）
     const lightboxImgLoading = document.getElementById('lightbox-img-loading');
     const lightboxCaption = document.getElementById('lightbox-caption');
+    const lightboxSolarTerm = document.getElementById('lightbox-solar-term');
     const tagsEl = document.getElementById('lightbox-tags');
     const lightboxMeta = document.getElementById('lightbox-meta');
     const lightboxMetaPlace = document.querySelector('#lightbox-meta-place .lightbox-meta-text');
@@ -282,6 +283,11 @@ export function initLightbox() {
     // 渲染整个元信息面板（标题 / 分类与系列胶囊 / 简行 / EXIF 分行 / 直方图与色卡 / 故事）
     function renderPanel(p) {
         if (lightboxCaption) lightboxCaption.textContent = p.title;
+        // 日期行左侧的节气标识：模板按日期查表，空值隐藏（2026-11-23）
+        if (lightboxSolarTerm) {
+            lightboxSolarTerm.textContent = p.solarTerm || '';
+            lightboxSolarTerm.hidden = !p.solarTerm;
+        }
         meta.render(p);
         // 故事块与图鉴/标签同规则：有/无描述时只折叠该块（grid 行 + 内层淡入），
         // 文字直接更新；移除时保留旧文本随内层淡出，隐藏后 aria-hidden/inert

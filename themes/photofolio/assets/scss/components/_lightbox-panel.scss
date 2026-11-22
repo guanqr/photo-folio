@@ -1,5 +1,15 @@
 ﻿@use "../base/primitives" as *;
 
+/* 节气标识字体：霞鶩篆書 OFL 1.1 子集，只声明在灯箱样式内，字体文件
+   仅在标识出现时按需下载；授权文本随字体目录分发（2026-11-23） */
+@font-face {
+    font-family: "LXGW Seal";
+    src: url("../fonts/lxgw-seal-subset.woff2") format("woff2");
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
 /* ===== Lightbox 元信息面板（窄屏底部抽屉 / 桌面右栏） ===== */
 /* 元信息面板：移动优先——图片下方，折叠态只露简行，点箭头展开详情
    （窄屏不加顶部分隔线；桌面端以左边线分隔，见媒体查询） */
@@ -32,6 +42,37 @@
     font-weight: 400;
     margin-bottom: var(--space-4);
     transition: opacity var(--transition-fade);
+}
+
+/* 日期行左侧的节气标识：与日期值同处右对齐文本组；间距为标签胶囊的
+   12px 内边距 + 8px 视觉间隙，描边用伪元素画在文字框外；
+   hidden 时不占位、也不触发字体下载 */
+#lightbox-meta-date .lightbox-meta-text {
+    display: inline-flex;
+    align-items: center; /* 篆书满格字形按基线对齐会偏离日期视觉中心，改按中心对齐 */
+    justify-content: flex-end;
+    gap: var(--space-20);
+}
+
+/* 节气标识：文字与胶囊描边取图像分析触发行灰（--color-text-muted）；
+   字号对齐分类标签胶囊。描边用绝对定位伪元素按标签胶囊的内边距
+   （4px/12px）绘制，不占布局——有无节气时日期行行高一致，
+   切图不产生轻微位移（2026-11-23） */
+.lightbox-solar-term {
+    position: relative;
+    font-family: "LXGW Seal", var(--font-meta);
+    font-size: var(--size-meta);
+    color: var(--color-text-muted);
+    white-space: nowrap;
+
+    &::after {
+        content: '';
+        position: absolute;
+        inset: calc(-1 * var(--space-4)) calc(-1 * var(--space-12));
+        border: 0.0625em solid var(--color-text-muted);
+        border-radius: var(--radius-pill);
+        pointer-events: none;
+    }
 }
 
 /* 标签行：行高/下边距折叠负责空↔有；具体标签的增删由 .lightbox-tag 的

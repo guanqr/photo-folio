@@ -2,7 +2,7 @@
  * 灯箱元信息面板渲染（独立模块；集成见 lightbox.js）
  *
  * - 地点/日期简行、EXIF 分行列表、标题下方分类/系列胶囊——由照片对象填充；
- *   标题（caption）单行文本仍由 lightbox.js 直接写入
+ *   标题（caption）与节气标识仍由 lightbox.js 直接写入
  * - 镜头型号展示缩减：仅保留到光圈值（f/x-x）为止，其后的字母/系列后缀
  *   （VR、S、Di III VC VXD…）不展示——照片数据原始记录不动，仅灯箱展示截断
  * - EXIF 行结构（图标/标签）由模板渲染，这里只填值——行配置与 li 列表
@@ -30,8 +30,11 @@ export function initLightboxMeta({ tagsEl, metaEl, metaPlaceEl, metaDateEl, exif
         let any = false;
         rows.forEach(([el, text]) => {
             if (!el) return;
-            el.textContent = text || '';
-            el.parentElement.style.display = text ? '' : 'none';
+            // 日期行的文本写在值 span 里，外层 span 还承载左侧的节气标识
+            const valueEl = el.querySelector('.lightbox-meta-date-value') || el;
+            valueEl.textContent = text || '';
+            const group = el.closest('.lightbox-meta-group') || el.parentElement;
+            group.style.display = text ? '' : 'none';
             if (text) any = true;
         });
         metaEl.style.display = any ? '' : 'none';
