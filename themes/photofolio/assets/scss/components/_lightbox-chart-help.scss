@@ -49,6 +49,9 @@
     font-family: var(--font-meta);
     font-size: var(--size-small);
     line-height: 1.6;
+    text-align: justify;
+    text-justify: inter-ideograph;
+    text-align-last: justify; /* 末行也两端对齐（2026-11-23） */
     box-shadow: var(--shadow-pop);
     overflow-y: auto; /* 短视口下长文案内部滚动（高度上限由 JS 写入） */
     overscroll-behavior: contain;
