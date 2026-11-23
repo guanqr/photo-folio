@@ -614,3 +614,49 @@ other = "小雪"
 other = "大雪"
 [solar_term_dongzhi]
 other = "冬至"
+
+# 天干地支（畫廊年份背景；按公曆年計算）
+[ganzhi_stem_jia]
+other = "甲"
+[ganzhi_stem_yi]
+other = "乙"
+[ganzhi_stem_bing]
+other = "丙"
+[ganzhi_stem_ding]
+other = "丁"
+[ganzhi_stem_wu]
+other = "戊"
+[ganzhi_stem_ji]
+other = "己"
+[ganzhi_stem_geng]
+other = "庚"
+[ganzhi_stem_xin]
+other = "辛"
+[ganzhi_stem_ren]
+other = "壬"
+[ganzhi_stem_gui]
+other = "癸"
+[ganzhi_branch_zi]
+other = "子"
+[ganzhi_branch_chou]
+other = "丑"
+[ganzhi_branch_yin]
+other = "寅"
+[ganzhi_branch_mao]
+other = "卯"
+[ganzhi_branch_chen]
+other = "辰"
+[ganzhi_branch_si]
+other = "巳"
+[ganzhi_branch_wu]
+other = "午"
+[ganzhi_branch_wei]
+other = "未"
+[ganzhi_branch_shen]
+other = "申"
+[ganzhi_branch_you]
+other = "酉"
+[ganzhi_branch_xu]
+other = "戌"
+[ganzhi_branch_hai]
+other = "亥"

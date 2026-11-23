@@ -18,5 +18,16 @@
             {{- end -}}
             </p>
         {{ end }}
+        {{/* 年份筛选的干支背景（仅全部作品页传入 yearMarks）：竖排两字、淡灰、绝对定位在标题区右侧；
+             aria-hidden——筛选状态由年份按钮的 aria-pressed 表达（2026-11-23） */}}
+        {{ with $ctx.yearMarks }}
+        <div class="gallery-year-ganzhi" id="gallery-year-ganzhi" aria-hidden="true">
+            {{ range . }}
+            <span class="gallery-year-ganzhi-item" data-year="{{ .year }}">
+                <span>{{ .stem }}</span><span>{{ .branch }}</span>
+            </span>
+            {{ end }}
+        </div>
+        {{ end }}
     </div>
 </div>

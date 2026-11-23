@@ -1,0 +1,10 @@
+{{- /* 公曆年的天干地支（返回 dict：stem / branch，值已走 i18n）。
+       年份筛选按公曆年，不按立春換年；2026 = 丙午（2026-11-23）。 */ -}}
+{{- $year := int . -}}
+{{- $stems := slice "jia" "yi" "bing" "ding" "wu" "ji" "geng" "xin" "ren" "gui" -}}
+{{- $branches := slice "zi" "chou" "yin" "mao" "chen" "si" "wu" "wei" "shen" "you" "xu" "hai" -}}
+{{- $stem := index $stems (mod (sub $year 4) 10) -}}
+{{- $branch := index $branches (mod (sub $year 4) 12) -}}
+{{- return (dict
+    "stem" (i18n (printf "ganzhi_stem_%s" $stem))
+    "branch" (i18n (printf "ganzhi_branch_%s" $branch))) -}}

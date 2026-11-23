@@ -4,6 +4,16 @@
    灯箱样式表单独打包后两个入口共用同一份定义，不重复输出 CSS（2026-11-15） */
 @forward "primitives";
 
+/* 篆书标识字体（节气/干支）：霞鶩篆書 OFL 1.1 子集；主样式声明，
+   灯箱与画廊页共用，有对应字符时才下载（2026-11-23） */
+@font-face {
+    font-family: "LXGW Seal";
+    src: url("../fonts/lxgw-seal-subset.woff2") format("woff2");
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
 /* ===== Reset & Base ===== */
 *, *::before, *::after {
     margin: 0;
@@ -110,6 +120,8 @@ body {
     @include defineColorHSL(--color-text-secondary, 0, 0%, 60%);
     @include defineColorHSL(--color-text-muted, 0, 0%, 40%);
     @include defineColorHSL(--color-accent, 168.9, 25.2%, 58%);
+    /* 灯箱节气标识：印泥朱红（固定色，不随明暗主题切换；2026-11-23） */
+    @include defineColorHSL(--color-seal, 6, 58%, 47%);
     @include defineColorHSL(--color-border, 210, 16.3%, 16.9%);
     @include defineColorHSL(--color-white, 0, 0%, 100%);
     @include defineColorHSL(--color-black, 0, 0%, 0%);

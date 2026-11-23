@@ -83,8 +83,16 @@
 {{ end }}
 
 <section class="gallery-page">
+    {{/* 年份筛选的干支背景：只为数值年份生成条目；合并档 before-* 跨多年，无单一年份干支 */}}
+    {{ $yearMarks := slice }}
+    {{ range $yearOptions }}
+        {{ if not (strings.HasPrefix .value "before-") }}
+            {{ $gz := partial "utils/ganzhi.html" (int .value) }}
+            {{ $yearMarks = $yearMarks | append (dict "year" .value "stem" $gz.stem "branch" $gz.branch) }}
+        {{ end }}
+    {{ end }}
     {{/* 真实作品总数统计（含组照内页）；数字包 span 供筛选后滚动动画更新（countId） */}}
-    {{ partial "components/page-header.html" (dict "title" .Title "description" .Params.description "countKey" "total_photos" "count" $totalRealCount "countId" "photo-count-num") }}
+    {{ partial "components/page-header.html" (dict "title" .Title "description" .Params.description "countKey" "total_photos" "count" $totalRealCount "countId" "photo-count-num" "yearMarks" $yearMarks) }}
 
     <div class="masonry-container">
         {{ if gt (len $gridPhotos) 0 }}

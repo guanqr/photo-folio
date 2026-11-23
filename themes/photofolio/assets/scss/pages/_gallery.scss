@@ -4,9 +4,70 @@
 .gallery-page { margin-top: var(--space-page-top); }
 
 .gallery-header {
+    position: relative;
+    overflow: hidden;
     padding: var(--space-48) 0 var(--space-32);
     border-bottom: 0.0625em solid var(--color-border);
     transition: border-color var(--transition-fade);
+}
+
+/* 页头内容在水印之上；水印只作背景 */
+.gallery-header .page-title,
+.gallery-header .page-description,
+.gallery-header .photo-count {
+    position: relative;
+    z-index: 1;
+}
+
+/* 年份筛选中具体年份时，标题区右侧淡入该年天干地支。
+   条目由模板预渲染、JS 只切 is-visible；grid 叠放实现切年交叉淡入。
+   字号 6em 为展示级例外；窄屏缩到 3em 但保留（2026-11-23） */
+.gallery-header .container {
+    position: relative;
+}
+
+.gallery-year-ganzhi {
+    /* 页边距按根字号（跨 6em 字号恒等，不能用 em 间距 token）；
+       0.08em 为篆书字形右侧固有留白，扣掉后墨迹与内容右缘对齐 */
+    --ganzhi-page-margin: 1rem;
+    --ganzhi-rsb: 0.08em;
+    position: absolute;
+    top: 50%;
+    right: calc(var(--ganzhi-page-margin) - var(--ganzhi-rsb));
+    display: grid;
+    transform: translateY(-50%);
+    font-family: "LXGW Seal", var(--font-heading);
+    font-size: 6em;
+    line-height: 1;
+    color: var(--color-text-muted);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    user-select: none;
+    transition: opacity var(--transition-fade), visibility var(--transition-fade);
+}
+
+.gallery-year-ganzhi.is-visible {
+    opacity: 0.12;
+    visibility: visible;
+}
+
+.gallery-year-ganzhi-item {
+    grid-area: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    opacity: 0;
+    transition: opacity var(--transition-fade);
+}
+
+.gallery-year-ganzhi-item.is-visible {
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gallery-year-ganzhi,
+    .gallery-year-ganzhi-item { transition: none; }
 }
 
 .page-title {

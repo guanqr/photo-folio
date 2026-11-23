@@ -77,6 +77,21 @@ export function initGalleryFilter() {
         return b && b.dataset.value ? b.textContent : '';
     };
 
+    /* 页头年份干支背景：仅数值年份显示对应条目；「全部」与 before-* 合并档隐藏。
+       条目由模板按年份预渲染，这里只切 is-visible（CSS 负责淡入/交叉淡入） */
+    const yearGanzhi = document.getElementById('gallery-year-ganzhi');
+    const yearGanzhiItems = yearGanzhi
+        ? Array.from(yearGanzhi.querySelectorAll('.gallery-year-ganzhi-item'))
+        : [];
+    const syncYearGanzhi = (year) => {
+        if (!yearGanzhi) return;
+        const item = /^\d{4}$/.test(year)
+            ? (yearGanzhiItems.find((el) => el.dataset.year === year) || null)
+            : null;
+        yearGanzhiItems.forEach((el) => el.classList.toggle('is-visible', el === item));
+        yearGanzhi.classList.toggle('is-visible', !!item);
+    };
+
     const activate = (group, btn) => {
         group.querySelectorAll('button').forEach((b) => {
             const on = b === btn;
@@ -134,6 +149,7 @@ export function initGalleryFilter() {
         // 每轮筛选只解析一次各维度值（避免在匹配谓词中逐项重复查询 DOM）
         const scope = valueOf('scope');
         const year = valueOf('year');
+        syncYearGanzhi(year);
         // 合并档按数值区间匹配；普通年份仍精确相等（分界年由模板写入 token）
         const yearCutoff = year.startsWith(YEAR_BUCKET_PREFIX)
             ? parseInt(year.slice(YEAR_BUCKET_PREFIX.length), 10) || 0
