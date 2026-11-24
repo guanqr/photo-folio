@@ -8,7 +8,11 @@
         {{- $dates = .dates | default dict -}}
     {{- end -}}
     {{- with index $dates (. | time.Format "2006-01-02") -}}
-        {{- $term = i18n (printf "solar_term_%s" .) -}}
+        {{- $key := printf "solar_term_%s" . -}}
+        {{- $term = i18n $key -}}
+        {{- if not $term -}}
+            {{- errorf "%s" (i18n "error_solar_term_i18n_missing" (dict "Key" $key)) -}}
+        {{- end -}}
     {{- end -}}
 {{- end -}}
 {{- return $term -}}

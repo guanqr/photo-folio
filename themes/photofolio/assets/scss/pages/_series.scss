@@ -83,7 +83,7 @@
         position: relative;
         display: block;
         aspect-ratio: 3 / 2;
-        border-radius: var(--radius-xs); /* 与瀑布流作品卡一致 */
+        border-radius: var(--radius-image); /* 底部入口小卡回到缩略卡 4px */
         overflow: hidden;
 
         /* 悬停幅度与照片卡对齐（首页大卡是 -0.35em，此处不沿用） */

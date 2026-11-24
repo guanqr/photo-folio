@@ -51,7 +51,7 @@
     @extend %card-surface;
     display: flex;
     flex-direction: column;
-    border-radius: var(--radius-card);
+    border-radius: var(--radius-sm); /* 图片大卡：8px，小于 UI 容器 12px */
     overflow: hidden;
     transition: transform var(--transition-spring), border-color var(--transition), box-shadow var(--transition), background-color var(--transition-fade), opacity var(--transition-reveal);
 

@@ -16,7 +16,7 @@
 {{- $colsBase := .colsBase -}}
 <div class="{{ $gridClass }}"{{ with $colsBase }} data-cols-base="{{ . }}"{{ end }}>
     {{- range .covers -}}
-        <a href="{{ partial "utils/series-url.html" .series }}" class="category-card">
+        <a href="{{ partialCached "utils/series-url.html" .series .series }}" class="category-card">
             <div class="category-image">
                 {{ $coverUrl := partial "utils/img-url-cached.html" (dict "src" .src "hash" (.hash | default "") "site" site "width" $coverWidth "mode" "lfit" "format" "avif" "quality" ($cfg.quality | default 80)) }}
                 <img src="{{ $coverUrl }}" alt="{{ .series }}" loading="lazy">

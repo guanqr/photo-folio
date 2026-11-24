@@ -83,12 +83,16 @@
 {{ end }}
 
 <section class="gallery-page">
-    {{/* 年份筛选的干支背景：只为数值年份生成条目；合并档 before-* 跨多年，无单一年份干支 */}}
+    {{/* 筛选开关解析一次：页头干支与筛选栏共用；年份关闭时不生成不可达的干支 DOM */}}
+    {{ $filtersCfg := merge (dict "year" true "location" false "category" false "scope" false) (default dict site.Params.galleryFilters) }}
+    {{/* 年份筛选的干支背景：只为全部作品页的数值年份生成；合并档 before-* 跨多年，无单一年份干支 */}}
     {{ $yearMarks := slice }}
-    {{ range $yearOptions }}
-        {{ if not (strings.HasPrefix .value "before-") }}
-            {{ $gz := partial "utils/ganzhi.html" (int .value) }}
-            {{ $yearMarks = $yearMarks | append (dict "year" .value "stem" $gz.stem "branch" $gz.branch) }}
+    {{ if and (eq $sectionName "gallery") $filtersCfg.year }}
+        {{ range $yearOptions }}
+            {{ if not (strings.HasPrefix .value "before-") }}
+                {{ $gz := partialCached "utils/ganzhi.html" (int .value) (string (int .value)) }}
+                {{ $yearMarks = $yearMarks | append (dict "year" .value "stem" $gz.stem "branch" $gz.branch) }}
+            {{ end }}
         {{ end }}
     {{ end }}
     {{/* 真实作品总数统计（含组照内页）；数字包 span 供筛选后滚动动画更新（countId） */}}
@@ -97,8 +101,7 @@
     <div class="masonry-container">
         {{ if gt (len $gridPhotos) 0 }}
         {{/* 筛选栏：仅全部作品页；各维度由 hugo.toml [params.galleryFilters] 控制开关
-           （胶囊按钮组，可横向滚动；缺省仅开启 year）——开关解析一次成 dict */}}
-        {{ $filtersCfg := merge (dict "year" true "location" false "category" false "scope" false) (default dict site.Params.galleryFilters) }}
+           （胶囊按钮组，可横向滚动；缺省仅开启 year）——开关在页头前解析一次 */}}
         {{ if and (eq $sectionName "gallery") (or $filtersCfg.year $filtersCfg.location $filtersCfg.category $filtersCfg.scope) }}
         <div class="gallery-filters" role="group" aria-label="{{ i18n "filter_photos" }}">
             {{ if $filtersCfg.scope }}

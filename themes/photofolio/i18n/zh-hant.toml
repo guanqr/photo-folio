@@ -565,6 +565,12 @@ other = "locations.toml slug {{ .Slug }} 重复（地点页 URL 冲突）"
 [error_location_unregistered]
 other = "照片數據的地點 {{ .Names }} 未登记进 locations.toml（地点页无法生成，时间线/地图会链接到 404）"
 
+[error_solar_term_i18n_missing]
+other = "節氣「{{ .Key }}」缺少對應的 i18n 文案"
+
+[error_ganzhi_i18n_missing]
+other = "干支「{{ .Key }}」缺少對應的 i18n 文案"
+
 # 二十四節氣（燈箱日期標識；data/solar_terms.toml 的 key → 繁體名）
 [solar_term_xiaohan]
 other = "小寒"

@@ -35,7 +35,7 @@
 - **rAF 逐帧重排（无 debounce）**：每帧最多执行一次；宽度/档位未变但视口高度变化（全屏/F11/拖高窗口）时仍按新视口补行；跨档位重建后按视口补行（instant），再交回逐行补载
 
 ### 照片卡片
-- `.photo-card`：圆角（0.25em）、边框；**悬停时整卡轻微上移（translateY(-0.15em)，弹簧曲线，比分类卡 -0.35em 幅度小），图片不放大**；照片卡与分类/系列卡悬停时边框有**光标跟随高亮**——保留整圈强调色，鼠标附近一段叠全强调色光晕（`card-glow.js` 逐帧写入 `--card-glow-x/y`；`components/_card-glow.scss` 把边框本身画成高亮：透明边框 + 三层背景，实色卡底裁 padding-box、径向光晕与整圈强调色裁 border-box，与边框线完全重合；光晕半径取卡片短边（`--card-glow-r`），光标到最近边框的距离与半径同比例，大卡与小卡亮度一致；`card-hover` mixin 只做位移/阴影、不再改 `border-color`，避免高特异性规则盖掉透明边框导致亮度不一；仅可悬停设备）
+- `.photo-card`：圆角（`--radius-image`，0.25em / 4px；分类/系列大卡用 `--radius-sm` 8px，底部入口小卡 4px）、边框；**悬停时整卡轻微上移（translateY(-0.15em)，弹簧曲线，比分类卡 -0.35em 幅度小），图片不放大**；照片卡与分类/系列卡悬停时边框有**光标跟随高亮**——保留整圈强调色，鼠标附近一段叠全强调色光晕（`card-glow.js` 逐帧写入 `--card-glow-x/y`；`components/_card-glow.scss` 把边框本身画成高亮：透明边框 + 三层背景，实色卡底裁 padding-box、径向光晕与整圈强调色裁 border-box，与边框线完全重合；光晕半径取卡片短边（`--card-glow-r`），光标到最近边框的距离与半径同比例，大卡与小卡亮度一致；`card-hover` mixin 只做位移/阴影、不再改 `border-color`，避免高特异性规则盖掉透明边框导致亮度不一；仅可悬停设备）
 - `.photo-wrapper`：统一 div 容器，`position: relative`，`overflow: hidden`
 - **卡片悬停显示标题 + 「地点 · 日期」两行小字**（地点取 `photo.location`、日期沿用 i18n 完整日期，空项自动省略；触屏无悬停）；标题与完整元信息（地点/分类/日期/EXIF）经 `.photo-card` 的 `data-title` / `data-place` / `data-category` / `data-date` / `data-focus` / `data-aperture` / `data-shutter` / `data-iso` / `data-camera` / `data-lens` 传给灯箱（不再使用 `data-exif` 聚合属性）
 - 所有照片（含组照封面与内页）均为普通卡片，点击触发 Lightbox；点击委托守卫排除 `<a>` 内元素（卡片内部不再有系列链接）

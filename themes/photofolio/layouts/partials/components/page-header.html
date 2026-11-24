@@ -4,7 +4,7 @@
     count（计数行数字）、countId（可选：数字包 span 供筛选滚动动画，
     见 gallery-filter.js） */}}
 {{ $ctx := . }}
-<div class="gallery-header">
+<div class="gallery-header{{ if $ctx.yearMarks }} has-year-ganzhi{{ end }}">
     <div class="container">
         <h1 class="page-title">{{ $ctx.title }}</h1>
         {{ with $ctx.description }}<p class="page-description">{{ . }}</p>{{ end }}

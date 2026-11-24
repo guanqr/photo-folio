@@ -3,8 +3,14 @@
 {{- $year := int . -}}
 {{- $stems := slice "jia" "yi" "bing" "ding" "wu" "ji" "geng" "xin" "ren" "gui" -}}
 {{- $branches := slice "zi" "chou" "yin" "mao" "chen" "si" "wu" "wei" "shen" "you" "xu" "hai" -}}
-{{- $stem := index $stems (mod (sub $year 4) 10) -}}
-{{- $branch := index $branches (mod (sub $year 4) 12) -}}
-{{- return (dict
-    "stem" (i18n (printf "ganzhi_stem_%s" $stem))
-    "branch" (i18n (printf "ganzhi_branch_%s" $branch))) -}}
+{{- $stemKey := printf "ganzhi_stem_%s" (index $stems (mod (sub $year 4) 10)) -}}
+{{- $branchKey := printf "ganzhi_branch_%s" (index $branches (mod (sub $year 4) 12)) -}}
+{{- $stemLabel := i18n $stemKey -}}
+{{- $branchLabel := i18n $branchKey -}}
+{{- if not $stemLabel -}}
+    {{- errorf "%s" (i18n "error_ganzhi_i18n_missing" (dict "Key" $stemKey)) -}}
+{{- end -}}
+{{- if not $branchLabel -}}
+    {{- errorf "%s" (i18n "error_ganzhi_i18n_missing" (dict "Key" $branchKey)) -}}
+{{- end -}}
+{{- return (dict "stem" $stemLabel "branch" $branchLabel) -}}

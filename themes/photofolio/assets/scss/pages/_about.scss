@@ -78,7 +78,7 @@
 /* 面板错峰入场（沿用原设备区交错入场风格）；卡片样式与全站分类卡片一致 */
 .stats-panel {
     @extend %card-surface;
-    border-radius: var(--radius-card);
+    border-radius: var(--radius-sm); /* 与分类/系列大卡同档 8px */
     padding: var(--space-24);
     transition: border-color var(--transition-fade), background-color var(--transition-fade);
     animation: fadeIn var(--transition-reveal) both;

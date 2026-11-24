@@ -5,10 +5,14 @@
 
 .gallery-header {
     position: relative;
-    overflow: hidden;
     padding: var(--space-48) 0 var(--space-32);
     border-bottom: 0.0625em solid var(--color-border);
     transition: border-color var(--transition-fade);
+}
+
+/* 只有带干支水印的画廊页头需要裁剪；分类/系列/足迹等共享页头不承担画廊专属裁剪 */
+.gallery-header.has-year-ganzhi {
+    overflow: hidden;
 }
 
 /* 页头内容在水印之上；水印只作背景 */
@@ -21,7 +25,7 @@
 
 /* 年份筛选中具体年份时，标题区右侧淡入该年天干地支。
    条目由模板预渲染、JS 只切 is-visible；grid 叠放实现切年交叉淡入。
-   字号 6em 为展示级例外；窄屏缩到 3em 但保留（2026-11-23） */
+   字号 6em 为展示级例外；窄屏保持 6em、不缩小（2026-11-23） */
 .gallery-header .container {
     position: relative;
 }
@@ -36,7 +40,6 @@
     right: calc(var(--ganzhi-page-margin) - var(--ganzhi-rsb));
     display: grid;
     transform: translateY(-50%);
-    font-family: "LXGW Seal", var(--font-heading);
     font-size: 6em;
     line-height: 1;
     color: var(--color-text-muted);
@@ -47,7 +50,9 @@
     transition: opacity var(--transition-fade), visibility var(--transition-fade);
 }
 
+/* 篆书字体只在水印可见时才应用：未选年份不触发 woff2 下载 */
 .gallery-year-ganzhi.is-visible {
+    font-family: "LXGW Seal", var(--font-heading);
     opacity: 0.12;
     visibility: visible;
 }
@@ -161,7 +166,7 @@
 
 .photo-card {
     @extend %card-surface;
-    border-radius: var(--radius-xs); /* 锁定值（--radius-xs），永不变 */
+    border-radius: var(--radius-image); /* 图片缩略卡 4px，接近杂志直边 */
     overflow: hidden;
     transition: border-color var(--transition), box-shadow var(--transition), background-color var(--transition-fade), transform var(--transition-spring);
 

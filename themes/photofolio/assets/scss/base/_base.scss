@@ -264,13 +264,15 @@ body {
     --shadow-pop: 0 0.75em 2em hsla(var(--color-black-h), var(--color-black-s), var(--color-black-l), 0.15);
 
     /* ═══ 圆角梯度（:root 单源，全站引用）═══
-       --radius-xs 为瀑布流作品卡锁定值（永不改）；
+       --radius-image 为图片缩略卡专用（4px）；分类/系列大卡用 --radius-sm（8px），
+       形成「缩略图 4 / 大图卡 8 / UI 容器 12」的层级；
        胶囊统一走 --radius-pill（50em：完全圆头——全站尺寸体系为 em、
        胶囊元素均 em 定高，em 随字体缩放同步缩放；灯箱原先的 9999px 混用就此归一）；
        圆形（50%）与更细的线端点（0.0625/0.1em）不在梯度内、保持原样 */
     --radius-2xs: 0.125em;  /* 细圆角：焦点环、图表占比条 */
-    --radius-xs: 0.25em;    /* 最小档：瀑布流作品卡（锁定值）、下拉面板、小部件 */
-    --radius-sm: 0.5em;     /* 中档：弹层、小按钮 */
+    --radius-image: 0.25em; /* 图片缩略卡：4px，接近杂志直边 */
+    --radius-xs: 0.25em;    /* 最小档：下拉面板、小部件 */
+    --radius-sm: 0.5em;     /* 中档：图片大卡、关于页统计卡、弹层、小按钮 */
     --radius-card: 0.75em;  /* 卡片档：卡片/大容器 */
     --radius-pill: 50em;    /* 胶囊：完全圆头 */
 }

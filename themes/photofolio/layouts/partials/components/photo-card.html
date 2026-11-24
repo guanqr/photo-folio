@@ -57,7 +57,7 @@
 {{/* 反查系列的英文 URL（灯箱系列胶囊跳转用；见 series-url.html 唯一实现） */}}
 {{ $seriesUrl := "" }}
 {{ if $seriesName }}
-    {{ $seriesUrl = partial "utils/series-url.html" $seriesName }}
+    {{ $seriesUrl = partialCached "utils/series-url.html" $seriesName $seriesName }}
 {{ end }}
 
 {{/* 卡片/灯箱标题：一律显示作品自己的 alt（系列封面点击已改为开灯箱，不再显示系列名） */}}
@@ -67,14 +67,17 @@
    卡片上仅悬停显示标题与焦距·光圈两行小字（见下方 photo-hover-info） */}}
 {{ $dateStr := "" }}
 {{ with $time }}
-    {{ $year := . | time.Format "2006" }}
     {{ $month := . | time.Format "01" }}
     {{ $day := . | time.Format "02" }}
     {{ $dateStr = i18n "date_format_full" (dict "Year" $year "Month" $month "Day" $day) }}
 {{ end }}
 
-{{/* 日期当天命中的节气（灯箱日期行标识；空值不输出属性） */}}
-{{ $solarTerm := partial "utils/solar-term.html" (dict "time" $time) }}
+{{/* 日期当天命中的节气（灯箱日期行标识；空值不输出属性）。
+   按日期缓存：同一天多张照片只查一次表/i18n */}}
+{{ $solarTerm := "" }}
+{{ with $time }}
+    {{ $solarTerm = partialCached "utils/solar-term.html" (dict "time" $time) (. | time.Format "2006-01-02") }}
+{{ end }}
 
 <div class="masonry-item" data-year="{{ $year }}" data-location="{{ $photo.location }}" data-category="{{ $photo.category }}" data-scope="{{ if $photo.featured }}featured {{ end }}{{ $orientation }}">
     <div class="photo-card"
