@@ -51,7 +51,7 @@
                 <p class="carousel-hero-subtitle">{{ .Site.Params.heroSubtitle }}</p>
                 {{/* 大字下方的胶囊按钮（站内链接由 SPA 拦截切换页面） */}}
                 <div class="carousel-actions">
-                    <a href="/gallery/" class="carousel-action-btn">{{ i18n "hero_view_gallery" }}</a>
+                    <a href="/archives/" class="carousel-action-btn">{{ i18n "hero_view_gallery" }}</a>
                     <a href="/about/" class="carousel-action-btn">{{ i18n "hero_about_me" }}</a>
                 </div>
             </div>
@@ -67,9 +67,15 @@
 {{/* ================= 分类入口（轮播图下方，下拉后可见） ================= */}}
 <section class="home-section" id="categories-grid">
     <div class="container">
-        <h2 class="home-section-title">{{ i18n "categories_title" }}</h2>
-        {{/* 分类目录卡片（与 /categories/ 合集页同款；见 categories-cards.html） */}}
         {{ $categoriesSection := site.GetPage "categories" }}
+        <div class="home-section-head">
+            <h2 class="home-section-title">{{ i18n "categories_title" }}</h2>
+            {{ with $categoriesSection }}
+                {{/* 首页只展示前几张卡片（CSS 按断点隐藏），其余入口统一放这里 */}}
+                <a class="home-section-more" href="{{ .RelPermalink }}"><span>{{ i18n "home_more_categories" }}</span>{{ partial "utils/icon.html" (dict "name" "chevron_right") }}</a>
+            {{ end }}
+        </div>
+        {{/* 分类目录卡片（与 /categories/ 合集页同款；见 categories-cards.html） */}}
         {{ if $categoriesSection }}
             {{ partial "components/categories-cards.html" (dict "sections" $categoriesSection.Sections.ByWeight "allPhotos" $sortedPhotos "coverMode" (.Site.Params.categoryCover | default "latest-landscape")) }}
         {{ end }}
@@ -81,7 +87,12 @@
 {{ if gt (len $coverPhotos) 0 }}
 <section class="home-section">
     <div class="container">
-        <h2 class="home-section-title">{{ i18n "series_title" }}</h2>
+        <div class="home-section-head">
+            <h2 class="home-section-title">{{ i18n "series_title" }}</h2>
+            {{ with site.GetPage "series" }}
+                <a class="home-section-more" href="{{ .RelPermalink }}"><span>{{ i18n "home_more_series" }}</span>{{ partial "utils/icon.html" (dict "name" "chevron_right") }}</a>
+            {{ end }}
+        </div>
         {{ partial "components/series-cards.html" (dict "covers" $coverPhotos "allPhotos" $sortedPhotos) }}
     </div>
 </section>

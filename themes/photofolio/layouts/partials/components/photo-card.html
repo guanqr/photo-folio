@@ -101,7 +101,7 @@
         {{ with $aperture }}data-aperture="{{ . }}"{{ end }}
         {{ with $shutter }}data-shutter="{{ . }}"{{ end }}
         {{ with $iso }}data-iso="{{ . }}"{{ end }}
-        {{ with $photo.camera }}data-camera="{{ . }}"{{ end }}
+        {{ with $photo.camera }}{{ $cameraName := partialCached "utils/camera-name.html" (dict "exif" .) . | printf "%s" }}data-camera="{{ $cameraName }}"{{ end }}
         {{ with $photo.lens }}data-lens="{{ . }}"{{ end }}>
 
         {{/* 作品一律渲染普通 img（点击开灯箱）；卡片上仅悬停显示标题与焦距·光圈

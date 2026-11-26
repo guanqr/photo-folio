@@ -1,0 +1,14 @@
+{{- /* EXIF 機型代碼 → 商用名：查 data/camera_models.toml（[[camera]] 表，exif 逐字匹配）。
+       未收錄時原樣返回代碼（如 NIKON Z 8 的 EXIF 值本身即商用名）。
+       調用：partialCached "utils/camera-name.html" (dict "exif" $value) $value
+       ——variant 取機型代碼，同值跨頁共用；2026-11-26 */ -}}
+{{- $exif := .exif -}}
+{{- $name := $exif -}}
+{{- with hugo.Data.camera_models -}}
+    {{- with .camera -}}
+        {{- range . -}}
+            {{- if eq .exif $exif -}}{{- $name = .name -}}{{- end -}}
+        {{- end -}}
+    {{- end -}}
+{{- end -}}
+{{- $name -}}

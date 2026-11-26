@@ -5,8 +5,8 @@
    互不干扰 */
 
 ::-webkit-scrollbar {
-    width: var(--space-8);
-    height: var(--space-8);
+    width: var(--space-xs);
+    height: var(--space-xs);
 }
 
 ::-webkit-scrollbar-track {
@@ -18,11 +18,11 @@
     border-radius: var(--radius-xs); /* 两端圆角（0.25em = 条宽一半，胶囊端） */
 
     &:hover {
-        background-color: var(--color-accent-50);
+        background-color: var(--color-accent-medium);
     }
 
     &:active {
-        background-color: var(--color-accent-75);
+        background-color: var(--color-accent-strong);
     }
 }
 

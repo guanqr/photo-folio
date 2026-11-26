@@ -8,8 +8,8 @@
     --color-border: var(--dark-border);
     --color-bg-card: var(--dark-card);
     --color-accent: var(--dark-accent);
-    --color-accent-15: hsla(var(--dark-accent-h), var(--dark-accent-s), var(--dark-accent-l), 0.15);
-    --color-accent-30: hsla(var(--dark-accent-h), var(--dark-accent-s), var(--dark-accent-l), 0.3);
+    --color-accent-faint: hsla(var(--dark-accent-h), var(--dark-accent-s), var(--dark-accent-l), 0.15);
+    --color-accent-subtle: hsla(var(--dark-accent-h), var(--dark-accent-s), var(--dark-accent-l), 0.3);
     --color-zone-shadow-bg: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.06);
     --color-zone-mid-bg: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.12);
     --color-zone-high-bg: hsla(var(--color-white-h), var(--color-white-s), var(--color-white-l), 0.06);
@@ -110,7 +110,7 @@
 .lightbox-counter {
     position: absolute;
     top: 50%;
-    left: var(--space-16);
+    left: var(--space-md);
     transform: translateY(-50%);
     font-family: var(--font-meta);
     font-size: var(--size-body);
@@ -127,9 +127,9 @@
 .lightbox-topbar-actions {
     position: absolute;
     top: 50%;
-    right: var(--space-16);
+    right: var(--space-md);
     display: flex;
-    gap: var(--space-8);
+    gap: var(--space-xs);
     transform: translateY(-50%);
 }
 
@@ -363,13 +363,13 @@
 }
 
 .lightbox-prev {
-    left: var(--space-16); /* 与顶栏内边距一致 */
+    left: var(--space-md); /* 与顶栏内边距一致 */
     /* 无水平位移：与叉号保持同一列对齐（悬停仅变背景/颜色） */
     &:hover { transform: translateY(-50%); }
     &:active { transform: translateY(-50%) scale(0.9); }
 }
 .lightbox-next {
-    right: var(--space-16); /* 与顶部叉号右缘对齐（同为 3em 宽、右边距 1em） */
+    right: var(--space-md); /* 与顶部叉号右缘对齐（同为 3em 宽、右边距 1em） */
     &:hover { transform: translateY(-50%); }
     &:active { transform: translateY(-50%) scale(0.9); }
 }
@@ -441,10 +441,10 @@
 
     /* 箭头边距与顶栏一致（向右箭头与叉号右缘对齐） */
     .lightbox-prev {
-        left: var(--space-16);
+        left: var(--space-md);
     }
 
     .lightbox-next {
-        right: var(--space-16);
+        right: var(--space-md);
     }
 }

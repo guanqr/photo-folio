@@ -1,13 +1,33 @@
-{{- /* 系列目录卡片网格（首页系列区块与系列合集页共用）：封面图 + 系列名 + 总张数
-       输入：.covers（series + is_cover 封面作品集）、.allPhotos（全站展示顺序作品集，用于统计各系列总张数）、
+{{- /* 系列目录卡片网格（系列页、首页系列区块、详情页「其他系列」共用）：封面图 + 系列名 + 总张数，
+       卡片按各系列最新照片时间降序排列（见下方排序块）
+       输入：.covers（series + is_cover 封面作品集）、.allPhotos（全站展示顺序作品集，用于统计各系列总张数与最新照片时间）、
        .imageWidth（可选：封面取图宽度；底部入口卡传更小一档，见 page-others.html）、
        .colsBase（可选：网格列数基准，写入 data-cols-base 供 cards-flip 读取） */ -}}
 {{- $seriesCounts := dict -}}
+{{- /* 各系列最新照片时间（time 最大值，含系列内页）：卡片排序键 */ -}}
+{{- $seriesLatest := dict -}}
 {{- range .allPhotos -}}
-    {{- with .series -}}
-        {{- $seriesCounts = merge $seriesCounts (dict . (add (index $seriesCounts . | default 0) 1)) -}}
+    {{- $name := .series -}}
+    {{- if $name -}}
+        {{- $seriesCounts = merge $seriesCounts (dict $name (add (index $seriesCounts $name | default 0) 1)) -}}
+        {{- $at := 0 -}}
+        {{- with .time }}{{ $at = (. | time.AsTime).Unix }}{{ end -}}
+        {{- if gt $at (index $seriesLatest $name | default 0) -}}
+            {{- $seriesLatest = merge $seriesLatest (dict $name $at) -}}
+        {{- end -}}
     {{- end -}}
 {{- end -}}
+{{- /* 卡片顺序：按各系列最新照片时间降序——刚更新过照片的系列排最前；
+       同刻按系列名升序（先按名升序排一次、再按时间降序，稳定排序保留同名次序）；
+       2026-11-26 起取代「封面照片在展示顺序中的位置」 */ -}}
+{{- $orderedCovers := slice -}}
+{{- range .covers -}}
+    {{- $orderedCovers = $orderedCovers | append (dict "cover" . "series" .series "at" (index $seriesLatest .series | default 0)) -}}
+{{- end -}}
+{{- $orderedCovers = sort $orderedCovers "series" "asc" -}}
+{{- $orderedCovers = sort $orderedCovers "at" "desc" -}}
+{{- $sortedCovers := slice -}}
+{{- range $orderedCovers -}}{{- $sortedCovers = $sortedCovers | append .cover -}}{{- end -}}
 {{- $cfg := site.Params.imageSizes | default dict -}}
 {{- $coverWidth := .imageWidth | default ($cfg.category | default 1000) -}}
 {{- /* gridClass：默认 .grid（首页/目录页，列数由 cards-flip 接管）；
@@ -15,7 +35,7 @@
 {{- $gridClass := .gridClass | default "grid" -}}
 {{- $colsBase := .colsBase -}}
 <div class="{{ $gridClass }}"{{ with $colsBase }} data-cols-base="{{ . }}"{{ end }}>
-    {{- range .covers -}}
+    {{- range $sortedCovers -}}
         <a href="{{ partialCached "utils/series-url.html" .series .series }}" class="category-card">
             <div class="category-image">
                 {{ $coverUrl := partial "utils/img-url-cached.html" (dict "src" .src "hash" (.hash | default "") "site" site "width" $coverWidth "mode" "lfit" "format" "avif" "quality" ($cfg.quality | default 80)) }}

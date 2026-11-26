@@ -76,7 +76,7 @@ export function initMasonry(skipInitialReveal = false) {
     grid._cardBorder = 0;
     grid._cardBorderV = 0;
     grid._gap = 0;
-    // 行基准档位（0=超窄屏 ≤500、1=窄屏 501-768 与汉堡断点一致、2=中屏 769-1000、3=宽屏 >1000）；
+    // 行基准档位（数值等级对应 xs=超窄屏 ≤500、sm=窄屏 501-768 与汉堡断点一致、md=中屏 769-1000、lg=宽屏 >1000）；
     // 带滞回，防止断点附近来回切换；按当前宽度初始化
     grid._tier = null;
     updateTier(grid);
@@ -532,13 +532,13 @@ function getRowGap(grid) {
     return grid._gap;
 }
 
-/* 行基准档位判定：
-   0=超窄屏 ≤500px（每行 1–2 张：3:2 横构图独占或与竖构图同行）、
-   1=窄屏 501-768px（每行 2 张 3:2 基准）、2=中屏 769-1000px（每行 3 张 3:2 基准）、
-   3=宽屏 >1000px（每行 4 张 3:2 基准）
+/* 行基准档位判定（CSS 档位名 → 数值等级 0–3）：
+   xs=超窄屏 ≤500px（每行 1–2 张：3:2 横构图独占或与竖构图同行）、
+   sm=窄屏 501-768px（每行 2 张 3:2 基准）、md=中屏 769-1000px（每行 3 张 3:2 基准）、
+   lg=宽屏 >1000px（每行 4 张 3:2 基准）
    档位信号唯一源在样式表（_base.scss）：--layout-tier 基础档位、--layout-tier-exit
-   为已越过的最高出口档位（520/788/1020 对应 1/2/3）；读取统一走
-   breakpoints.readLayoutTiers(true)（保留 0 档），JS 只读不持有阈值；
+   为已越过的最高出口档位（520/788/1020 对应 sm/md/lg）；读取统一走
+   breakpoints.readLayoutTiers(true)（保留 xs 档），JS 只读不持有阈值；
    升档需 exitTier > grid._tier，降档随基础档位立即生效；返回档位是否变化。
    iPad Safari 旋转后 JS matchMedia/clientWidth 可能永久陈旧——这里不查询
    matchMedia，改由 orientationchange/screen.orientation 触发重排（见 initMasonryResize） */

@@ -6,7 +6,7 @@
 
 - **Hugo** ≥ 0.139.0（标准版；SCSS 由外部 Dart Sass 1.107.0 独立版编译，JS 由内置 esbuild 打包）
 - **自定义主题** `themes/photofolio`
-- **数据格式** TOML（`data/photos/*.toml` 照片分片、`data/locations.toml`、`data/birds.toml`）
+- **数据格式** TOML（`data/photos/*.toml` 照片分片、`data/locations.toml`、`data/birds.toml`、`data/camera_models.toml`）
 - **部署** GitHub Pages + 阿里云 OSS CDN
 - **JS** ES6 模块，Hugo `js.Build`（esbuild）打包
 - **CSS** SCSS，Hugo `css.Sass` 经外部 Dart Sass 1.107.0 编译（`transpiler: dartsass`；模块用 `@use`，base 共享模块 `as *`；`unquote` 改 `string.unquote`，无弃用警告）
@@ -41,10 +41,21 @@ description = "照片描述"            # Lightbox 展示
 series = "割蔺草"                   # 组照名称（同组照片填相同值，单张留空）
 species = "fairy-pitta"            # 鸟种 id（选填；对应 data/birds.toml，灯箱显示觀鳥圖鑑）
 is_cover = false                   # 是否为组照封面（同组仅一张为 true）
-featured = true                    # 精选标记（可选；true 的照片进入首页轮播、OG 封面回退与全部作品页「精選」筛选）
+featured = true                    # 精选标记（可选；true 的照片进入首页轮播、OG 封面回退与歸檔页「精選」筛选）
 ```
 
-- `category` 必须是 `content/categories/<key>/` 下存在的分类：构建期在 `photo-sorted` 唯一入口校验，拼错即 `errorf`（否则该分类照片只会出现在全部作品页、从分类页静默消失）
+- `category` 必须是 `content/categories/<key>/` 下存在的分类：构建期在 `photo-sorted` 唯一入口校验，拼错即 `errorf`（否则该分类照片只会出现在歸檔页、从分类页静默消失）
+
+### 机身商用名映射（`data/camera_models.toml`）
+
+```toml
+[[camera]]
+exif = "HUAWEI EBG-AN00"  # 必须与照片数据的 camera 字段逐字一致
+name = "HONOR 30 Pro"     # 展示用商用名
+```
+
+- 未收录的机型代码原样展示（如 `NIKON Z 8` 的 EXIF 值本身即商用名，无需登记）
+- 唯一查表实现 `utils/camera-name.html`（调用方用 `partialCached`、variant 取机型代码）；关于页机身排行与照片卡 `data-camera`（灯箱「機身」行）共用，未收录时回退原值
 
 ### 足迹地图与地点页（`data/locations.toml`）
 
@@ -108,14 +119,15 @@ url = "https://example.com/source"
 - **分类卡片网格**（`categories-grid`）位于轮播图下方、下拉后可见：滚动进入视口时交错渐入（60ms/张）
 - 分类卡片直接取 `categories` 分区（`site.GetPage "categories"`）下的四个分类生成，不按顶层目录枚举；每个卡片显示封面图、分类名、照片数量（分类描述不在任何卡片上展示）；封面默认取该分类最新一张横构图作品（`[params].categoryCover = latest-landscape`，可切 `custom`）
 - 卡片按各分类页 front matter 的 `weight` 排序（当前 2–5；注意 Hugo `ByWeight` 将 0 视为无权重、排最后）
+- **首页分类/系列区块卡片上限**：宽屏（>1000）只显示前 3 张、中屏（769–1000）前 4 张、窄屏（≤768）前 3 张——超出部分由 CSS `nth-child` 隐藏（卡片仍渲染在 HTML，无 JS 依赖、同时移出 Tab 序与读屏；选择器只作用于 `.home-section`，目录页同用 `.grid` 但不受影响）；第 4 张卡片跨断点进出带 0.2s 淡出/淡入——`display` 用 `allow-discrete` 过渡（过渡结束才真正 `display:none`）+ `@starting-style` 补入场起始透明度，行数变化本身仍在该淡出结束瞬间完成，减弱动态时由全局兜底归零；区块标题右侧新增文字链入口「查看全部分類」「查看全部系列」（muted 小字 + chevron，hover 强调色）（i18n `home_more_categories` / `home_more_series`），与标题同排（`.home-section-head`）指向 `/categories/`、`/series/`
 
-### 2. 作品集 `/gallery/` 及分类页 `/scenery/` 等
+### 2. 歸檔 `/archives/` 及分类页 `/scenery/` 等
 - 瀑布流照片展示
-- 组照封面与内页一律作为普通卡片展示（不渲染系列图标/徽章），点击触发 Lightbox；系列入口由导航与系列合集页承担
+- 组照封面与内页一律作为普通卡片展示（不渲染系列图标/徽章），点击触发 Lightbox；系列入口由导航与系列页承担
 - **页面底端「其他分類/系列」入口**（分类详情页与系列详情页共用 `page-others.html`）使用独立网格 `page-others-grid`：>1000px 4 列、0.5em 间距、3:2 封面，与瀑布流照片同尺寸；标题与张数压在封面底部渐变上（复用 `--photo-hover-overlay` 等照片悬停信息 token），封面按 `imageSizes.gallery`（800）取图、首页/目录大卡仍用 `category`（1000）；右侧带 `arrow_up_right` 大箭头标示可跳转（1.2em、跨标题/张数两行垂直居中、贴右边缘，悬停沿 ↗ 轻移；`svg.toml` 新增该图标）；列数基准由网格 `data-cols-base="2"` 声明（2/3/4 列），由 `cards-flip.js` 接管、与首页/目录卡共用同一套换列 FLIP 与滞回；档位只读 CSS 的 `--layout-tier`/`--layout-tier-exit`（不查 `innerWidth`/`matchMedia`，并监听 `orientationchange`），窄屏保持两列不退成单列大卡；首页与目录页的目录大卡不变
 - **面包屑已移除**（全站）
 
-### 2.5 全部作品筛选（仅 `/gallery/`）
+### 2.5 归档页筛选（仅 `/archives/`）
 - 四组胶囊按钮（`作品範圍 / 拍摄年份 / 拍摄地點 / 作品類型`），行首文字标签 + 「全部」按钮，可组合，默认全部；範圍选项为 `featured / landscape / portrait`（精選/橫構圖/豎構圖，可与年份等维度组合）
 - 年份/地点/类型选项从网格渲染集（`$gridPhotos`，含组照内页——与卡片 data 属性同源）推导：年份降序、地点/类型按照片数降序；类型显示中文标题（風光/人文/花木/動物，分类页经 `site.GetPage (printf "/categories/%s" ...)` 绝对路径取标题）
 - 早于 `params.yearMergeBefore` 的年份合并为一个「<分界年> 前」档（标签显示分界年本身，如分界 2024 → 「2024 前」、覆盖 2023 及更早；data-value `before-<分界年>`、`gallery-filter.js` 按数值区间匹配；0/缺省不合并），与关于页「拍摄档案」年度走势共用同一配置
@@ -127,7 +139,7 @@ url = "https://example.com/source"
 - 照片卡片带 `data-scope/year/location/category` 属性驱动匹配（`data-scope` 为 `featured`/`landscape`/`portrait` token 列表，精選与构图方向可并存）；地点按钮 data-value 存 slug、匹配用按钮中文文本
 
 ### 3. 组照合集 `/series/` 及详情页 `/series/{name}/`
-- 列表页展示所有组照封面
+- 列表页展示所有组照封面；卡片排序 = 各系列全部照片（含内页）拍摄时间最大值降序——刚更新过最新照片的系列排最前，同刻按系列名升序（首页「系列」区块与详情页「其他系列」同源同序，共用 `series-cards.html`）
 - 详情页直接按照片数据的 `series` 字段取图（含内页），按展示顺序（分片内条目顺序，手动调序优先）排列，与其他瀑布流一致；无需 front matter `photos` 列表，不支持自定义系列内顺序
 - 构建期校验：每个系列 `is_cover` 恰好 1 张；`series-url.html` 找不到同名内容页时 errorf（不再回退 urlize 死链）
 
@@ -144,7 +156,7 @@ url = "https://example.com/source"
 
 - **SVG 图标统一管理**：所有 SVG 图标必须定义在 `data/svg.toml` 中，模板通过 `{{ $.Site.Data.svg.xxx | safeHTML }}` 引用，**严禁在 HTML 模板中直接硬编码 `<svg>` 标签**
 - 新增图标时先在 `svg.toml` 添加定义（含 `xmlns`、`viewBox` 等完整属性），再在模板中引用
-- **共享数据管线用 partial**：`utils/photo-sorted.html`（展示顺序）、`utils/location-registry.html`（地点注册表）——新模板不得重复实现
+- **共享数据管线用 partial**：`utils/photo-sorted.html`（展示顺序）、`utils/location-registry.html`（地点注册表）、`utils/camera-name.html`（机身商用名映射）——新模板不得重复实现
 - **页面骨架单源**：页面头与空状态骨架用 `components/page-header.html`、`components/empty-state.html`（2026-10-18 自 13 处复制收敛），新页面不得复制骨架
 - **灯箱壳分块**：`lightbox-shell.html` 只保留容器骨架（图片区/面板底栏/箭头/缩略图条/气泡容器），顶栏、地点日期+EXIF、图像分析、故事、觀鳥圖鑑拆为 `components/lightbox-{topbar,meta-exif,analysis,story,bird}.html`；区块开关 `lbCfg` 与鸟种注册表经 dict 传入分块
 - **瀑布流网格单源**：网格标记与卡片循环统一由 `components/masonry-grid.html` 渲染，新列表页不得复制网格骨架
@@ -200,7 +212,7 @@ url = "https://example.com/source"
 | `theme-toggle.js` | 明暗主题切换 |
 | `carousel.js` | 首页轮播：srcset 响应式、首图 eager/邻居空闲预取、自动播放、圆点、箭头 |
 | `category-reveal.js` | 首页分类卡片：滚动进入视口交错渐入（IntersectionObserver，换页拆线） |
-| `about-stats.js` | 关于页统计条与换列 FLIP |
+| `about-stats.js` | 关于页统计条与换列 FLIP（First 基准取上一帧缓存矩形——RO 回调时布局已按新视口重排，现场量测会把旧列数在新宽度下的拉伸结果当起点；拖动缩放期间过渡在途且容器宽度再变时，以当前可视矩形为 First 重新定向、用更短更快的缓动，目标始终跟随当下布局） |
 | `cards-flip.js` | 分类/系列卡片网格换列 FLIP（列数基准由网格 `data-cols-base` 声明，缺省 1） |
 | `card-glow.js` | 卡片边框光标跟随高亮：委托 `pointermove` 写入 `--card-glow-x/y`（逐帧合并、触屏跳过） |
 | `avif-fallback.js` | AVIF→WebP 兜底 |
@@ -239,7 +251,7 @@ url = "https://example.com/source"
         rowLoadRatio = 0.5         # 下一行至少一半进入视口后才逐行加载
         lcpPreload = 4             # 首行前 N 张卡片在 HTML 中直接写 src（0 关闭）
 
-    # 全部作品页筛选维度开关（模板缺省仅 year；站点当前开启 scope/year）
+    # 歸檔页筛选维度开关（模板缺省仅 year；站点当前开启 scope/year）
     [params.galleryFilters]
         scope = true
         year = true

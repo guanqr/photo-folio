@@ -41,17 +41,20 @@
     position: fixed;
     z-index: var(--z-lightbox-pop);
     max-width: 20em;
-    padding: var(--space-8) var(--space-12);
+    padding: var(--space-xs) var(--space-sm);
     border: 0.0625em solid var(--color-border);
     border-radius: 0.25em;
-    background: var(--color-bg-card);
+    /* 毛玻璃：半透明卡色 + backdrop-filter 二次模糊/提饱和——背后是灯箱已模糊
+       压暗的照片层，玻璃感主要来自透出的照片色调；同首页轮播按钮（2026-11-26） */
+    background: hsla(var(--dark-card-h), var(--dark-card-s), var(--dark-card-l), 0.6);
+    backdrop-filter: blur(0.75em) saturate(1.4);
+    -webkit-backdrop-filter: blur(0.75em) saturate(1.4);
     color: var(--color-text-secondary);
     font-family: var(--font-meta);
     font-size: var(--size-small);
     line-height: 1.6;
     text-align: justify;
-    text-justify: inter-ideograph;
-    text-align-last: justify; /* 末行也两端对齐（2026-11-23） */
+    text-justify: inter-ideograph; /* 末行不拉伸：单行短文案被撑满会拉大字间距（2026-11-26） */
     box-shadow: var(--shadow-pop);
     overflow-y: auto; /* 短视口下长文案内部滚动（高度上限由 JS 写入） */
     overscroll-behavior: contain;

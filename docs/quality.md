@@ -14,8 +14,8 @@
 
 - `head.html` 包含 meta description、canonical、Open Graph（`og:*`）、Twitter Card；SPA 导航后 `page-transition.js` 从新页面 head 同步这些页面级标签（canonical/OG/Twitter/description/RSS alternate），字体/样式/站点级 JSON-LD 不动
 - OG/Twitter 图片：页面 `.Params.cover` 优先；无 cover 的首页/全部作品/系列/足迹/关于回退展示顺序最前的精选（无则作品首张）
-- RSS 只保留首页摄影 feed（`/index.xml`）；section 输出设为仅 HTML，不再生成空的 `/section/index.xml` 与 `rel=alternate`；页脚版权行末尾以「·RSS」链接指向该 feed（`params.enableFooterRss` 开关，文案与分隔符走 i18n）
-- 订阅源每张作品一条、按 `published`（缺失回退 `time`）倒序取最近 `feedCount` 条；`guid` 用作品 `src`（稳定唯一），链接指向灯箱深链 `/gallery/?p=<slug>`——补发旧拍摄日期的作品也会成为新条目；描述文本给出「地點 · 日期 · 焦距 · 光圈 · 快門 · 感光度」并另起一行附「來源：」+ 同一深链（读者端通常只渲染描述、看不到 item link）
+- RSS 只保留首页摄影 feed（`/index.xml`）；section 输出设为仅 HTML，不再生成空的 `/section/index.xml` 与 `rel=alternate`；页脚版权行末尾以「·RSS」链接指向该 feed（`params.enableFooterRss` 开关，文案与分隔符走 i18n）；链接以新窗口打开（`target="_blank" rel="noopener"`，避免离开站内页面去显示 XML，且 SPA 导航拦截会放行该链接）
+- 订阅源每张作品一条、按 `published`（缺失回退 `time`）倒序取最近 `feedCount` 条；`guid` 用作品 `src`（稳定唯一），链接指向灯箱深链 `/archives/?p=<slug>`——补发旧拍摄日期的作品也会成为新条目；描述文本给出「地點 · 日期 · 焦距 · 光圈 · 快門 · 感光度」并另起一行附「來源：」+ 同一深链（读者端通常只渲染描述、看不到 item link）
 - sitemap 由 Hugo 自动生成
 
 ---
@@ -31,7 +31,7 @@
 ## 关键行为
 
 1. **照片排序**：`data/photos/` 分片内顺序即展示顺序（新→旧），分片按年份降序拼接、`pre-YYYY` 最后；同日手动调序优先；排序管线唯一实现 `partials/photo-sorted.html`
-2. **组照展示**：画廊/分类页展示全部作品（含组照封面与内页），不按 `is_cover` 过滤；系列入口由系列合集页与导航承担
+2. **组照展示**：画廊/分类页展示全部作品（含组照封面与内页），不按 `is_cover` 过滤；系列入口由系列页与导航承担
 3. **照片计数**：页头总数与地图弹层计数使用 `realCount`（含组照内页）
 4. **初始渲染**：照片全部在 DOM 中，未渲染者带 `is-hidden`（display:none）；`baseof` 内联脚本解析阶段先加、initMasonry 按可见窗口揭示时移除（bundle 失败有 4s 兜底看门狗，拆行容器后放出全部卡片）；SPA 换页由 `main.js` 在入口加载前为新网格重新加 `is-hidden`，4s 未就绪走同口径兜底释放
 5. **隐藏照片**：仍在 DOM 中（供筛选复用与后来补载），留在网格隐藏池（无 src）

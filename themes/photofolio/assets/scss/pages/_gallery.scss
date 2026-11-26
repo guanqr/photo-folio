@@ -5,7 +5,7 @@
 
 .gallery-header {
     position: relative;
-    padding: var(--space-48) 0 var(--space-32);
+    padding: var(--space-huge) 0 var(--space-xxl);
     border-bottom: 0.0625em solid var(--color-border);
     transition: border-color var(--transition-fade);
 }
@@ -77,13 +77,13 @@
 
 .page-title {
     @extend %section-heading;
-    font-size: var(--size-h1);
+    font-size: var(--size-heading-primary);
     font-weight: 700;
-    margin-bottom: var(--space-12);
+    margin-bottom: var(--space-sm);
 }
 
 .masonry-container {
-    padding: var(--space-32) var(--space-16) var(--space-footer-gap); /* 底部与页脚间距统一（--space-footer-gap）；横向最小边距与窄屏一致 */
+    padding: var(--space-xxl) var(--space-md) var(--space-footer-gap); /* 底部与页脚间距统一（--space-footer-gap）；横向最小边距与窄屏一致 */
     max-width: var(--container-width);
     margin: 0 auto;
     /* 关键：卡片图片的内联像素宽度（JS 按当前视口布局写入）会把页面最小内容
@@ -100,7 +100,7 @@
 .masonry-grid {
     display: flex;
     flex-direction: column;
-    gap: var(--space-8);
+    gap: var(--space-xs);
 }
 
 /* 瀑布流初始化前按两行 3:2 照片高度占位（仅 JS 标记 is-masonry-pending 时生效）：
@@ -142,7 +142,7 @@
 .masonry-grid.is-fallback {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(14em, 1fr));
-    gap: var(--space-8);
+    gap: var(--space-xs);
 }
 
 .masonry-grid.is-fallback .photo-img {
@@ -153,7 +153,7 @@
 
 .masonry-row {
     display: flex;
-    gap: var(--space-8);
+    gap: var(--space-xs);
 }
 
 .masonry-item {
@@ -299,8 +299,8 @@ img.photo-img {
     bottom: 0;
     display: flex;
     flex-direction: column;
-    gap: var(--space-4);
-    padding: var(--space-24) var(--space-12) var(--space-8);
+    gap: var(--space-xxs);
+    padding: var(--space-xl) var(--space-sm) var(--space-xs);
     background: var(--photo-hover-overlay);
     opacity: 0;
     transition: opacity var(--transition-fade);
@@ -338,13 +338,13 @@ img.photo-img {
 .gallery-filters {
     display: flex;
     flex-direction: column;
-    gap: var(--space-16);
-    margin-bottom: var(--space-24);
+    gap: var(--space-md);
+    margin-bottom: var(--space-xl);
 
     .filter-group {
         display: flex;
         align-items: center;
-        gap: var(--space-16);
+        gap: var(--space-md);
         min-width: 0; /* 允许内部横向滚动 */
     }
 
@@ -361,7 +361,7 @@ img.photo-img {
     .filter-options {
         display: flex;
         align-items: center;
-        gap: var(--space-8);
+        gap: var(--space-xs);
         overflow-x: auto;
         padding-bottom: 0.125em; /* 补偿隐藏滚动条高度（2px 发丝级特例，style-lint-ignore） */
         /* 左右渐隐遮罩：--filter-fade-l/-r 是渐变两端 alpha（1 = 无渐隐、
@@ -378,7 +378,7 @@ img.photo-img {
             font-family: var(--font-meta);
             font-size: var(--size-small);
             letter-spacing: 0.1em;
-            padding: var(--space-4) var(--space-16);
+            padding: var(--space-xxs) var(--space-md);
             cursor: pointer;
             /* 覆盖基类过渡：hover 三属性统一走 --transition-fade（匀速渐变——
                cubic-bezier 前快后慢、颜色在前段就跳到位，变化阶段观感突兀） */

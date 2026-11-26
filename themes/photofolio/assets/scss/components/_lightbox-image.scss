@@ -12,7 +12,7 @@
     /* 顶部 4em = 顶栏高度：普通视图主图不进入顶栏覆盖区（全屏模式在
        _lightbox-fullscreen.scss 中另行还原为 1em）；底部 2.5em：窄屏抽屉升到
        最高时，辉光的 blur 向外溢出（约 1.5~2em）在到达裁剪边缘前自然衰减 */
-    padding: var(--space-64) var(--space-16) var(--space-40);
+    padding: var(--space-giant) var(--space-md) var(--space-xxxl);
     user-select: none; /* 长按拖动抽屉时避免选中/拖图 */
     /* 触屏滑动手势由 JS（lightbox-swipe）接管，禁浏览器原生手势
        （原生滚动/捏合会触发 pointercancel 打断拖拽） */
@@ -99,7 +99,7 @@
 @media (min-width: 1001px) {
     .lightbox-img-area {
         padding-left: 5.5em; /* 面板内边距 1.25em + 箭头列 4.25em（几何值，style-lint-ignore） */
-        padding-right: var(--space-32);
-        padding-bottom: var(--space-16);
+        padding-right: var(--space-xxl);
+        padding-bottom: var(--space-md);
     }
 }

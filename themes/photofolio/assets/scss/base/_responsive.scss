@@ -3,14 +3,14 @@
 @media (max-width: 768px) {
     .header-inner,
     .footer-inner {
-        padding: 0 var(--space-16);
+        padding: 0 var(--space-md);
     }
 
     /* .container 的窄屏横向留白已在 _base 统一为 1em，此处无需再声明 */
 
     .footer-inner {
         flex-direction: column;
-        gap: var(--space-16);
+        gap: var(--space-md);
         text-align: center;
     }
 
@@ -33,7 +33,7 @@
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
         /* 内容下移避开顶部导航栏（--space-page-top）+ 2em 间距；左右 1em 页边距与窄屏 header-inner 一致 */
-        padding: calc(var(--space-page-top) + var(--space-32)) var(--space-16) var(--space-32);
+        padding: calc(var(--space-page-top) + var(--space-xxl)) var(--space-md) var(--space-xxl);
 
         /* 页面已滚动时：面板直接以不透明打开，不做背景渐变 */
         &.nav-solid {
@@ -65,7 +65,7 @@
         ul {
             display: flex;
             flex-direction: column;
-            gap: var(--space-16);
+            gap: var(--space-md);
             align-items: stretch; /* 整行拉伸：文字固定最左、圆点可定位到最右 */
         }
 
@@ -140,14 +140,14 @@
             min-height: 0;
             display: flex;
             flex-direction: column;
-            gap: var(--space-4);
-            padding: 0 0 0 var(--space-24); /* 只保留左右缩进，不增加上下行距 */
+            gap: var(--space-xxs);
+            padding: 0 0 0 var(--space-xl); /* 只保留左右缩进，不增加上下行距 */
             align-items: stretch; /* 子项整行拉伸：文字保持缩进、圆点贴屏幕最右 */
         }
 
         .nav-dropdown a {
             font-size: var(--size-body);
-            padding: var(--space-4) 0;
+            padding: var(--space-xxs) 0;
         }
 
         /* 窄屏箭头旋转只跟随 sub-open——触屏点击后 :hover 粘性保持，
@@ -194,7 +194,7 @@
 
         ul {
             flex-direction: row;
-            gap: var(--space-32);
+            gap: var(--space-xxl);
             align-items: center;
             white-space: nowrap;
         }
@@ -211,7 +211,7 @@
     }
 
     .back-to-top {
-        right: var(--space-24);
+        right: var(--space-xl);
         width: var(--control-md);
         height: var(--control-md);
     }
@@ -219,11 +219,11 @@
     /* 可见位置只挂 active：挂在基础规则上会压过隐藏态的 bottom:-4em、
        入场动画退化为原地浮出 */
     .back-to-top.active {
-        bottom: var(--space-24);
+        bottom: var(--space-xl);
     }
 
     .header-actions {
-        gap: var(--space-12);
+        gap: var(--space-sm);
     }
 
     .theme-toggle {
@@ -238,7 +238,7 @@
     .about-header {
         flex-direction: column;
         text-align: center;
-        gap: var(--space-16);
+        gap: var(--space-md);
     }
     .about-avatar {
         width: 5em; /* style-lint-ignore：移动端头像尺寸 */

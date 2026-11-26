@@ -107,7 +107,7 @@ defaultContentLanguage = "zh-hant"
         rowLoadRatio = 0.5      # 下一行至少一半进入视口后才逐行加载
         lcpPreload = 4          # 首行前 N 张卡片在 HTML 中直接写 src（0 关闭）
 
-    # 全部作品页筛选栏：自行选择开启哪些筛选维度（true 开启 / false 关闭）
+    # 歸檔页筛选栏：自行选择开启哪些筛选维度（true 开启 / false 关闭）
     [params.galleryFilters]
         scope = true
         year = true
@@ -161,15 +161,15 @@ defaultContentLanguage = "zh-hant"
         [menu.main.params]
         icon = "home"
     [[menu.main]]
-        name = "作品"
-        url = "/gallery/"
+        name = "相簿"
+        url = "/archives/"
         weight = 2
         identifier = "works"
         [menu.main.params]
         icon = "grid"
 
     [[menu.main]]
-        name = "作品分類"
+        name = "分類"
         url = "/categories/"
         weight = 1
         parent = "works"
@@ -177,7 +177,7 @@ defaultContentLanguage = "zh-hant"
         icon = "tag"
 
     [[menu.main]]
-        name = "系列合集"
+        name = "系列"
         url = "/series/"
         weight = 2
         parent = "works"
@@ -185,8 +185,8 @@ defaultContentLanguage = "zh-hant"
         icon = "layers"
 
     [[menu.main]]
-        name = "全部作品"
-        url = "/gallery/"
+        name = "歸檔"
+        url = "/archives/"
         weight = 3
         parent = "works"
         [menu.main.params]

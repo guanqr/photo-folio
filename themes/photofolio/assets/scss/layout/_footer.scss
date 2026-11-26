@@ -1,8 +1,8 @@
 /* ===== Footer ===== */
 .site-footer {
     border-top: 0.0625em solid var(--color-border);
-    padding: var(--space-40) 0;
-    margin-top: var(--space-32);
+    padding: var(--space-xxxl) 0;
+    margin-top: var(--space-xxl);
     font-family: var(--font-footer);
     font-size: var(--size-footer);
     flex-shrink: 0;
@@ -12,7 +12,7 @@
 .footer-inner {
     max-width: var(--container-width);
     margin: 0 auto;
-    padding: 0 var(--space-16); /* 与窄屏一致的最小边距 */
+    padding: 0 var(--space-md); /* 与窄屏一致的最小边距 */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -31,7 +31,7 @@
         &:hover {
             color: var(--color-accent);
             border-color: var(--color-accent);
-            text-shadow: 0 0 0.8em var(--color-accent-30);
+            text-shadow: 0 0 0.8em var(--color-accent-subtle);
         }
     }
 }

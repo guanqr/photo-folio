@@ -1,27 +1,27 @@
 /* ===== Empty State & Placeholder ===== */
 .empty-state {
     text-align: center;
-    padding: var(--space-64) var(--space-32);
+    padding: var(--space-giant) var(--space-xxl);
     background: var(--color-bg-secondary);
     border-radius: var(--radius-card);
     border: 0.0625em dashed var(--color-border);
-    margin: var(--space-32) 0;
+    margin: var(--space-xxl) 0;
 
     .empty-icon {
         font-size: 3em;
         color: var(--color-text-muted);
-        margin-bottom: var(--space-8);
+        margin-bottom: var(--space-xs);
     }
 
     h3 {
         font-family: var(--font-heading);
-        font-size: var(--size-h3);
-        margin-bottom: var(--space-16);
+        font-size: var(--size-heading-tertiary);
+        margin-bottom: var(--space-md);
         color: var(--color-text-secondary);
     }
 
     .empty-hint {
-        margin-top: var(--space-16);
+        margin-top: var(--space-md);
         color: var(--color-text-muted);
         font-size: var(--size-small);
         transition: color var(--transition-fade);
@@ -30,7 +30,7 @@
     code {
         font-family: var(--font-meta);
         background: var(--color-bg-card);
-        padding: var(--space-4) var(--space-8);
+        padding: var(--space-xxs) var(--space-xs);
         border-radius: var(--radius-xs);
         color: var(--color-accent);
         font-size: var(--size-small);
@@ -43,8 +43,8 @@
     /* 隐藏/显示用 bottom 位移（不用 transform——fixed + transform + 过渡时长>0
        是 WebKit 旋转后视口宽度永久取旧值的常驻触发模式，iPad Safari 横竖屏
        样式不切换的根因之一，故彻底移除 transform） */
-    bottom: calc(var(--space-64) * -1);
-    right: var(--space-32);
+    bottom: calc(var(--space-giant) * -1);
+    right: var(--space-xxl);
     width: var(--control-md);
     height: var(--control-md);
     border-radius: 50%;
@@ -73,7 +73,7 @@
     &.active {
         opacity: 1;
         visibility: visible;
-        bottom: var(--space-32);
+        bottom: var(--space-xxl);
     }
 
     svg {

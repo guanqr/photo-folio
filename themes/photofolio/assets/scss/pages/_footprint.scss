@@ -8,7 +8,7 @@
 .footprint-layout {
     max-width: var(--container-width);
     margin: 0 auto;
-    padding: var(--space-32) var(--space-16) var(--space-footer-gap); /* 顶部与页头分隔线留空隙；底部与页脚间距统一（--space-footer-gap）；横向与窄屏一致 */
+    padding: var(--space-xxl) var(--space-md) var(--space-footer-gap); /* 顶部与页头分隔线留空隙；底部与页脚间距统一（--space-footer-gap）；横向与窄屏一致 */
 
     .footprint-map-section {
         padding: 0;
@@ -28,7 +28,7 @@
     position: relative;
     width: 100%;
     aspect-ratio: 5 / 3; /* JS 构建后内联覆盖为实际视图比；兜底防 CLS */
-    border-radius: var(--radius-card);
+    border-radius: var(--radius-sm); /* 大图卡档 8px：地图框按图片容器口径、非卡片档（2026-11-26） */
     transition: background-color var(--transition-fade), border-color var(--transition-fade);
 
     svg {
@@ -174,8 +174,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: var(--space-4);
-    padding: var(--space-8) var(--space-16);
+    gap: var(--space-xxs);
+    padding: var(--space-xs) var(--space-md);
     border-radius: var(--radius-sm);
     box-shadow: var(--shadow-pop);
     pointer-events: none;
@@ -212,8 +212,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--space-8);
-    margin-top: var(--space-32); /* 与地图的间距（宽窄屏一致） */
+    gap: var(--space-xs);
+    margin-top: var(--space-xxl); /* 与地图的间距（宽窄屏一致） */
     margin-bottom: 0; /* 底部留白由 .footprint-layout 的 padding 提供 */
     font-family: var(--font-meta);
     font-size: var(--size-small);
@@ -226,7 +226,7 @@
         height: 0.625em; /* style-lint-ignore：图例圆点尺寸 */
         border-radius: 50%;
         background: var(--color-accent);
-        box-shadow: 0 0 0.6em var(--color-accent-30);
+        box-shadow: 0 0 0.6em var(--color-accent-subtle);
         transition: background-color var(--transition-fade);
     }
 }
@@ -235,12 +235,12 @@
 .footprint-map-fallback {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-12);
+    gap: var(--space-sm);
     justify-content: center;
 
     a {
         @extend %pill-ghost;
-        padding: var(--space-4) var(--space-12);
+        padding: var(--space-xxs) var(--space-sm);
         font-size: var(--size-small);
 
         &:hover {

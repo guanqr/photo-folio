@@ -387,8 +387,14 @@ other = "來源：{{ .Url }}"
 [categories_title]
 other = "分類"
 
+[home_more_categories]
+other = "查看全部分類"
+
 [series_title]
 other = "系列"
+
+[home_more_series]
+other = "查看全部系列"
 
 [category_count]
 other = "共 {{ .Count }} 個分類"
@@ -422,9 +428,6 @@ other = "年度拍攝走勢"
 
 [year_before]
 other = "{{ .Year }} 前"
-
-[stats_other_device]
-other = "其他設備"
 
 [stats_expand]
 other = "展開全部 {{ .Count }} 項"

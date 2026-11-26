@@ -10,7 +10,7 @@
 
 {{/* 【修复 1】先获取真实的作品集合（包含系列内页），用于准确统计总数 */}}
 {{ $realPhotos := slice }}
-{{ if eq $sectionName "gallery" }}
+{{ if eq $sectionName "archives" }}
     {{ $realPhotos = $sortedPhotos }}
 {{ else }}
     {{ $realPhotos = where $sortedPhotos "category" $sectionName }}
@@ -29,7 +29,7 @@
 {{ $yearOptions := slice }}
 {{ $locList := slice }}
 {{ $catList := slice }}
-{{ if eq $sectionName "gallery" }}
+{{ if eq $sectionName "archives" }}
     {{/* 地点 slug 取自足迹地点注册表（URL 参数用，如 guangdong/japan；显示仍为中文名） */}}
     {{ $locReg := partialCached "utils/location-registry.html" . "locations" }}
     {{ $locNames := slice }}
@@ -87,7 +87,7 @@
     {{ $filtersCfg := merge (dict "year" true "location" false "category" false "scope" false) (default dict site.Params.galleryFilters) }}
     {{/* 年份筛选的干支背景：只为全部作品页的数值年份生成；合并档 before-* 跨多年，无单一年份干支 */}}
     {{ $yearMarks := slice }}
-    {{ if and (eq $sectionName "gallery") $filtersCfg.year }}
+    {{ if and (eq $sectionName "archives") $filtersCfg.year }}
         {{ range $yearOptions }}
             {{ if not (strings.HasPrefix .value "before-") }}
                 {{ $gz := partialCached "utils/ganzhi.html" (int .value) (string (int .value)) }}
@@ -102,7 +102,7 @@
         {{ if gt (len $gridPhotos) 0 }}
         {{/* 筛选栏：仅全部作品页；各维度由 hugo.toml [params.galleryFilters] 控制开关
            （胶囊按钮组，可横向滚动；缺省仅开启 year）——开关在页头前解析一次 */}}
-        {{ if and (eq $sectionName "gallery") (or $filtersCfg.year $filtersCfg.location $filtersCfg.category $filtersCfg.scope) }}
+        {{ if and (eq $sectionName "archives") (or $filtersCfg.year $filtersCfg.location $filtersCfg.category $filtersCfg.scope) }}
         <div class="gallery-filters" role="group" aria-label="{{ i18n "filter_photos" }}">
             {{ if $filtersCfg.scope }}
             <div class="filter-group" data-dim="scope">
@@ -141,7 +141,7 @@
                 <div class="filter-options">
                     <button type="button" data-value="" aria-pressed="true" class="is-active">{{ i18n "filter_all" }}</button>
                     {{ range $catList }}
-                        {{/* 绝对路径取页：相对名会按当前页（/gallery/）解析恒为 nil、
+                        {{/* 绝对路径取页：相对名会按当前页（/archives/）解析恒为 nil、
                             标题回退英文分类键（photo-card.html 同款先例） */}}
                         {{ $catPage := site.GetPage (printf "/categories/%s" .name) }}
                         {{ $catTitle := .name }}
@@ -156,7 +156,7 @@
         {{ partial "components/masonry-grid.html" (dict "photos" $gridPhotos "site" .Site) }}
 
         {{/* 筛选无结果提示：构建期预渲染、筛选 JS 切换 hidden（hidden 默认收起） */}}
-        {{ if and (eq $sectionName "gallery") (or $filtersCfg.year $filtersCfg.location $filtersCfg.category $filtersCfg.scope) }}
+        {{ if and (eq $sectionName "archives") (or $filtersCfg.year $filtersCfg.location $filtersCfg.category $filtersCfg.scope) }}
         {{ partial "components/empty-state.html" (dict "id" "gallery-filter-empty" "hidden" true "titleKey" "filter_empty") }}
         {{ end }}
 

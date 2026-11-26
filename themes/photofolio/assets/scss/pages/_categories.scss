@@ -5,22 +5,58 @@
    避免相邻区块的上下边距叠加出大空隙 */
 .home-section {
     /* 顶部间距 = 页脚 margin-top（2em）+ 底部留白（1.5em），与页面底端节奏一致 */
-    margin-top: calc(var(--space-32) + var(--space-24));
+    margin-top: calc(var(--space-xxl) + var(--space-xl));
     padding-bottom: var(--space-footer-gap); /* 与页脚 margin-top 2em 合计 3.5em（--space-footer-gap），底部间距与区间距一致 */
 }
 
-/* 区块标题：H1 字号，上下留白一致（各 1.25em） */
+/* 区块标题行：标题在左、「查看全部」胶囊在右；上下留白一致（各 1.25em，2026-11-26
+   由标题自身的 margin 上移到行容器，标题与按钮共享同一行基线区的外边距） */
+.home-section-head {
+    display: flex;
+    /* 基线对齐：flex-end 对齐的是盒子底边，标题 2.5em 与链接 0.875em 的行间留白
+       不同，盒底齐平反而文字错位；baseline 让两侧文字底部落在同一线（2026-11-26） */
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-md);
+    margin: var(--space-lg) 0;
+}
+
+/* 区块标题：H1 字号（外边距由 .home-section-head 统一控制） */
 .home-section-title {
     @extend %section-heading;
-    font-size: var(--size-h1);
-    margin: var(--space-20) 0;
+    font-size: var(--size-heading-primary);
+    margin: 0;
+}
+
+/* 「查看全部」入口：纯文字 + chevron 箭头（2026-11-26 用户裁定不用胶囊——胶囊
+   与标题同排显得抢眼、与卡片争夺视觉）；muted 小字、hover 变强调色 */
+.home-section-more {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xxs);
+    flex: none;
+    font-family: var(--font-meta);
+    font-size: var(--size-small);
+    white-space: nowrap;
+    text-decoration: none;
+    color: var(--color-text-muted);
+    transition: color var(--transition-fade);
+
+    svg {
+        width: var(--icon-sm);
+        height: var(--icon-sm);
+    }
+
+    &:hover {
+        color: var(--color-accent);
+    }
 }
 
 /* 移动优先：窄屏单列 → ≥769px 两列 → ≥1001px 三列（769 与汉堡断点一致） */
 .grid {
     display: grid;
     grid-template-columns: repeat(1, 1fr);
-    gap: var(--space-16);
+    gap: var(--space-md);
 
     /* 裁剪列数切换 FLIP 的瞬态 transform 溢出（2026-10-18 诊断）：cards-flip 的
        Invert 阶段把卡片经 translate/scale 摆回旧列位置，宽→窄切换时旧位置超出
@@ -35,7 +71,7 @@
     }
 }
 
-/* 换列断点与 breakpoints.js 的 BP_DESKTOP_MIN(769) 同源；1001 档由 _base.scss 的
+/* 换列断点与 breakpoints.js 的 BP_DESKTOP_MIN(769) 同源；1001 起的 lg 档由 _base.scss 的
    --layout-tier 表达（JS 只读变量）。JS 内联列数优先，本段保留为无 JS 降级 */
 @media (min-width: 769px) {
     .grid { grid-template-columns: repeat(2, 1fr); }
@@ -43,6 +79,43 @@
 
 @media (min-width: 1001px) {
     .grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* 首页区块卡片数上限（2026-11-26）：宽屏 3 / 中屏 4 / 窄屏 3——超出部分由标题右侧
+   「查看全部」入口承担。只作用于首页 .home-section：目录页同用 .grid，但包在
+   .section-list-grid 内、不受影响。卡片仍全部渲染，靠 display:none 隐藏——无 JS
+   依赖，且隐藏卡片同时移出 Tab 序与读屏。断点与上方列数规则同源（769/1001，
+   JS 侧只读 --layout-tier） */
+
+/* 第 4 张卡片跨断点进出时做淡出/淡入（2026-11-26）：display 走 allow-discrete
+   过渡——元素保持渲染、透明度过渡结束后才真正 display:none，不再瞬变；
+   @starting-style 为 display:none → flex 补起始透明度。
+   过渡声明需覆盖基类全部属性（.category-card 的同款列表 + opacity/display），
+   改基类 transition 时同步这里。行数变化（第 4 张占位行的收起/展开）本身无法
+   过渡，仍在该淡出结束时一次性完成 */
+.home-section .grid > .category-card:nth-child(4) {
+    transition:
+        transform var(--transition-spring),
+        border-color var(--transition),
+        box-shadow var(--transition),
+        background-color var(--transition-fade),
+        opacity var(--transition-fast),
+        display var(--transition-fast) allow-discrete;
+}
+
+.home-section .grid > .category-card:nth-child(n + 4) {
+    display: none;
+    opacity: 0; /* 隐藏态：退出淡出由此计算 1 → 0，display 在过渡结束后才翻转 */
+}
+
+@media (min-width: 769px) and (max-width: 1000px) {
+    /* 中屏恢复第 4 张（2 列 × 2 行），第 5 张起仍隐藏 */
+    .home-section .grid > .category-card:nth-child(4) { display: flex; opacity: 1; }
+    .home-section .grid > .category-card:nth-child(n + 5) { display: none; }
+}
+
+@starting-style {
+    .home-section .grid > .category-card:nth-child(4) { opacity: 0; }
 }
 
 /* 分类卡片：上图下文结构 */
@@ -78,16 +151,16 @@
 
 /* 底部信息区域：自然流式布局 */
 .category-info {
-    padding: var(--space-24);
+    padding: var(--space-xl);
     display: flex;
     flex-direction: column;
-    gap: var(--space-4);
+    gap: var(--space-xxs);
     flex: 1;
 }
 
 .category-title {
     @extend %section-heading;
-    font-size: var(--size-h3);
+    font-size: var(--size-heading-tertiary);
 }
 
 .category-count {

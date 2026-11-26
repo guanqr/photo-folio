@@ -1,0 +1,19 @@
+# 機身商用名映射：EXIF 機型代碼 → 商用名
+# 供關於頁「機身排行」與燈箱 EXIF「機身」行展示（utils/camera-name.html 查表）；
+# exif 必須與照片數據（data/photos/）的 camera 字段逐字一致，未收錄的代碼原樣展示
+
+[[camera]]
+exif = "HUAWEI EBG-AN00"
+name = "HONOR 30 Pro"
+
+[[camera]]
+exif = "HUAWEI STF-AL10"
+name = "HONOR 9"
+
+[[camera]]
+exif = "HONOR REP-AN00"
+name = "HONOR 90 Pro"
+
+[[camera]]
+exif = "Panasonic DMC-FT5"
+name = "LUMIX DMC-FT5"

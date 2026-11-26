@@ -20,6 +20,8 @@
     {{- $entries = $entries | append (dict "photo" . "at" $at "key" $key) -}}
 {{- end -}}
 {{- $entries = sort $entries "key" "desc" -}}
+{{- /* 深链目标是归档页（/archives/，2026-11-26 由 /gallery/ 更名）；按 section 页取 Permalink，不写死路径 */ -}}
+{{- $archivesURL := (site.GetPage "/archives").Permalink -}}
 <?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
 <channel>
@@ -36,7 +38,7 @@
         {{- $title := $p.alt | default (i18n "feed_untitled") -}}
         {{- /* 拍摄时间自 2026-11-14 起带具体时刻；订阅描述仍只展示日期 */ -}}
         {{- /* 作品源地址 = 灯箱深链（slug 即照片文件名去扩展名），item link 与描述文本同源 */ -}}
-        {{- $url := printf "%sgallery/?p=%s" site.Home.Permalink ($slug | urlquery) -}}
+        {{- $url := printf "%s?p=%s" $archivesURL ($slug | urlquery) -}}
         {{- /* 拍摄参数沿用灯箱的 i18n 值格式，单位/前缀不写死在模板里；缺项跳过不占位 */ -}}
         {{- $exif := slice -}}
         {{- with $p.focus }}{{ $exif = $exif | append (i18n "exif_focus_value" (dict "Value" .)) }}{{ end -}}

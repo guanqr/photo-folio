@@ -15,7 +15,9 @@
             {{- end -}}
             {{- if $footerRss -}}
                 {{- with site.Home.OutputFormats.Get "rss" -}}
-                    {{ i18n "footer_separator" }}<a href="{{ .RelPermalink }}">{{ i18n "footer_rss" }}</a>
+                    {{- /* 新窗口打开：订阅源是 XML，同标签打开会直接离开站点页面；
+                           target="_blank" 同时让 page-transition.js 的站内导航拦截放行 */ -}}
+                    {{ i18n "footer_separator" }}<a href="{{ .RelPermalink }}" target="_blank" rel="noopener">{{ i18n "footer_rss" }}</a>
                 {{- end -}}
             {{- end -}}
         </p>

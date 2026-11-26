@@ -33,7 +33,7 @@
 - 直方图明度曲线金色为固定四元组 `--dark-lum-curve`（JS 不持颜色字面量；R/G/B 通道色属数据可视化身份色、rgb 计算值豁免）
 
 ### 语义颜色（派生自上方四元组）
-- 透明度阶梯：`--color-accent-15/30/50/75`（hsla(accent 分量, 0.15/0.3/0.5/0.75)）
+- 透明度阶梯：`--color-accent-faint / subtle / medium / strong`（hsla(accent 分量, 0.15 / 0.3 / 0.5 / 0.75)）
 - 背景遮罩：`--color-header-bg`(0.85)、`--color-nav-bg`(不透明)、`--color-lightbox-bg`(纯黑)
 - 叠加层：`--color-overlay-subtle`（暗=白 10% / 亮=黑 5%，遮罩/叠加用）
 - 足迹地图：`--color-map-fill`（低精度陆地填充）、`--color-map-region-fill`（高精度省/国区块，单层深色实色）、`--color-map-region-hover`（省/国悬停色块，旧版叠加色）、`--color-map-border`（边界/海岸线）
@@ -45,7 +45,7 @@
 
 - **样式入口拆分**：`scss/main.scss`（全站）与 `scss/lightbox.scss`（灯箱专用，首次启动灯箱才加载）两个入口；不产出 CSS 的占位符/mixin 放 `base/_primitives.scss`（`_base.scss` 通过 `@forward` 转发），两入口共用同一份定义、不得复制
 - 长度以 `em` 为单位（基于 16px）
-- **间距唯一标尺**：`--space-4 … --space-96`（4px 基准，名称即设计像素值，见 `_base.scss`）是 margin/padding/gap 的唯一来源；新增间距先登记 token，禁止 1.6em/1.7em 这类字号换算沉淀值；页面内容顶部统一 `--space-32`（2em）
+- **间距唯一标尺**：`--space-xxs … --space-mega`（4px 基准的字母档位，见 `_base.scss`；行尾注释标 16px 根字号下的设计像素值）是 margin/padding/gap 的唯一来源；新增间距先登记 token，禁止 1.6em/1.7em 这类字号换算沉淀值；页面内容顶部统一 `--space-xxl`（2em）
 - **字号唯一标尺**：H1 2.5 / H2 2 / H3 1.5 / lead 1.25 / body 1 / small 0.875 / meta 0.75（`--size-*`，footer 与 small 同值）；**倍率固定写在 `_base.scss` 的 `:root`，不开放站点配置**——hugo.toml 只暴露 `baseFontSize`，各档位随根字号等比缩放；模板/样式不再写字面量字号，展示级 3em/6em（轮播大屏标题、空状态图标、404 大字）为唯一例外
 - **标尺自检**：间距、字号、`width/height/top/right/bottom/left` 的 `em/rem` 字面量由 `tools/style-lint/check_style.py` 拦截；几何配对、发丝级、媒体/数据尺寸等真例外在同一行注释写 `style-lint-ignore`，不允许无标记放行
 - **组件尺寸标尺**：图标 `--icon-xs/sm/md/lg/xl`（0.75/0.875/1/1.25/1.5em）、控件 `--control-sm/md`（2.5/3em）；定位偏移用 `--space-*`；缩略图高、图表高、色卡、头像、统计列宽等媒体/数据尺寸保留现值并标记例外

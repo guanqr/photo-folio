@@ -55,9 +55,9 @@ body {
 .skip-link {
     position: absolute;
     top: -100%;
-    left: var(--space-16);
+    left: var(--space-md);
     z-index: var(--z-skip-link);
-    padding: var(--space-12) var(--space-24);
+    padding: var(--space-sm) var(--space-xl);
     background: var(--color-accent);
     color: var(--color-bg-card);
     font-weight: 600;
@@ -65,7 +65,7 @@ body {
     transition: top var(--transition-fast);
 
     &:focus {
-        top: var(--space-16);
+        top: var(--space-md);
     }
 }
 
@@ -73,7 +73,7 @@ body {
 :focus-visible {
     outline: 0.125em solid var(--color-accent);
     outline-offset: 0.125em;
-    border-radius: var(--radius-2xs);
+    border-radius: var(--radius-hairline);
 }
 
 .main-content {
@@ -127,10 +127,10 @@ body {
     @include defineColorHSL(--color-black, 0, 0%, 0%);
 
     /* 主题色派生：透明度阶梯（分量引用上方四元组，随主题自动切换） */
-    --color-accent-15: hsla(var(--color-accent-h), var(--color-accent-s), var(--color-accent-l), 0.15);
-    --color-accent-30: hsla(var(--color-accent-h), var(--color-accent-s), var(--color-accent-l), 0.3);
-    --color-accent-50: hsla(var(--color-accent-h), var(--color-accent-s), var(--color-accent-l), 0.5);  /* 滚动条 thumb hover */
-    --color-accent-75: hsla(var(--color-accent-h), var(--color-accent-s), var(--color-accent-l), 0.75); /* 滚动条 thumb active */
+    --color-accent-faint: hsla(var(--color-accent-h), var(--color-accent-s), var(--color-accent-l), 0.15);
+    --color-accent-subtle: hsla(var(--color-accent-h), var(--color-accent-s), var(--color-accent-l), 0.3);
+    --color-accent-medium: hsla(var(--color-accent-h), var(--color-accent-s), var(--color-accent-l), 0.5);  /* 滚动条 thumb hover */
+    --color-accent-strong: hsla(var(--color-accent-h), var(--color-accent-s), var(--color-accent-l), 0.75); /* 滚动条 thumb active */
 
     /* 影调分析图表配色：明度直方图三分区底色 / 占比条三段（陰影·中間調·高光）、
        明度曲线、饱和度曲线、剪裁标记（暗色白基，亮色黑基见 [data-theme="light"]）。
@@ -217,30 +217,30 @@ body {
     /* 页面头与固定导航栏的间距（画廊/关于/足迹等页面统一） */
     --space-page-top: 4.5em;
 
-    /* ═══ 间距标尺（4px 基准的 em 档位，名称按 16px 根字号标定为设计像素值；
-       改 baseFontSize 后名称仅作档位标识，实际像素随 em 缩放）═══
+    /* ═══ 间距标尺（4px 基准的 em 档位，按字母档位递进；行尾注释为 16px
+       根字号下的设计像素值，改 baseFontSize 后实际像素随 em 缩放）═══
        margin/padding/gap 统一从这里取，避免再出现 1.6em/1.7em/2.6em 这类
        随手值或字号换算沉淀值；新增间距先在此登记（2026-11-14） */
-    --space-4: 0.25em;   /* 4px */
-    --space-8: 0.5em;    /* 8px */
-    --space-12: 0.75em;  /* 12px */
-    --space-16: 1em;     /* 16px */
-    --space-20: 1.25em;  /* 20px */
-    --space-24: 1.5em;   /* 24px */
-    --space-32: 2em;     /* 32px */
-    --space-40: 2.5em;   /* 40px */
-    --space-48: 3em;     /* 48px */
-    --space-64: 4em;     /* 64px */
-    --space-96: 6em;     /* 96px */
+    --space-xxs: 0.25em; /* 4px */
+    --space-xs: 0.5em;   /* 8px */
+    --space-sm: 0.75em;  /* 12px */
+    --space-md: 1em;     /* 16px */
+    --space-lg: 1.25em;  /* 20px */
+    --space-xl: 1.5em;   /* 24px */
+    --space-xxl: 2em;    /* 32px */
+    --space-xxxl: 2.5em; /* 40px */
+    --space-huge: 3em;   /* 48px */
+    --space-giant: 4em;  /* 64px */
+    --space-mega: 6em;   /* 96px */
 
     /* ═══ 字号标尺（唯一源头；倍率固定，不开放配置）═══
        H1 2.5 / H2 2 / H3 1.5 / lead 1.25 / body 1 / small 0.875 / meta 0.75
        （footer 与 small 同值）。em 随根字号 --base-font-size（hugo.toml 唯一
        可配字号）等比缩放；展示级 3em/6em（轮播大屏标题、空状态图标、404 大字）
        为仅有的例外，在使用处直接声明（2026-11-15） */
-    --size-h1: 2.5em;
-    --size-h2: 2em;
-    --size-h3: 1.5em;
+    --size-heading-primary: 2.5em;
+    --size-heading-secondary: 2em;
+    --size-heading-tertiary: 1.5em;
     --size-lead: 1.25em;
     --size-body: 1em;
     --size-small: 0.875em;
@@ -269,7 +269,7 @@ body {
        胶囊统一走 --radius-pill（50em：完全圆头——全站尺寸体系为 em、
        胶囊元素均 em 定高，em 随字体缩放同步缩放；灯箱原先的 9999px 混用就此归一）；
        圆形（50%）与更细的线端点（0.0625/0.1em）不在梯度内、保持原样 */
-    --radius-2xs: 0.125em;  /* 细圆角：焦点环、图表占比条 */
+    --radius-hairline: 0.125em;  /* 细圆角：焦点环、图表占比条 */
     --radius-image: 0.25em; /* 图片缩略卡：4px，接近杂志直边 */
     --radius-xs: 0.25em;    /* 最小档：下拉面板、小部件 */
     --radius-sm: 0.5em;     /* 中档：图片大卡、关于页统计卡、弹层、小按钮 */
@@ -408,7 +408,7 @@ ul { list-style: none; }
 .container {
     max-width: var(--container-width);
     margin: 0 auto;
-    padding: 0 var(--space-16); /* 与窄屏一致的最小边距 */
+    padding: 0 var(--space-md); /* 与窄屏一致的最小边距 */
 }
 
 .icon {
@@ -435,16 +435,16 @@ ul { list-style: none; }
 /* 布局档位信号（JS 只读，阈值唯一源）：iPad Safari 旋转后 JS 侧 matchMedia/
    clientWidth 评估永久陈旧、CSS 媒体查询照常重估（诊断页探针实测）——档位判定
    全部由 CSS 媒体查询写入、getComputedStyle 读取（见 masonry.js updateTier）：
-   --layout-tier 基础档位（0: ≤500 / 1: 501-768 / 2: 769-1000 / 3: >1000）；
-   --layout-tier-exit 已越过的最高出口档位（501→1、769→2、1001→3 的升档滞回，
+   --layout-tier 基础档位（xs: ≤500 / sm: 501-768 / md: 769-1000 / lg: >1000）；
+   --layout-tier-exit 已越过的最高出口档位（501→sm、769→md、1001→lg 的升档滞回，
    出口阈值比入口高 20px：521/789/1021） */
 :root {
-    --layout-tier: 0;
-    --layout-tier-exit: 0;
+    --layout-tier: xs;
+    --layout-tier-exit: xs;
 }
-@media (min-width: 501px) { :root { --layout-tier: 1; } }
-@media (min-width: 521px) { :root { --layout-tier-exit: 1; } }
-@media (min-width: 769px) { :root { --layout-tier: 2; } }
-@media (min-width: 789px) { :root { --layout-tier-exit: 2; } }
-@media (min-width: 1001px) { :root { --layout-tier: 3; } }
-@media (min-width: 1021px) { :root { --layout-tier-exit: 3; } }
+@media (min-width: 501px) { :root { --layout-tier: sm; } }
+@media (min-width: 521px) { :root { --layout-tier-exit: sm; } }
+@media (min-width: 769px) { :root { --layout-tier: md; } }
+@media (min-width: 789px) { :root { --layout-tier-exit: md; } }
+@media (min-width: 1001px) { :root { --layout-tier: lg; } }
+@media (min-width: 1021px) { :root { --layout-tier-exit: lg; } }

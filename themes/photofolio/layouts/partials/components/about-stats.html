@@ -1,6 +1,7 @@
 {{/* ===== 關於頁「拍攝檔案」統計（構建期聚合，零 JS）=====
      照片取數與全站一致：photo-sorted.html 返回照片分片全部記錄（含組照內頁）。
-     機身排行：按具體值聚合、數量 desc（同數按名稱 asc 保證構建穩定）；
+     機身排行：EXIF 機型代碼經 data/camera_models.toml 映射為商用名後聚合、數量 desc
+     （同數按名稱 asc 保證構建穩定）；
      檔位面板（焦距/光圈/快門/感光度）：固定檔位順序、空檔隱藏；年度走勢升序、僅列有照片的年份。
      條形寬度 = 數量 / 面板最大值（百分比），行級交錯延遲由 about-stats-rows.html 生成。 */}}
 
@@ -15,25 +16,18 @@
     {{ end }}
 {{ end }}
 
-{{/* —— 機身排行（數量 < 5 的設備歸併「其他設備」，列於排行尾部） —— */}}
-{{ $minKeep := 5 }}
+{{/* —— 機身排行（逐台具體設備各佔一行；不歸併小樣本，
+     2026-11-26 取消原「數量 < 5 歸併其他設備」——用戶要求看到具體設備 —— */}}
 {{ $camCount := dict }}
 {{ range $photos }}
     {{ with .camera }}
-        {{ $camCount = merge $camCount (dict . (add (default 0 (index $camCount .)) 1)) }}
+        {{ $name := partialCached "utils/camera-name.html" (dict "exif" .) . | printf "%s" }}
+        {{ $camCount = merge $camCount (dict $name (add (default 0 (index $camCount $name)) 1)) }}
     {{ end }}
 {{ end }}
 {{ $camList := slice }}
 {{ range $k, $v := $camCount }}{{ $camList = $camList | append (dict "name" $k "count" $v) }}{{ end }}
 {{ $camList = sort $camList "count" "desc" "name" "asc" }}
-{{ $camKept := slice }}
-{{ $camOther := 0 }}
-{{ range $camList }}
-    {{ if ge .count $minKeep }}{{ $camKept = $camKept | append . }}
-    {{ else }}{{ $camOther = add $camOther .count }}{{ end }}
-{{ end }}
-{{ if gt $camOther 0 }}{{ $camKept = $camKept | append (dict "name" (i18n "stats_other_device") "count" $camOther) }}{{ end }}
-{{ $camList = $camKept }}
 {{ $camMax := 0 }}{{ range $camList }}{{ if gt .count $camMax }}{{ $camMax = .count }}{{ end }}{{ end }}
 
 {{/* —— 焦距分佈（七档，≤16 保留、空档隐藏）——

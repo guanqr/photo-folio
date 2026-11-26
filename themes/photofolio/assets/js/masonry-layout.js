@@ -21,10 +21,10 @@ export function rowHeight(W, count, sum, gap, border2) {
 }
 
 /* 行高参考值：以「每行 N 张 3:2 宽幅作品（长边 3、宽边 2）」为基准，按实际容器宽度反推
-   档位：0=超窄屏每行 1 张（占满整行）、1=窄屏每行 2 张、2=中屏每行 3 张、3=宽屏每行 4 张
-   （档位判定在 masonry.js 的 updateTier） */
+   档位：xs=超窄屏每行 1 张（占满整行）、sm=窄屏每行 2 张、md=中屏每行 3 张、lg=宽屏每行 4 张
+   （档位判定在 masonry.js 的 updateTier；脚本内以数值等级 0–3 表示） */
 export function getTargetRowHeight(containerWidth, gap, border2, tier) {
-    // 档位 0（超窄屏）：单张 3:2 占满整行为基准；其余档位每行 N 张 3:2 基准
+    // 数值档位 0（xs，超窄屏）：单张 3:2 占满整行为基准；其余档位每行 N 张 3:2 基准
     const N = tier === 0 ? 1 : (tier === 1 ? 2 : (tier === 2 ? 3 : 4));
     return rowHeight(containerWidth, N, N * (3 / 2), gap, border2);
 }
@@ -62,7 +62,7 @@ export function planRowHeight(row, W, gap, border2, H, minRowH = H) {
 
 /* 贪心分行：行高 = (行宽 − 间距 − 边框) / 宽高比之和（自然铺满，行高可变化）
    逐张累加直到再加一张会低于参考值 H；
-   超窄屏档位 0：每行最多 2 张——横构图（宽高比 ≥ 1）可独占一行；竖构图开头的行必须
+   超窄屏档位 xs：每行最多 2 张——横构图（宽高比 ≥ 1）可独占一行；竖构图开头的行必须
    与下一张同行（绝不落单）；行内一张横构图后若下一张是最后一张竖构图，则并入本行；
    正方形只与竖构图并排，与横构图/另一张正方形分行（否则行高过小，2026-11-06）；
    其余档位：边界处比较「停在此处 / 纳入下一张」，取行高最接近 H 者；

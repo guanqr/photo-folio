@@ -11,11 +11,11 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: var(--space-4);
-    padding: var(--space-12) var(--space-20);
+    gap: var(--space-xxs);
+    padding: var(--space-sm) var(--space-lg);
     /* 上边距与正常图表区块一致（1em、与 EXIF 保持同距）；下边距为 0——
        底部收起按钮自带 1em 上边距，与图表加载态的间距完全同构 */
-    margin: var(--space-16) 0 0;
+    margin: var(--space-md) 0 0;
     background: transparent;
     /* 虚线框提亮：灯箱内 --color-border 固定为暗色边框（暗面板上不可见），
        取与图标同调的 --color-text-muted */
@@ -24,7 +24,7 @@
 
     .empty-icon {
         font-size: 3em;
-        margin-bottom: calc(var(--space-4) * -1);
+        margin-bottom: calc(var(--space-xxs) * -1);
         color: var(--color-text-secondary); /* 与标题文字同色（基类为 text-muted 更暗一档） */
     }
 
@@ -57,7 +57,7 @@
 .lightbox-sat-wrap,
 .lightbox-hue-wrap,
 .lightbox-palette-wrap {
-    margin-top: var(--space-16);
+    margin-top: var(--space-md);
     transition: opacity var(--transition-fade); /* 随图片同步淡入 */
 }
 
@@ -74,7 +74,7 @@
 
 .lightbox-story-wrap.is-present {
     grid-template-rows: 1fr;
-    margin-top: var(--space-16);
+    margin-top: var(--space-md);
 }
 
 .lightbox-story-inner {
@@ -105,7 +105,7 @@
     height: 6em; /* style-lint-ignore：图表高度（媒体尺寸） */
     border-radius: var(--radius-xs);
     background: var(--color-lightbox-ctrl-bg);
-    margin-top: var(--space-8);
+    margin-top: var(--space-xs);
 }
 
 /* 图表标注共用样式：霞鹜 0.875em 灰字（说明文字/图例/轴标注） */
@@ -118,7 +118,7 @@
 /* 图表说明文字：位于图表上方的小号灰色标注（如「直方圖」「區域系統 0–X」） */
 .lightbox-chart-caption {
     @extend %chart-note;
-    margin: var(--space-8) 0 var(--space-4);
+    margin: var(--space-xs) 0 var(--space-xxs);
 }
 
 /* 直方图图例：通道色圆点 + 名称（R/G/B/明度） */
@@ -126,13 +126,13 @@
     @extend %chart-note;
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-4) var(--space-16);
-    margin-top: var(--space-4);
+    gap: var(--space-xxs) var(--space-md);
+    margin-top: var(--space-xxs);
 
     > span {
         display: flex;
         align-items: center;
-        gap: var(--space-4);
+        gap: var(--space-xxs);
     }
 
     i {
@@ -154,7 +154,7 @@
     @extend %chart-note;
     display: flex;
     justify-content: space-between;
-    margin-top: var(--space-4);
+    margin-top: var(--space-xxs);
 }
 
 /* 區域系統标尺：11 级灰阶（0 纯黑 → X 纯白，感知均匀，JS 生成色阶），
@@ -162,19 +162,19 @@
 .lightbox-zone-strip {
     display: flex;
     gap: 0.125em; /* 11 级灰阶之间的 2px 发丝缝（发丝级特例，style-lint-ignore） */
-    margin-top: var(--space-8);
+    margin-top: var(--space-xs);
     position: relative;
 
     > span:not(.lightbox-zone-bracket) {
         flex: 1;
         height: 0.9em; /* style-lint-ignore：灰阶色块高度（数据可视化） */
-        border-radius: var(--radius-2xs);
+        border-radius: var(--radius-hairline);
     }
 
     .lightbox-zone-bracket {
         position: absolute;
-        top: calc(var(--space-4) * -1);
-        bottom: calc(var(--space-4) * -1);
+        top: calc(var(--space-xxs) * -1);
+        bottom: calc(var(--space-xxs) * -1);
         left: 0;
         width: 0;
         border: 0.0625em solid var(--color-accent);
@@ -190,7 +190,7 @@
     height: 0.55em; /* style-lint-ignore：占比条高度（数据可视化） */
     border-radius: var(--radius-pill);
     overflow: hidden;
-    margin-top: var(--space-8);
+    margin-top: var(--space-xs);
     background: var(--color-lightbox-ctrl-bg);
 }
 
@@ -209,8 +209,8 @@
 .lightbox-tonal-stats {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-4) var(--space-16);
-    margin-top: var(--space-8);
+    gap: var(--space-xxs) var(--space-md);
+    margin-top: var(--space-xs);
     font-family: var(--font-meta);
     font-size: var(--size-small);
     color: var(--color-text-secondary); /* 与色卡灰色一致 */
@@ -225,7 +225,7 @@
 .lightbox-tonal-stat {
     display: flex;
     align-items: baseline;
-    gap: var(--space-8);
+    gap: var(--space-xs);
 }
 
 .lightbox-tonal-stat-value {
@@ -236,14 +236,14 @@
 .lightbox-palette {
     display: flex;
     flex-direction: column;
-    gap: var(--space-8);
-    margin-top: var(--space-8);
+    gap: var(--space-xs);
+    margin-top: var(--space-xs);
 }
 
 .lightbox-palette-row {
     display: flex;
     align-items: center;
-    gap: var(--space-8);
+    gap: var(--space-xs);
     font-family: var(--font-meta);
     font-size: var(--size-small);
 }
@@ -287,12 +287,12 @@
 .lightbox-section-title {
     display: flex;
     align-items: center;
-    gap: var(--space-8);
+    gap: var(--space-xs);
     font-family: var(--font-meta);
     font-size: var(--size-small);
     font-weight: 400;
     color: var(--color-text);
-    margin-bottom: var(--space-8);
+    margin-bottom: var(--space-xs);
     transition: color var(--transition-fade);
 }
 

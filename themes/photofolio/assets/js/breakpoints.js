@@ -10,8 +10,11 @@ export const BP_DESKTOP_MIN = 769;
 // 主图窄屏宽度降档（imageSizes.lightboxNarrow）与抽屉同界
 export const BP_LIGHTBOX_NARROW = 1000;
 
-/* 读取 :root 的 CSS 档位（0: ≤500 / 1: 501-768 / 2: 769-1000 / 3: >1000）。
-   默认按卡片/统计网格把 0 档并入 1 档；masonry 传 allowZero=true 保留 0 档
+/* CSS 档位名 → 数值等级：样式表只写英文名，模块内仍按 0–3 比较 */
+const TIER_RANK = { xs: 0, sm: 1, md: 2, lg: 3 };
+
+/* 读取 :root 的 CSS 档位（xs: ≤500 / sm: 501-768 / md: 769-1000 / lg: >1000）。
+   默认按卡片/统计网格把 xs 档并入 sm 档；masonry 传 allowZero=true 保留 xs 档
    （超窄屏单张行基准）。
    不用 matchMedia/innerWidth：iPad Safari 旋转后这些值可能永久陈旧，
    CSS 变量由媒体查询重新求值（2026-11-14） */
@@ -19,8 +22,8 @@ export function readLayoutTiers(allowZero = false) {
     const style = getComputedStyle(document.documentElement);
     const min = allowZero ? 0 : 1;
     const read = (name) => {
-        const v = parseInt(style.getPropertyValue(name), 10);
-        return Number.isFinite(v) ? Math.max(min, Math.min(3, v)) : min;
+        const v = TIER_RANK[style.getPropertyValue(name).trim()];
+        return v === undefined ? min : Math.max(min, v);
     };
     return { tier: read('--layout-tier'), exit: read('--layout-tier-exit') };
 }

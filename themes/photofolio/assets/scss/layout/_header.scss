@@ -70,7 +70,7 @@
     position: relative; /* 跨断点滑出的绝对定位导航以内容右缘为参照 */
     max-width: var(--container-width);
     margin: 0 auto;
-    padding: 0 var(--space-16); /* 与窄屏一致的最小边距 */
+    padding: 0 var(--space-md); /* 与窄屏一致的最小边距 */
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -82,12 +82,12 @@
 .header-inner:has(.site-nav.nav-slide-in),
 .header-inner:has(.site-nav.nav-slide-out) {
     overflow: hidden;
-    clip-path: inset(0 var(--space-16) 0 0);
+    clip-path: inset(0 var(--space-md) 0 0);
 }
 
 .logo-text {
     font-family: var(--font-heading);
-    font-size: var(--size-h2);
+    font-size: var(--size-heading-secondary);
     font-weight: 700;
     letter-spacing: -0.02em;
     color: var(--color-text);
@@ -97,7 +97,7 @@
 .site-nav {
     > ul {
         display: flex;
-        gap: var(--space-32);
+        gap: var(--space-xxl);
 
         > li {
             position: relative; /* 下拉菜单定位锚点 */
@@ -107,7 +107,7 @@
     a, .nav-parent {
         font-size: var(--size-body);
         color: var(--color-text-secondary);
-        padding: var(--space-4) 0;
+        padding: var(--space-xxs) 0;
         display: flex;
         align-items: center;
         /* 颜色过渡：a 链接由 _base 全局规则提供，span 父项（.nav-parent）无——
@@ -146,7 +146,7 @@
         display: inline-flex;
         width: var(--icon-xs);
         height: var(--icon-xs);
-        margin-left: var(--space-4);
+        margin-left: var(--space-xxs);
         transition: transform var(--transition);
 
         svg {
@@ -163,7 +163,7 @@
         top: 100%;
         left: 0;
         right: 0;
-        height: var(--space-8);
+        height: var(--space-xs);
     }
 
     /* 下拉菜单：悬停/键盘聚焦展开（面板是 li 的子元素，指针移入面板不丢失悬停）；
@@ -179,9 +179,9 @@
         left: -2.3em; /* style-lint-ignore：下拉面板对齐偏移（几何推导） */
         /* 入场位移用 margin 而非 transform：absolute + transform + 过渡时长>0 是
            WebKit 旋转后视口宽度永久取旧值（Bug 287042）的触发模式（见下注释） */
-        margin-top: var(--space-4);
+        margin-top: var(--space-xxs);
         min-width: 0;
-        padding: var(--space-4) 0; /* 上下留白收紧，只保留左右边距 */
+        padding: var(--space-xxs) 0; /* 上下留白收紧，只保留左右边距 */
         border-radius: var(--radius-xs); /* 与瀑布流作品卡同档 */
         box-shadow: var(--shadow-pop);
         opacity: 0;
@@ -192,7 +192,7 @@
         a {
             display: flex;
             align-items: center;
-            padding: var(--space-8) var(--space-20) var(--space-8) var(--space-16);
+            padding: var(--space-xs) var(--space-lg) var(--space-xs) var(--space-md);
             white-space: nowrap;
             font-size: var(--size-body);
         }
@@ -208,7 +208,7 @@
             align-items: center;
             width: var(--icon-sm);
             height: var(--icon-sm);
-            margin-right: var(--space-8); /* 图标与文字间距 */
+            margin-right: var(--space-xs); /* 图标与文字间距 */
             flex: none;
         }
     }
@@ -226,7 +226,7 @@
         &.sub-open .nav-dropdown {
             opacity: 1;
             visibility: visible;
-            margin-top: var(--space-8);
+            margin-top: var(--space-xs);
         }
     }
 
@@ -241,7 +241,7 @@
             &.hover-ready:focus-within .nav-dropdown {
                 opacity: 1;
                 visibility: visible;
-                margin-top: var(--space-8);
+                margin-top: var(--space-xs);
             }
         }
     }
@@ -252,7 +252,7 @@
     display: none;
     width: var(--icon-sm);
     height: var(--icon-sm);
-    margin-right: var(--space-8);
+    margin-right: var(--space-xs);
     flex-shrink: 0;
 
     svg {
@@ -321,7 +321,7 @@
     position: relative;
     display: flex;
     align-items: center;
-    gap: var(--space-24);
+    gap: var(--space-xl);
 }
 
 /* 亮色主题首页：顶部透明阶段（轮播暗色遮罩上）导航文字保持白色——

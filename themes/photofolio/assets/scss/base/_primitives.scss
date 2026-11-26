@@ -35,7 +35,7 @@
     transition: border-color var(--transition), color var(--transition-fade);
 
     &:hover {
-        border-color: var(--color-accent-30);
+        border-color: var(--color-accent-subtle);
     }
 }
 
@@ -73,9 +73,9 @@
 @mixin lightbox-detail-trigger {
     display: flex;
     align-items: center;
-    gap: var(--space-8);
-    margin-top: var(--space-16);
-    padding: var(--space-4) 0;
+    gap: var(--space-xs);
+    margin-top: var(--space-md);
+    padding: var(--space-xxs) 0;
     max-height: 2em; /* 略高于自然高度（一行 0.875em + 0.5em 边距） */
     overflow: hidden;
     background: none;
@@ -114,9 +114,9 @@
 @mixin lightbox-detail-collapse {
     display: flex;
     align-items: center;
-    gap: var(--space-8);
-    margin: var(--space-16) 0 0;
-    padding: var(--space-4) 0;
+    gap: var(--space-xs);
+    margin: var(--space-md) 0 0;
+    padding: var(--space-xxs) 0;
     background: none;
     border: none;
     color: var(--color-text-muted);
