@@ -73,6 +73,6 @@
 - Hugo ≥ 0.139（标准版；`silenceDeprecations` 自 0.139 起支持）+ Dart Sass 1.107.0 **独立版**（不要用 npm 版：纯 JS 构建不支持 Hugo dartsass 的 embedded 协议，会报 EOF）；CI（.github/workflows/build.yml）由 peaceiris/actions-hugo@v3 pin Hugo 0.169.0 标准版（无 sha256 校验——动作源即 pin 对象），另下载官方 Dart Sass standalone 压缩包并加入 PATH（2026-10-30）
 - 每次改动后至少跑一次 `hugo --cleanDestinationDir` 确认零警告零错误
 - **样式标尺自检**：`python tools/style-lint/check_style.py` 扫描 SCSS 的间距、字号、`width/height/top/right/bottom/left` 字面量（例外须带 `style-lint-ignore` 注释）；CI 在构建前运行该检查，Hugo 构建带 `--panicOnWarning`（警告即失败）；`--printUnusedTemplates` 对 `layout` 指定的模板会误报（2026-11-16 实测），不得用作死模板判据或 CI 门禁
-- 验证构建用 `-d` 独立目录（如 `.verify-build`），不写入 public/——public/ 不会自动清理、历史残留会混淆对比
+- 验证构建固定用 `-d .verify-build`（唯一临时构建目录，不另建 `.verify-local` 等变体名；需要临时改 baseURL 时也构建到这里，验证完按原参数重建），不写入 public/——public/ 不会自动清理、历史残留会混淆对比
 - 编译产物抽查：JS 改动后查 bundle*.js（变量名被压缩，按语义模式匹配）；SCSS 改动后查 style*.css；怀疑回归用 `git worktree add` 构建旧版逐规则对比
 - i18n 目录残留 `*.tmp` 文件会导致构建失败，排查前先清理 tmp
